@@ -5,14 +5,23 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.promise.Promise;
+import io.vproxy.dep.vjson.CharStream;
 import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.cs.LineColCharStream;
+import io.vproxy.dep.vjson.deserializer.DeserializeParserListener;
+import io.vproxy.dep.vjson.parser.ParserMode;
+import io.vproxy.dep.vjson.parser.ParserOptions;
+import io.vproxy.dep.vjson.parser.ParserUtils;
 import io.vproxy.dep.vjson.util.ObjectBuilder;
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -225,117 +234,58 @@ public class ConfigLoader {
         return utilGetDomainCheckerList(alias, noProxyDomains);
     }
 
+    @SuppressWarnings("ConstantConditions")
     public void load(String fileName) throws Exception {
-        FileInputStream inputStream = new FileInputStream(fileName);
-        BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-        int step = 0;
-        String currentAlias = null;
-        // 0 -> normal
-        // 1 -> proxy.server.list
-        // 2 -> proxy.domain.list
-        // 3 -> proxy.resolve.list
-        // 4 -> no-proxy.domain.list
-        // 5 -> https-sni-erasure.domain.list
-        // 6 -> agent.https-sni-erasure.cert-key.list
-        String line;
-        while ((line = br.readLine()) != null) {
-            line = line.trim();
-            if (line.isEmpty() || line.startsWith("#"))
-                continue; // ignore whitespace lines and comment lines
-
-            if (step == 0) {
-                if (line.startsWith("agent.listen ") || line.startsWith("agent.socks5.listen ")) {
-                    int prefixLen = (line.startsWith("agent.listen ")) ? "agent.listen ".length() : "agent.socks5.listen ".length();
-                    String port = line.substring(prefixLen).trim();
-                    try {
-                        socks5ListenPort = Integer.parseInt(port);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.listen, expecting an integer");
-                    }
-                    if (socks5ListenPort < 1 || socks5ListenPort > 65535) {
+        String content = Files.readString(Path.of(fileName));
+        var listener = new DeserializeParserListener<>(VPWSAgentConfig.Companion.getRule());
+        ParserUtils.buildFrom(
+            new LineColCharStream(CharStream.from(content), fileName), ParserOptions.allFeatures().setListener(listener)
+                .setMode(ParserMode.JAVA_OBJECT)
+                .setNullArraysAndObjects(true)
+        );
+        var config = listener.get();
+        { // indent for git diff
+            { // indent for git diff
+                { // indent for git diff
+                    socks5ListenPort = config.getAgent().getSocks5Listen();
+                    if (socks5ListenPort != 0 && (socks5ListenPort < 1 || socks5ListenPort > 65535)) {
                         throw new Exception("invalid agent.listen, port number out of range");
                     }
-                } else if (line.startsWith("agent.httpconnect.listen ")) {
-                    String port = line.substring("agent.httpconnect.listen ".length()).trim();
-                    try {
-                        httpConnectListenPort = Integer.parseInt(port);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.httpconnect.listen, expecting an integer");
-                    }
-                    if (httpConnectListenPort < 1 || httpConnectListenPort > 65535) {
+                    httpConnectListenPort = config.getAgent().getHttpConnectListen();
+                    if (httpConnectListenPort != 0 && (httpConnectListenPort < 1 || httpConnectListenPort > 65535)) {
                         throw new Exception("invalid agent.httpconnect.listen, port number out of range");
                     }
-                } else if (line.startsWith("agent.ss.listen ")) {
-                    String port = line.substring("agent.ss.listen ".length()).trim();
-                    try {
-                        ssListenPort = Integer.parseInt(port);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.ss.listen, expecting an integer");
-                    }
-                    if (ssListenPort < 1 || ssListenPort > 65535) {
+                    ssListenPort = config.getAgent().getSsListen();
+                    if (ssListenPort != 0 && (ssListenPort < 1 || ssListenPort > 65535)) {
                         throw new Exception("invalid agent.ss.listen, port number out of range");
                     }
-                } else if (line.startsWith("agent.ss.password ")) {
-                    ssPassword = line.substring("agent.ss.password ".length()).trim();
-                } else if (line.startsWith("agent.dns.listen ")) {
-                    String port = line.substring("agent.dns.listen ".length()).trim();
-                    try {
-                        dnsListenPort = Integer.parseInt(port);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.dns.listen, expecting an integer");
-                    }
-                    if (dnsListenPort < 1 || dnsListenPort > 65535) {
+                    ssPassword = config.getAgent().getSsPassword();
+                    dnsListenPort = config.getAgent().getDnsListen();
+                    if (dnsListenPort != 0 && (dnsListenPort < 1 || dnsListenPort > 65535)) {
                         throw new Exception("invalid agent.dns.listen, port number out of range");
                     }
-                } else if (line.startsWith("agent.gateway ")) {
-                    String val = line.substring("agent.gateway ".length()).trim();
-                    switch (val) {
-                        case "on":
-                            gateway = true;
-                            break;
-                        case "off":
-                            gateway = false;
-                            break;
-                        default:
-                            throw new Exception("invalid value for agent.gateway: " + val);
-                    }
-                } else if (line.startsWith("agent.direct-relay ")) {
-                    String val = line.substring("agent.direct-relay ".length()).trim();
-                    switch (val) {
-                        case "on":
-                            directRelay = true;
-                            break;
-                        case "off":
-                            directRelay = false;
-                            break;
-                        default:
-                            throw new Exception("invalid value for agent.direct-relay: " + val);
-                    }
-                } else if (line.startsWith("agent.direct-relay.ip-range ")) {
-                    String val = line.substring("agent.direct-relay.ip-range ".length()).trim();
+                }
+                gateway = config.getAgent().getGateway();
+                directRelay = config.getAgent().getDirectRelay().getEnabled();
+                {
+                    var val = config.getAgent().getDirectRelay().getIpRange();
                     if (!Network.validNetworkStr(val)) {
                         throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
                     }
                     directRelayIpRange = Network.from(val);
-                } else if (line.startsWith("agent.direct-relay.listen ")) {
-                    String val = line.substring("agent.direct-relay.listen ".length()).trim();
+                }
+                {
+                    var val = config.getAgent().getDirectRelay().getListen();
                     if (!IPPort.validL4AddrStr(val)) {
                         throw new Exception("invalid binding address in agent.direct-relay.listen: " + val);
                     }
                     String host = val.substring(0, val.lastIndexOf(":"));
                     int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
                     directRelayListen = new IPPort(IP.from(host), port);
-                } else if (line.startsWith("agent.direct-relay.ip-bond-timeout ")) {
-                    String val = line.substring("agent.direct-relay.ip-bond-timeout ".length()).trim();
-                    int timeout;
-                    try {
-                        timeout = Integer.parseInt(val);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid value for agent.direct-relay.ip-bond-timeout, should be a number: " + val);
-                    }
-                    directRelayIpBondTimeout = timeout * 60 * 1000;
-                } else if (line.startsWith("proxy.server.auth ")) {
-                    String auth = line.substring("proxy.server.auth ".length()).trim();
+                }
+                directRelayIpBondTimeout = config.getAgent().getDirectRelay().getIpBondTimeout() * 60 * 1000;
+                {
+                    var auth = config.getProxy().getAuth();
                     String[] userpass = auth.split(":");
                     if (userpass.length != 2)
                         throw new Exception("invalid proxy.server.auth: " + auth);
@@ -345,96 +295,35 @@ public class ConfigLoader {
                     pass = userpass[1].trim();
                     if (pass.isEmpty())
                         throw new Exception("invalid proxy.server.auth: pass is empty");
-                } else if (line.startsWith("proxy.server.hc ")) {
-                    String hc = line.substring("proxy.server.hc ".length());
-                    if (hc.equals("on")) {
-                        noHealthCheck = false;
-                    } else if (hc.equals("off")) {
-                        noHealthCheck = true;
-                    } else {
-                        throw new Exception("invalid value for proxy.server.hc: " + hc);
-                    }
-                } else if (line.startsWith("agent.cacerts.path ")) {
-                    String path = line.substring("agent.cacerts.path ".length()).trim();
-                    if (path.isEmpty())
+                }
+                noHealthCheck = !config.getProxy().getHc();
+                {
+                    cacertsPath = config.getAgent().getCacertsPath();
+                    if (cacertsPath.isBlank())
                         throw new Exception("cacert path not specified");
-                    cacertsPath = Utils.filename(path);
-                } else if (line.startsWith("agent.cacerts.pswd ")) {
-                    String pswd = line.substring("agent.cacerts.pswd ".length()).trim();
-                    if (pswd.isEmpty())
+                }
+                {
+                    cacertsPswd = config.getAgent().getCacertsPswd();
+                    if (cacertsPswd.isBlank())
                         throw new Exception("cacert path not specified");
-                    cacertsPswd = pswd;
-                } else if (line.startsWith("agent.cert.verify ")) {
-                    String val = line.substring("agent.cert.verify ".length()).trim();
-                    switch (val) {
-                        case "on":
-                            verifyCert = true;
-                            break;
-                        case "off":
-                            verifyCert = false;
-                            break;
-                        default:
-                            throw new Exception("invalid value for agent.cert.verify: " + val);
-                    }
-                } else if (line.startsWith("agent.strict ")) {
-                    String val = line.substring("agent.strict ".length()).trim();
-                    switch (val) {
-                        case "on":
-                            strictMode = true;
-                            break;
-                        case "off":
-                            strictMode = false;
-                            break;
-                        default:
-                            throw new Exception("invalid value for agent.strict: " + val);
-                    }
-                } else if (line.startsWith("agent.pool ")) {
-                    String size = line.substring("agent.pool ".length()).trim();
-                    int intSize;
-                    try {
-                        intSize = Integer.parseInt(size);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.pool, expecting an integer");
-                    }
-                    if (intSize < 0) {
-                        throw new Exception("invalid agent.pool, should not be negative");
-                    }
-                    poolSize = intSize;
-                } else if (line.startsWith("agent.gateway.pac.listen ")) {
-                    String val = line.substring("agent.gateway.pac.listen ".length()).trim();
-                    int port;
-                    try {
-                        port = Integer.parseInt(val);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.gateway.pac.listen, the port is invalid");
-                    }
-                    pacServerPort = port;
-                } else if (line.startsWith("proxy.server.uot ")) {
-                    String val = line.substring("proxy.server.uot ".length()).trim();
-                    if (val.equals("on")) {
-                        udpOverTcpEnabled = true;
-                    } else if (val.equals("off")) {
-                        udpOverTcpEnabled = false;
-                    } else {
-                        throw new Exception("invalid value for proxy.server.uot: " + val);
-                    }
-                } else if (line.startsWith("proxy.server.uot.nic ")) {
-                    udpOverTcpNic = line.substring("proxy.server.uot.nic ".length()).trim();
-                } else if (line.startsWith("agent.https-sni-erasure.cert-key.auto-sign ")) {
-                    line = line.substring("agent.https-sni-erasure.cert-key.auto-sign ".length());
-                    var args = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
-                    if (args.isEmpty()) {
-                        continue;
-                    }
+                }
+                verifyCert = config.getAgent().getCertVerify();
+                strictMode = config.getAgent().getStrict();
+                poolSize = config.getAgent().getPool();
+                pacServerPort = config.getAgent().getGatewayPacListen();
+                udpOverTcpEnabled = config.getAgent().getUot().getEnabled();
+                udpOverTcpNic = config.getAgent().getUot().getNic();
+                {
+                    var args = config.getAgent().getTlsSniErasure().getCertKeyAutoSign();
                     if (args.size() != 2 && args.size() != 3) {
-                        throw new Exception("agent.https-sni-erasure.cert-key.auto-sign should take exactly two arguments");
+                        throw new Exception("agent.tls-sni-erasure.cert-key.auto-sign should take exactly two arguments");
                     }
                     autoSignCert = Utils.filename(args.get(0));
                     autoSignKey = Utils.filename(args.get(1));
                     if (!new File(autoSignCert).isFile())
-                        throw new Exception("agent.https-sni-erasure.cert-key.auto-sign cert is not a file");
+                        throw new Exception("agent.tls-sni-erasure.cert-key.auto-sign cert is not a file");
                     if (!new File(autoSignKey).isFile())
-                        throw new Exception("agent.https-sni-erasure.cert-key.auto-sign key is not a file");
+                        throw new Exception("agent.tls-sni-erasure.cert-key.auto-sign key is not a file");
                     if (args.size() == 3) {
                         autoSignWorkingDirectory = new File(Utils.filename(args.get(2)));
                         if (!autoSignWorkingDirectory.isDirectory()) {
@@ -445,51 +334,12 @@ public class ConfigLoader {
                         autoSignWorkingDirectory = Files.createTempDirectory("vpws-agent-auto-sign").toFile();
                         autoSignWorkingDirectory.deleteOnExit();
                     }
-                } else if (line.startsWith("proxy.server.list.start")) {
-                    step = 1; // retrieving server list
-                    if (!line.equals("proxy.server.list.start")) {
-                        String alias = line.substring("proxy.server.list.start".length()).trim();
-                        if (alias.split(" ").length > 1)
-                            throw new Exception("symbol cannot contain spaces");
-                        currentAlias = alias;
-                    }
-                } else if (line.startsWith("proxy.domain.list.start")) {
-                    step = 2;
-                    if (!line.equals("proxy.domain.list.start")) {
-                        String alias = line.substring("proxy.domain.list.start".length()).trim();
-                        if (alias.split(" ").length > 1)
-                            throw new Exception("symbol cannot contain spaces");
-                        currentAlias = alias;
-                    }
-                } else if (line.startsWith("proxy.resolve.list.start")) {
-                    step = 3;
-                    if (!line.equals("proxy.resolve.list.start")) {
-                        String alias = line.substring("proxy.resolve.list.start".length()).trim();
-                        if (alias.split(" ").length > 1)
-                            throw new Exception("symbol cannot contain spaces");
-                        currentAlias = alias;
-                    }
-                } else if (line.startsWith("no-proxy.domain.list.start")) {
-                    step = 4;
-                    if (!line.equals("no-proxy.domain.list.start")) {
-                        String alias = line.substring("no-proxy.domain.list.start".length()).trim();
-                        if (alias.split(" ").length > 1)
-                            throw new Exception("symbol cannot contain spaces");
-                        currentAlias = alias;
-                    }
-                } else if (line.equals("https-sni-erasure.domain.list.start")) {
-                    step = 5;
-                } else if (line.equals("agent.https-sni-erasure.cert-key.list.start")) {
-                    step = 6;
-                } else {
-                    throw new Exception("unknown line: " + line);
-                }
-            } else if (step == 1) {
-                if (line.equals("proxy.server.list.end")) {
-                    step = 0; // return to normal state
-                    currentAlias = null;
-                    continue;
-                }
+                } // indent for git diff
+            } // indent for git diff
+        } // indent for git diff
+        for (var group : config.getProxy().getGroups()) {
+            String currentAlias = group.getName();
+            for (var line : group.getServers()) {
                 if (!line.startsWith("websocks://") && !line.startsWith("websockss://")
                     && !line.startsWith("websocks:kcp://") && !line.startsWith("websockss:kcp://")
                     && !line.startsWith("websocks:uot:kcp://") && !line.startsWith("websockss:uot:kcp://")) {
@@ -540,46 +390,27 @@ public class ConfigLoader {
                 }
 
                 getGroup(currentAlias).add(useSSL, useKCP, useUOT, hostPart, port);
-            } else if (step == 2) {
-                if (line.equals("proxy.domain.list.end")) {
-                    step = 0;
-                    currentAlias = null;
-                    continue;
-                }
+            }
+            for (var line : group.getDomains()) {
                 getDomainList(currentAlias).add(formatDomainChecker(line));
-            } else if (step == 3) {
-                if (line.equals("proxy.resolve.list.end")) {
-                    step = 0;
-                    currentAlias = null;
-                    continue;
-                }
+            }
+            for (var line : group.getResolve()) {
                 getProxyResolveList(currentAlias).add(formatDomainChecker(line));
-            } else if (step == 4) {
-                if (line.equals("no-proxy.domain.list.end")) {
-                    step = 0;
-                    currentAlias = null;
-                    continue;
-                }
+            }
+            for (var line : group.getNoProxy()) {
                 getNoProxyDomainList(currentAlias).add(formatDomainChecker(line));
-            } else if (step == 5) {
-                if (line.equals("https-sni-erasure.domain.list.end")) {
-                    step = 0;
-                    continue;
-                }
+            }
+        }
+        { // indent for git diff
+            for (var line : config.getAgent().getTlsSniErasure().getDomains()) {
                 httpsSniErasureDomains.add(formatDomainChecker(line));
-            } else {
-                //noinspection ConstantConditions
-                assert step == 6;
-                if (line.equals("agent.https-sni-erasure.cert-key.list.end")) {
-                    step = 0;
-                    continue;
-                }
-                var ls = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+            }
+            for (var ls : config.getAgent().getTlsSniErasure().getCertKeyList()) {
                 if (ls.isEmpty())
                     continue;
                 httpsSniErasureCertKeyFiles.add(ls);
             }
-        }
+        } // indent for git diff
     }
 
     public List<String> validate() {
