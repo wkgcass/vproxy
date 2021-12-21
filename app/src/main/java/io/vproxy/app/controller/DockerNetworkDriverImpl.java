@@ -320,7 +320,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         UMem umem = getUMem(suffix);
         if (umem == null) {
             // need to add umem
-            umem = sw.addUMem(UMEM_NAME_PREFIX + suffix, NativeXDP.supportUMemReuse ? 4096 : 64, 32, 32, 2048);
+            umem = sw.addUMem(UMEM_NAME_PREFIX + suffix, NativeXDP.supportUMemReuse ? 16384 : 256, 128, 128, 4096);
         } else {
             return umem;
         }
