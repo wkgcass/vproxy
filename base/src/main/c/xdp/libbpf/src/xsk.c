@@ -52,6 +52,16 @@
  #define PF_XDP AF_XDP
 #endif
 
+#ifndef SO_BUSY_POLL
+ #define SO_BUSY_POLL 46
+#endif
+#ifndef SO_PREFER_BUSY_POLL
+ #define SO_PREFER_BUSY_POLL 69
+#endif
+#ifndef SO_BUSY_POLL_BUDGET
+ #define SO_BUSY_POLL_BUDGET 70
+#endif
+
 enum xsk_prog {
 	XSK_PROG_FALLBACK,
 	XSK_PROG_REDIRECT_FLAGS,
@@ -159,6 +169,7 @@ static int xsk_set_xdp_socket_config(struct xsk_socket_config *cfg,
 		cfg->libbpf_flags = 0;
 		cfg->xdp_flags = 0;
 		cfg->bind_flags = 0;
+		cfg->busy_poll_budget = 0;
 		return 0;
 	}
 
@@ -170,6 +181,7 @@ static int xsk_set_xdp_socket_config(struct xsk_socket_config *cfg,
 	cfg->libbpf_flags = usr_cfg->libbpf_flags;
 	cfg->xdp_flags = usr_cfg->xdp_flags;
 	cfg->bind_flags = usr_cfg->bind_flags;
+	cfg->busy_poll_budget = usr_cfg->busy_poll_budget;
 
 	return 0;
 }
@@ -1041,6 +1053,27 @@ int xsk_socket__create_shared(struct xsk_socket **xsk_ptr,
 		xsk->fd = umem->fd;
 		rx_setup_done = umem->rx_ring_setup_done;
 		tx_setup_done = umem->tx_ring_setup_done;
+	}
+
+	if (xsk->config.busy_poll_budget) {
+		int sock_opt = 1;
+		if (setsockopt(xsk->fd, SOL_SOCKET, SO_PREFER_BUSY_POLL,
+				(void *)&sock_opt, sizeof(sock_opt)) < 0) {
+			err = -errno;
+			goto out_xsk_alloc;
+		}
+		sock_opt = 20;
+		if (setsockopt(xsk->fd, SOL_SOCKET, SO_BUSY_POLL,
+				(void *)&sock_opt, sizeof(sock_opt)) < 0) {
+			err = -errno;
+			goto out_xsk_alloc;
+		}
+		sock_opt = xsk->config.busy_poll_budget;
+		if (setsockopt(xsk->fd, SOL_SOCKET, SO_BUSY_POLL_BUDGET,
+				(void *)&sock_opt, sizeof(sock_opt)) < 0) {
+			err = -errno;
+			goto out_xsk_alloc;
+		}
 	}
 
 	ctx = xsk_get_ctx(umem, ifindex, queue_id);

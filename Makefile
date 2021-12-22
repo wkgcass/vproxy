@@ -53,7 +53,7 @@ _add_linux_so_to_zip:
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.so ./io/vproxy/libvfdposix-$(LINUX_ARCH).so
 	cp ./base/src/main/c/libvpxdp.so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so
-	cp ./base/src/main/c/xdp/libbpf/src/libbpf.so.0.4.0 ./io/vproxy/libbpf-$(LINUX_ARCH).so
+	cp ./base/src/main/c/xdp/libbpf/src/libbpf.so.0.6.0 ./io/vproxy/libbpf-$(LINUX_ARCH).so
 	zip build/libs/vproxy.jar ./io/vproxy/libvfdposix-$(LINUX_ARCH).so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so ./io/vproxy/libbpf-$(LINUX_ARCH).so
 	rm -r ./io
 
