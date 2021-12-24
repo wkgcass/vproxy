@@ -410,6 +410,7 @@ int vp_xdp_write_pkt(struct vp_xsk_info* xsk, struct vp_chunk_info* chunk) {
     xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = chunk->pktlen;
     xsk_ring_prod__submit(&xsk->tx, 1);
     chunk->xsk = xsk;
+    chunk->tx_ref += 1;
 
     xsk->outstanding_tx++;
 
@@ -439,6 +440,7 @@ int vp_xdp_write_pkts(struct vp_xsk_info* xsk, int size, long* chunk_ptrs) {
         xsk_ring_prod__tx_desc(&xsk->tx, tx_idx + i)->addr = chunk->pktaddr;
         xsk_ring_prod__tx_desc(&xsk->tx, tx_idx + i)->len = chunk->pktlen;
         chunk->xsk = xsk;
+        chunk->tx_ref += 1;
     }
     xsk_ring_prod__submit(&xsk->tx, ret);
 
@@ -465,6 +467,11 @@ void vp_xdp_complete_tx(struct vp_xsk_info* xsk) {
             struct vp_chunk_info* chunk = vp_chunk_seek(xsk->umem->chunks, addr);
             // assert chunk != null
             chunk->xsk = NULL;
+            if (chunk->tx_ref == 0) {
+                fprintf(stderr, "WARN: chunk %lu tx_ref = 0 before removing from comp_ring\n", (size_t) chunk);
+            } else {
+                chunk->tx_ref -= 1;
+            }
             vp_chunk_release(xsk->umem->chunks, chunk);
         }
         xsk_ring_cons__release(&xsk->umem->comp_ring, completed);

@@ -14,6 +14,8 @@ struct vp_chunk_info {
     struct vp_xsk_info*  xsk;
 
     uint8_t  ref;      // reference count, 0 means it can be used by the rings
+    uint8_t  tx_ref;   // increase when put into tx ring
+                       // decrease when fetched from comp ring
     uint64_t addr;     // xsk addr, offset of this chunk
     uint64_t endaddr;  // xsk addr, offset of the end cursor (exclusive) of this chunk
     char*    realaddr; // pointer to the real mem location of this chunk
@@ -85,8 +87,9 @@ void vp_umem_close(struct vp_umem_info* umem, bool clean_buffer);
 
 void vp_xdp_fill_ring_fillup(struct vp_umem_info* umem);
 // the first invocation to this function, idx_rx should be set to -1 (all bits 1)
-// `idx_rx` will be set in each iteration and user may not modify the value
-// return received packet count, user should iterate [return value] times
+// `idx_rx` will be set in each iteration and user may not modify the value.
+// the first invocation returns received packet count,
+// user should iterate [return value] times.
 // if idx_rx is not -1, return value will always be 0
 // otherwise, returning 0 indicates that there's no packets
 // also, when idx_rx is -1, the chunk will not be set, and packets will not be retrieved
