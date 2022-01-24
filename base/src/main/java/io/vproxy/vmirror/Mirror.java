@@ -1,18 +1,22 @@
 package io.vproxy.vmirror;
 
-import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.direct.DirectByteBuffer;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
-import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.file.FileWatcher;
+import io.vproxy.base.util.file.FileWatcherHandler;
+import io.vproxy.dep.vjson.CharStream;
 import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.parser.ParserOptions;
+import io.vproxy.dep.vjson.parser.ParserUtils;
 import io.vproxy.vfd.*;
 import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv6Packet;
 import io.vproxy.vpacket.PacketBytes;
 
-import java.io.*;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -21,14 +25,9 @@ import java.util.stream.Collectors;
 public class Mirror {
     private static final Mirror mirror = new Mirror();
 
-    private static final int LOAD_CONFIG_SUCCESS_WAIT_INTERVAL = 2 * 1000;
-    private static final int LOAD_CONFIG_FAIL_WAIT_INTERVAL = 10 * 1000;
-
     private boolean initialized = false;
     private boolean enabled = false;
-    private String conf;
-    private long lastTimestamp = 0;
-    private SelectorEventLoop loop;
+    private FileWatcher watcher;
 
     private List<MirrorConfig> mirrors = Collections.emptyList();
     private Set<String> enabledOrigins = Collections.emptySet();
@@ -40,27 +39,30 @@ public class Mirror {
     public static void init(String conf) throws Exception {
         if (mirror.initialized)
             throw new IllegalStateException("cannot initialize twice");
-        mirror.conf = conf;
-        mirror.loop = SelectorEventLoop.open();
-        mirror.loop.loop(r -> VProxyThread.create(r, "mirror"));
+        mirror.watcher = new FileWatcher(conf, new FileWatcherHandler() {
+            @Override
+            public void onFileCreated(Path file, String fileContent) {
+                mirror.loadConfig(fileContent);
+            }
+
+            @Override
+            public void onFileRemoved(Path file) {
+                mirror.enabled = false;
+            }
+
+            @Override
+            public void onFileUpdated(Path file, String fileContent) {
+                mirror.loadConfig(fileContent);
+            }
+        });
         mirror.initialized = true;
-        mirror.loadConfig();
-        mirror.loop.delay(LOAD_CONFIG_SUCCESS_WAIT_INTERVAL, mirror::loadConfigAndSetTimer);
+        mirror.watcher.start();
     }
 
     public static void destroy() {
+        mirror.watcher.stop();
         mirror.initialized = false;
         mirror.enabled = false;
-        mirror.conf = null;
-        mirror.lastTimestamp = 0;
-        if (mirror.loop != null) {
-            try {
-                mirror.loop.close();
-            } catch (IOException e) {
-                Logger.shouldNotHappen("closing selector event loop for mirror failed", e);
-            }
-            mirror.loop = null;
-        }
         mirror.destroyTaps(mirror.mirrors);
         mirror.mirrors = Collections.emptyList();
         mirror.filters = Collections.emptyList();
@@ -310,39 +312,14 @@ public class Mirror {
         }
     }
 
-    private void loadConfig() throws Exception {
-        File f = new File(conf);
-        if (!f.exists())
-            throw new IOException(f.getAbsolutePath() + " does not exist");
-        if (!f.isFile())
-            throw new IOException(f.getAbsolutePath() + " is not a file");
-        long ts = f.lastModified();
-        if (mirror.lastTimestamp == ts) { // nothing changes, no need to load
-            return;
-        }
-        FileInputStream fis = new FileInputStream(f);
-        BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-        String s;
-        StringBuilder sb = new StringBuilder();
-        while ((s = br.readLine()) != null) {
-            sb.append(s);
-        }
-        JSON.Instance<?> inst = JSON.parse(sb.toString());
-        parseAndLoad(inst);
-        mirror.lastTimestamp = ts;
-        Logger.alert("mirror config reloaded");
-    }
-
-    private void loadConfigAndSetTimer() {
-        int timeout;
+    private void loadConfig(String content) {
         try {
-            loadConfig();
-            timeout = LOAD_CONFIG_SUCCESS_WAIT_INTERVAL;
+            JSON.Instance<?> inst = ParserUtils.buildFrom(CharStream.from(content), ParserOptions.allFeatures());
+            parseAndLoad(inst);
+            Logger.alert("mirror config reloaded");
         } catch (Exception e) {
             Logger.error(LogType.SYS_ERROR, "loading mirror config failed", e);
-            timeout = LOAD_CONFIG_FAIL_WAIT_INTERVAL;
         }
-        loop.delay(timeout, this::loadConfigAndSetTimer);
     }
 
     private void parseAndLoad(JSON.Instance<?> inst) throws Exception {
