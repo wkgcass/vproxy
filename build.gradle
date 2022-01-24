@@ -71,7 +71,6 @@ subprojects {
         dokkaSourceSets {
             sourceSet {
                 sourceRoot(file("src/main/java"))
-                sourceRoot(file("src/main/kotlin"))
             }
         }
     }
