@@ -213,7 +213,9 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         int bytes = 0;
         while (true) {
             int wrote = plainBufferForApp.writeTo(channel, maxBytesToWrite);
-            generalUnwrap();
+            if (plainBufferForApp.used() == 0) {
+                generalUnwrap();
+            }
             if (wrote == 0) {
                 break;
             }
