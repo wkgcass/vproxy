@@ -471,4 +471,14 @@ public class TcpEntry {
             return windowScale;
         }
     }
+
+
+    @Override
+    public String toString() {
+        return "TcpEntry{" +
+            "source=" + source +
+            ", destination=" + destination +
+            ", state=" + state +
+            '}';
+    }
 }

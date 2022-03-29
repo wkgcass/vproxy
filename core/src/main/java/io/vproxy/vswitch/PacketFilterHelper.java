@@ -1,5 +1,6 @@
 package io.vproxy.vswitch;
 
+import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.net.IPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.vfd.IPPort;
@@ -54,16 +55,20 @@ public class PacketFilterHelper {
 
     public boolean isTcpNat(PacketBuffer pkb) {
         if (pkb.tcpPkt == null) {
+            assert Logger.lowLevelDebug("isTcpNat: no tcpPkt");
             return false;
         }
         var tcp = pkb.network.conntrack.lookupTcp(pkb.ipPkt, pkb.tcpPkt);
         if (tcp == null) {
+            assert Logger.lowLevelDebug("isTcpNat: no tcp entry");
             return false;
         }
         var nat = tcp.getNat();
         if (nat == null) {
+            assert Logger.lowLevelDebug("isTcpNat: no nat record");
             return false;
         }
+        assert Logger.lowLevelDebug("isTcpNat: yes");
         pkb.tcp = tcp;
         pkb.tcpNat = nat;
         return true;

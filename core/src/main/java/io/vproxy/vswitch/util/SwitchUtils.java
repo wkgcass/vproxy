@@ -280,18 +280,24 @@ public class SwitchUtils {
     }
 
     public static void executeTcpNat(PacketBuffer pkb, TcpNat nat) {
-        assert Logger.lowLevelDebug("executeTcpDNat(" + pkb + ", " + nat + ")");
+        assert Logger.lowLevelDebug("executeTcpNat(" + pkb + ", " + nat + ")");
         var pkt = pkb.tcpPkt;
-        boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.destination.getAddress()) &&
-            pkb.tcpPkt.getSrcPort() == nat._2.destination.getPort();
-        switch (nat.getState()) {
+        boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.source.getAddress()) &&
+            pkb.tcpPkt.getSrcPort() == nat._2.source.getPort();
+        assert Logger.lowLevelDebug("isBackhaul = " + isBackhaul);
+
+        pkt.initPartial(PartialPacket.LEVEL_HANDLED_FIELDS);
+
+        var state = nat.getState();
+        switch (state) {
             case TIME_WAIT:
             case CLOSED:
                 if (!pkt.isSyn() || pkt.isAck()) {
-                    assert Logger.lowLevelDebug("is not syn, cannot handle this session");
-                    return;
+                    assert Logger.lowLevelDebug("is not syn, not a new session");
+                    nat.resetTimer();
+                } else {
+                    nat.setState(TcpState.SYN_SENT);
                 }
-                nat.setState(TcpState.SYN_SENT);
                 break;
             case SYN_SENT:
                 if (isBackhaul && pkt.isSyn() && pkt.isAck()) {
@@ -354,7 +360,7 @@ public class SwitchUtils {
                 }
                 break;
             default:
-                Logger.shouldNotHappen("should not reach here");
+                Logger.shouldNotHappen("should not reach here: " + state);
         }
 
         if (isBackhaul) {
