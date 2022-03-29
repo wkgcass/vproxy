@@ -726,8 +726,13 @@ public class L3 {
         // assign mac to the packet
         MacAddress srcMac = pkb.network.ips.lookup(pkb.ipPkt.getSrc());
         if (srcMac == null) {
-            Logger.shouldNotHappen("cannot find synthetic ip for sending the output packet");
-            return;
+            assert Logger.lowLevelDebug("cannot find synthetic ip for sending the output packet, try to use any existing ip");
+            var ipmac = pkb.network.ips.findAnyIPForRouting(pkb.ipPkt.getDst() instanceof IPv6);
+            if (ipmac == null) {
+                Logger.shouldNotHappen("cannot find synthetic ip for sending the output packet");
+                return;
+            }
+            srcMac = ipmac.mac;
         }
         MacAddress dstMac;
 
