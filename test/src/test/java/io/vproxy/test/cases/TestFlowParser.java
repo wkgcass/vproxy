@@ -199,6 +199,24 @@ public class TestFlowParser {
     }
 
     @Test
+    public void tx() throws Exception {
+        testFlow("action=tx",
+            "table=0,priority=0,actions=tx");
+        testFlow("action=TX",
+            "table=0,priority=0,actions=tx");
+    }
+
+    @Test
+    public void l3tx() throws Exception {
+        testFlow("action=l3tx",
+            "table=0,priority=0,actions=l3tx");
+        testFlow("action=L3TX",
+            "table=0,priority=0,actions=l3tx");
+        testFlow("action=L3_TX",
+            "table=0,priority=0,actions=l3tx");
+    }
+
+    @Test
     public void goto_table() throws Exception {
         testFlow("action=goto_table:1",
             "table=0,priority=0,actions=goto_table:1");

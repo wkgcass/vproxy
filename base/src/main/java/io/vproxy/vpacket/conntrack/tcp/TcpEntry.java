@@ -41,6 +41,7 @@ public class TcpEntry {
     // {
     private ConnectionHandler connectionHandler;
     private TcpListenEntry parent;
+    private TcpNat nat;
     // }
 
     public TcpEntry(TcpListenEntry listenEntry, IPPort source, IPPort destination, long seq) {
@@ -52,6 +53,14 @@ public class TcpEntry {
         this.receivingQueue = new ReceivingQueue(seq + 1 /* the sequence is syn_packet.seq + 1 */);
     }
 
+    public TcpEntry(IPPort source, IPPort destination) {
+        this.source = source;
+        this.destination = destination;
+        this.sendingQueue = null;
+        this.receivingQueue = null;
+        this.state = TcpState.CLOSED;
+    }
+
     public TcpListenEntry getParent() {
         return parent;
     }
@@ -60,13 +69,35 @@ public class TcpEntry {
         if (this.connectionHandler != null) {
             throw new IllegalStateException("cannot set connectionHandler because it already exists");
         }
+        if (nat != null) {
+            throw new IllegalStateException("this is a connection being handled by nat, cannot set connectionHandler on this connection");
+        }
         this.connectionHandler = connectionHandler;
         this.parent = null;
     }
 
+    public TcpNat getNat() {
+        return nat;
+    }
+
+    public void setNat(TcpNat nat) {
+        if (this.nat != null) {
+            throw new IllegalStateException("cannot set nat because it already exists");
+        }
+        if (connectionHandler != null || parent != null) {
+            throw new IllegalStateException("this is a connection being handled by tcp stack, cannot set nat on this connection");
+        }
+        this.nat = nat;
+    }
+
     public void destroy() {
         state = TcpState.CLOSED;
-        retransmissionTimer.cancel();
+        if (retransmissionTimer != null) {
+            retransmissionTimer.cancel();
+        }
+        if (delayedAckTimer != null) {
+            delayedAckTimer.cancel();
+        }
         if (connectionHandler != null) {
             connectionHandler.destroy(this);
         }

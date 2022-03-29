@@ -1,12 +1,14 @@
 package io.vproxy.vproxyx.websocks.uot;
 
-import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vpacket.*;
+import io.vproxy.vpacket.AbstractPacket;
+import io.vproxy.vpacket.PacketBytes;
+import io.vproxy.vpacket.TcpPacket;
+import io.vproxy.vpacket.UdpPacket;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
@@ -60,8 +62,8 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             return FilterResult.DROP;
         }
 
-        var remote = new IPPort(pkb.ipPkt.getSrc(), pkt.getSrcPort());
-        var local = new IPPort(pkb.ipPkt.getDst(), pkt.getDstPort());
+        var remote = pkt.getSrc(pkb.ipPkt);
+        var local = pkt.getDst(pkb.ipPkt);
         var udpEntry = pkb.network.conntrack.lookupUdp(remote, local);
 
         if (udpEntry != null) {
@@ -168,7 +170,7 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             return FilterResult.DROP;
         }
         var udpEntry = pkb.network.conntrack.recordUdp(src, dst, () ->
-            new EnhancedUDPEntry(listenEntry, src, dst, pkb.network, SelectorEventLoop.current()));
+            new EnhancedUDPEntry(listenEntry, src, dst, pkb.network.conntrack));
         udpEntry.userData = entry;
 
         var tpkt = buildTcpPacket(entry, pkb.tcpPkt.getDstPort(), pkb.tcpPkt.getSrcPort(), ByteArray.allocate(0));
@@ -193,8 +195,8 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
         assert Logger.lowLevelDebug("uot output got packet: " + pkb);
         var pkt = pkb.udpPkt;
 
-        var remote = new IPPort(pkb.ipPkt.getDst(), pkt.getDstPort());
-        var local = new IPPort(pkb.ipPkt.getSrc(), pkt.getSrcPort());
+        var remote = pkt.getDst(pkb.ipPkt);
+        var local = pkt.getSrc(pkb.ipPkt);
         var udpEntry = pkb.network.conntrack.lookupUdp(remote, local);
 
         if (udpEntry == null) {

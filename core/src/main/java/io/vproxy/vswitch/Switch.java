@@ -173,19 +173,8 @@ public class Switch {
     }
 
     private void stopStack() {
-        stopTcp();
-    }
-
-    private void stopTcp() {
         for (var net : networks.values()) {
-            for (var entry : net.conntrack.listListenEntries()) {
-                entry.destroy();
-                net.conntrack.removeTcpListen(entry.listening);
-            }
-            for (var entry : net.conntrack.listTcpEntries()) {
-                entry.destroy();
-                net.conntrack.removeTcp(entry.source, entry.destination);
-            }
+            net.conntrack.destroy();
         }
     }
 

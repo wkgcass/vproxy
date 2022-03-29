@@ -7,6 +7,7 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.IP;
 import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
+import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.udp.UdpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import io.vproxy.vpacket.tuples.PacketFullTuple;
@@ -68,6 +69,7 @@ public class PacketBuffer extends PacketDataBuffer {
     public boolean needTcpReset = false; // this field is only used in L4.input
     public UdpListenEntry udpListen = null;
     public UdpEntry udp = null;
+    public TcpNat tcpNat = null;
 
     // 1. set to true in L4, set to false before handling egress filters
     // 2. set to true in ingress filters, set to false before handling

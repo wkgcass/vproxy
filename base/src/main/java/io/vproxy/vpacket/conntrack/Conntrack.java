@@ -1,10 +1,13 @@
 package io.vproxy.vpacket.conntrack;
 
+import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
+import io.vproxy.vpacket.AbstractIpPacket;
+import io.vproxy.vpacket.TcpPacket;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpListenHandler;
@@ -13,9 +16,12 @@ import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpListenHandler;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class Conntrack {
+    public final SelectorEventLoop loop;
+
     private final Map<IPPort, TcpListenEntry> tcpListenEntries = new HashMap<>();
     private final Map<IPPort, UdpListenEntry> udpListenEntries = new HashMap<>();
     // dstIPPort => srcIPPort => TcpEntry
@@ -26,12 +32,24 @@ public class Conntrack {
     private static final IP ipv4BindAny = IP.from("0.0.0.0");
     private static final IP ipv6BindAny = IP.from("::");
 
-    public int countListenEntry() {
+    public Conntrack(SelectorEventLoop loop) {
+        this.loop = loop;
+    }
+
+    public int countTcpListenEntry() {
         return tcpListenEntries.size();
     }
 
-    public Collection<TcpListenEntry> listListenEntries() {
+    public Collection<TcpListenEntry> listTcpListenEntries() {
         return tcpListenEntries.values();
+    }
+
+    public int countUdpListenEntry() {
+        return udpListenEntries.size();
+    }
+
+    public Collection<UdpListenEntry> listUdpListenEntries() {
+        return udpListenEntries.values();
     }
 
     public int countTcpEntries() {
@@ -45,6 +63,22 @@ public class Conntrack {
     public Collection<TcpEntry> listTcpEntries() {
         List<TcpEntry> ls = new LinkedList<>();
         for (var map : tcpEntries.values()) {
+            ls.addAll(map.values());
+        }
+        return ls;
+    }
+
+    public int countUdpEntries() {
+        int total = 0;
+        for (var map : udpEntries.values()) {
+            total += map.size();
+        }
+        return total;
+    }
+
+    public Collection<UdpEntry> listUdpEntries() {
+        List<UdpEntry> ls = new LinkedList<>();
+        for (var map : udpEntries.values()) {
             ls.addAll(map.values());
         }
         return ls;
@@ -68,6 +102,10 @@ public class Conntrack {
         return udpListenEntries.get(dst);
     }
 
+    public TcpEntry lookupTcp(AbstractIpPacket ip, TcpPacket tcp) {
+        return lookupTcp(new IPPort(ip.getSrc(), tcp.getSrcPort()), new IPPort(ip.getDst(), tcp.getDstPort()));
+    }
+
     public TcpEntry lookupTcp(IPPort src, IPPort dst) {
         var map = tcpEntries.get(dst);
         if (map == null) {
@@ -88,15 +126,27 @@ public class Conntrack {
         return new TcpEntry(listenEntry, src, dst, seq);
     }
 
-    public TcpEntry createTcp(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
+    protected TcpEntry createTcpEntry(IPPort src, IPPort dst) {
+        return new TcpEntry(src, dst);
+    }
+
+    private TcpEntry createTcp(IPPort src, IPPort dst, BiFunction<IPPort, IPPort, TcpEntry> constructor) {
         var map = tcpEntries.computeIfAbsent(dst, x -> new HashMap<>());
-        TcpEntry entry = createTcpEntry(listenEntry, src, dst, seq);
+        TcpEntry entry = constructor.apply(src, dst);
         var old = map.put(src, entry);
         if (old != null) {
             Logger.error(LogType.IMPROPER_USE, "found old connection " + old + " but a new connection with the same tuple is created");
             old.destroy();
         }
         return entry;
+    }
+
+    public TcpEntry createTcp(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
+        return createTcp(src, dst, (_src, _dst) -> createTcpEntry(listenEntry, _src, _dst, seq));
+    }
+
+    public TcpEntry recordTcp(IPPort src, IPPort dst) {
+        return createTcp(src, dst, this::createTcpEntry);
     }
 
     public UdpEntry recordUdp(IPPort remote, IPPort local, Supplier<UdpEntry> entrySupplier) {
@@ -165,6 +215,25 @@ public class Conntrack {
         map.remove(remote);
         if (map.isEmpty()) {
             udpEntries.remove(local);
+        }
+    }
+
+    public void destroy() {
+        for (var entry : listTcpListenEntries()) {
+            entry.destroy();
+            removeTcpListen(entry.listening);
+        }
+        for (var entry : listTcpEntries()) {
+            entry.destroy();
+            removeTcp(entry.source, entry.destination);
+        }
+        for (var entry : listUdpListenEntries()) {
+            entry.destroy();
+            removeUdpListen(entry.listening);
+        }
+        for (var entry : listUdpEntries()) {
+            entry.destroy();
+            removeUdp(entry.remote, entry.local);
         }
     }
 }

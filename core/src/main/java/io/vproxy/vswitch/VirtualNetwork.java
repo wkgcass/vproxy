@@ -28,7 +28,7 @@ public class VirtualNetwork {
     public final RouteTable routeTable;
     private Annotations annotations;
 
-    public final Conntrack conntrack = new EnhancedConntrack();
+    public final Conntrack conntrack;
 
     private final FDs fds;
 
@@ -49,6 +49,7 @@ public class VirtualNetwork {
         arpTable = new ArpTable(loop.getSelectorEventLoop(), arpTableTimeout);
         ips = new SyntheticIpHolder(this);
         routeTable = new RouteTable(this);
+        conntrack = new EnhancedConntrack(loop.getSelectorEventLoop());
 
         this.fds = new VSwitchFDs(new VSwitchFDContext(swCtx, this));
     }

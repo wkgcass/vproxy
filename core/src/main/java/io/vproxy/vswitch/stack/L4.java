@@ -17,6 +17,7 @@ import io.vproxy.vswitch.SwitchContext;
 import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.stack.conntrack.EnhancedTCPEntry;
 import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
+import io.vproxy.vswitch.util.SwitchUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +36,13 @@ public class L4 {
         if (!wantToHandle(pkb)) {
             assert Logger.lowLevelDebug("L4 stack doesn't handle this packet");
             return false;
+        }
+        if (pkb.tcp != null && pkb.tcp.getNat() != null) {
+            assert Logger.lowLevelDebug("need to handle tcp nat for this packet");
+            var nat = pkb.tcp.getNat();
+            SwitchUtils.executeTcpNat(pkb, nat);
+            output(pkb);
+            return true;
         }
         if (pkb.needTcpReset) {
             assert Logger.lowLevelDebug("reset the packet");
@@ -64,8 +72,8 @@ public class L4 {
         var ipPkt = pkb.ipPkt;
         if (ipPkt.getPacket() instanceof TcpPacket) {
             var tcpPkt = (TcpPacket) ipPkt.getPacket();
-            IPPort src = new IPPort(ipPkt.getSrc(), tcpPkt.getSrcPort());
-            IPPort dst = new IPPort(ipPkt.getDst(), tcpPkt.getDstPort());
+            IPPort src = tcpPkt.getSrc(ipPkt);
+            IPPort dst = tcpPkt.getDst(ipPkt);
             var tcpEntry = pkb.network.conntrack.lookupTcp(src, dst);
             if (tcpEntry != null) {
                 pkb.tcp = tcpEntry;
@@ -434,7 +442,7 @@ public class L4 {
             var remote = new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort());
             var local = new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort());
             pkb.udp = pkb.network.conntrack.recordUdp(remote, local, () -> {
-                var entry = new EnhancedUDPEntry(pkb.udpListen, remote, local, pkb.network, swCtx.getSelectorEventLoop());
+                var entry = new EnhancedUDPEntry(pkb.udpListen, remote, local, pkb.network.conntrack);
                 entry.userData = pkb.fastpathUserData;
                 return entry;
             });
@@ -613,7 +621,7 @@ public class L4 {
 
             assert Logger.lowLevelDebug("recording udp entry: " + pkb);
             pkb.udp = network.conntrack.recordUdp(remote, local,
-                () -> new EnhancedUDPEntry(udpListen, remote, local, network, swCtx.getSelectorEventLoop()));
+                () -> new EnhancedUDPEntry(udpListen, remote, local, network.conntrack));
 
             outputL3(pkb);
         }

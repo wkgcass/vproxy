@@ -9,6 +9,8 @@ import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
+import io.vproxy.vpacket.conntrack.tcp.TcpNat;
+import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
 import io.vproxy.vswitch.iface.Iface;
@@ -275,5 +277,110 @@ public class SwitchUtils {
         }
         assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ") return " + ret);
         return ret;
+    }
+
+    public static void executeTcpNat(PacketBuffer pkb, TcpNat nat) {
+        assert Logger.lowLevelDebug("executeTcpDNat(" + pkb + ", " + nat + ")");
+        var pkt = pkb.tcpPkt;
+        boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.destination.getAddress()) &&
+            pkb.tcpPkt.getSrcPort() == nat._2.destination.getPort();
+        switch (nat.getState()) {
+            case TIME_WAIT:
+            case CLOSED:
+                if (!pkt.isSyn() || pkt.isAck()) {
+                    assert Logger.lowLevelDebug("is not syn, cannot handle this session");
+                    return;
+                }
+                nat.setState(TcpState.SYN_SENT);
+                break;
+            case SYN_SENT:
+                if (isBackhaul && pkt.isSyn() && pkt.isAck()) {
+                    nat.setState(TcpState.SYN_RECEIVED);
+                } else {
+                    nat.resetTimer();
+                }
+            case SYN_RECEIVED:
+                if (!isBackhaul && !pkt.isSyn() && pkt.isAck()) {
+                    nat.setState(TcpState.ESTABLISHED);
+                } else {
+                    nat.resetTimer();
+                }
+                break;
+            case ESTABLISHED:
+                if (pkt.isFin()) {
+                    if (isBackhaul) {
+                        nat.setState(TcpState.CLOSE_WAIT);
+                    } else {
+                        nat.setState(TcpState.FIN_WAIT_1);
+                    }
+                } else {
+                    nat.resetTimer();
+                }
+                break;
+            case FIN_WAIT_1:
+                if (isBackhaul && pkt.isAck()) {
+                    if (pkt.isFin()) {
+                        nat.setState(TcpState.TIME_WAIT);
+                    } else {
+                        nat.setState(TcpState.FIN_WAIT_2);
+                    }
+                } else {
+                    nat.resetTimer();
+                }
+                break;
+            case FIN_WAIT_2:
+                if (isBackhaul && pkt.isFin()) {
+                    nat.setState(TcpState.TIME_WAIT);
+                } else {
+                    nat.resetTimer();
+                }
+                break;
+            case CLOSE_WAIT:
+                if (!isBackhaul && pkt.isFin()) {
+                    if (pkt.isAck()) {
+                        nat.setState(TcpState.TIME_WAIT);
+                    } else {
+                        nat.setState(TcpState.CLOSING);
+                    }
+                } else {
+                    nat.resetTimer();
+                }
+                break;
+            case CLOSING:
+                if (pkt.isAck()) {
+                    nat.setState(TcpState.TIME_WAIT);
+                } else {
+                    nat.resetTimer();
+                }
+                break;
+            default:
+                Logger.shouldNotHappen("should not reach here");
+        }
+
+        if (isBackhaul) {
+            assert Logger.lowLevelDebug("change pkt to " + nat._1 + "(will reverse)");
+            if (nat._1.destination.getAddress() instanceof IPv4) {
+                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._1.destination.getAddress());
+                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._1.source.getAddress());
+            } else {
+                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._1.destination.getAddress());
+                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._1.source.getAddress());
+            }
+            pkt.setSrcPort(nat._1.destination.getPort());
+            pkt.setDstPort(nat._1.source.getPort());
+        } else {
+            assert Logger.lowLevelDebug("change pkt to " + nat._2 + "(will reverse)");
+            if (nat._1.destination.getAddress() instanceof IPv4) {
+                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._2.destination.getAddress());
+                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._2.source.getAddress());
+            } else {
+                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._2.destination.getAddress());
+                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._2.source.getAddress());
+            }
+            pkt.setSrcPort(nat._2.destination.getPort());
+            pkt.setDstPort(nat._2.source.getPort());
+        }
+
+        pkb.tcp = null;
     }
 }

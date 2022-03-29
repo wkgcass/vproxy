@@ -7,6 +7,7 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bitwise.*;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.base.util.display.TreeBuilder;
+import io.vproxy.base.util.net.IPPortPool;
 import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
 import io.vproxy.base.util.objectpool.CursorList;
 import io.vproxy.base.util.objectpool.PrototypeObjectList;
@@ -14,6 +15,7 @@ import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
 import io.vproxy.base.util.ratelimit.StatisticsRateLimiter;
 import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.MacAddress;
 import org.junit.Assert;
 import org.junit.Test;
@@ -414,5 +416,44 @@ public class TestUtilities {
         compareVersions("1.2.3-RC-4-DEV", "1.2.3-RC-4", -1);
         compareVersions("1.2.3-RC-4", "1.2.3-RC-4", 0);
         compareVersions("1.2.3-RC-4", "1.2.3-RC-5", -1);
+    }
+
+    @Test
+    public void ipportPoolOneIp() {
+        IPPortPool pool = new IPPortPool("192.168.0.1:1000");
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
+        assertNull(pool.allocate());
+
+        pool = new IPPortPool("192.168.0.1:1000-1999");
+        for (int i = 0; i < 1000; ++i) {
+            assertEquals(new IPPort(IP.from("192.168.0.1"), 1000 + i % 1000), pool.allocate());
+        }
+        assertNull(pool.allocate());
+
+        pool = new IPPortPool("192.168.0.1:1000.1005.1010");
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1005), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1010), pool.allocate());
+        assertNull(pool.allocate());
+
+        pool = new IPPortPool("192.168.0.1:1000.1004-1006.1010");
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1004), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1005), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1006), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1010), pool.allocate());
+        assertNull(pool.allocate());
+    }
+
+    @Test
+    public void ipportPoolMultiIps() {
+        IPPortPool pool = new IPPortPool("192.168.0.1:1000/192.168.0.2:1000");
+        assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
+        assertEquals(new IPPort(IP.from("192.168.0.2"), 1000), pool.allocate());
+        assertNull(pool.allocate());
+
+        pool.release(new IPPort(IP.from("192.168.0.2"), 1000));
+        assertEquals(new IPPort(IP.from("192.168.0.2"), 1000), pool.allocate());
+        assertNull(pool.allocate());
     }
 }

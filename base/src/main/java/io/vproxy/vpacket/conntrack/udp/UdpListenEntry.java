@@ -9,7 +9,7 @@ import io.vproxy.vfd.IPPort;
 import java.util.LinkedList;
 
 public class UdpListenEntry {
-    public final IPPort bind;
+    public final IPPort listening;
     private final UdpListenHandler handler;
 
     public final ReceivingQueue receivingQueue = new ReceivingQueue();
@@ -19,7 +19,7 @@ public class UdpListenEntry {
     private IPPort connect;
 
     public UdpListenEntry(IPPort dst, UdpListenHandler handler) {
-        this.bind = dst;
+        this.listening = dst;
         this.handler = handler;
     }
 

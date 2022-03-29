@@ -168,6 +168,22 @@ public class TestFlowGen {
     }
 
     @Test
+    public void tx() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.TX");
+        tables = genTable(0, EXECUTE0);
+        actions = List.of("return FilterResult.TX;");
+        check("action=tx");
+    }
+
+    @Test
+    public void l3tx() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.L3TX");
+        tables = genTable(0, EXECUTE0);
+        actions = List.of("return FilterResult.L3_TX;");
+        check("action=l3tx");
+    }
+
+    @Test
     public void table() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.Table");
         tables = genTable(0, "return table1(helper, pkb);")

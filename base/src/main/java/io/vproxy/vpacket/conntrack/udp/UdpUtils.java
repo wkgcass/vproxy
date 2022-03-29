@@ -14,7 +14,7 @@ public class UdpUtils {
 
     public static UdpPacket buildCommonUdpResponse(UdpListenEntry udp, Datagram dg) {
         var ret = new UdpPacket();
-        ret.setSrcPort(udp.bind.getPort());
+        ret.setSrcPort(udp.listening.getPort());
         ret.setDstPort(dg.remotePort);
         ret.setLength(8 + dg.data.length());
         ret.setData(new PacketBytes(dg.data));
@@ -23,9 +23,9 @@ public class UdpUtils {
     }
 
     public static AbstractIpPacket buildIpResponse(UdpListenEntry udp, Datagram dg, UdpPacket udpPkt) {
-        if (udp.bind.getAddress() instanceof IPv4) {
+        if (udp.listening.getAddress() instanceof IPv4) {
             var ipv4 = new Ipv4Packet();
-            ipv4.setSrc((IPv4) udp.bind.getAddress());
+            ipv4.setSrc((IPv4) udp.listening.getAddress());
             ipv4.setDst((IPv4) dg.remoteIp);
             var udpBytes = udpPkt.buildIPv4UdpPacket(ipv4, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
@@ -40,7 +40,7 @@ public class UdpUtils {
             return ipv4;
         } else {
             var ipv6 = new Ipv6Packet();
-            ipv6.setSrc((IPv6) udp.bind.getAddress());
+            ipv6.setSrc((IPv6) udp.listening.getAddress());
             ipv6.setDst((IPv6) dg.remoteIp);
             var udpBytes = udpPkt.buildIPv6UdpPacket(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 

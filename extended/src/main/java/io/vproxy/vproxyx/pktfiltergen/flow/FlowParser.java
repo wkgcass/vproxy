@@ -189,11 +189,22 @@ public class FlowParser {
             case "PASS":
             case "normal":
             case "NORMAL":
+            case "ACCEPT":
+            case "accept":
                 action.normal = true;
                 return;
             case "drop":
             case "DROP":
                 action.drop = true;
+                return;
+            case "tx":
+            case "TX":
+                action.tx = true;
+                return;
+            case "l3tx":
+            case "L3TX":
+            case "L3_TX":
+                action.l3tx = true;
                 return;
         }
         if (!s.contains(":")) {

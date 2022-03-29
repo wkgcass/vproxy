@@ -209,12 +209,15 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
 
     @Override
     public String inspect() {
-        //noinspection StringBufferReplaceableByString
         StringBuilder sb = new StringBuilder();
-        sb.append("ingress.microflow{hit=").append(ingressMicroFlow.getHitCount())
-            .append(",miss=").append(ingressMicroFlow.getMissCount())
-            .append(",cache=").append(ingressMicroFlow.getCurrentCacheCount())
-            .append("}");
+        if (ingressMicroFlow != null) {
+            sb.append("ingress.microflow{hit=").append(ingressMicroFlow.getHitCount())
+                .append(",miss=").append(ingressMicroFlow.getMissCount())
+                .append(",cache=").append(ingressMicroFlow.getCurrentCacheCount())
+                .append("}");
+        } else {
+            sb.append("ingress.microflow{hit=0,miss=0,cache=0}");
+        }
         return sb.toString();
     }
 }

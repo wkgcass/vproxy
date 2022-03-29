@@ -10,4 +10,8 @@ public class EnhancedTCPEntry extends TcpEntry {
     public EnhancedTCPEntry(TcpListenEntry listenEntry, IPPort source, IPPort destination, long seq) {
         super(listenEntry, source, destination, seq);
     }
+
+    public EnhancedTCPEntry(IPPort source, IPPort destination) {
+        super(source, destination);
+    }
 }

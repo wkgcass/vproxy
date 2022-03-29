@@ -35,6 +35,9 @@ public class FlowMatcher {
     public BitwiseIntMatcher tp_src;
     public BitwiseIntMatcher tp_dst;
 
+    // nat
+    public boolean is_nat;
+
     // vni
     public int vni;
 
@@ -92,6 +95,7 @@ public class FlowMatcher {
         if (tp_dst != null) {
             appendAnd(sb).append(ctx.fieldName(tp_dst)).append(".match(").append(castTransport(ctx)).append(".getDstPort()").append(")");
         }
+        // TODO
         if (vni != 0) {
             appendAnd(sb).append("pkb.network != null && pkb.network.vni == ").append(vni);
         }

@@ -87,7 +87,7 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
             throw new IOException("any local address is not allowed when using VSwitchDatagramFD");
         }
         udpListenEntry = ctx.network.conntrack.listenUdp(l4addr, new ListenHandler());
-        bindIPPort = udpListenEntry.bind;
+        bindIPPort = udpListenEntry.listening;
     }
 
     @Override
@@ -138,7 +138,7 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
         closed = true;
         if (udpListenEntry != null) {
             udpListenEntry.destroy();
-            ctx.conntrack.removeUdpListen(udpListenEntry.bind);
+            ctx.conntrack.removeUdpListen(udpListenEntry.listening);
             udpListenEntry = null;
         }
     }
@@ -146,7 +146,7 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
     @Override
     public IPPort getLocalAddress() throws IOException {
         checkEntry();
-        return udpListenEntry.bind;
+        return udpListenEntry.listening;
     }
 
     @Override
