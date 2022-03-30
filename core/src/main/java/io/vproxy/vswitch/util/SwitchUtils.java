@@ -288,79 +288,85 @@ public class SwitchUtils {
 
         pkt.initPartial(PartialPacket.LEVEL_HANDLED_FIELDS);
 
-        var state = nat.getState();
-        switch (state) {
-            case TIME_WAIT:
-            case CLOSED:
-                if (!pkt.isSyn() || pkt.isAck()) {
-                    assert Logger.lowLevelDebug("is not syn, not a new session");
-                    nat.resetTimer();
-                } else {
-                    nat.setState(TcpState.SYN_SENT);
-                }
-                break;
-            case SYN_SENT:
-                if (isBackhaul && pkt.isSyn() && pkt.isAck()) {
-                    nat.setState(TcpState.SYN_RECEIVED);
-                } else {
-                    nat.resetTimer();
-                }
-            case SYN_RECEIVED:
-                if (!isBackhaul && !pkt.isSyn() && pkt.isAck()) {
-                    nat.setState(TcpState.ESTABLISHED);
-                } else {
-                    nat.resetTimer();
-                }
-                break;
-            case ESTABLISHED:
-                if (pkt.isFin()) {
-                    if (isBackhaul) {
-                        nat.setState(TcpState.CLOSE_WAIT);
+        if (pkt.isRst()) {
+            assert Logger.lowLevelDebug("the packet is RST");
+            nat.setState(TcpState.CLOSED);
+        } else {
+            assert Logger.lowLevelDebug("the packet is not RST");
+            var state = nat.getState();
+            switch (state) {
+                case TIME_WAIT:
+                case CLOSED:
+                    if (!pkt.isSyn() || pkt.isAck()) {
+                        assert Logger.lowLevelDebug("is not syn, not a new session");
+                        nat.resetTimer();
                     } else {
-                        nat.setState(TcpState.FIN_WAIT_1);
+                        nat.setState(TcpState.SYN_SENT);
                     }
-                } else {
-                    nat.resetTimer();
-                }
-                break;
-            case FIN_WAIT_1:
-                if (isBackhaul && pkt.isAck()) {
+                    break;
+                case SYN_SENT:
+                    if (isBackhaul && pkt.isSyn() && pkt.isAck()) {
+                        nat.setState(TcpState.SYN_RECEIVED);
+                    } else {
+                        nat.resetTimer();
+                    }
+                case SYN_RECEIVED:
+                    if (!isBackhaul && !pkt.isSyn() && pkt.isAck()) {
+                        nat.setState(TcpState.ESTABLISHED);
+                    } else {
+                        nat.resetTimer();
+                    }
+                    break;
+                case ESTABLISHED:
                     if (pkt.isFin()) {
+                        if (isBackhaul) {
+                            nat.setState(TcpState.CLOSE_WAIT);
+                        } else {
+                            nat.setState(TcpState.FIN_WAIT_1);
+                        }
+                    } else {
+                        nat.resetTimer();
+                    }
+                    break;
+                case FIN_WAIT_1:
+                    if (isBackhaul && pkt.isAck()) {
+                        if (pkt.isFin()) {
+                            nat.setState(TcpState.TIME_WAIT);
+                        } else {
+                            nat.setState(TcpState.FIN_WAIT_2);
+                        }
+                    } else {
+                        nat.resetTimer();
+                    }
+                    break;
+                case FIN_WAIT_2:
+                    if (isBackhaul && pkt.isFin()) {
                         nat.setState(TcpState.TIME_WAIT);
                     } else {
-                        nat.setState(TcpState.FIN_WAIT_2);
+                        nat.resetTimer();
                     }
-                } else {
-                    nat.resetTimer();
-                }
-                break;
-            case FIN_WAIT_2:
-                if (isBackhaul && pkt.isFin()) {
-                    nat.setState(TcpState.TIME_WAIT);
-                } else {
-                    nat.resetTimer();
-                }
-                break;
-            case CLOSE_WAIT:
-                if (!isBackhaul && pkt.isFin()) {
+                    break;
+                case CLOSE_WAIT:
+                    if (!isBackhaul && pkt.isFin()) {
+                        if (pkt.isAck()) {
+                            nat.setState(TcpState.TIME_WAIT);
+                        } else {
+                            nat.setState(TcpState.CLOSING);
+                        }
+                    } else {
+                        nat.resetTimer();
+                    }
+                    break;
+                case CLOSING:
                     if (pkt.isAck()) {
                         nat.setState(TcpState.TIME_WAIT);
                     } else {
-                        nat.setState(TcpState.CLOSING);
+                        nat.resetTimer();
                     }
-                } else {
-                    nat.resetTimer();
-                }
-                break;
-            case CLOSING:
-                if (pkt.isAck()) {
-                    nat.setState(TcpState.TIME_WAIT);
-                } else {
-                    nat.resetTimer();
-                }
-                break;
-            default:
-                Logger.shouldNotHappen("should not reach here: " + state);
+                    break;
+                default:
+                    Logger.shouldNotHappen("should not reach here: " + state);
+            }
         }
 
         if (isBackhaul) {
