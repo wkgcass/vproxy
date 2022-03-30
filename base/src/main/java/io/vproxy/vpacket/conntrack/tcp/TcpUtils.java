@@ -14,8 +14,8 @@ public class TcpUtils {
 
     public static TcpPacket buildCommonTcpResponse(TcpEntry tcp) {
         var ret = new TcpPacket();
-        ret.setSrcPort(tcp.destination.getPort());
-        ret.setDstPort(tcp.source.getPort());
+        ret.setSrcPort(tcp.local.getPort());
+        ret.setDstPort(tcp.remote.getPort());
         ret.setSeqNum(tcp.sendingQueue.getFetchSeq());
         ret.setAckNum(tcp.receivingQueue.getAckedSeq());
         ret.setWindow(tcp.receivingQueue.getWindow() / tcp.receivingQueue.getWindowScale());
@@ -24,10 +24,10 @@ public class TcpUtils {
     }
 
     public static AbstractIpPacket buildIpResponse(TcpEntry tcp, TcpPacket tcpPkt) {
-        if (tcp.source.getAddress() instanceof IPv4) {
+        if (tcp.remote.getAddress() instanceof IPv4) {
             var ipv4 = new Ipv4Packet();
-            ipv4.setSrc((IPv4) tcp.destination.getAddress());
-            ipv4.setDst((IPv4) tcp.source.getAddress());
+            ipv4.setSrc((IPv4) tcp.local.getAddress());
+            ipv4.setDst((IPv4) tcp.remote.getAddress());
             var tcpBytes = tcpPkt.buildIPv4TcpPacket(ipv4, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv4.setVersion(4);
@@ -41,8 +41,8 @@ public class TcpUtils {
             return ipv4;
         } else {
             var ipv6 = new Ipv6Packet();
-            ipv6.setSrc((IPv6) tcp.destination.getAddress());
-            ipv6.setDst((IPv6) tcp.source.getAddress());
+            ipv6.setSrc((IPv6) tcp.local.getAddress());
+            ipv6.setDst((IPv6) tcp.remote.getAddress());
             var tcpBytes = tcpPkt.buildIPv6TcpPacket(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv6.setVersion(6);

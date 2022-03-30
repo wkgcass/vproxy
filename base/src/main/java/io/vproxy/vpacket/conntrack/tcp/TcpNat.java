@@ -95,11 +95,11 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
         isDestroyed = true;
 
         timer.cancel();
-        conntrack.removeTcp(_1.source, _1.destination);
-        conntrack.removeTcp(_2.source, _2.destination);
+        conntrack.removeTcp(_1.remote, _1.local);
+        conntrack.removeTcp(_2.remote, _2.local);
 
         if (releaseIp && pool != null) {
-            pool.release(_2.destination);
+            pool.release(_2.local);
         }
     }
 

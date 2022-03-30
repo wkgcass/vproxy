@@ -106,12 +106,12 @@ public class Conntrack {
         return lookupTcp(new IPPort(ip.getSrc(), tcp.getSrcPort()), new IPPort(ip.getDst(), tcp.getDstPort()));
     }
 
-    public TcpEntry lookupTcp(IPPort src, IPPort dst) {
-        var map = tcpEntries.get(dst);
+    public TcpEntry lookupTcp(IPPort remote, IPPort local) {
+        var map = tcpEntries.get(local);
         if (map == null) {
             return null;
         }
-        return map.get(src);
+        return map.get(remote);
     }
 
     public UdpEntry lookupUdp(IPPort remote, IPPort local) {
@@ -122,18 +122,18 @@ public class Conntrack {
         return map.get(remote);
     }
 
-    protected TcpEntry createTcpEntry(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
-        return new TcpEntry(listenEntry, src, dst, seq);
+    protected TcpEntry createTcpEntry(TcpListenEntry listenEntry, IPPort remote, IPPort local, long seq) {
+        return new TcpEntry(listenEntry, remote, local, seq);
     }
 
-    protected TcpEntry createTcpEntry(IPPort src, IPPort dst) {
-        return new TcpEntry(src, dst);
+    protected TcpEntry createTcpEntry(IPPort remote, IPPort local) {
+        return new TcpEntry(remote, local);
     }
 
-    private TcpEntry createTcp(IPPort src, IPPort dst, BiFunction<IPPort, IPPort, TcpEntry> constructor) {
-        var map = tcpEntries.computeIfAbsent(dst, x -> new HashMap<>());
-        TcpEntry entry = constructor.apply(src, dst);
-        var old = map.put(src, entry);
+    private TcpEntry createTcp(IPPort remote, IPPort local, BiFunction<IPPort, IPPort, TcpEntry> constructor) {
+        var map = tcpEntries.computeIfAbsent(local, x -> new HashMap<>());
+        TcpEntry entry = constructor.apply(remote, local);
+        var old = map.put(remote, entry);
         if (old != null) {
             Logger.error(LogType.IMPROPER_USE, "found old connection " + old + " but a new connection with the same tuple is created");
             old.destroy();
@@ -141,12 +141,12 @@ public class Conntrack {
         return entry;
     }
 
-    public TcpEntry createTcp(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
-        return createTcp(src, dst, (_src, _dst) -> createTcpEntry(listenEntry, _src, _dst, seq));
+    public TcpEntry createTcp(TcpListenEntry listenEntry, IPPort remote, IPPort local, long seq) {
+        return createTcp(remote, local, (_src, _dst) -> createTcpEntry(listenEntry, _src, _dst, seq));
     }
 
-    public TcpEntry recordTcp(IPPort src, IPPort dst) {
-        return createTcp(src, dst, this::createTcpEntry);
+    public TcpEntry recordTcp(IPPort remote, IPPort local) {
+        return createTcp(remote, local, this::createTcpEntry);
     }
 
     public UdpEntry recordUdp(IPPort remote, IPPort local, Supplier<UdpEntry> entrySupplier) {
@@ -196,14 +196,14 @@ public class Conntrack {
         }
     }
 
-    public void removeTcp(IPPort src, IPPort dst) {
-        var map = tcpEntries.get(dst);
+    public void removeTcp(IPPort remote, IPPort local) {
+        var map = tcpEntries.get(local);
         if (map == null) {
             return;
         }
-        map.remove(src);
+        map.remove(remote);
         if (map.isEmpty()) {
-            tcpEntries.remove(dst);
+            tcpEntries.remove(local);
         }
     }
 
@@ -225,7 +225,7 @@ public class Conntrack {
         }
         for (var entry : listTcpEntries()) {
             entry.destroy();
-            removeTcp(entry.source, entry.destination);
+            removeTcp(entry.remote, entry.local);
         }
         for (var entry : listUdpListenEntries()) {
             entry.destroy();

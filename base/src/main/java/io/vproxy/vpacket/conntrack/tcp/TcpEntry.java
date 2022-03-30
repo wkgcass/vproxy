@@ -26,8 +26,8 @@ public class TcpEntry {
     public static final int MAX_REMOTE_WINDOW_MSS_DUP = 45; // * mss
     public static final int MAX_RETRANSMISSION_AFTER_CLOSING = 7;
 
-    public final IPPort source;
-    public final IPPort destination;
+    public final IPPort remote;
+    public final IPPort local;
     private TcpState state;
     private boolean needClosing = false;
 
@@ -44,18 +44,18 @@ public class TcpEntry {
     private TcpNat nat;
     // }
 
-    public TcpEntry(TcpListenEntry listenEntry, IPPort source, IPPort destination, long seq) {
+    public TcpEntry(TcpListenEntry listenEntry, IPPort remote, IPPort local, long seq) {
         this.parent = listenEntry;
-        this.source = source;
-        this.destination = destination;
+        this.remote = remote;
+        this.local = local;
         this.state = TcpState.CLOSED;
         this.sendingQueue = new SendingQueue(new Random().nextInt(TCP_SEQ_RAND) + TCP_SEQ_INIT_MIN);
         this.receivingQueue = new ReceivingQueue(seq + 1 /* the sequence is syn_packet.seq + 1 */);
     }
 
-    public TcpEntry(IPPort source, IPPort destination) {
-        this.source = source;
-        this.destination = destination;
+    public TcpEntry(IPPort remote, IPPort local) {
+        this.remote = remote;
+        this.local = local;
         this.sendingQueue = null;
         this.receivingQueue = null;
         this.state = TcpState.CLOSED;
@@ -476,8 +476,8 @@ public class TcpEntry {
     @Override
     public String toString() {
         return "TcpEntry{" +
-            "source=" + source +
-            ", destination=" + destination +
+            "remote=" + remote +
+            ", local=" + local +
             ", state=" + state +
             '}';
     }

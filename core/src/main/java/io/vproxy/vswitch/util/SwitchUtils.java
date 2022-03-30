@@ -282,8 +282,8 @@ public class SwitchUtils {
     public static void executeTcpNat(PacketBuffer pkb, TcpNat nat) {
         assert Logger.lowLevelDebug("executeTcpNat(" + pkb + ", " + nat + ")");
         var pkt = pkb.tcpPkt;
-        boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.source.getAddress()) &&
-            pkb.tcpPkt.getSrcPort() == nat._2.source.getPort();
+        boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.remote.getAddress()) &&
+            pkb.tcpPkt.getSrcPort() == nat._2.remote.getPort();
         assert Logger.lowLevelDebug("isBackhaul = " + isBackhaul);
 
         pkt.initPartial(PartialPacket.LEVEL_HANDLED_FIELDS);
@@ -371,26 +371,26 @@ public class SwitchUtils {
 
         if (isBackhaul) {
             assert Logger.lowLevelDebug("change pkt to " + nat._1 + "(will reverse)");
-            if (nat._1.destination.getAddress() instanceof IPv4) {
-                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._1.destination.getAddress());
-                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._1.source.getAddress());
+            if (nat._1.local.getAddress() instanceof IPv4) {
+                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._1.local.getAddress());
+                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._1.remote.getAddress());
             } else {
-                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._1.destination.getAddress());
-                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._1.source.getAddress());
+                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._1.local.getAddress());
+                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._1.remote.getAddress());
             }
-            pkt.setSrcPort(nat._1.destination.getPort());
-            pkt.setDstPort(nat._1.source.getPort());
+            pkt.setSrcPort(nat._1.local.getPort());
+            pkt.setDstPort(nat._1.remote.getPort());
         } else {
             assert Logger.lowLevelDebug("change pkt to " + nat._2 + "(will reverse)");
-            if (nat._1.destination.getAddress() instanceof IPv4) {
-                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._2.destination.getAddress());
-                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._2.source.getAddress());
+            if (nat._1.local.getAddress() instanceof IPv4) {
+                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._2.local.getAddress());
+                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._2.remote.getAddress());
             } else {
-                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._2.destination.getAddress());
-                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._2.source.getAddress());
+                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._2.local.getAddress());
+                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._2.remote.getAddress());
             }
-            pkt.setSrcPort(nat._2.destination.getPort());
-            pkt.setDstPort(nat._2.source.getPort());
+            pkt.setSrcPort(nat._2.local.getPort());
+            pkt.setDstPort(nat._2.remote.getPort());
         }
 
         pkb.tcp = null;

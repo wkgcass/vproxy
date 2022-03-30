@@ -66,13 +66,13 @@ public class ConntrackHandle {
             var nat = tcp.getNat();
             if (nat == null) {
                 result.add(new ConntrackEntry(
-                    Protocol.TCP, tcp.getState(), tcp.source, tcp.destination
+                    Protocol.TCP, tcp.getState(), tcp.remote, tcp.local
                 ));
             } else {
                 var another = nat._1 == tcp ? nat._2 : nat._1;
                 result.add(new ConntrackEntry(
-                    Protocol.TCP, nat.getState(), tcp.source, tcp.destination,
-                    new NatRecord(another.source, another.destination, nat.getTTL())
+                    Protocol.TCP, nat.getState(), tcp.remote, tcp.local,
+                    new NatRecord(another.remote, another.local, nat.getTTL())
                 ));
             }
         }

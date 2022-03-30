@@ -138,14 +138,14 @@ public class ConnectionHandle {
     }
 
     public static class Conn {
-        public final IPPort src;
-        public final IPPort dst;
+        public final IPPort remote;
+        public final IPPort local;
         public final String state;
         private final Connection conn;
 
         public Conn(TcpEntry tcp) {
-            this.src = tcp.source;
-            this.dst = tcp.destination;
+            this.remote = tcp.remote;
+            this.local = tcp.local;
             this.state = tcp.getState().name();
             this.conn = null;
         }
@@ -156,11 +156,11 @@ public class ConnectionHandle {
 
         public Conn(Connection conn, boolean active) {
             if (active) {
-                src = conn.getLocal();
-                dst = conn.remote;
+                remote = conn.getLocal();
+                local = conn.remote;
             } else {
-                src = conn.remote;
-                dst = conn.getLocal();
+                remote = conn.remote;
+                local = conn.getLocal();
             }
             if (conn.isClosed()) {
                 state = "CLOSED";
@@ -178,11 +178,11 @@ public class ConnectionHandle {
 
         @Override
         public String toString() {
-            return src.formatToIPPortString() + "/" + dst.formatToIPPortString() + "[" + state + "]";
+            return remote.formatToIPPortString() + "/" + local.formatToIPPortString() + "[" + state + "]";
         }
 
         public String id() {
-            return src.formatToIPPortString() + "/" + dst.formatToIPPortString();
+            return remote.formatToIPPortString() + "/" + local.formatToIPPortString();
         }
 
         public void close() {

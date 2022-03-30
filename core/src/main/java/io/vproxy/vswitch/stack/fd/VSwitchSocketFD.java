@@ -115,13 +115,13 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
     @Override
     public IPPort getLocalAddress() throws IOException {
         checkEntry();
-        return entry.destination;
+        return entry.local;
     }
 
     @Override
     public IPPort getRemoteAddress() throws IOException {
         checkEntry();
-        return entry.source;
+        return entry.remote;
     }
 
     @Override
@@ -234,7 +234,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
     @Override
     public String toString() {
-        return "VSwitchSocketFD(" + entry.source + "->" + entry.destination + ")[" + (closed ? "CLOSED" : "OPEN") + "]";
+        return "VSwitchSocketFD(" + entry.remote + "->" + entry.local + ")[" + (closed ? "CLOSED" : "OPEN") + "]";
     }
 
     private class ConnectionHandler implements io.vproxy.vpacket.conntrack.tcp.ConnectionHandler {

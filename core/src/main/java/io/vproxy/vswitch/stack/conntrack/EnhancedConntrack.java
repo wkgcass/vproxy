@@ -12,12 +12,12 @@ public class EnhancedConntrack extends Conntrack {
     }
 
     @Override
-    protected TcpEntry createTcpEntry(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
-        return new EnhancedTCPEntry(listenEntry, src, dst, seq);
+    protected TcpEntry createTcpEntry(TcpListenEntry listenEntry, IPPort remote, IPPort local, long seq) {
+        return new EnhancedTCPEntry(listenEntry, remote, local, seq);
     }
 
     @Override
-    protected TcpEntry createTcpEntry(IPPort src, IPPort dst) {
-        return new EnhancedTCPEntry(src, dst);
+    protected TcpEntry createTcpEntry(IPPort remote, IPPort local) {
+        return new EnhancedTCPEntry(remote, local);
     }
 }

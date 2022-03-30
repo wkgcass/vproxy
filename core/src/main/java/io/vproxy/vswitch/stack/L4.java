@@ -572,7 +572,7 @@ public class L4 {
         output(pkb);
 
         tcp.setState(TcpState.CLOSED);
-        network.conntrack.removeTcp(tcp.source, tcp.destination);
+        network.conntrack.removeTcp(tcp.remote, tcp.local);
     }
 
     private void sendTcpPsh(VirtualNetwork network, TcpEntry tcp, Segment s) {
