@@ -84,6 +84,10 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
         timer.resetTimer();
     }
 
+    public long getTTL() {
+        return timer.getTTL();
+    }
+
     public void destroy() {
         if (isDestroyed) {
             return;

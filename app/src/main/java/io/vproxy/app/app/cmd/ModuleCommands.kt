@@ -2,6 +2,7 @@ package io.vproxy.app.app.cmd
 
 import io.vproxy.app.app.cmd.handle.param.*
 import io.vproxy.app.app.cmd.handle.resource.*
+import io.vproxy.base.util.display.TableBuilder
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
@@ -775,6 +776,41 @@ class ModuleCommands private constructor() : Commands() {
         exec = {
           ArpHandle.remove(it)
           CmdResult()
+        }
+      )
+    }
+    it + Res(ResourceType.conntrack) {
+      it + ResAct(
+        relation = ResRelation(
+          ResourceType.conntrack, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
+        action = ActType.list,
+        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        exec = {
+          val cnt = ConntrackHandle.count(it.resource.parentResource)
+          CmdResult(cnt, cnt, "" + cnt)
+        }
+      )
+      it + ResAct(
+        relation = ResRelation(
+          ResourceType.conntrack, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
+        action = ActType.listdetail,
+        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        exec = {
+          val ctLs = ConntrackHandle.list(it.resource.parentResource)
+          val tb = TableBuilder()
+          ctLs.stream().forEach { it.buildTable(tb) }
+          val str = tb.toString()
+          CmdResult(ctLs, str.split("\n"), str)
         }
       )
     }

@@ -24,6 +24,7 @@ public enum ResourceType {
     sw("switch"),
     vpc("vpc"),
     arp("arp"),
+    conntrack("ct"),
     iface("iface"),
     user("user"),
     tap("tap"),

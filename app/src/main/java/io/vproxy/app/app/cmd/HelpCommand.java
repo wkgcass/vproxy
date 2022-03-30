@@ -1273,6 +1273,21 @@ public class HelpCommand {
                     )
                 ))
             )),
+        conntrack("conntrack", "ct", "connection tracking table entries", Arrays.asList(
+            new ResActMan(ActMan.list, "count entries in a vpc", Collections.emptyList(), Collections.singletonList(
+                new Tuple<>(
+                    "list conntrack in vpc 1314 in switch sw0",
+                    "(integer) 2"
+                )
+            )),
+            new ResActMan(ActMan.listdetail, "list connection tracking table entries in a vpc", Collections.emptyList(), Collections.singletonList(
+                new Tuple<>(
+                    "list-detail conntrack in vpc 1314 in switch sw0",
+                    "1) \"TCP ESTABLISHED remote=10.100.0.2:80    local=10.100.0.1:50014      --nat-> local=123.123.123.123:1234  remote=10.100.0.1:50014 TTL:431993\"\n" +
+                        "2) \"TCP ESTABLISHED remote=10.100.0.1:50014 local=123.123.123.123:1234  --nat-> local=10.100.0.1:50014      remote=10.100.0.2:80    TTL:43199\""
+                )
+            ))
+        )),
         user("user", null, "user in a switch",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add a user to a switch", Arrays.asList(
