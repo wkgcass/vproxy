@@ -809,8 +809,8 @@ class ModuleCommands private constructor() : Commands() {
           val ctLs = ConntrackHandle.list(it.resource.parentResource)
           val tb = TableBuilder()
           ctLs.stream().forEach { it.buildTable(tb) }
-          val str = tb.toString()
-          CmdResult(ctLs, str.split("\n"), str)
+          val str = tb.toString().trim()
+          CmdResult(ctLs, if (str.isBlank()) arrayOf<String>() else str.split("\n"), str)
         }
       )
     }
