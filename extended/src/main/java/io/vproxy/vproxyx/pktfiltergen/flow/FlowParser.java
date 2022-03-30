@@ -6,10 +6,9 @@ import io.vproxy.base.util.Network;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.IPv4;
-import io.vproxy.vfd.IPv6;
-import io.vproxy.vfd.MacAddress;
+import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.vfd.*;
 
 public class FlowParser {
     private final String input;
@@ -164,6 +163,14 @@ public class FlowParser {
                 isNotSet(flow.matcher.tp_dst, "tp_dst");
                 flow.matcher.tp_dst = portMatcher(value);
                 return;
+            case "ct_state":
+                nwProtoTP();
+                isNotSet(flow.matcher.ct_state, "ct_state");
+                if (!value.equals("+trk") && !value.equals("-trk")) {
+                    throw new Exception("ct_state only supports +trk or -trk: " + value);
+                }
+                flow.matcher.ct_state = value;
+                return;
             case "vni":
                 flow.matcher.vni = parsePositiveInt(value);
                 return;
@@ -205,6 +212,9 @@ public class FlowParser {
             case "L3TX":
             case "L3_TX":
                 action.l3tx = true;
+                return;
+            case "nat":
+                action.nat = true;
                 return;
         }
         if (!s.contains(":")) {
@@ -251,6 +261,15 @@ public class FlowParser {
                 return;
             case "limit_pps":
                 action.limit_pps = parsePositiveLong(value);
+                return;
+            case "dnat":
+                action.dnat = parseIPPort(value);
+                return;
+            case "snat":
+                action.snat = parseIPPortPool(value);
+                return;
+            case "fnat":
+                action.fnat = parseFNat(value);
                 return;
             case "run":
                 assertValidMethodName(value);
@@ -304,6 +323,45 @@ public class FlowParser {
             throw new Exception("zero not allowed");
         }
         return n;
+    }
+
+    private IPPort parseIPPort(String value) throws Exception {
+        try {
+            return new IPPort(value);
+        } catch (IllegalArgumentException e) {
+            throw new Exception("unexpected fnat expression: " + e.getMessage() + ": " + value);
+        }
+    }
+
+    private IPPortPool parseIPPortPool(String value) throws Exception {
+        try {
+            return new IPPortPool(value);
+        } catch (IllegalArgumentException e) {
+            throw new Exception("unexpected snat expression: " + e.getMessage() + ": " + value);
+        }
+    }
+
+    private Tuple<IPPortPool, IPPort> parseFNat(String value) throws Exception {
+        if (!value.contains("^")) {
+            throw new Exception("unexpected fnat expression, must contain `^` to split src pool and dst ip: " + value);
+        }
+        String[] split = value.split("\\^");
+        if (split.length != 2) {
+            throw new Exception("unexpected fnat expression, expecting $src_ipport_pool^$dst_ipport: " + value);
+        }
+        IPPortPool pool;
+        try {
+            pool = new IPPortPool(split[0]);
+        } catch (IllegalArgumentException e) {
+            throw new Exception("unexpected fnat expression: " + e.getMessage() + ": " + value);
+        }
+        IPPort dst;
+        try {
+            dst = new IPPort(split[1]);
+        } catch (IllegalArgumentException e) {
+            throw new Exception("unexpected fnat expression: " + e.getMessage() + ": " + value);
+        }
+        return new Tuple<>(pool, dst);
     }
 
     private void assertValidMethodName(String value) throws Exception {

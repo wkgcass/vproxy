@@ -1,7 +1,10 @@
 package io.vproxy.vproxyx.pktfiltergen.flow;
 
 import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.net.IPPortPool;
 import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv6;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
@@ -24,6 +27,11 @@ public class FlowAction {
 
     public long limit_bps;
     public long limit_pps;
+
+    public boolean nat;
+    public IPPort dnat;
+    public IPPortPool snat;
+    public Tuple<IPPortPool, IPPort> fnat;
 
     public String run;
     public String invoke;
@@ -59,6 +67,22 @@ public class FlowAction {
                 "}";
         } else if (limit_pps != 0) {
             return "if (!helper.ratelimitByPacketsPerSecond(pkb, ratelimiters[" + ctx.newPPSRateLimiter(limit_pps) + "])) {\n" +
+                "\treturn FilterResult.DROP;\n" +
+                "}";
+        } else if (nat) {
+            return "if (!helper.executeNat(pkb)) {\n" +
+                "\treturn FilterResult.DROP;\n" +
+                "}";
+        } else if (dnat != null) {
+            return "if (!helper.executeDNat(pkb, " + ctx.fieldName(dnat) + ")) {\n" +
+                "\treturn FilterResult.DROP;\n" +
+                "}";
+        } else if (snat != null) {
+            return "if (!helper.executeSNat(pkb, " + ctx.fieldName(snat) + ")) {\n" +
+                "\treturn FilterResult.DROP;\n" +
+                "}";
+        } else if (fnat != null) {
+            return "if (!helper.executeFNat(pkb, " + ctx.fieldName(fnat._1) + ", " + ctx.fieldName(fnat._2) + ")) {\n" +
                 "\treturn FilterResult.DROP;\n" +
                 "}";
         } else if (run != null) {
@@ -123,6 +147,14 @@ public class FlowAction {
             return "limit_bps:" + limit_bps;
         } else if (limit_pps != 0) {
             return "limit_pps:" + limit_pps;
+        } else if (nat) {
+            return "nat";
+        } else if (dnat != null) {
+            return "dnat:" + dnat.formatToIPPortString();
+        } else if (snat != null) {
+            return "snat:" + snat.serialize();
+        } else if (fnat != null) {
+            return "fnat:" + fnat._1.serialize() + "^" + fnat._2.formatToIPPortString();
         } else if (run != null) {
             return "run:" + run;
         } else if (invoke != null) {

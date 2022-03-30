@@ -3,13 +3,11 @@ package io.vproxy.vproxyx.pktfiltergen.flow;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.net.IPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
 import io.vproxy.dep.vjson.simple.SimpleString;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.IPv4;
-import io.vproxy.vfd.IPv6;
-import io.vproxy.vfd.MacAddress;
+import io.vproxy.vfd.*;
 import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
@@ -384,6 +382,24 @@ public class Flows {
                 .append(matcher.getMatcher()).append(", ")
                 .append(matcher.getMask()).append(");\n");
         }
+        for (IPPort ipport : ctx.ipportFields) {
+            ctx.ensureImport(IPPort.class);
+            genIndent(sb, 4);
+            sb.append("private static final IPPort ")
+                .append(ctx.fieldName(ipport)).append(" = ")
+                .append("new IPPort(\"")
+                .append(ipport.formatToIPPortString())
+                .append("\");\n");
+        }
+        for (IPPortPool pool : ctx.ipportPoolFields) {
+            ctx.ensureImport(IPPortPool.class);
+            genIndent(sb, 4);
+            sb.append("private final IPPortPool ")
+                .append(ctx.fieldName(pool)).append(" = ")
+                .append("new IPPortPool(\"")
+                .append(pool.serialize())
+                .append("\");\n");
+        }
         if (!ctx.indexedIfaces.isEmpty()) {
             genIndent(sb, 4);
             ctx.ensureImport(IfaceHolder.class);
@@ -497,6 +513,8 @@ public class Flows {
         private final Set<IPv6> ipv6Fields = new HashSet<>();
         private final List<BitwiseMatcher> bitwiseMatcherFields = new ArrayList<>();
         private final List<BitwiseIntMatcher> bitwiseIntMatcherFields = new ArrayList<>();
+        private final Set<IPPort> ipportFields = new HashSet<>();
+        private final List<IPPortPool> ipportPoolFields = new ArrayList<>();
         private final List<String> actions = new ArrayList<>();
         private final LinkedHashSet<String> predicateMethods = new LinkedHashSet<>();
         private final LinkedHashSet<String> runnableMethods = new LinkedHashSet<>();
@@ -572,6 +590,24 @@ public class Flows {
                 bitwiseIntMatcherFields.add(matcher);
             }
             return "BITWISE_INT_MATCHER_HOLDER_" + idx;
+        }
+
+        public String fieldName(IPPort ipport) {
+            ipportFields.add(ipport);
+            if (ipport.getAddress() instanceof IPv4) {
+                return "IPv4PORT_HOLDER_" + ipport.getAddress().formatToIPString().replace(".", "_") + "$" + ipport.getPort();
+            } else {
+                return "IPv6PORT_HOLDER_" + ipport.getAddress().formatToIPString().replace(":", "_") + "$" + ipport.getPort();
+            }
+        }
+
+        public String fieldName(IPPortPool pool) {
+            int idx = ipportPoolFields.indexOf(pool);
+            if (idx == -1) {
+                idx = ipportPoolFields.size();
+                ipportPoolFields.add(pool);
+            }
+            return "IPPORTPOOL_HOLDER_" + idx;
         }
 
         public Flow getCurrentFlow() {

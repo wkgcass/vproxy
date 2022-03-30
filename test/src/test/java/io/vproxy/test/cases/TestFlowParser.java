@@ -177,6 +177,12 @@ public class TestFlowParser {
     }
 
     @Test
+    public void ct_state() throws Exception {
+        testFlow("tcp,ct_state=+trk,action=nat,l3tx",
+            "table=0,priority=0,ip,tcp,ct_state=+trk,actions=nat,l3tx");
+    }
+
+    @Test
     public void vni() throws Exception {
         testFlow("vni=1,action=normal",
             "table=0,priority=0,vni=1,actions=normal");
@@ -285,15 +291,39 @@ public class TestFlowParser {
     }
 
     @Test
-    public void testRateLimitBPS() throws Exception {
+    public void rateLimitBPS() throws Exception {
         testFlow("action=limit_bps:1048576,pass",
             "table=0,priority=0,actions=limit_bps:1048576,normal");
     }
 
     @Test
-    public void testRateLimitPPS() throws Exception {
+    public void rateLimitPPS() throws Exception {
         testFlow("action=limit_pps:1000000,pass",
             "table=0,priority=0,actions=limit_pps:1000000,normal");
+    }
+
+    @Test
+    public void nat() throws Exception {
+        testFlow("action=nat,pass",
+            "table=0,priority=0,actions=nat,normal");
+    }
+
+    @Test
+    public void dnat() throws Exception {
+        testFlow("action=dnat:10.100.0.2:80,pass",
+            "table=0,priority=0,actions=dnat:10.100.0.2:80,normal");
+    }
+
+    @Test
+    public void snat() throws Exception {
+        testFlow("action=snat:10.100.0.100:1-65535,pass",
+            "table=0,priority=0,actions=snat:10.100.0.100:1-65535,normal");
+    }
+
+    @Test
+    public void fnat() throws Exception {
+        testFlow("action=fnat:10.100.0.100:1-65535^10.100.0.2:80,pass",
+            "table=0,priority=0,actions=fnat:10.100.0.100:1-65535^10.100.0.2:80,normal");
     }
 
     @Test
@@ -303,7 +333,7 @@ public class TestFlowParser {
     }
 
     @Test
-    public void testInvoke() throws Exception {
+    public void invoke() throws Exception {
         testFlow("action=invoke:my_method",
             "table=0,priority=0,actions=invoke:my_method");
     }

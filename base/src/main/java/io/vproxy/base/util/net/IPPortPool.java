@@ -104,4 +104,46 @@ public class IPPortPool {
         }
         pool.release(ipport.getPort());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IPPortPool that = (IPPortPool) o;
+        return pool.equals(that.pool);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(pool);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (var tup : pool) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                sb.append("/");
+            }
+            sb.append(tup._1.formatToIPString()).append(":").append(tup._2.toString());
+        }
+        return sb.toString();
+    }
+
+    public String serialize() {
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (var tup : pool) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                sb.append("/");
+            }
+            sb.append(tup._1.formatToIPString()).append(":").append(tup._2.serialize());
+        }
+        return sb.toString();
+    }
 }

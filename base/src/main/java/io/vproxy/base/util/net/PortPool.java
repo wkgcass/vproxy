@@ -2,6 +2,9 @@ package io.vproxy.base.util.net;
 
 import io.vproxy.base.util.Utils;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 public class PortPool {
     private final int minPort;
     private final boolean[] ports;
@@ -123,5 +126,67 @@ public class PortPool {
             throw new IllegalArgumentException("not allocated");
         }
         ports[port - minPort] = true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PortPool portPool = (PortPool) o;
+        return minPort == portPool.minPort && Arrays.equals(originalPorts, portPool.originalPorts);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(minPort);
+        result = 31 * result + Arrays.hashCode(originalPorts);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "raw=" + formatToString(originalPorts) + ",current=" + formatToString(ports);
+    }
+
+    public String serialize() {
+        return formatToString(originalPorts);
+    }
+
+    private String formatToString(boolean[] portArray) {
+        StringBuilder sb = new StringBuilder();
+        int beginIndex = -1;
+        int i;
+        boolean requireAppendAfterLoop = false;
+        for (i = 0; i < portArray.length; ++i) {
+            if (portArray[i]) {
+                if (beginIndex == -1) {
+                    beginIndex = i;
+                }
+                requireAppendAfterLoop = true;
+            } else {
+                if (beginIndex != -1) {
+                    doAppend(sb, beginIndex, i);
+                    beginIndex = -1;
+                    requireAppendAfterLoop = false;
+                }
+            }
+        }
+        if (requireAppendAfterLoop) {
+            doAppend(sb, beginIndex, i);
+        }
+        return sb.toString();
+    }
+
+    private void doAppend(StringBuilder sb, int beginIndex, int i) {
+        if (sb.length() != 0) {
+            sb.append(".");
+        }
+        if (beginIndex == i - 1) {
+            sb.append(minPort + beginIndex);
+        } else if (beginIndex == i - 2) {
+            sb.append(minPort + beginIndex).append(".").append(minPort + beginIndex + 1);
+        } else {
+            sb.append(minPort + beginIndex).append("-").append(minPort + i - 1);
+        }
     }
 }

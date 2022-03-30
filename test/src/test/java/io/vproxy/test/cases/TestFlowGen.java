@@ -4,12 +4,10 @@ import io.vproxy.app.plugin.impl.BasePacketFilter;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.net.IPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.IPv4;
-import io.vproxy.vfd.IPv6;
-import io.vproxy.vfd.MacAddress;
+import io.vproxy.vfd.*;
 import io.vproxy.vpacket.*;
 import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vproxyx.pktfiltergen.flow.Flows;
@@ -601,6 +599,42 @@ public class TestFlowGen {
     }
 
     @Test
+    public void ct_state() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.CTState");
+        imports = List.of(
+            AbstractIpPacket.class,
+            Ipv4Packet.class
+        );
+        tables = genTable(0, "" +
+            "if (pkb.pkt.getType() == 2048 " +
+            "&& pkb.pkt.getPacket() instanceof Ipv4Packet " +
+            "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
+            "&& helper.isNatTracked(pkb)) {\n" +
+            "    " + EXECUTE0 + "\n" +
+            "}\n" +
+            "return FilterResult.DROP;");
+        check("tcp,ct_state=+trk,action=normal");
+    }
+
+    @Test
+    public void ct_state_untracked() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.CTStateUntracked");
+        imports = List.of(
+            AbstractIpPacket.class,
+            Ipv4Packet.class
+        );
+        tables = genTable(0, "" +
+            "if (pkb.pkt.getType() == 2048 " +
+            "&& pkb.pkt.getPacket() instanceof Ipv4Packet " +
+            "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
+            "&& !helper.isNatTracked(pkb)) {\n" +
+            "    " + EXECUTE0 + "\n" +
+            "}\n" +
+            "return FilterResult.DROP;");
+        check("tcp,ct_state=-trk,action=normal");
+    }
+
+    @Test
     public void vni() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.Vni");
         tables = genTable(0, "" +
@@ -1054,6 +1088,66 @@ public class TestFlowGen {
 
         tables = genTable(0, EXECUTE0);
         check("actions=limit_bps:1048576,limit_pps:1000000,normal");
+    }
+
+    @Test
+    public void nat() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.Nat");
+        actions = List.of("" +
+            "if (!helper.executeNat(pkb)) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}\n" +
+            "return FilterResult.L3_TX;");
+
+        tables = genTable(0, EXECUTE0);
+        check("actions=nat,l3tx");
+    }
+
+    @Test
+    public void dnat() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.DNat");
+        imports = List.of(IPPort.class);
+        fields = "private static final IPPort IPv4PORT_HOLDER_10_100_0_2$80 = new IPPort(\"10.100.0.2:80\");";
+        actions = List.of("" +
+            "if (!helper.executeDNat(pkb, IPv4PORT_HOLDER_10_100_0_2$80)) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}\n" +
+            "return FilterResult.L3_TX;");
+
+        tables = genTable(0, EXECUTE0);
+        check("actions=dnat:10.100.0.2:80,l3tx");
+    }
+
+    @Test
+    public void snat() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.SNat");
+        imports = List.of(IPPortPool.class);
+        fields = "private final IPPortPool IPPORTPOOL_HOLDER_0 = new IPPortPool(\"10.100.0.199:1-65535\");";
+        actions = List.of("" +
+            "if (!helper.executeSNat(pkb, IPPORTPOOL_HOLDER_0)) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}\n" +
+            "return FilterResult.L3_TX;");
+
+        tables = genTable(0, EXECUTE0);
+        check("actions=snat:10.100.0.199:1-65535,l3tx");
+    }
+
+    @Test
+    public void fnat() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.FNat");
+        imports = List.of(IPPort.class, IPPortPool.class);
+        fields = "" +
+            "private static final IPPort IPv4PORT_HOLDER_10_100_0_2$80 = new IPPort(\"10.100.0.2:80\");\n" +
+            "private final IPPortPool IPPORTPOOL_HOLDER_0 = new IPPortPool(\"10.100.0.199:1-65535\");";
+        actions = List.of("" +
+            "if (!helper.executeFNat(pkb, IPPORTPOOL_HOLDER_0, IPv4PORT_HOLDER_10_100_0_2$80)) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}\n" +
+            "return FilterResult.L3_TX;");
+
+        tables = genTable(0, EXECUTE0);
+        check("actions=fnat:10.100.0.199:1-65535^10.100.0.2:80,l3tx");
     }
 
     @Test

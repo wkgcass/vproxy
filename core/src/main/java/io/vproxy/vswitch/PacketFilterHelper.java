@@ -1,5 +1,6 @@
 package io.vproxy.vswitch;
 
+import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.net.IPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
@@ -53,7 +54,16 @@ public class PacketFilterHelper {
         return rl.acquire(1);
     }
 
-    public boolean isTcpNat(PacketBuffer pkb) {
+    public boolean isNatTracked(PacketBuffer pkb) {
+        if (pkb.tcpPkt != null) {
+            return isTcpNatTracked(pkb);
+        } else if (pkb.udpPkt != null) {
+            // TODO
+        }
+        return false;
+    }
+
+    private boolean isTcpNatTracked(PacketBuffer pkb) {
         if (pkb.tcpPkt == null) {
             assert Logger.lowLevelDebug("isTcpNat: no tcpPkt");
             return false;
@@ -74,20 +84,40 @@ public class PacketFilterHelper {
         return true;
     }
 
-    public void executeNat(PacketBuffer pkb) {
+    public boolean executeNat(PacketBuffer pkb) {
         if (pkb.tcpPkt != null) {
             if (pkb.tcpNat == null) {
-                isTcpNat(pkb); // try to get tcp nat record
+                isTcpNatTracked(pkb); // try to get tcp nat record
             }
             if (pkb.tcpNat != null) {
                 SwitchUtils.executeTcpNat(pkb, pkb.tcpNat);
+                return true;
+            } else {
+                return false;
             }
         } else {
             // TODO
+            return false;
         }
     }
 
-    public void newDNat(PacketBuffer pkb, IPPort dst) {
+    public boolean executeDNat(PacketBuffer pkb, IPPort dst) {
+        if (pkb.tcpPkt != null) {
+            if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
+                return executeNat(pkb);
+            }
+            newTcpDNat(pkb, dst);
+            return true;
+        } else if (pkb.udpPkt != null) {
+            // TODO
+            return true;
+        } else {
+            assert Logger.lowLevelDebug("cannot handle dnat for packet " + pkb.pkt);
+            return false;
+        }
+    }
+
+    private void newTcpDNat(PacketBuffer pkb, IPPort dst) {
         var _1 = pkb.network.conntrack.recordTcp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
@@ -102,8 +132,24 @@ public class PacketFilterHelper {
         SwitchUtils.executeTcpNat(pkb, nat);
     }
 
-    public void newSNat(PacketBuffer pkb, IPPortPool pool) {
-        IPPort src = pool.allocate();
+    public boolean executeSNat(PacketBuffer pkb, IPPortPool srcPool) {
+        if (pkb.tcpPkt != null) {
+            if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
+                return executeNat(pkb);
+            }
+            newTcpSNat(pkb, srcPool);
+            return true;
+        } else if (pkb.udpPkt != null) {
+            // TODO
+            return true;
+        } else {
+            Logger.error(LogType.IMPROPER_USE, "cannot handle snat for packet " + pkb.pkt);
+            return false;
+        }
+    }
+
+    private void newTcpSNat(PacketBuffer pkb, IPPortPool srcPool) {
+        IPPort src = srcPool.allocate();
         var _1 = pkb.network.conntrack.recordTcp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
@@ -112,13 +158,38 @@ public class PacketFilterHelper {
             new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort()),
             src
         );
-        var nat = new TcpNat(_1, _2, pool, true, pkb.network.conntrack, TcpTimeout.DEFAULT);
+        var nat = new TcpNat(_1, _2, srcPool, true, pkb.network.conntrack, TcpTimeout.DEFAULT);
         _1.setNat(nat);
         _2.setNat(nat);
         SwitchUtils.executeTcpNat(pkb, nat);
     }
 
-    public void newFullNat(PacketBuffer pkb, IPPortPool srcPool, IPPortPool dst) {
-        // TODO
+    public boolean executeFNat(PacketBuffer pkb, IPPortPool srcPool, IPPort dst) {
+        if (pkb.tcpPkt != null) {
+            if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
+                return executeNat(pkb);
+            }
+            newTcpFNat(pkb, srcPool, dst);
+            return true;
+        } else if (pkb.udpPkt != null) {
+            // TODO
+            return true;
+        } else {
+            Logger.error(LogType.IMPROPER_USE, "cannot handle fnat for packet " + pkb.pkt);
+            return false;
+        }
+    }
+
+    private void newTcpFNat(PacketBuffer pkb, IPPortPool srcPool, IPPort dst) {
+        IPPort src = srcPool.allocate();
+        var _1 = pkb.network.conntrack.recordTcp(
+            new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
+            new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
+        );
+        var _2 = pkb.network.conntrack.recordTcp(dst, src);
+        var nat = new TcpNat(_1, _2, srcPool, true, pkb.network.conntrack, TcpTimeout.DEFAULT);
+        _1.setNat(nat);
+        _2.setNat(nat);
+        SwitchUtils.executeTcpNat(pkb, nat);
     }
 }

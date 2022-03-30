@@ -425,18 +425,21 @@ public class TestUtilities {
         assertNull(pool.allocate());
 
         pool = new IPPortPool("192.168.0.1:1000-1999");
+        assertEquals("192.168.0.1:raw=1000-1999,current=1000-1999", pool.toString());
         for (int i = 0; i < 1000; ++i) {
             assertEquals(new IPPort(IP.from("192.168.0.1"), 1000 + i % 1000), pool.allocate());
         }
         assertNull(pool.allocate());
 
         pool = new IPPortPool("192.168.0.1:1000.1005.1010");
+        assertEquals("192.168.0.1:raw=1000.1005.1010,current=1000.1005.1010", pool.toString());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1005), pool.allocate());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1010), pool.allocate());
         assertNull(pool.allocate());
 
         pool = new IPPortPool("192.168.0.1:1000.1004-1006.1010");
+        assertEquals("192.168.0.1:raw=1000.1004-1006.1010,current=1000.1004-1006.1010", pool.toString());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1004), pool.allocate());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1005), pool.allocate());
@@ -448,12 +451,17 @@ public class TestUtilities {
     @Test
     public void ipportPoolMultiIps() {
         IPPortPool pool = new IPPortPool("192.168.0.1:1000/192.168.0.2:1000");
+        assertEquals("192.168.0.1:raw=1000,current=1000/192.168.0.2:raw=1000,current=1000", pool.toString());
         assertEquals(new IPPort(IP.from("192.168.0.1"), 1000), pool.allocate());
+        assertEquals("192.168.0.1:raw=1000,current=/192.168.0.2:raw=1000,current=1000", pool.toString());
         assertEquals(new IPPort(IP.from("192.168.0.2"), 1000), pool.allocate());
+        assertEquals("192.168.0.1:raw=1000,current=/192.168.0.2:raw=1000,current=", pool.toString());
         assertNull(pool.allocate());
 
         pool.release(new IPPort(IP.from("192.168.0.2"), 1000));
+        assertEquals("192.168.0.1:raw=1000,current=/192.168.0.2:raw=1000,current=1000", pool.toString());
         assertEquals(new IPPort(IP.from("192.168.0.2"), 1000), pool.allocate());
+        assertEquals("192.168.0.1:raw=1000,current=/192.168.0.2:raw=1000,current=", pool.toString());
         assertNull(pool.allocate());
     }
 }
