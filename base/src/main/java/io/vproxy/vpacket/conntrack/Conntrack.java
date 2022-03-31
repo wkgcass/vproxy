@@ -8,6 +8,7 @@ import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.TcpPacket;
+import io.vproxy.vpacket.UdpPacket;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpListenHandler;
@@ -114,6 +115,10 @@ public class Conntrack {
         return map.get(remote);
     }
 
+    public UdpEntry lookupUdp(AbstractIpPacket ip, UdpPacket udp) {
+        return lookupUdp(new IPPort(ip.getSrc(), udp.getSrcPort()), new IPPort(ip.getDst(), udp.getDstPort()));
+    }
+
     public UdpEntry lookupUdp(IPPort remote, IPPort local) {
         var map = udpEntries.get(local);
         if (map == null) {
@@ -128,6 +133,10 @@ public class Conntrack {
 
     protected TcpEntry createTcpEntry(IPPort remote, IPPort local) {
         return new TcpEntry(remote, local);
+    }
+
+    protected UdpEntry createUdpEntry(IPPort remote, IPPort local) {
+        return new UdpEntry(remote, local);
     }
 
     private TcpEntry createTcp(IPPort remote, IPPort local, BiFunction<IPPort, IPPort, TcpEntry> constructor) {
@@ -147,6 +156,17 @@ public class Conntrack {
 
     public TcpEntry recordTcp(IPPort remote, IPPort local) {
         return createTcp(remote, local, this::createTcpEntry);
+    }
+
+    public UdpEntry recordUdp(IPPort remote, IPPort local) {
+        var map = udpEntries.computeIfAbsent(local, x -> new HashMap<>());
+        UdpEntry entry = createUdpEntry(remote, local);
+        var old = map.put(remote, entry);
+        if (old != null) {
+            Logger.error(LogType.IMPROPER_USE, "found old udp entry " + old + " but a new udp entry with the same tuple is created");
+            old.destroy(false);
+        }
+        return entry;
     }
 
     public UdpEntry recordUdp(IPPort remote, IPPort local, Supplier<UdpEntry> entrySupplier) {

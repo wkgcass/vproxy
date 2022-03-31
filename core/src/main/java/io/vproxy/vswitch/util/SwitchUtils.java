@@ -4,13 +4,11 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.IPv4;
-import io.vproxy.vfd.IPv6;
-import io.vproxy.vfd.MacAddress;
+import io.vproxy.vfd.*;
 import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
+import io.vproxy.vpacket.conntrack.udp.UdpNat;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
 import io.vproxy.vswitch.iface.Iface;
@@ -369,30 +367,44 @@ public class SwitchUtils {
             }
         }
 
-        if (isBackhaul) {
-            assert Logger.lowLevelDebug("change pkt to " + nat._1 + "(will reverse)");
-            if (nat._1.local.getAddress() instanceof IPv4) {
-                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._1.local.getAddress());
-                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._1.remote.getAddress());
-            } else {
-                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._1.local.getAddress());
-                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._1.remote.getAddress());
-            }
-            pkt.setSrcPort(nat._1.local.getPort());
-            pkt.setDstPort(nat._1.remote.getPort());
-        } else {
-            assert Logger.lowLevelDebug("change pkt to " + nat._2 + "(will reverse)");
-            if (nat._1.local.getAddress() instanceof IPv4) {
-                ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) nat._2.local.getAddress());
-                ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) nat._2.remote.getAddress());
-            } else {
-                ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) nat._2.local.getAddress());
-                ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) nat._2.remote.getAddress());
-            }
-            pkt.setSrcPort(nat._2.local.getPort());
-            pkt.setDstPort(nat._2.remote.getPort());
-        }
+        applyNat(isBackhaul, nat._1.remote, nat._1.local, nat._2.remote, nat._2.local, pkb, pkt);
 
         pkb.tcp = null;
+    }
+
+    public static void executeUdpNat(PacketBuffer pkb, UdpNat nat) {
+        assert Logger.lowLevelDebug("executeUdpNat(" + pkb + ", " + nat + ")");
+        var pkt = pkb.udpPkt;
+        boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.remote.getAddress()) &&
+            pkb.udpPkt.getSrcPort() == nat._2.remote.getPort();
+        assert Logger.lowLevelDebug("isBackhaul = " + isBackhaul);
+
+        nat.resetTimer();
+
+        applyNat(isBackhaul, nat._1.remote, nat._1.local, nat._2.remote, nat._2.local, pkb, pkt);
+
+        pkb.udp = null;
+    }
+
+    private static void applyNat(boolean isBackhaul, IPPort _1remote, IPPort _1local, IPPort _2remote, IPPort _2local,
+                                 PacketBuffer pkb, TransportPacket pkt) {
+        if (isBackhaul) {
+            applyNat(_1remote, _1local, pkb, pkt, _1local.getAddress() instanceof IPv4);
+        } else {
+            applyNat(_2remote, _2local, pkb, pkt, _1local.getAddress() instanceof IPv4);
+        }
+    }
+
+    private static void applyNat(IPPort remote, IPPort local, PacketBuffer pkb, TransportPacket pkt, boolean ipv4) {
+        assert Logger.lowLevelDebug("change pkt to " + local + " -> " + remote);
+        if (ipv4) {
+            ((Ipv4Packet) pkb.ipPkt).setSrc((IPv4) local.getAddress());
+            ((Ipv4Packet) pkb.ipPkt).setDst((IPv4) remote.getAddress());
+        } else {
+            ((Ipv6Packet) pkb.ipPkt).setSrc((IPv6) local.getAddress());
+            ((Ipv6Packet) pkb.ipPkt).setDst((IPv6) remote.getAddress());
+        }
+        pkt.setSrcPort(local.getPort());
+        pkt.setDstPort(remote.getPort());
     }
 }

@@ -1,5 +1,6 @@
 package io.vproxy.vswitch.stack;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
@@ -41,6 +42,13 @@ public class L4 {
             assert Logger.lowLevelDebug("need to handle tcp nat for this packet");
             var nat = pkb.tcp.getNat();
             SwitchUtils.executeTcpNat(pkb, nat);
+            output(pkb);
+            return true;
+        }
+        if (pkb.udp != null && pkb.udp.getNat() != null) {
+            assert Logger.lowLevelDebug("need to handle udp nat for this packet");
+            var nat = pkb.udp.getNat();
+            SwitchUtils.executeUdpNat(pkb, nat);
             output(pkb);
             return true;
         }
@@ -442,7 +450,7 @@ public class L4 {
             var remote = new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort());
             var local = new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort());
             pkb.udp = pkb.network.conntrack.recordUdp(remote, local, () -> {
-                var entry = new EnhancedUDPEntry(pkb.udpListen, remote, local, pkb.network.conntrack);
+                var entry = new EnhancedUDPEntry(pkb.udpListen, remote, local, pkb.network.conntrack, Config.udpTimeout);
                 entry.userData = pkb.fastpathUserData;
                 return entry;
             });
@@ -621,7 +629,7 @@ public class L4 {
 
             assert Logger.lowLevelDebug("recording udp entry: " + pkb);
             pkb.udp = network.conntrack.recordUdp(remote, local,
-                () -> new EnhancedUDPEntry(udpListen, remote, local, network.conntrack));
+                () -> new EnhancedUDPEntry(udpListen, remote, local, network.conntrack, Config.udpTimeout));
 
             outputL3(pkb);
         }

@@ -1,5 +1,6 @@
 package io.vproxy.vproxyx.websocks.uot;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
@@ -170,7 +171,7 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             return FilterResult.DROP;
         }
         var udpEntry = pkb.network.conntrack.recordUdp(src, dst, () ->
-            new EnhancedUDPEntry(listenEntry, src, dst, pkb.network.conntrack));
+            new EnhancedUDPEntry(listenEntry, src, dst, pkb.network.conntrack, Config.udpTimeout));
         udpEntry.userData = entry;
 
         var tpkt = buildTcpPacket(entry, pkb.tcpPkt.getDstPort(), pkb.tcpPkt.getSrcPort(), ByteArray.allocate(0));
