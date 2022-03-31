@@ -97,17 +97,30 @@ public class SNatIPPortPool {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SNatIPPortPool that = (SNatIPPortPool) o;
+        return pool.equals(that.pool);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(pool);
+    }
+
+    public String serialize() {
+        return pool.serialize();
+    }
+
+    @Override
     public String toString() {
         return "SNatIPPortPool{" +
             "pool=" + pool +
             ", ctSet=" + ctSet +
             ", srcRefMap=" + srcRefMap +
             ", srcList=" + srcList +
-            '}';
-    }
-
-    public String serialize() {
-        return pool.serialize();
+            "}@" + Integer.toHexString(super.hashCode());
     }
 
     private static final class Tuple {
