@@ -188,28 +188,26 @@ public class PacketFilterHelper {
             if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
                 return executeNat(pkb);
             }
-            newTcpSNat(pkb, srcPool);
-            return true;
+            return newTcpSNat(pkb, srcPool);
         } else if (pkb.udpPkt != null) {
             if (pkb.udpNat != null || isUdpNatTracked(pkb)) {
                 return executeNat(pkb);
             }
-            newUdpSNat(pkb, srcPool);
-            return true;
+            return newUdpSNat(pkb, srcPool);
         } else {
             Logger.error(LogType.IMPROPER_USE, "cannot handle snat for packet " + pkb.pkt);
             return false;
         }
     }
 
-    private void newTcpSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
+    private boolean newTcpSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
         var dst = new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort());
-        newTcpNatWithSNatAndDst(pkb, srcPool, dst);
+        return newTcpNatWithSNatAndDst(pkb, srcPool, dst);
     }
 
-    private void newUdpSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
+    private boolean newUdpSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
         var dst = new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort());
-        newUdpNatWithSNatAndDst(pkb, srcPool, dst);
+        return newUdpNatWithSNatAndDst(pkb, srcPool, dst);
     }
 
     public boolean executeFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
@@ -217,30 +215,33 @@ public class PacketFilterHelper {
             if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
                 return executeNat(pkb);
             }
-            newTcpFNat(pkb, srcPool, dst);
-            return true;
+            return newTcpFNat(pkb, srcPool, dst);
         } else if (pkb.udpPkt != null) {
             if (pkb.udpNat != null || isUdpNatTracked(pkb)) {
                 return executeNat(pkb);
             }
-            newUdpFNat(pkb, srcPool, dst);
-            return true;
+            return newUdpFNat(pkb, srcPool, dst);
         } else {
             Logger.error(LogType.IMPROPER_USE, "cannot handle fnat for packet " + pkb.pkt);
             return false;
         }
     }
 
-    private void newTcpFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
-        newTcpNatWithSNatAndDst(pkb, srcPool, dst);
+    private boolean newTcpFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+        return newTcpNatWithSNatAndDst(pkb, srcPool, dst);
     }
 
-    private void newUdpFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
-        newUdpNatWithSNatAndDst(pkb, srcPool, dst);
+    private boolean newUdpFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+        return newUdpNatWithSNatAndDst(pkb, srcPool, dst);
     }
 
-    private void newTcpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+    private boolean newTcpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
         IPPort src = srcPool.allocate(Protocol.TCP, dst);
+        if (src == null) {
+            Logger.error(LogType.IMPROPER_USE, "unable to allocate src l4addr from " +
+                srcPool + " with dst " + dst.formatToIPPortString() + " for nat");
+            return false;
+        }
         var _1 = pkb.network.conntrack.recordTcp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
@@ -250,10 +251,16 @@ public class PacketFilterHelper {
         _1.setNat(nat);
         _2.setNat(nat);
         SwitchUtils.executeTcpNat(pkb, nat);
+        return true;
     }
 
-    private void newUdpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+    private boolean newUdpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
         IPPort src = srcPool.allocate(Protocol.UDP, dst);
+        if (src == null) {
+            Logger.error(LogType.IMPROPER_USE, "unable to allocate src l4addr from " +
+                srcPool + " with dst " + dst.formatToIPPortString() + " for nat");
+            return false;
+        }
         var _1 = pkb.network.conntrack.recordUdp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort())
@@ -263,5 +270,6 @@ public class PacketFilterHelper {
         _1.setNat(nat);
         _2.setNat(nat);
         SwitchUtils.executeUdpNat(pkb, nat);
+        return true;
     }
 }
