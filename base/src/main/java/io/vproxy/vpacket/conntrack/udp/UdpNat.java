@@ -1,13 +1,14 @@
 package io.vproxy.vpacket.conntrack.udp;
 
+import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.util.Timer;
 import io.vproxy.base.util.anno.Nullable;
 import io.vproxy.base.util.coll.Tuple;
-import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.vpacket.conntrack.Conntrack;
 
 public class UdpNat extends Tuple<UdpEntry, UdpEntry> {
-    @Nullable public final IPPortPool pool;
+    @Nullable public final SNatIPPortPool pool;
     private final boolean releaseIp;
     public final Conntrack conntrack;
     private final Timer timer;
@@ -20,7 +21,7 @@ public class UdpNat extends Tuple<UdpEntry, UdpEntry> {
     }
 
     public UdpNat(UdpEntry _1, UdpEntry _2,
-                  @Nullable IPPortPool pool, boolean releaseIp,
+                  @Nullable SNatIPPortPool pool, boolean releaseIp,
                   Conntrack conntrack, int timeout) {
         super(_1, _2);
         this.releaseIp = releaseIp;
@@ -59,7 +60,7 @@ public class UdpNat extends Tuple<UdpEntry, UdpEntry> {
         conntrack.removeUdp(_2.remote, _2.local);
 
         if (releaseIp && pool != null) {
-            pool.release(_2.local);
+            pool.release(Protocol.UDP, _2.local, _2.remote);
         }
     }
 

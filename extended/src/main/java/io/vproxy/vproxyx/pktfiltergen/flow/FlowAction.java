@@ -2,7 +2,7 @@ package io.vproxy.vproxyx.pktfiltergen.flow;
 
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.coll.Tuple;
-import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv6;
@@ -30,8 +30,8 @@ public class FlowAction {
 
     public boolean nat;
     public IPPort dnat;
-    public IPPortPool snat;
-    public Tuple<IPPortPool, IPPort> fnat;
+    public SNatIPPortPool snat;
+    public Tuple<SNatIPPortPool, IPPort> fnat;
 
     public String run;
     public String invoke;

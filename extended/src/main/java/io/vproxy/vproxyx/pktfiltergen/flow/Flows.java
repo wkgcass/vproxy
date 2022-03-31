@@ -3,7 +3,7 @@ package io.vproxy.vproxyx.pktfiltergen.flow;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
-import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
 import io.vproxy.dep.vjson.simple.SimpleString;
@@ -391,12 +391,12 @@ public class Flows {
                 .append(ipport.formatToIPPortString())
                 .append("\");\n");
         }
-        for (IPPortPool pool : ctx.ipportPoolFields) {
-            ctx.ensureImport(IPPortPool.class);
+        for (SNatIPPortPool pool : ctx.ipportPoolFields) {
+            ctx.ensureImport(SNatIPPortPool.class);
             genIndent(sb, 4);
-            sb.append("private final IPPortPool ")
+            sb.append("private final SNatIPPortPool ")
                 .append(ctx.fieldName(pool)).append(" = ")
-                .append("new IPPortPool(\"")
+                .append("new SNatIPPortPool(\"")
                 .append(pool.serialize())
                 .append("\");\n");
         }
@@ -514,7 +514,7 @@ public class Flows {
         private final List<BitwiseMatcher> bitwiseMatcherFields = new ArrayList<>();
         private final List<BitwiseIntMatcher> bitwiseIntMatcherFields = new ArrayList<>();
         private final Set<IPPort> ipportFields = new HashSet<>();
-        private final List<IPPortPool> ipportPoolFields = new ArrayList<>();
+        private final List<SNatIPPortPool> ipportPoolFields = new ArrayList<>();
         private final List<String> actions = new ArrayList<>();
         private final LinkedHashSet<String> predicateMethods = new LinkedHashSet<>();
         private final LinkedHashSet<String> runnableMethods = new LinkedHashSet<>();
@@ -601,7 +601,7 @@ public class Flows {
             }
         }
 
-        public String fieldName(IPPortPool pool) {
+        public String fieldName(SNatIPPortPool pool) {
             int idx = ipportPoolFields.indexOf(pool);
             if (idx == -1) {
                 idx = ipportPoolFields.size();

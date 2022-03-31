@@ -7,7 +7,7 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
 import io.vproxy.base.util.coll.Tuple;
-import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.vfd.*;
 
 public class FlowParser {
@@ -333,15 +333,15 @@ public class FlowParser {
         }
     }
 
-    private IPPortPool parseIPPortPool(String value) throws Exception {
+    private SNatIPPortPool parseIPPortPool(String value) throws Exception {
         try {
-            return new IPPortPool(value);
+            return new SNatIPPortPool(value);
         } catch (IllegalArgumentException e) {
             throw new Exception("unexpected snat expression: " + e.getMessage() + ": " + value);
         }
     }
 
-    private Tuple<IPPortPool, IPPort> parseFNat(String value) throws Exception {
+    private Tuple<SNatIPPortPool, IPPort> parseFNat(String value) throws Exception {
         if (!value.contains("^")) {
             throw new Exception("unexpected fnat expression, must contain `^` to split src pool and dst ip: " + value);
         }
@@ -349,9 +349,9 @@ public class FlowParser {
         if (split.length != 2) {
             throw new Exception("unexpected fnat expression, expecting $src_ipport_pool^$dst_ipport: " + value);
         }
-        IPPortPool pool;
+        SNatIPPortPool pool;
         try {
-            pool = new IPPortPool(split[0]);
+            pool = new SNatIPPortPool(split[0]);
         } catch (IllegalArgumentException e) {
             throw new Exception("unexpected fnat expression: " + e.getMessage() + ": " + value);
         }

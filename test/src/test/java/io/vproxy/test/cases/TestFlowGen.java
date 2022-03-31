@@ -4,7 +4,7 @@ import io.vproxy.app.plugin.impl.BasePacketFilter;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
-import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
 import io.vproxy.vfd.*;
@@ -1121,8 +1121,8 @@ public class TestFlowGen {
     @Test
     public void snat() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.SNat");
-        imports = List.of(IPPortPool.class);
-        fields = "private final IPPortPool IPPORTPOOL_HOLDER_0 = new IPPortPool(\"10.100.0.199:1-65535\");";
+        imports = List.of(SNatIPPortPool.class);
+        fields = "private final SNatIPPortPool IPPORTPOOL_HOLDER_0 = new SNatIPPortPool(\"10.100.0.199:1-65535\");";
         actions = List.of("" +
             "if (!helper.executeSNat(pkb, IPPORTPOOL_HOLDER_0)) {\n" +
             "    return FilterResult.DROP;\n" +
@@ -1136,10 +1136,10 @@ public class TestFlowGen {
     @Test
     public void fnat() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.FNat");
-        imports = List.of(IPPort.class, IPPortPool.class);
+        imports = List.of(IPPort.class, SNatIPPortPool.class);
         fields = "" +
             "private static final IPPort IPv4PORT_HOLDER_10_100_0_2$80 = new IPPort(\"10.100.0.2:80\");\n" +
-            "private final IPPortPool IPPORTPOOL_HOLDER_0 = new IPPortPool(\"10.100.0.199:1-65535\");";
+            "private final SNatIPPortPool IPPORTPOOL_HOLDER_0 = new SNatIPPortPool(\"10.100.0.199:1-65535\");";
         actions = List.of("" +
             "if (!helper.executeFNat(pkb, IPPORTPOOL_HOLDER_0, IPv4PORT_HOLDER_10_100_0_2$80)) {\n" +
             "    return FilterResult.DROP;\n" +

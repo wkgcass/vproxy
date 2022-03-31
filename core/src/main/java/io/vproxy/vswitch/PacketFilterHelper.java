@@ -1,9 +1,10 @@
 package io.vproxy.vswitch;
 
 import io.vproxy.base.Config;
+import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.net.IPPortPool;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.AbstractPacket;
@@ -182,7 +183,7 @@ public class PacketFilterHelper {
         SwitchUtils.executeUdpNat(pkb, nat);
     }
 
-    public boolean executeSNat(PacketBuffer pkb, IPPortPool srcPool) {
+    public boolean executeSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
         if (pkb.tcpPkt != null) {
             if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
                 return executeNat(pkb);
@@ -201,39 +202,17 @@ public class PacketFilterHelper {
         }
     }
 
-    private void newTcpSNat(PacketBuffer pkb, IPPortPool srcPool) {
-        IPPort src = srcPool.allocate();
-        var _1 = pkb.network.conntrack.recordTcp(
-            new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
-            new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
-        );
-        var _2 = pkb.network.conntrack.recordTcp(
-            new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort()),
-            src
-        );
-        var nat = new TcpNat(_1, _2, srcPool, true, pkb.network.conntrack, TcpTimeout.DEFAULT);
-        _1.setNat(nat);
-        _2.setNat(nat);
-        SwitchUtils.executeTcpNat(pkb, nat);
+    private void newTcpSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
+        var dst = new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort());
+        newTcpNatWithSNatAndDst(pkb, srcPool, dst);
     }
 
-    private void newUdpSNat(PacketBuffer pkb, IPPortPool srcPool) {
-        IPPort src = srcPool.allocate();
-        var _1 = pkb.network.conntrack.recordUdp(
-            new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort()),
-            new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort())
-        );
-        var _2 = pkb.network.conntrack.recordUdp(
-            new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort()),
-            src
-        );
-        var nat = new UdpNat(_1, _2, srcPool, true, pkb.network.conntrack, Config.udpTimeout);
-        _1.setNat(nat);
-        _2.setNat(nat);
-        SwitchUtils.executeUdpNat(pkb, nat);
+    private void newUdpSNat(PacketBuffer pkb, SNatIPPortPool srcPool) {
+        var dst = new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort());
+        newUdpNatWithSNatAndDst(pkb, srcPool, dst);
     }
 
-    public boolean executeFNat(PacketBuffer pkb, IPPortPool srcPool, IPPort dst) {
+    public boolean executeFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
         if (pkb.tcpPkt != null) {
             if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
                 return executeNat(pkb);
@@ -252,8 +231,16 @@ public class PacketFilterHelper {
         }
     }
 
-    private void newTcpFNat(PacketBuffer pkb, IPPortPool srcPool, IPPort dst) {
-        IPPort src = srcPool.allocate();
+    private void newTcpFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+        newTcpNatWithSNatAndDst(pkb, srcPool, dst);
+    }
+
+    private void newUdpFNat(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+        newUdpNatWithSNatAndDst(pkb, srcPool, dst);
+    }
+
+    private void newTcpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+        IPPort src = srcPool.allocate(Protocol.TCP, dst);
         var _1 = pkb.network.conntrack.recordTcp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
@@ -265,8 +252,8 @@ public class PacketFilterHelper {
         SwitchUtils.executeTcpNat(pkb, nat);
     }
 
-    private void newUdpFNat(PacketBuffer pkb, IPPortPool srcPool, IPPort dst) {
-        IPPort src = srcPool.allocate();
+    private void newUdpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
+        IPPort src = srcPool.allocate(Protocol.UDP, dst);
         var _1 = pkb.network.conntrack.recordUdp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort())
