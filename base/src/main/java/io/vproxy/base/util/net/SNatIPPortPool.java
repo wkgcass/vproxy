@@ -137,9 +137,19 @@ public class SNatIPPortPool {
             hash = Objects.hash(proto, src, dst);
             return hash;
         }
+
+        @Override
+        public String toString() {
+            return "{" + proto + "/" + src + "/" + dst + "/ref=" + srcRef + "}";
+        }
     }
 
     private static final class Ref {
         int ref = 0;
+
+        @Override
+        public String toString() {
+            return "{" + ref + "}@" + Integer.toHexString(super.hashCode());
+        }
     }
 }
