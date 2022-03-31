@@ -30,7 +30,7 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
         this.conntrack = conntrack;
         this.timeout = timeout;
 
-        this.timer = new Timer(conntrack.loop, timeout.getUnack() * 1000) {
+        this.timer = new Timer(conntrack.loop, timeout.getClose() * 1000) {
             @Override
             public void cancel() {
                 super.cancel();
