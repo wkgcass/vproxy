@@ -37,6 +37,7 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
                 destroy();
             }
         };
+        this.timer.start();
     }
 
     public TcpState getState() {
