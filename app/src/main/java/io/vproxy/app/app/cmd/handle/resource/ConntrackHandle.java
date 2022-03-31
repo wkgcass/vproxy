@@ -77,9 +77,18 @@ public class ConntrackHandle {
             }
         }
         for (var udp : network.conntrack.listUdpEntries()) {
-            result.add(new ConntrackEntry(
-                Protocol.UDP, udp.remote, udp.local
-            ));
+            var nat = udp.getNat();
+            if (nat == null) {
+                result.add(new ConntrackEntry(
+                    Protocol.UDP, udp.remote, udp.local
+                ));
+            } else {
+                var another = nat._1 == udp ? nat._2 : nat._1;
+                result.add(new ConntrackEntry(
+                    Protocol.UDP, null, udp.remote, udp.local,
+                    new NatRecord(another.remote, another.local, nat.getTTL())
+                ));
+            }
         }
 
         return result;
