@@ -60,7 +60,7 @@ public class PacketFilterHelper {
         if (pkb.tcpPkt != null) {
             return isTcpNatTracked(pkb);
         } else if (pkb.udpPkt != null) {
-            // TODO
+            return isUdpNatTracked(pkb);
         }
         return false;
     }
