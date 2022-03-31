@@ -34,6 +34,7 @@ public class UdpNat extends Tuple<UdpEntry, UdpEntry> {
                 destroy();
             }
         };
+        this.timer.start();
     }
 
     public void resetTimer() {
