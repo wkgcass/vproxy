@@ -27,7 +27,7 @@ public class UdpNat extends Tuple<UdpEntry, UdpEntry> {
         this.pool = pool;
         this.conntrack = conntrack;
 
-        this.timer = new Timer(conntrack.loop, timeout * 1000) {
+        this.timer = new Timer(conntrack.loop, timeout) {
             @Override
             public void cancel() {
                 super.cancel();
