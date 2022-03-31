@@ -810,7 +810,11 @@ class ModuleCommands private constructor() : Commands() {
           val tb = TableBuilder()
           ctLs.stream().forEach { it.buildTable(tb) }
           val str = tb.toString().trim()
-          CmdResult(ctLs, if (str.isBlank()) arrayOf<String>() else str.split("\n"), str)
+          val array = ArrayList(if (str.isBlank()) listOf() else str.split("\n"))
+          array.forEachIndexed { idx, s ->
+            array[idx] = s.trim()
+          }
+          CmdResult(ctLs, array, str)
         }
       )
     }

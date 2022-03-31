@@ -134,7 +134,7 @@ public class ConntrackHandle {
                 tr.td("--nat->")
                     .td("local=" + nat.local.formatToIPPortString())
                     .td("remote=" + nat.remote.formatToIPPortString())
-                    .td("TTL:" + (nat.ttl / 1000));
+                    .td("TTL:" + ((nat.ttl < 0) ? nat.ttl : (nat.ttl / 1000)));
             }
         }
     }
