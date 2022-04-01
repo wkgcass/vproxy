@@ -8,9 +8,8 @@ import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
 public class EnhancedUDPEntry extends UdpEntry {
     public Fastpath fastpath;
 
-    public EnhancedUDPEntry(IPPort remote, IPPort local,
-                            Conntrack conntrack, int timeout) {
-        super(null, remote, local, conntrack, timeout);
+    public EnhancedUDPEntry(IPPort remote, IPPort local) {
+        super(remote, local);
     }
 
     public EnhancedUDPEntry(UdpListenEntry listenEntry, IPPort remote, IPPort local,
