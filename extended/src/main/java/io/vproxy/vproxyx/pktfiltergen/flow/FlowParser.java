@@ -7,6 +7,8 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
 import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.misc.IntMatcher;
+import io.vproxy.base.util.net.PortPool;
 import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.vfd.*;
 
@@ -546,7 +548,7 @@ public class FlowParser {
         return port;
     }
 
-    private BitwiseIntMatcher portMatcher(String value) throws Exception {
+    private IntMatcher portMatcher(String value) throws Exception {
         if (value.contains("/")) {
             BitwiseMatcher m = matcher(value, 2);
             return BitwiseIntMatcher.from(
@@ -554,8 +556,12 @@ public class FlowParser {
                 (((m.getMask().get(0) << 8) & 0xff00) | (m.getMask().get(1) & 0xff))
             );
         }
-        int port = parsePort(value);
-        return BitwiseIntMatcher.from(port);
+        try {
+            return new PortPool(value);
+        } catch (IllegalArgumentException e) {
+            int port = parsePort(value);
+            return BitwiseIntMatcher.from(port);
+        }
     }
 
     private BitwiseMatcher matcher(String value, int bytesCount) throws Exception {

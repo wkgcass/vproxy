@@ -1,10 +1,11 @@
 package io.vproxy.base.util.bitwise;
 
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.misc.IntMatcher;
 
 import java.util.Objects;
 
-public class BitwiseIntMatcher {
+public class BitwiseIntMatcher implements IntMatcher {
     private final int matcher;
     private final int mask;
 
@@ -30,6 +31,7 @@ public class BitwiseIntMatcher {
         return new BitwiseIntMatcher(matcher, mask);
     }
 
+    @Override
     public boolean match(int n) {
         return (n & mask) == matcher;
     }

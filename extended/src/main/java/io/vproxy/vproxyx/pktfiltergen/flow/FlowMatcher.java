@@ -6,6 +6,8 @@ import io.vproxy.base.util.Network;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.misc.IntMatcher;
+import io.vproxy.base.util.net.PortPool;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
@@ -32,8 +34,8 @@ public class FlowMatcher {
     public int nw_proto;
 
     // tcp or udp
-    public BitwiseIntMatcher tp_src;
-    public BitwiseIntMatcher tp_dst;
+    public IntMatcher tp_src;
+    public IntMatcher tp_dst;
 
     // ct_state
     public String ct_state;
@@ -275,9 +277,11 @@ public class FlowMatcher {
         }
     }
 
-    private String formatPort(BitwiseIntMatcher port) {
-        if (port.maskAll()) {
-            return "" + port.getMatcher();
+    private String formatPort(IntMatcher port) {
+        if (port instanceof BitwiseIntMatcher && ((BitwiseIntMatcher) port).maskAll()) {
+            return "" + ((BitwiseIntMatcher) port).getMatcher();
+        } else if (port instanceof PortPool) {
+            return ((PortPool) port).serialize();
         } else {
             return port.toString();
         }

@@ -1,11 +1,12 @@
 package io.vproxy.base.util.net;
 
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.misc.IntMatcher;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public class PortPool {
+public class PortPool implements IntMatcher {
     private final int minPort;
     private final boolean[] ports;
     private final boolean[] originalPorts;
@@ -188,5 +189,16 @@ public class PortPool {
         } else {
             sb.append(minPort + beginIndex).append("-").append(minPort + i - 1);
         }
+    }
+
+    @Override
+    public boolean match(int n) {
+        if (n < minPort) {
+            return false;
+        }
+        if (n >= minPort + ports.length) {
+            return false;
+        }
+        return ports[n - minPort];
     }
 }

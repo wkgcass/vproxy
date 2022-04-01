@@ -2,8 +2,9 @@ package io.vproxy.test.cases;
 
 import io.vproxy.app.plugin.impl.BasePacketFilter;
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.misc.IntMatcher;
+import io.vproxy.base.util.net.PortPool;
 import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
@@ -429,10 +430,11 @@ public class TestFlowGen {
             AbstractIpPacket.class,
             Ipv4Packet.class,
             TcpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -452,10 +454,11 @@ public class TestFlowGen {
             AbstractIpPacket.class,
             Ipv4Packet.class,
             TcpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -475,10 +478,11 @@ public class TestFlowGen {
             Ipv6Packet.class,
             AbstractIpPacket.class,
             TcpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -498,10 +502,11 @@ public class TestFlowGen {
             Ipv6Packet.class,
             AbstractIpPacket.class,
             TcpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -521,10 +526,11 @@ public class TestFlowGen {
             AbstractIpPacket.class,
             Ipv4Packet.class,
             UdpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -544,10 +550,11 @@ public class TestFlowGen {
             AbstractIpPacket.class,
             Ipv4Packet.class,
             UdpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -567,10 +574,11 @@ public class TestFlowGen {
             Ipv6Packet.class,
             AbstractIpPacket.class,
             UdpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -590,10 +598,11 @@ public class TestFlowGen {
             Ipv6Packet.class,
             AbstractIpPacket.class,
             UdpPacket.class,
-            BitwiseIntMatcher.class
+            IntMatcher.class,
+            PortPool.class
         );
-        fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "BitwiseIntMatcher.from(80, -1);";
+        fields = "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
+            "new PortPool(\"80\");";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -1195,7 +1204,8 @@ public class TestFlowGen {
             MacAddress.class,
             BitwiseMatcher.class,
             ByteArray.class,
-            BitwiseIntMatcher.class,
+            IntMatcher.class,
+            PortPool.class,
             IfaceHolder.class
         );
         fields = "" +
@@ -1208,9 +1218,9 @@ public class TestFlowGen {
             "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_5 = BitwiseMatcher.from(ByteArray.fromHexString(\"1875322e59e8\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
             "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_6 = BitwiseMatcher.from(ByteArray.fromHexString(\"c0a80101\"), ByteArray.fromHexString(\"ffffffff\"));\n" +
             "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_7 = BitwiseMatcher.from(ByteArray.fromHexString(\"64600000\"), ByteArray.fromHexString(\"ffe00000\"));\n" +
-            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = BitwiseIntMatcher.from(68, -1);\n" +
-            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_1 = BitwiseIntMatcher.from(67, -1);\n" +
-            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_2 = BitwiseIntMatcher.from(53, -1);\n" +
+            "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_0 = new PortPool(\"68\");\n" +
+            "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_1 = new PortPool(\"67\");\n" +
+            "private static final IntMatcher BITWISE_INT_MATCHER_HOLDER_2 = new PortPool(\"53\");\n" +
             "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
             "    new IfaceHolder(\"enp1s0\", null),\n" +
             "    new IfaceHolder(\"gw0-in-br\", null),\n" +

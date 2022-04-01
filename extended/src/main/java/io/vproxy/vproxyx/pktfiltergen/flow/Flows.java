@@ -3,6 +3,8 @@ package io.vproxy.vproxyx.pktfiltergen.flow;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.misc.IntMatcher;
+import io.vproxy.base.util.net.PortPool;
 import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
@@ -373,14 +375,24 @@ public class Flows {
                 .append(matcher.getMask().toHexString()).append("\")")
                 .append(");\n");
         }
-        for (BitwiseIntMatcher matcher : ctx.bitwiseIntMatcherFields) {
-            ctx.ensureImport(BitwiseIntMatcher.class);
+        for (IntMatcher matcher : ctx.intMatcherFields) {
+            ctx.ensureImport(IntMatcher.class);
             genIndent(sb, 4);
-            sb.append("private static final BitwiseIntMatcher ")
-                .append(ctx.fieldName(matcher)).append(" = ")
-                .append("BitwiseIntMatcher.from(")
-                .append(matcher.getMatcher()).append(", ")
-                .append(matcher.getMask()).append(");\n");
+            sb.append("private static final IntMatcher ")
+                .append(ctx.fieldName(matcher)).append(" = ");
+            if (matcher instanceof BitwiseIntMatcher) {
+                ctx.ensureImport(BitwiseIntMatcher.class);
+                sb.append("BitwiseIntMatcher.from(")
+                    .append(((BitwiseIntMatcher) matcher).getMatcher()).append(", ")
+                    .append(((BitwiseIntMatcher) matcher).getMask()).append(");\n");
+            } else if (matcher instanceof PortPool) {
+                ctx.ensureImport(PortPool.class);
+                sb.append("new PortPool(\"")
+                    .append(((PortPool) matcher).serialize())
+                    .append("\");\n");
+            } else {
+                throw new UnsupportedOperationException("unsupported int matcher: " + matcher);
+            }
         }
         for (IPPort ipport : ctx.ipportFields) {
             ctx.ensureImport(IPPort.class);
@@ -512,7 +524,7 @@ public class Flows {
         private final Set<IPv4> ipv4Fields = new HashSet<>();
         private final Set<IPv6> ipv6Fields = new HashSet<>();
         private final List<BitwiseMatcher> bitwiseMatcherFields = new ArrayList<>();
-        private final List<BitwiseIntMatcher> bitwiseIntMatcherFields = new ArrayList<>();
+        private final List<IntMatcher> intMatcherFields = new ArrayList<>();
         private final Set<IPPort> ipportFields = new HashSet<>();
         private final List<SNatIPPortPool> ipportPoolFields = new ArrayList<>();
         private final List<String> actions = new ArrayList<>();
@@ -583,11 +595,11 @@ public class Flows {
             return "BITWISE_MATCHER_HOLDER_" + idx;
         }
 
-        public String fieldName(BitwiseIntMatcher matcher) {
-            int idx = bitwiseIntMatcherFields.indexOf(matcher);
+        public String fieldName(IntMatcher matcher) {
+            int idx = intMatcherFields.indexOf(matcher);
             if (idx == -1) {
-                idx = bitwiseIntMatcherFields.size();
-                bitwiseIntMatcherFields.add(matcher);
+                idx = intMatcherFields.size();
+                intMatcherFields.add(matcher);
             }
             return "BITWISE_INT_MATCHER_HOLDER_" + idx;
         }
