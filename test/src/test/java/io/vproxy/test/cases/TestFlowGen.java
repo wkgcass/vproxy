@@ -182,6 +182,14 @@ public class TestFlowGen {
     }
 
     @Test
+    public void l4tx() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.L4TX");
+        tables = genTable(0, EXECUTE0);
+        actions = List.of("return FilterResult.L4_TX;");
+        check("action=l4tx");
+    }
+
+    @Test
     public void table() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.Table");
         tables = genTable(0, "return table1(helper, pkb);")
@@ -1097,10 +1105,10 @@ public class TestFlowGen {
             "if (!helper.executeNat(pkb)) {\n" +
             "    return FilterResult.DROP;\n" +
             "}\n" +
-            "return FilterResult.L3_TX;");
+            "return FilterResult.L4_TX;");
 
         tables = genTable(0, EXECUTE0);
-        check("actions=nat,l3tx");
+        check("actions=nat,l4tx");
     }
 
     @Test
@@ -1112,10 +1120,10 @@ public class TestFlowGen {
             "if (!helper.executeDNat(pkb, IPv4PORT_HOLDER_10_100_0_2$80)) {\n" +
             "    return FilterResult.DROP;\n" +
             "}\n" +
-            "return FilterResult.L3_TX;");
+            "return FilterResult.L4_TX;");
 
         tables = genTable(0, EXECUTE0);
-        check("actions=dnat:10.100.0.2:80,l3tx");
+        check("actions=dnat:10.100.0.2:80,l4tx");
     }
 
     @Test
@@ -1127,10 +1135,10 @@ public class TestFlowGen {
             "if (!helper.executeSNat(pkb, IPPORTPOOL_HOLDER_0)) {\n" +
             "    return FilterResult.DROP;\n" +
             "}\n" +
-            "return FilterResult.L3_TX;");
+            "return FilterResult.L4_TX;");
 
         tables = genTable(0, EXECUTE0);
-        check("actions=snat:10.100.0.199:1-65535,l3tx");
+        check("actions=snat:10.100.0.199:1-65535,l4tx");
     }
 
     @Test
@@ -1144,10 +1152,10 @@ public class TestFlowGen {
             "if (!helper.executeFNat(pkb, IPPORTPOOL_HOLDER_0, IPv4PORT_HOLDER_10_100_0_2$80)) {\n" +
             "    return FilterResult.DROP;\n" +
             "}\n" +
-            "return FilterResult.L3_TX;");
+            "return FilterResult.L4_TX;");
 
         tables = genTable(0, EXECUTE0);
-        check("actions=fnat:10.100.0.199:1-65535^10.100.0.2:80,l3tx");
+        check("actions=fnat:10.100.0.199:1-65535^10.100.0.2:80,l4tx");
     }
 
     @Test

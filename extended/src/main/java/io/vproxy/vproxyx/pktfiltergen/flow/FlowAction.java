@@ -14,6 +14,7 @@ public class FlowAction {
     public boolean drop;
     public boolean tx;
     public boolean l3tx;
+    public boolean l4tx;
     public int table;
 
     public MacAddress mod_dl_dst;
@@ -45,6 +46,8 @@ public class FlowAction {
             return "return FilterResult.TX";
         } else if (l3tx) {
             return "return FilterResult.L3_TX";
+        } else if (l4tx) {
+            return "return FilterResult.L4_TX";
         } else if (table != 0) {
             return "return table" + table + "(helper, pkb)";
         } else if (mod_dl_dst != null) {
@@ -127,6 +130,8 @@ public class FlowAction {
             return "tx";
         } else if (l3tx) {
             return "l3tx";
+        } else if (l4tx) {
+            return "l4tx";
         } else if (table != 0) {
             return "goto_table:" + table;
         } else if (mod_dl_dst != null) {
@@ -174,7 +179,7 @@ public class FlowAction {
     }
 
     public boolean isTerminator() {
-        return normal || drop || tx || l3tx || table != 0 || invoke != null;
+        return normal || drop || tx || l3tx || l4tx || table != 0 || invoke != null;
     }
 
     public boolean allowTerminating() {

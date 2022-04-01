@@ -223,6 +223,16 @@ public class TestFlowParser {
     }
 
     @Test
+    public void l4tx() throws Exception {
+        testFlow("action=l4tx",
+            "table=0,priority=0,actions=l4tx");
+        testFlow("action=L4TX",
+            "table=0,priority=0,actions=l4tx");
+        testFlow("action=L4_TX",
+            "table=0,priority=0,actions=l4tx");
+    }
+
+    @Test
     public void goto_table() throws Exception {
         testFlow("action=goto_table:1",
             "table=0,priority=0,actions=goto_table:1");

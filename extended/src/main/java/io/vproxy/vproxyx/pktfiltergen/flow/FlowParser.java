@@ -213,6 +213,11 @@ public class FlowParser {
             case "L3_TX":
                 action.l3tx = true;
                 return;
+            case "l4tx":
+            case "L4TX":
+            case "L4_TX":
+                action.l4tx = true;
+                return;
             case "nat":
                 action.nat = true;
                 return;

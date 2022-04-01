@@ -936,6 +936,10 @@ public class Switch {
             assert Logger.lowLevelDebug("ingress filter returns L3_TX: " + pkb);
             netStack.L3.output(pkb);
             return;
+        } else if (res == FilterResult.L4_TX) {
+            assert Logger.lowLevelDebug("ingress filter returns L4_TX: " + pkb);
+            netStack.L4.output(pkb);
+            return;
         }
         Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet ingress");
     }
