@@ -369,7 +369,12 @@ public class SwitchUtils {
 
         applyNat(isBackhaul, nat._1.remote, nat._1.local, nat._2.remote, nat._2.local, pkb, pkt);
 
-        pkb.tcp = null;
+        if (isBackhaul) {
+            pkb.tcp = nat._1;
+        } else {
+            pkb.tcp = nat._2;
+        }
+        pkb.fastpath = true;
     }
 
     public static void executeUdpNat(PacketBuffer pkb, UdpNat nat) {
@@ -383,7 +388,12 @@ public class SwitchUtils {
 
         applyNat(isBackhaul, nat._1.remote, nat._1.local, nat._2.remote, nat._2.local, pkb, pkt);
 
-        pkb.udp = null;
+        if (isBackhaul) {
+            pkb.udp = nat._1;
+        } else {
+            pkb.udp = nat._2;
+        }
+        pkb.fastpath = true;
     }
 
     private static void applyNat(boolean isBackhaul, IPPort _1remote, IPPort _1local, IPPort _2remote, IPPort _2local,
