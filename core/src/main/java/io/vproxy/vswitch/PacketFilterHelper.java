@@ -4,8 +4,10 @@ import io.vproxy.base.Config;
 import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.anno.Nullable;
 import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
+import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.AbstractPacket;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
@@ -242,12 +244,16 @@ public class PacketFilterHelper {
                 srcPool + " with dst " + dst.formatToIPPortString() + " for nat");
             return false;
         }
+        return newTcpNatWithSrcAndDst(pkb, src, dst, srcPool);
+    }
+
+    private boolean newTcpNatWithSrcAndDst(PacketBuffer pkb, IPPort src, IPPort dst, @Nullable SNatIPPortPool pool) {
         var _1 = pkb.network.conntrack.recordTcp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.tcpPkt.getDstPort())
         );
         var _2 = pkb.network.conntrack.recordTcp(dst, src);
-        var nat = new TcpNat(_1, _2, srcPool, true, pkb.network.conntrack, TcpTimeout.DEFAULT);
+        var nat = new TcpNat(_1, _2, pool, pool != null, pkb.network.conntrack, TcpTimeout.DEFAULT);
         _1.setNat(nat);
         _2.setNat(nat);
         SwitchUtils.executeTcpNat(pkb, nat);
@@ -261,15 +267,36 @@ public class PacketFilterHelper {
                 srcPool + " with dst " + dst.formatToIPPortString() + " for nat");
             return false;
         }
+        return newUdpNatWithSrcAndDst(pkb, src, dst, srcPool);
+    }
+
+    private boolean newUdpNatWithSrcAndDst(PacketBuffer pkb, IPPort src, IPPort dst, @Nullable SNatIPPortPool pool) {
         var _1 = pkb.network.conntrack.recordUdp(
             new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort()),
             new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort())
         );
         var _2 = pkb.network.conntrack.recordUdp(dst, src);
-        var nat = new UdpNat(_1, _2, srcPool, true, pkb.network.conntrack, Config.udpTimeout);
+        var nat = new UdpNat(_1, _2, pool, pool != null, pkb.network.conntrack, Config.udpTimeout);
         _1.setNat(nat);
         _2.setNat(nat);
         SwitchUtils.executeUdpNat(pkb, nat);
         return true;
+    }
+
+    public boolean newNat(PacketBuffer pkb, IP srcIp, int srcPort, IP dstIp, int dstPort) {
+        if (pkb.tcpPkt != null) {
+            if (pkb.tcpNat != null || isTcpNatTracked(pkb)) {
+                return executeNat(pkb);
+            }
+            return newTcpNatWithSrcAndDst(pkb, new IPPort(srcIp, srcPort), new IPPort(dstIp, dstPort), null);
+        } else if (pkb.udpPkt != null) {
+            if (pkb.udpNat != null || isUdpNatTracked(pkb)) {
+                return executeNat(pkb);
+            }
+            return newUdpNatWithSrcAndDst(pkb, new IPPort(srcIp, srcPort), new IPPort(dstIp, dstPort), null);
+        } else {
+            Logger.error(LogType.IMPROPER_USE, "cannot handle nat for packet " + pkb.pkt);
+            return false;
+        }
     }
 }
