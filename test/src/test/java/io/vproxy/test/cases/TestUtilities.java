@@ -464,4 +464,10 @@ public class TestUtilities {
         assertEquals("192.168.0.1:raw=1000,current=/192.168.0.2:raw=1000,current=", pool.toString());
         assertNull(pool.allocate());
     }
+
+    @Test
+    public void ipportPoolIPv6() {
+        assertEquals("[fd00::abcd:1234]:1-65535", new IPPortPool("fd00::abcd:1234:1-65535").serialize());
+        assertEquals("[fd00::abcd:1234]:1-65535", new IPPortPool("[fd00::abcd:1234]:1-65535").serialize());
+    }
 }

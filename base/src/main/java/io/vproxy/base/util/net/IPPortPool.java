@@ -46,11 +46,17 @@ public class IPPortPool {
         var ips = new HashSet<IP>();
 
         for (String line : configs) {
-            String[] ipAndPort = line.split(":");
-            if (ipAndPort.length != 2) {
-                throw new IllegalArgumentException("invalid config: " + line);
+            int colonIndex = line.lastIndexOf(":");
+            if (colonIndex == -1) {
+                throw new IllegalArgumentException("invalid config: no colon: " + line);
             }
-            String ipStr = ipAndPort[0];
+            if (colonIndex == line.length() - 1) {
+                throw new IllegalArgumentException("invalid config: missing port ranges: " + line);
+            }
+            if (colonIndex == 0) {
+                throw new IllegalArgumentException("invalid config: missing ip: " + line);
+            }
+            String ipStr = line.substring(0, colonIndex);
             if (!IP.isIpLiteral(ipStr)) {
                 throw new IllegalArgumentException("invalid config: " + ipStr + " is not a valid ip: " + ipStr);
             }
@@ -59,7 +65,7 @@ public class IPPortPool {
                 throw new IllegalArgumentException("duplicated ip: " + ip.formatToIPString() + ": " + ipStr);
             }
 
-            String portExp = ipAndPort[1];
+            String portExp = line.substring(colonIndex + 1);
             PortPool portPool;
             try {
                 portPool = new PortPool(portExp);
