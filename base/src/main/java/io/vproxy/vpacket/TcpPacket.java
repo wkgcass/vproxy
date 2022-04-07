@@ -190,13 +190,13 @@ public class TcpPacket extends TransportPacket {
     @Override
     public String initPartial(int level) {
         ByteArray bytes = raw.pktBuf;
+        var dataOffsetReservedFlags = bytes.uint16(12);
+        flags = (dataOffsetReservedFlags & 0b0011_1111);
         if (level > LEVEL_KEY_FIELDS) {
             seqNum = bytes.uint32(4);
             ackNum = bytes.uint32(8);
 
-            var dataOffsetReservedFlags = bytes.uint16(12);
             dataOffset = ((dataOffsetReservedFlags >> 12) & 0xf) * 4;
-            flags = (dataOffsetReservedFlags & 0b0011_1111);
 
             window = bytes.uint16(14);
 

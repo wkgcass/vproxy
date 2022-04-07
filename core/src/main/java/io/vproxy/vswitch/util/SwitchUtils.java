@@ -284,8 +284,6 @@ public class SwitchUtils {
             pkb.tcpPkt.getSrcPort() == nat._2.remote.getPort();
         assert Logger.lowLevelDebug("isBackhaul = " + isBackhaul);
 
-        pkt.initPartial(PartialPacket.LEVEL_HANDLED_FIELDS);
-
         if (pkt.isRst()) {
             assert Logger.lowLevelDebug("the packet is RST");
             nat.setState(TcpState.CLOSED);
