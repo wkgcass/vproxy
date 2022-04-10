@@ -55,7 +55,10 @@ public class TcpPacket extends TransportPacket {
     }
 
     public void setSeqNum(long seqNum) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.pktBuf.int32(4, (int) seqNum);
+            checksumSkipped();
+        }
         this.seqNum = seqNum;
     }
 
@@ -64,7 +67,10 @@ public class TcpPacket extends TransportPacket {
     }
 
     public void setAckNum(long ackNum) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.pktBuf.int32(8, (int) ackNum);
+            checksumSkipped();
+        }
         this.ackNum = ackNum;
     }
 
@@ -82,7 +88,10 @@ public class TcpPacket extends TransportPacket {
     }
 
     public void setFlags(int flags) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.pktBuf.int16(12, (raw.pktBuf.uint16(12) & 0b1111_1111_1100_0000) | (flags & 0b0011_1111));
+            checksumSkipped();
+        }
         this.flags = flags;
     }
 
