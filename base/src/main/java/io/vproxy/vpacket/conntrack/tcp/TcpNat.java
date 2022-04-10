@@ -17,6 +17,8 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
     private TcpState state = TcpState.CLOSED;
     private boolean isDestroyed = false;
 
+    public ProxyProtocolHelper proxyProtocolHelper = null;
+
     public TcpNat(TcpEntry _1, TcpEntry _2,
                   Conntrack conntrack, TcpTimeout timeout) {
         this(_1, _2, null, false, conntrack, timeout);
@@ -112,6 +114,7 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
             ", passive=" + _2 +
             ", state=" + state +
             ", timer=" + timer.getTTL() +
+            ", pp=" + proxyProtocolHelper +
             '}';
     }
 }

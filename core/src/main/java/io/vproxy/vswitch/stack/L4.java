@@ -41,8 +41,9 @@ public class L4 {
         if (pkb.tcp != null && pkb.tcp.getNat() != null) {
             assert Logger.lowLevelDebug("need to handle tcp nat for this packet");
             var nat = pkb.tcp.getNat();
-            SwitchUtils.executeTcpNat(pkb, nat);
-            output(pkb);
+            if (SwitchUtils.executeTcpNat(pkb, nat)) {
+                output(pkb);
+            }
             return true;
         }
         if (pkb.udp != null && pkb.udp.getNat() != null) {

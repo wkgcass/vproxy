@@ -182,6 +182,8 @@ public class TcpPacket extends TransportPacket {
         }
         srcPort = bytes.uint16(0);
         dstPort = bytes.uint16(2);
+        var dataOffsetReservedFlags = bytes.uint16(12);
+        flags = (dataOffsetReservedFlags & 0b0011_1111);
 
         this.raw = raw;
         return null;

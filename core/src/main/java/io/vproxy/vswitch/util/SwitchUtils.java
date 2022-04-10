@@ -18,6 +18,7 @@ import io.vproxy.xdp.NativeXDP;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
@@ -277,7 +278,7 @@ public class SwitchUtils {
         return ret;
     }
 
-    public static void executeTcpNat(PacketBuffer pkb, TcpNat nat) {
+    public static boolean executeTcpNat(PacketBuffer pkb, TcpNat nat) {
         assert Logger.lowLevelDebug("executeTcpNat(" + pkb + ", " + nat + ")");
         var pkt = pkb.tcpPkt;
         boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.remote.getAddress()) &&
@@ -297,19 +298,62 @@ public class SwitchUtils {
                         assert Logger.lowLevelDebug("is not syn, not a new session");
                         nat.resetTimer();
                     } else {
+                        if (nat.proxyProtocolHelper != null) {
+                            buildSynPacketForProxyProtocol(pkb, nat);
+                        }
                         nat.setState(TcpState.SYN_SENT);
                     }
                     break;
                 case SYN_SENT:
-                    if (isBackhaul && pkt.isSyn() && pkt.isAck()) {
-                        nat.setState(TcpState.SYN_RECEIVED);
+                    boolean handled = false;
+                    if (isBackhaul) {
+                        if (nat.proxyProtocolHelper != null) {
+                            if (pkt.isSyn() && pkt.isAck()) {
+                                nat.resetTimer();
+                                return handleProxyProtocolHeader(pkb, nat);
+                            }
+                            if (pkt.isAck()) { // ack, no syn
+                                if (nat.proxyProtocolHelper.isSent) {
+                                    // the proxy protocol header is acked
+                                    // need to send the responding packet
+                                    buildSynAckPacketForProxyProtocol(pkb);
+                                    nat.setState(TcpState.SYN_RECEIVED);
+                                    handled = true;
+                                } else {
+                                    assert Logger.lowLevelDebug("received unexpected packet, " +
+                                        "the proxy protocol header is not sent yet, but received !syn + ack packet from the passive side");
+                                    return false; // drop
+                                }
+                            }
+                        } else {
+                            if (pkt.isSyn() && pkt.isAck()) {
+                                nat.setState(TcpState.SYN_RECEIVED);
+                                handled = true;
+                            }
+                        }
                     } else {
+                        if (nat.proxyProtocolHelper != null) {
+                            if (pkt.isSyn() && !pkt.isAck()) {
+                                // is syn retransmission, allow it to pass
+                                buildSynPacketForProxyProtocol(pkb, nat);
+                            } else {
+                                // no other packet is allowed from the active side when handling proxy protocol
+                                return false; // drop
+                            }
+                        }
+                    }
+                    if (!handled) {
                         nat.resetTimer();
                     }
+                    break;
                 case SYN_RECEIVED:
                     if (!isBackhaul && !pkt.isSyn() && pkt.isAck()) {
+                        nat.proxyProtocolHelper = null;
                         nat.setState(TcpState.ESTABLISHED);
                     } else {
+                        if (isBackhaul && nat.proxyProtocolHelper != null) {
+                            buildSynAckPacketForProxyProtocol(pkb);
+                        }
                         nat.resetTimer();
                     }
                     break;
@@ -373,6 +417,50 @@ public class SwitchUtils {
             pkb.tcp = nat._2;
         }
         pkb.fastpath = true;
+
+        return true;
+    }
+
+    private static void buildSynPacketForProxyProtocol(PacketBuffer pkb, TcpNat nat) {
+        var pkt = pkb.tcpPkt;
+        pkt.initPartial(PartialPacket.LEVEL_HANDLED_FIELDS);
+        pkt.setSeqNum(pkt.getSeqNum() - nat.proxyProtocolHelper.getV2HeaderLength());
+    }
+
+    private static void buildSynAckPacketForProxyProtocol(PacketBuffer pkb) {
+        var pkt = pkb.tcpPkt;
+        pkt.initPartial(PartialPacket.LEVEL_HANDLED_FIELDS);
+        pkt.setSeqNum(pkt.getSeqNum() - 1);
+        pkt.setAckNum(pkt.getAckNum());
+        pkt.setFlags(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK);
+    }
+
+    private static boolean handleProxyProtocolHeader(PacketBuffer pkb, TcpNat nat) {
+        if (pkb.ensurePartialPacketParsed()) {
+            assert Logger.lowLevelDebug("partial packet parsing failed");
+            return false;
+        }
+
+        pkb.ipPkt.swapSrcDst();
+        var port = pkb.tcpPkt.getSrcPort();
+        pkb.tcpPkt.setSrcPort(pkb.tcpPkt.getDstPort());
+        pkb.tcpPkt.setDstPort(port);
+        var seq = pkb.tcpPkt.getSeqNum();
+        pkb.tcpPkt.setSeqNum(pkb.tcpPkt.getAckNum());
+        pkb.tcpPkt.setAckNum(seq + 1);
+        pkb.tcpPkt.setFlags(Consts.TCP_FLAGS_PSH | Consts.TCP_FLAGS_ACK);
+        pkb.tcpPkt.setOptions(List.of());
+
+        var hdr = nat.proxyProtocolHelper.buildV2Header();
+        pkb.tcpPkt.setData(hdr);
+
+        pkb.ipPkt.setHopLimit(255);
+
+        nat.proxyProtocolHelper.isSent = true;
+        pkb.tcp = nat._2;
+        pkb.fastpath = true;
+
+        return true;
     }
 
     public static void executeUdpNat(PacketBuffer pkb, UdpNat nat) {

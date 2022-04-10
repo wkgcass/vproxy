@@ -10,6 +10,8 @@ import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.AbstractPacket;
+import io.vproxy.vpacket.conntrack.tcp.ProxyProtocolHelper;
+import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.tcp.TcpTimeout;
 import io.vproxy.vpacket.conntrack.udp.UdpNat;
@@ -116,8 +118,7 @@ public class PacketFilterHelper {
                 isTcpNatTracked(pkb); // try to get tcp nat record
             }
             if (pkb.tcpNat != null) {
-                SwitchUtils.executeTcpNat(pkb, pkb.tcpNat);
-                return true;
+                return SwitchUtils.executeTcpNat(pkb, pkb.tcpNat);
             } else {
                 return false;
             }
@@ -165,9 +166,7 @@ public class PacketFilterHelper {
             new IPPort(pkb.ipPkt.getSrc(), pkb.tcpPkt.getSrcPort())
         );
         var nat = new TcpNat(_1, _2, pkb.network.conntrack, TcpTimeout.DEFAULT);
-        _1.setNat(nat);
-        _2.setNat(nat);
-        SwitchUtils.executeTcpNat(pkb, nat);
+        initTcpNat(pkb, _1, _2, nat);
     }
 
     private void newUdpDNat(PacketBuffer pkb, IPPort dst) {
@@ -254,10 +253,21 @@ public class PacketFilterHelper {
         );
         var _2 = pkb.network.conntrack.recordTcp(dst, src);
         var nat = new TcpNat(_1, _2, pool, pool != null, pkb.network.conntrack, TcpTimeout.DEFAULT);
+        initTcpNat(pkb, _1, _2, nat);
+        return true;
+    }
+
+    private void initTcpNat(PacketBuffer pkb, TcpEntry _1, TcpEntry _2, TcpNat nat) {
         _1.setNat(nat);
         _2.setNat(nat);
+        var userData = pkb.getUserData(ProxyProtocolHelper.USER_DATA_KEY);
+        if (userData != null) {
+            if (userData == ProxyProtocolHelper.NORMAL_PROXY_PROTOCOL) {
+                nat.proxyProtocolHelper = new ProxyProtocolHelper(
+                    pkb.ipPkt.getSrc(), pkb.ipPkt.getDst(), pkb.tcpPkt.getSrcPort(), pkb.tcpPkt.getDstPort());
+            }
+        }
         SwitchUtils.executeTcpNat(pkb, nat);
-        return true;
     }
 
     private boolean newUdpNatWithSNatAndDst(PacketBuffer pkb, SNatIPPortPool srcPool, IPPort dst) {
