@@ -27,13 +27,17 @@ public class ModuleInfoGenerator {
                     line = line.substring(0, line.length() - 1);
                 }
                 if (line.startsWith("requires ")) {
-                    // String mod = line.substring("requires ".length()).trim();
-                    // if (mod.startsWith("io.vproxy")) {
-                    //     continue;
-                    // }
-                    // requires.add(mod);
-                    //noinspection UnnecessaryContinue
-                    continue;
+                    String mod = line.substring("requires ".length()).trim();
+                    if (mod.startsWith("transitive ")) {
+                        mod = mod.substring("transitive ".length()).trim();
+                    }
+                    if (mod.startsWith("kotlin.") || mod.startsWith("kotlinx.")) {
+                        continue; // kotlin classes will be added to the final jar, so no need to require them
+                    }
+                    if (mod.startsWith("io.vproxy.")) {
+                        continue;
+                    }
+                    requires.add(mod);
                 } else if (line.startsWith("exports ")) {
                     exports.add(line.substring("exports ".length()).trim());
                 } else if (line.startsWith("uses ")) {
