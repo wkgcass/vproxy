@@ -7,8 +7,6 @@ import io.vproxy.vfd.IPv4;
 
 // https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
 public class ProxyProtocolHelper {
-    public static final Object USER_DATA_KEY = new Object();
-    public static final Object NORMAL_PROXY_PROTOCOL = new Object();
     private static final ByteArray prefix =
         ByteArray.fromHexString("0D0A0D0A000D0A515549540A").concat(
             ByteArray.fromHexString("21") // cmd: ver2 and proxy

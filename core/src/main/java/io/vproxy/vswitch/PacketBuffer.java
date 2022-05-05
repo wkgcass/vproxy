@@ -22,6 +22,8 @@ public class PacketBuffer extends PacketDataBuffer {
     public static final int FLAG_VXLAN = 0x00000001;
     public static final int FLAG_IP = 0x00000004;
 
+    public static final int INTERNAL_MASK_PROXY_PROTOCOL = 0x00010000;
+
     public static PacketBuffer fromVXLanBytes(Iface devin, ByteArray buf, int pktOff, int pad) {
         return new PacketBuffer(devin, buf, pktOff, pad);
     }
@@ -88,6 +90,8 @@ public class PacketBuffer extends PacketDataBuffer {
     public boolean assumeIfaceEnabled = false;
 
     // ----- extra -----
+    public int internalMask;
+    public int mask;
     private Map<Object, Object> userdata;
 
     // fromVXLanBytes

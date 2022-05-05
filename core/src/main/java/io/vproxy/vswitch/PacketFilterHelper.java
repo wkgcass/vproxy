@@ -260,12 +260,9 @@ public class PacketFilterHelper {
     private void initTcpNat(PacketBuffer pkb, TcpEntry _1, TcpEntry _2, TcpNat nat) {
         _1.setNat(nat);
         _2.setNat(nat);
-        var userData = pkb.getUserData(ProxyProtocolHelper.USER_DATA_KEY);
-        if (userData != null) {
-            if (userData == ProxyProtocolHelper.NORMAL_PROXY_PROTOCOL) {
-                nat.proxyProtocolHelper = new ProxyProtocolHelper(
-                    pkb.ipPkt.getSrc(), pkb.ipPkt.getDst(), pkb.tcpPkt.getSrcPort(), pkb.tcpPkt.getDstPort());
-            }
+        if ((pkb.internalMask & PacketBuffer.INTERNAL_MASK_PROXY_PROTOCOL) == PacketBuffer.INTERNAL_MASK_PROXY_PROTOCOL) {
+            nat.proxyProtocolHelper = new ProxyProtocolHelper(
+                pkb.ipPkt.getSrc(), pkb.ipPkt.getDst(), pkb.tcpPkt.getSrcPort(), pkb.tcpPkt.getDstPort());
         }
         SwitchUtils.executeTcpNat(pkb, nat);
     }
