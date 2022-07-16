@@ -19,6 +19,7 @@ interface HttpHeaders {
 interface HttpServerRequest {
   fun method(): String
   fun uri(): String
+  fun query(): Map<String, String>
   fun headers(): HttpHeaders
   fun body(): io.vproxy.base.util.ByteArray
 }
@@ -103,7 +104,11 @@ class RoutingContext(
       try {
         handler.handle(this)
       } catch (e: Throwable) {
-        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.IMPROPER_USE, "handler thrown error when handling ${req.method()} ${req.uri()}", e)
+        io.vproxy.base.util.Logger.error(
+          io.vproxy.base.util.LogType.IMPROPER_USE,
+          "handler thrown error when handling ${req.method()} ${req.uri()}",
+          e
+        )
         handled = true
         send500(e)
         return

@@ -42,7 +42,11 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       try {
         handler(conn)
       } catch (e: Throwable) {
-        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.IMPROPER_USE, "connectionHandler thrown exception when handling $conn", e)
+        io.vproxy.base.util.Logger.error(
+          io.vproxy.base.util.LogType.IMPROPER_USE,
+          "connectionHandler thrown exception when handling $conn",
+          e
+        )
         return
       }
     }
@@ -57,13 +61,33 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
 
   private class ReqWrapper(val req: io.vproxy.base.processor.http1.entity.Request) : HttpServerRequest {
     private val headers = HeadersWrap(req)
+    private val uri = if (req.uri.contains("?")) req.uri.substring(0, req.uri.indexOf("?")) else req.uri
+    private val query = if (req.uri.contains("?")) {
+      val s = req.uri.substring(req.uri.indexOf("?") + 1)
+      val array = s.split("&")
+      val map = HashMap<String, String>()
+      for (e in array) {
+        if (e.contains("=")) {
+          val key = e.substring(0, e.indexOf("="))
+          val value = e.substring(e.indexOf("=") + 1)
+          map[key] = value
+        } else {
+          map[e] = ""
+        }
+      }
+      map
+    } else mapOf()
 
     override fun method(): String {
       return req.method
     }
 
     override fun uri(): String {
-      return req.uri
+      return uri
+    }
+
+    override fun query(): Map<String, String> {
+      return query
     }
 
     private var bodyCache: io.vproxy.base.util.ByteArray? = null
