@@ -125,8 +125,10 @@ subprojects {
             }
         }
     }
+    if (!System.getProperty("MavenLocalInstall", "false").equals("true")) {
     signing {
         sign publishing.publications.maven
+    }
     }
     }
 }
@@ -344,12 +346,17 @@ def loadVersion() {
     def SUFFIX = "\"; // _THE_VERSION_"
     def ver = file(projectDir.getAbsolutePath() + "/base/src/main/java/io/vproxy/base/util/Version.java")
     def lines = ver.getText().split("\n")
+    def isMavenLocalInstall = System.getProperty("MavenLocalInstall", "false").equals("true")
     for (def line : lines) {
         line = line.trim()
         if (line.startsWith(PREFIX) && line.endsWith(SUFFIX)) {
             def verstr = line.substring(PREFIX.length(), line.length() - SUFFIX.length())
             if (verstr.endsWith('-DEV')) {
-                verstr = verstr + '-' + versionTs + '-SNAPSHOT'
+                if (isMavenLocalInstall) {
+                    return "MAVEN-LOCAL"
+                } else {
+                    verstr = verstr + '-' + versionTs + '-SNAPSHOT'
+                }
             }
             return verstr
         }
