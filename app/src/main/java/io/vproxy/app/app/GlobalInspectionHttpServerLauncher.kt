@@ -41,6 +41,7 @@ class GlobalInspectionHttpServerLauncher private constructor() {
     loop!!.launch {
       app.start()
     }
+    this.app = app
   }
 
   private fun stop0() {
