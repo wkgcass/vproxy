@@ -16,6 +16,8 @@ public class ModuleInfoGenerator {
         var modules = List.of("dep", "base", "core", "lib", "extended", "app");
         var requires = new LinkedHashSet<String>();
         requires.add("java.base");
+        requires.add("kotlin.stdlib");
+        requires.add("kotlinx.coroutines.core.jvm");
         var exports = new LinkedHashSet<String>();
         var uses = new LinkedHashSet<String>();
         for (var module : modules) {
@@ -48,8 +50,8 @@ public class ModuleInfoGenerator {
 
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V11, Opcodes.ACC_MODULE, "module-info", null, null, null);
-        writer.newModule("io.vproxy");
-        ModuleVisitor module = writer.visitModule("io.vproxy", 0, Version.VERSION);
+        writer.newModule("io.vproxy.all");
+        ModuleVisitor module = writer.visitModule("io.vproxy.all", 0, Version.VERSION);
         for (var require : requires) {
             module.visitRequire(require, 0, null);
         }
