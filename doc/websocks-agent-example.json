@@ -1,0 +1,82 @@
+{
+  "agent": {
+    "socks5.listen": 1080,
+    "httpconnect.listen": 18080,
+    "ss.listen": 8388,
+    "ss.password": "123456",
+    "dns.listen": 53,
+    "tls-sni-erasure": {
+      "cert-key.auto-sign": [
+        "~/ca.cert.pem",
+        "~/ca.key.pem"
+      ],
+      "cert-key.list": [
+        [
+          "~/pixiv.cert.pem",
+          "~/pixiv.key.pem"
+        ],
+        [
+          "~/google.cert.pem",
+          "~/google.key.pem"
+        ]
+      ],
+      "domains": [
+        "/.*pixiv.*/"
+      ]
+    },
+    "direct-relay": {
+      "enabled": false,
+      "ip-range": "100.64.0.0/10",
+      "listen": "127.0.0.1:8888",
+      "ip-bond-timeout": 10
+    },
+    "cacerts.path": "./dep/cacerts",
+    "cacerts.pswd": "changeit",
+    "cert.verify": true,
+    "gateway": true,
+    "gateway.pac.listen": 20080,
+    "strict": false,
+    "pool": 10,
+    "uot": {
+      "enabled": false,
+      "nic": "eth0"
+    }
+  },
+  "proxy": {
+    "auth": "alice:pasSw0rD",
+    "hc": true,
+    "groups": [
+      {
+        "servers": [
+          "websockss://127.0.0.1:18686",
+          "websockss:kcp://example.com:443"
+        ],
+        "domains": [
+          "/.*google\\.com.*/",
+          "216.58.200.46",
+          "youtube.com",
+          "zh.wikipedia.org",
+          "id.heroku.com",
+          "baidu.com",
+          "/.*bilibili\\.com$/"
+        ],
+        "resolve": [
+          "pixiv.net"
+        ],
+        "no-proxy": [
+          "/.*pixiv.*/"
+        ]
+      },
+      {
+        "name": "TEST",
+        "servers": [
+          "websocks://127.0.0.1:18687"
+        ],
+        "domains": [
+          ":14000",
+          "163.com"
+        ]
+      }
+    ]
+  }
+}
