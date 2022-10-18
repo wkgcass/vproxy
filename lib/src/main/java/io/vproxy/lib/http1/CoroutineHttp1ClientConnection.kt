@@ -165,11 +165,11 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       }
 
       return loop.execute {
-        val conn = create(protocolAndHostAndPort)
-        defer { conn.close() }
         if (invokerLoop != loop) { // which means a new loop is created
           defer { loop.close() }
         }
+        val conn = create(protocolAndHostAndPort)
+        defer { conn.close() }
 
         conn.conn.setTimeout(5_000)
         val req = conn.get(uri)
