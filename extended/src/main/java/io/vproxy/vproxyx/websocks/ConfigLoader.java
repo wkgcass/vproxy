@@ -278,10 +278,10 @@ public class ConfigLoader {
                 }
                 if (config.getAgent().getDirectRelay() != null) {
                     var val = config.getAgent().getDirectRelay().getListen();
-                    if (!IPPort.validL4AddrStr(val)) {
-                        throw new Exception("invalid binding address in agent.direct-relay.listen: " + val);
-                    }
                     if (!val.isBlank()) {
+                        if (!IPPort.validL4AddrStr(val)) {
+                            throw new Exception("invalid binding address in agent.direct-relay.listen: " + val);
+                        }
                         String host = val.substring(0, val.lastIndexOf(":"));
                         int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
                         directRelayListen = new IPPort(IP.from(host), port);
