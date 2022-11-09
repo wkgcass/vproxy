@@ -21,7 +21,6 @@ public class ABP {
         for (int i = '0'; i <= '9'; ++i) {
             add((char) i);
         }
-        add('.');
     }};
     private final String abpSource;
     private final boolean defaultBlock;
@@ -63,20 +62,24 @@ public class ABP {
             // empty line or comment
             return;
         }
-        if (line.startsWith("||")) {
+        if (line.startsWith("||") && line.length() > "||".length()) {
             addMatchingSpecificURI(line.substring("||".length()));
-        } else if (line.startsWith("|")) {
+        } else if (line.startsWith("|") && line.length() > "|".length()) {
             addMatchingFromBeginning(line.substring("|".length()));
-        } else if (line.startsWith("/") && line.endsWith("/")) {
+        } else if (line.startsWith("/") && line.endsWith("/") && line.length() > 2) {
             addMatchingRegexp(line.substring("/".length(), line.length() - "/".length()));
-        } else if (line.startsWith("@@||")) {
+        } else if (line.startsWith("@@||") && line.length() > "@@||".length()) {
             addWhitelistRuleMatchingSpecificURI(line.substring("@@||".length()));
-        } else if (line.startsWith("@@|")) {
+        } else if (line.startsWith("@@|") && line.length() > "@@|".length()) {
             addWhitelistRuleMatchingFromBeginning(line.substring("@@|".length()));
-        } else if (line.startsWith("@@")) {
-            addWhitelistSimpleRule(line.substring("@@".length()));
-        } else if (line.startsWith("@@/") && line.endsWith("/")) {
+        } else if (line.startsWith("@@/") && line.endsWith("/") && line.length() > 4) {
             addWhitelistRuleRegexp(line.substring("@@/".length(), line.length() - "/".length()));
+        } else if (line.startsWith("@@.") && line.length() > "@@.".length()) {
+            addWhitelistSuffixRule(line.substring("@@.".length()));
+        } else if (line.startsWith("@@") && line.length() > "@@".length() && validSimpleRuleStart.contains(line.charAt(3))) {
+            addWhitelistSimpleRule(line.substring("@@".length()));
+        } else if (line.startsWith(".") && line.length() > ".".length()) {
+            addSuffixRule(line.substring(".".length()));
         } else if (validSimpleRuleStart.contains(line.charAt(0))) {
             addSimpleRule(line);
         } else {
@@ -185,6 +188,34 @@ public class ABP {
                     Logger.alert(input + " matches ABP WHITELIST regexp rule: " + rule);
                     return false;
                 }
+            }
+            return null;
+        });
+    }
+
+    private interface WhitelistSuffixRule extends Function<String, Boolean> {
+    }
+
+    private void addWhitelistSuffixRule(String rule) {
+        var host = extractHost(rule);
+        checkers.add((WhitelistSuffixRule) input -> {
+            if (input.endsWith(host)) {
+                Logger.alert(input + " matches ABP WHITELIST suffix rule: " + rule);
+                return false;
+            }
+            return null;
+        });
+    }
+
+    private interface SuffixRule extends Function<String, Boolean> {
+    }
+
+    private void addSuffixRule(String rule) {
+        var host = extractHost(rule);
+        checkers.add((SuffixRule) input -> {
+            if (input.endsWith(host)) {
+                Logger.alert(input + " matches ABP suffix rule: " + rule);
+                return true;
             }
             return null;
         });
