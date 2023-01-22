@@ -1,8 +1,8 @@
 package io.vproxy.poc
 
 import io.vproxy.dep.vjson.JSON
+import io.vproxy.dep.vjson.util.ArrayBuilder
 import io.vproxy.dep.vjson.util.ObjectBuilder
-import io.vproxy.dep.vjson.util.Transformer
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.sleep
 import io.vproxy.lib.common.with
@@ -17,15 +17,23 @@ class ApplicationLevelHttpServer {
   }
 
   private val services: MutableList<Service> = LinkedList<Service>()
-  private val tf = Transformer()
-    .addRule(io.vproxy.base.util.kt.KT.kclass(Service::class.java)) { s: Service ->
-      ObjectBuilder()
-        .put("id", s.id.toString())
-        .put("name", s.name)
-        .put("ingressAddress", s.address)
-        .put("ingressPort", s.port)
-        .build()
+
+  private fun serializeServices(services: List<Service>): JSON.Array {
+    val ab = ArrayBuilder()
+    for (svc in services) {
+      ab.addInst(serializeService(svc))
     }
+    return ab.build()
+  }
+
+  private fun serializeService(s: Service): JSON.Object {
+    return ObjectBuilder()
+      .put("id", s.id.toString())
+      .put("name", s.name)
+      .put("ingressAddress", s.address)
+      .put("ingressPort", s.port)
+      .build()
+  }
 
   private fun runClient() {
     val loop = io.vproxy.base.selector.SelectorEventLoop.open()
@@ -109,7 +117,7 @@ class ApplicationLevelHttpServer {
 
   private suspend fun listServices(rctx: RoutingContext) {
     io.vproxy.base.util.Logger.alert("listServices called")
-    rctx.conn.response(200).send(tf.transform(services))
+    rctx.conn.response(200).send(serializeServices(services))
   }
 
   private suspend fun createService(rctx: RoutingContext) {
@@ -134,7 +142,7 @@ class ApplicationLevelHttpServer {
         )
       return
     }
-    rctx.conn.response(200).send(tf.transform(service))
+    rctx.conn.response(200).send(serializeService(service))
   }
 
   private suspend fun getService(rctx: RoutingContext) {
@@ -142,7 +150,7 @@ class ApplicationLevelHttpServer {
     io.vproxy.base.util.Logger.alert("getService called with `$serviceId`")
     val ret = services.stream().filter { s: Service -> s.id.toString() == serviceId }.findAny()
     if (ret.isPresent) {
-      rctx.conn.response(200).send(tf.transform(ret.get()))
+      rctx.conn.response(200).send(serializeService(ret.get()))
     } else {
       rctx.conn.response(404)
         .send(
