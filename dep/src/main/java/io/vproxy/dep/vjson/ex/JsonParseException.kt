@@ -13,6 +13,7 @@ package io.vproxy.dep.vjson.ex
 
 import io.vproxy.dep.vjson.cs.LineCol
 
+// #ifdef COVERAGE {{@lombok.Generated}}
 class JsonParseException : ParserException {
   constructor(msg: String) : super(msg)
   constructor(msg: String, cause: Throwable) : super(msg, cause)

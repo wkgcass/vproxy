@@ -12,6 +12,10 @@
 package io.vproxy.dep.vjson.deserializer.rule
 
 abstract class Rule<T : Any?> internal constructor() {
+  open fun real(): Rule<*> {
+    return this
+  }
+
   abstract fun toString(sb: StringBuilder, processedListsOrObjects: MutableSet<Rule<*>>)
   override fun toString(): String {
     val sb = StringBuilder()

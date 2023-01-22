@@ -60,6 +60,12 @@ class TypeContext {
     return if (hasTypeInThisContext(type)) true else parent?.hasType(type) ?: false
   }
 
+  fun hasTypeConsiderArray(type: Type): Boolean {
+    if (hasType(type)) return true
+    if (!type.isArray) return false
+    return hasTypeConsiderArray(type.elementType)
+  }
+
   fun hasTypeInThisContext(type: Type): Boolean {
     return typeNameMap.containsKey(type)
   }
@@ -106,7 +112,7 @@ class TypeContext {
   }
 
   fun getVariable(name: String): Variable {
-    return variableMap[name] ?: (parent?.getVariable(name) ?: throw NoSuchElementException())
+    return variableMap[name] ?: (parent?.getVariable(name) ?: throw NoSuchElementException(name))
   }
 
   fun addVariable(variable: Variable) {
@@ -180,6 +186,18 @@ class TypeContext {
     }
   }
 
+  fun tmpVar(prefix: String): String {
+    var n = 0
+    while (true) {
+      val name = prefix + n
+      if (hasVariable(name)) {
+        n += 1
+        continue
+      }
+      return name
+    }
+  }
+
   private constructor(
     contextType: TypeInstance?,
     ast: AST?,
@@ -188,7 +206,7 @@ class TypeContext {
     typeNameMap: Map<Type, TypeInstance>,
     functionDescriptorSet: Set<FunctionDescriptor>,
     variableMap: Map<String, Variable>,
-    memoryDepth: Int
+    memoryDepth: Int,
   ) {
     this.contextType = contextType
     this.ast = ast

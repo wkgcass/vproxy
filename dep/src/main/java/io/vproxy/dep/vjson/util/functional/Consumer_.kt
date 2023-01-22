@@ -12,19 +12,19 @@
 package io.vproxy.dep.vjson.util.functional
 
 /* #ifdef KOTLIN_JS {{
-interface Func2<T, U, R> {
-  fun invoke(t: T, u: U): R
+interface Func1<T, R> {
+  fun invoke(t: T): R
 }
 }} */
 
-interface `BiConsumer$`<T, U> : /* #ifdef KOTLIN_JS {{ Func2 }} else {{ */Function2/* }} */<T, U, Unit> {
-  fun accept(t: T, u: U)
+interface Consumer_<T> : /* #ifdef KOTLIN_JS {{ Func1 }} else {{ */Function1/* }} */<T, Unit> {
+  fun accept(t: T)
 
   override
   /*#ifndef KOTLIN_NATIVE {{ */
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
-  fun invoke(t: T, u: U) {
-    accept(t, u)
+  fun invoke(t: T) {
+    accept(t)
   }
 }

@@ -23,6 +23,8 @@ enum class TokenType(val isTerminator: Boolean = false) {
   RIGHT_PAR,
   LEFT_BRACKET,
   RIGHT_BRACKET,
+  LEFT_BRACE,
+  RIGHT_BRACE,
   PLUS,
   MINUS,
   MULTIPLY,

@@ -117,8 +117,13 @@ open class CompositeParser protected constructor(private val opts: ParserOptions
         opts = ParserOptions.DEFAULT_JAVA_OBJECT_NO_END
       } else {
         opts = ParserOptions(this.opts).setEnd(false).setMode(ParserMode.JAVA_OBJECT).setListener(null)
+        if (this.opts.isKeyNoQuotes) {
+          opts.setStringValueNoQuotes(true)
+        } else {
+          opts.setStringValueNoQuotes(false)
+        }
       }
-      keyParser = StringParser(opts, ParserUtils.getThreadLocalKeyDictionary())
+      keyParser = StringParser(opts, ParserUtils.getThreadLocalKeyDictionary(), true)
     } else {
       keyParser!!.reset()
     }
@@ -126,7 +131,7 @@ open class CompositeParser protected constructor(private val opts: ParserOptions
   }
 
   private fun parserForValueNoQuotes(cs: CharStream): Parser<*> {
-    val (str, _) = ParserUtils.extractNoQuotesString(cs, opts)
+    val (str, _) = ParserUtils.extractNoQuotesString(cs, opts, false)
     // try number, bool and null
     try {
       val newCS = CharStream.from(str)

@@ -22,6 +22,7 @@ class LineCol /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
     val EMPTY = LineCol("", 0, 0)
   }
 
+  /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/
   constructor(lineCol: LineCol, innerOffsetIncrease: Int = 0) : this(
     lineCol.filename, lineCol.line, lineCol.col,
     if (lineCol.isEmpty()) 0 else lineCol.innerOffset + innerOffsetIncrease

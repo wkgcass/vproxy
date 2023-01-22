@@ -12,6 +12,11 @@
 
 package io.vproxy.dep.vjson.pl.type
 
+import io.vproxy.dep.vjson.cs.LineCol
+import io.vproxy.dep.vjson.ex.ParserException
+import io.vproxy.dep.vjson.pl.ast.Expr
+import io.vproxy.dep.vjson.pl.inst.*
+
 object TypeUtils {
   fun assignableFrom(parent: TypeInstance, child: TypeInstance): Boolean {
     if (parent == child) return true
@@ -30,5 +35,53 @@ object TypeUtils {
       return true
     }
     return false
+  }
+
+  fun checkImplicitStringCast(ctx: TypeContext, typeToStringCheck: TypeInstance, variableToStringCheck: Expr, lineCol: LineCol) {
+    val toStringField = typeToStringCheck.field(ctx, "toString", ctx.getContextType())
+      ?: throw ParserException(
+        "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) does not have `toString` field",
+        lineCol
+      )
+    val toStringFunc = toStringField.type.functionDescriptor(ctx)
+      ?: throw ParserException(
+        "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) `toString` field is not a function",
+        lineCol
+      )
+    if (toStringFunc.params.isNotEmpty())
+      throw ParserException(
+        "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) `toString` function parameters list is not empty",
+        lineCol
+      )
+    if (toStringFunc.returnType !is StringType) {
+      throw ParserException(
+        "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) `toString` function return type (${toStringField.type}) is not $StringType",
+        lineCol
+      )
+    }
+  }
+
+  fun buildToStringInstruction(ctx: TypeContext, variableType: TypeInstance, getFuncInst: Instruction, lineCol: LineCol): Instruction {
+    val toStringField = variableType.field(ctx, "toString", ctx.getContextType())!!
+    val toStringFunc = toStringField.type.functionDescriptor(ctx)!!
+    val total = toStringFunc.mem.memoryAllocator().getTotal()
+
+    val depth = if (variableType is ClassTypeInstance) {
+      variableType.cls.getMemDepth()
+    } else 0
+
+    return object : InstructionWithStackInfo(ctx.stackInfo(lineCol)) {
+      override fun execute0(ctx: ActionContext, exec: Execution) {
+        if (getFuncInst is FunctionInstance) {
+          getFuncInst.ctxBuilder = { ActionContext(total, it) }
+          getFuncInst.execute(ctx, exec)
+        } else {
+          getFuncInst.execute(ctx, exec)
+          val func = exec.values.refValue as Instruction
+          val newCtx = ActionContext(total, ctx.getContext(depth))
+          func.execute(newCtx, exec)
+        }
+      }
+    }
   }
 }

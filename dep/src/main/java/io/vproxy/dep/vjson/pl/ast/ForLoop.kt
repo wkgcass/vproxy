@@ -35,7 +35,7 @@ data class ForLoop(
     forInitCtx.checkStatements(init)
 
     val forConditionCtx = TypeContext(forInitCtx)
-    val conditionType = condition.check(forConditionCtx)
+    val conditionType = condition.check(forConditionCtx, BoolType)
     if (conditionType !is BoolType) {
       throw ParserException("$condition ($conditionType) is not a boolean value, cannot be used as `for` loop condition", lineCol)
     }

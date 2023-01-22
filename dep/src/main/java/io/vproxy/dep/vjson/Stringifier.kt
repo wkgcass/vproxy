@@ -11,6 +11,8 @@
  */
 package io.vproxy.dep.vjson
 
+import io.vproxy.dep.vjson.util.PrintableCharFunc
+
 interface Stringifier {
   fun beforeObjectBegin(sb: StringBuilder, obj: JSON.Object)
   fun afterObjectBegin(sb: StringBuilder, obj: JSON.Object)
@@ -32,4 +34,20 @@ interface Stringifier {
   fun afterArrayComma(sb: StringBuilder, array: JSON.Array)
   fun beforeArrayEnd(sb: StringBuilder, array: JSON.Array)
   fun afterArrayEnd(sb: StringBuilder, array: JSON.Array)
+
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
+  fun stringOptions(): StringOptions? = null
+
+  data class StringOptions(
+    val printableChar: PrintableCharFunc?,
+  ) {
+    class Builder {
+      var printableChar: PrintableCharFunc? = null
+      fun build(): StringOptions = StringOptions(
+        printableChar
+      )
+    }
+  }
 }

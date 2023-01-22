@@ -18,24 +18,39 @@ import io.vproxy.dep.vjson.pl.inst.Instruction
 import io.vproxy.dep.vjson.pl.type.TypeContext
 import io.vproxy.dep.vjson.pl.type.TypeInstance
 
-data class Param(
+data class Param /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   val name: String,
-  val type: Type
+  val type: Type,
+  val defaultValue: Expr? = null,
 ) : TypedAST {
   override var lineCol: LineCol = LineCol.EMPTY
 
   override fun copy(): Param {
-    val ret = Param(name, type)
+    val ret = Param(name, type, defaultValue)
     ret.lineCol = lineCol
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
-    if (!ctx.hasType(type)) {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
+    if (!ctx.hasTypeConsiderArray(type)) {
       throw ParserException("type of parameter $name (${type}) is not defined", lineCol)
     }
-    type.check(ctx)
-    return ctx.getType(type)
+    val typeInstance = type.check(ctx, typeHint)
+    if (defaultValue != null) {
+      if (defaultValue !is IntegerLiteral &&
+        defaultValue !is FloatLiteral &&
+        defaultValue !is BoolLiteral &&
+        defaultValue !is StringLiteral &&
+        defaultValue !is NullLiteral
+      ) {
+        throw ParserException("default value can only be literals or null", defaultValue.lineCol)
+      }
+      val defaultValueType = defaultValue.check(ctx, typeInstance)
+      if (typeInstance != defaultValueType) {
+        throw ParserException("default value $defaultValue ($defaultValueType) cannot be assigned to $typeInstance", defaultValue.lineCol)
+      }
+    }
+    return typeInstance
   }
 
   override fun typeInstance(): TypeInstance {

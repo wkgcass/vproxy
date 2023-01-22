@@ -11,17 +11,9 @@
  */
 package io.vproxy.dep.vjson.deserializer.rule
 
-object NullableStringRule : Rule<String?>() {
+object NullableStringRule : BuiltInNullableRule<String>(StringRule, { null }) {
   /*#ifndef KOTLIN_NATIVE {{ */@JvmStatic/*}}*/
   fun get(): NullableStringRule {
     return this
-  }
-
-  override fun toString(): String {
-    return "String?"
-  }
-
-  override fun toString(sb: StringBuilder, processedListsOrObjects: MutableSet<Rule<*>>) {
-    sb.append(toString())
   }
 }

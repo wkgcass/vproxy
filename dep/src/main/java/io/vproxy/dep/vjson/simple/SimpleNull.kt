@@ -14,6 +14,7 @@ package io.vproxy.dep.vjson.simple
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Stringifier
 import io.vproxy.dep.vjson.cs.LineCol
+import io.vproxy.dep.vjson.pl.ScriptifyContext
 
 class SimpleNull /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   private val lineCol: LineCol = LineCol.EMPTY
@@ -27,6 +28,10 @@ class SimpleNull /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   }
 
   override fun stringify(builder: StringBuilder, sfr: Stringifier) {
+    builder.append(stringify())
+  }
+
+  override fun scriptify(builder: StringBuilder, ctx: ScriptifyContext) {
     builder.append(stringify())
   }
 

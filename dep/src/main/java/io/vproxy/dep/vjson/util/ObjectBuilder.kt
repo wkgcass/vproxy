@@ -13,7 +13,8 @@ package io.vproxy.dep.vjson.util
 
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.simple.*
-import io.vproxy.dep.vjson.util.functional.`Consumer$`
+import io.vproxy.dep.vjson.util.functional.Consumer_
+import io.vproxy.dep.vjson.util.functional.Supplier_
 import kotlin.reflect.KClass
 
 class ObjectBuilder {
@@ -27,9 +28,22 @@ class ObjectBuilder {
   fun putInst(key: String, inst: JSON.Instance<*>): ObjectBuilder {
     if (key == "@type") { // always add @type to the most front
       map.add(0, SimpleObjectEntry(key, inst))
+    } else {
+      map.add(SimpleObjectEntry(key, inst))
     }
-    map.add(SimpleObjectEntry(key, inst))
     return this
+  }
+
+  fun putNullableInst(key: String, isNull: Boolean, instSupplier: () -> JSON.Instance<*>): ObjectBuilder {
+    if (isNull) {
+      return put(key, null)
+    } else {
+      return putInst(key, instSupplier())
+    }
+  }
+
+  fun putNullableInst(key: String, isNull: Boolean, instSupplier: Supplier_<JSON.Instance<*>>): ObjectBuilder {
+    return putNullableInst(key, isNull, instSupplier as () -> JSON.Instance<*>)
   }
 
   fun put(key: String, bool: Boolean): ObjectBuilder {
@@ -66,7 +80,7 @@ class ObjectBuilder {
     return putInst(key, builder.build())
   }
 
-  fun putObject(key: String, func: `Consumer$`<ObjectBuilder>): ObjectBuilder {
+  fun putObject(key: String, func: Consumer_<ObjectBuilder>): ObjectBuilder {
     return putObject(key, func as (ObjectBuilder) -> Unit)
   }
 
@@ -76,7 +90,7 @@ class ObjectBuilder {
     return putInst(key, builder.build())
   }
 
-  fun putArray(key: String, func: `Consumer$`<ArrayBuilder>): ObjectBuilder {
+  fun putArray(key: String, func: Consumer_<ArrayBuilder>): ObjectBuilder {
     return putArray(key, func as (ArrayBuilder) -> Unit)
   }
 

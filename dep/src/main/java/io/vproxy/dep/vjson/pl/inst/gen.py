@@ -31,8 +31,8 @@ data class Literal{{Type}}(
   val value: {{KtType}},
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    values.{{type}}Value = value
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    exec.values.{{type}}Value = value
   }
 }
 '''.strip()
@@ -47,8 +47,8 @@ data class Get{{Type}}(
   val index: Int,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    values.{{type}}Value = ctx.getMem(depth).get{{Type}}(index)
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    exec.values.{{type}}Value = ctx.getMem(depth).get{{Type}}(index)
   }
 }
 '''.strip()
@@ -62,9 +62,9 @@ data class GetField{{Type}}(
   val index: Int,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    val mem = values.refValue as ActionContext
-    values.{{type}}Value = mem.getCurrentMem().get{{Type}}(index)
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    val mem = exec.values.refValue as ActionContext
+    exec.values.{{type}}Value = mem.getCurrentMem().get{{Type}}(index)
   }
 }
 '''.strip()
@@ -79,12 +79,12 @@ data class GetIndex{{Type}}(
   val index: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    array.execute(ctx, values)
-    val arrayValue = values.refValue as {{ArrayType}}
-    index.execute(ctx, values)
-    val indexValue = values.intValue
-    values.{{type}}Value = arrayValue[indexValue]
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    array.execute(ctx, exec)
+    val arrayValue = exec.values.refValue as {{ArrayType}}
+    index.execute(ctx, exec)
+    val indexValue = exec.values.intValue
+    exec.values.{{type}}Value = arrayValue[indexValue]
   }
 }
 '''.strip()
@@ -100,9 +100,9 @@ data class Set{{Type}}(
   val valueInst: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    valueInst.execute(ctx, values)
-    ctx.getMem(depth).set{{Type}}(index, values.{{type}}Value)
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    valueInst.execute(ctx, exec)
+    ctx.getMem(depth).set{{Type}}(index, exec.values.{{type}}Value)
   }
 }
 '''.strip()
@@ -118,13 +118,13 @@ data class SetIndex{{Type}}(
   val valueInst: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    valueInst.execute(ctx, values)
-    val value = values.{{type}}Value
-    array.execute(ctx, values)
-    val arrayValue = values.refValue as {{ArrayType}}
-    index.execute(ctx, values)
-    val indexValue = values.intValue
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    valueInst.execute(ctx, exec)
+    val value = exec.values.{{type}}Value
+    array.execute(ctx, exec)
+    val arrayValue = exec.values.refValue as {{ArrayType}}
+    index.execute(ctx, exec)
+    val indexValue = exec.values.intValue
     arrayValue[indexValue] = value
   }
 }
@@ -140,10 +140,10 @@ data class SetField{{Type}}(
   val valueInst: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    valueInst.execute(ctx, values)
-    val mem = values.refValue as ActionContext
-    mem.getCurrentMem().set{{Type}}(index, values.{{type}}Value)
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    valueInst.execute(ctx, exec)
+    val mem = exec.values.refValue as ActionContext
+    mem.getCurrentMem().set{{Type}}(index, exec.values.{{type}}Value)
   }
 }
 '''.strip()
@@ -158,12 +158,12 @@ data class {{Op}}{{Type}}(
   val right: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    left.execute(ctx, values)
-    val leftValue = values.{{type}}Value
-    right.execute(ctx, values)
-    val rightValue = values.{{type}}Value
-    values.{{opResType}}Value = leftValue {{op}} rightValue
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    left.execute(ctx, exec)
+    val leftValue = exec.values.{{type}}Value
+    right.execute(ctx, exec)
+    val rightValue = exec.values.{{type}}Value
+    exec.values.{{opResType}}Value = leftValue {{op}} rightValue
   }
 }
 '''.strip()
@@ -249,9 +249,9 @@ data class Negative{{Type}}(
   private val valueInst: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    valueInst.execute(ctx, values)
-    values.{{type}}Value = -values.{{type}}Value
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    valueInst.execute(ctx, exec)
+    exec.values.{{type}}Value = -exec.values.{{type}}Value
   }
 }
 '''.strip()
@@ -265,9 +265,9 @@ data class NewArray{{Type}}(
   val lenInst: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    lenInst.execute(ctx, values)
-    values.refValue = {{ArrayType}}(values.intValue)
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    lenInst.execute(ctx, exec)
+    exec.values.refValue = {{ArrayType}}(exec.values.intValue)
   }
 }
 '''.strip()
@@ -281,9 +281,9 @@ data class NewArray{{Type}}(
   val lenInst: Instruction,
   override val stackInfo: StackInfo
 ) : Instruction() {
-  override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-    lenInst.execute(ctx, values)
-    values.refValue = Array<Any?>(values.intValue) { null }
+  override fun execute0(ctx: ActionContext, exec: Execution) {
+    lenInst.execute(ctx, exec)
+    exec.values.refValue = Array<Any?>(exec.values.intValue) { null }
   }
 }
 '''.strip()

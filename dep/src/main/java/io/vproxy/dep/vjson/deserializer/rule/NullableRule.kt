@@ -9,22 +9,24 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.vproxy.dep.vjson.util.functional
+package io.vproxy.dep.vjson.deserializer.rule
 
-/* #ifdef KOTLIN_JS {{
-interface Func3<T, U, V, R> {
-  fun invoke(t: T, u: U, v: V): R
-}
-}} */
+import io.vproxy.dep.vjson.util.functional.Supplier_
 
-interface `TriConsumer$`<T, U, V> : /* #ifdef KOTLIN_JS {{ Func3 }} else {{ */Function3/* }} */<T, U, V, Unit> {
-  fun accept(t: T, u: U, v: V)
+open class NullableRule<V>(val rule: Rule<V>, val opIfNull: () -> V?) : Rule<V?>() {
+  // for java
+  constructor(rule: Rule<V>, opIfNull: Supplier_<V?>) : this(rule, opIfNull as (() -> V?))
 
-  override
-  /*#ifndef KOTLIN_NATIVE {{ */
-  @Suppress("DEPRECATION")
-  @JvmDefault/*}}*/
-  fun invoke(t: T, u: U, v: V) {
-    accept(t, u, v)
+  // for convenience
+  constructor(rule: Rule<V>) : this(rule, { null })
+
+  override fun toString(sb: StringBuilder, processedListsOrObjects: MutableSet<Rule<*>>) {
+    sb.append("(")
+    rule.toString(sb, processedListsOrObjects)
+    sb.append(")?")
+  }
+
+  override fun real(): Rule<*> {
+    return rule.real()
   }
 }

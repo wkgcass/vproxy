@@ -12,8 +12,8 @@
 package io.vproxy.dep.vjson.deserializer.rule
 
 import io.vproxy.dep.vjson.util.CastUtils.cast
-import io.vproxy.dep.vjson.util.functional.`BiConsumer$`
-import io.vproxy.dep.vjson.util.functional.`TriConsumer$`
+import io.vproxy.dep.vjson.util.functional.BiConsumer_
+import io.vproxy.dep.vjson.util.functional.TriConsumer_
 
 open class ObjectRule<O : Any> : Rule<O> {
   val construct: () -> Any
@@ -100,7 +100,7 @@ open class ObjectRule<O : Any> : Rule<O> {
   ) : ObjectRule<O>(construct, superRule, build, 0)
 
   // for java
-  fun <V> put(key: String, set: `BiConsumer$`<O, V>, type: Rule<V>): ObjectRule<O> {
+  fun <V> put(key: String, set: BiConsumer_<O, V>, type: Rule<V>): ObjectRule<O> {
     return put(key, set as (O, V) -> Unit, type)
   }
 
@@ -118,7 +118,7 @@ open class ObjectRule<O : Any> : Rule<O> {
   fun <V> put(key: String, type: Rule<V>, set: O.(V) -> Unit): ObjectRule<O> = put(key, set, type)
 
   // for java
-  fun addExtraRule(func: `TriConsumer$`<O, String, Any?>): ObjectRule<O> {
+  fun addExtraRule(func: TriConsumer_<O, String, Any?>): ObjectRule<O> {
     return addExtraRule(func as O.(String, Any?) -> Unit)
   }
 

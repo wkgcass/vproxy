@@ -28,7 +28,8 @@ data class VariableDefinition(
   }
 
   private var ctx: TypeContext? = null
-  private var variableIndex: Int = -1
+  var variableIndex: Int = -1
+    private set
 
   override fun checkAST(ctx: TypeContext) {
     this.ctx = ctx
@@ -39,7 +40,7 @@ data class VariableDefinition(
       if (value !is Access) {
         throw ParserException("unexpected value $value for executable variable $name, expecting a function")
       }
-      val valueFuncType = value.check(ctx)
+      val valueFuncType = value.check(ctx, null)
       val func = valueFuncType.functionDescriptor(ctx)
         ?: throw ParserException("unexpected value $value ($valueFuncType) for executable variable $name, not a function")
       if (func.params.isNotEmpty()) {
@@ -58,7 +59,7 @@ data class VariableDefinition(
         )
       )
     } else {
-      val valueType = value.check(ctx)
+      val valueType = value.check(ctx, null)
       if (valueType is NullType) {
         throw ParserException("$this: cannot determine type for $value", lineCol)
       }

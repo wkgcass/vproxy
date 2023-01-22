@@ -18,12 +18,12 @@ import io.vproxy.dep.vjson.pl.inst.*
 import io.vproxy.dep.vjson.pl.type.*
 
 class ExtFunctions {
-  var currentTimeMillis: suspend () -> Long = { 0L }
+  var currentTimeMillis: () -> Long = { 0L }
     private set
-  var rand: suspend () -> Double = { 0.0 }
+  var rand: () -> Double = { 0.0 }
     private set
 
-  fun setCurrentTimeMillis(f: suspend () -> Long): ExtFunctions {
+  fun setCurrentTimeMillis(f: () -> Long): ExtFunctions {
     this.currentTimeMillis = f
     return this
   }
@@ -33,7 +33,7 @@ class ExtFunctions {
     return this
   }
 
-  fun setRand(f: suspend () -> Double): ExtFunctions {
+  fun setRand(f: () -> Double): ExtFunctions {
     this.rand = f
     return this
   }
@@ -65,20 +65,19 @@ class ExtTypes(private val funcs: ExtFunctions) : Types {
   inner class ExtClass : TypeInstance {
     override fun field(ctx: TypeContext, name: String, accessFrom: TypeInstance?): Field? {
       return when (name) {
-        "currentTimeMillis" -> object : ExecutableField(name, LongType, MemPos(0, 0)) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            values.longValue = funcs.currentTimeMillis()
+        "currentTimeMillis" -> object : ExecutableField(name, LongType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            exec.values.longValue = funcs.currentTimeMillis()
           }
         }
         "rand" -> object : ExecutableField(
           name,
-          ctx.getFunctionDescriptorAsInstance(listOf(), DoubleType, DummyMemoryAllocatorProvider),
-          MemPos(0, 0)
+          ctx.getFunctionDescriptorAsInstance(listOf(), DoubleType, DummyMemoryAllocatorProvider)
         ) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            values.refValue = object : InstructionWithStackInfo(RAND_STACK_INFO) {
-              override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                values.doubleValue = funcs.rand()
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            exec.values.refValue = object : InstructionWithStackInfo(RAND_STACK_INFO) {
+              override fun execute0(ctx: ActionContext, exec: Execution) {
+                exec.values.doubleValue = funcs.rand()
               }
             }
           }

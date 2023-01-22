@@ -81,8 +81,16 @@ class ASTGen(_prog: JSON.Object) {
           e.value.lineCol()
         )
       }
-      val type = e.value.toJavaObject()
-      astParams.add(Param(e.key, Type(type)))
+      var type = e.value.toJavaObject()
+      var defaultValue: Expr? = null
+      if (type.contains("=")) {
+        val index = type.indexOf("=")
+        val defaultValueExprStr = type.substring(index + 1).trim()
+        type = type.substring(0, index).trim()
+        defaultValue = exprString(defaultValueExprStr, e.value.lineCol().addCol(index))
+      }
+      val typeObj = Type(type)
+      astParams.add(Param(e.key, typeObj, defaultValue))
     }
 
     if (!prog.hasNext()) {
@@ -251,12 +259,75 @@ class ASTGen(_prog: JSON.Object) {
       when (nextEntry.value) {
         is JSON.Null -> NewInstance(Type(typeStr), listOf())
         is JSON.Array -> NewInstance(Type(typeStr), exprArray(nextEntry.value))
+        is JSON.Object -> parseNewInstanceWithJson(nextEntry.value, typeStr, entry.lineCol)
         else -> throw ParserException(
           "unexpected token ${nextEntry.value} for new instance statement, expecting null or array value after key `$typeStr`",
           nextEntry.value.lineCol()
         )
       }
     }
+  }
+
+  private fun parseNewInstanceWithJson(jsonObj: JSON.Object, typeStr: String, lineCol: LineCol): Expr {
+    val expr = NewInstanceWithJson(Type(typeStr), newJsonConvert(jsonObj))
+    expr.lineCol = lineCol
+    return expr
+  }
+
+  private fun newJsonConvert(v: JSON.Instance<*>): Any {
+    return when (v) {
+      is JSON.Integer, is JSON.Long -> {
+        val ret = IntegerLiteral(v as JSON.Number<*>)
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Double -> {
+        val ret = FloatLiteral(v)
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Bool -> {
+        val ret = BoolLiteral(v.booleanValue())
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Null -> {
+        val ret = NullLiteral()
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Object -> newJsonConvert(v)
+      is JSON.Array -> newJsonConvert(v)
+      is JSON.String -> newJsonConvert(v)
+      else -> throw ParserException("unknown json instance $v", v.lineCol())
+    }
+  }
+
+  private fun newJsonConvert(jsonObj: JSON.Object): LinkedHashMap<String, Any> {
+    val map = LinkedHashMap<String, Any>()
+    for (k in jsonObj.keyList()) {
+      val v = jsonObj[k]
+      map[k] = newJsonConvert(v)
+    }
+    return map
+  }
+
+  private fun newJsonConvert(jsonArr: JSON.Array): ArrayList<Any> {
+    val ls = ArrayList<Any>()
+    for (i in 0 until jsonArr.length()) {
+      val e = jsonArr[i]
+      ls.add(newJsonConvert(e))
+    }
+    return ls
+  }
+
+  private fun newJsonConvert(jsonStr: JSON.String): Expr {
+    var str = jsonStr.toJavaObject()
+    if (!str.startsWith("\${") || !str.endsWith("}")) {
+      return StringLiteral(str)
+    }
+    str = str.substring(2, str.length - 1)
+    return exprString(str, jsonStr.lineCol().inner())
   }
 
   private fun aFor(entry: JSON.ObjectEntry): ForLoop {
@@ -506,8 +577,30 @@ class ASTGen(_prog: JSON.Object) {
     return TemplateTypeInstantiation(typeName, Type(paramTypeName), typeParams)
   }
 
-  private fun exprKey(entry: JSON.ObjectEntry): Expr {
-    val tokenizer = ExprTokenizer(entry.key, entry.lineCol.inner())
+  private fun exprKey(_entry: JSON.ObjectEntry): Expr {
+    var entry = _entry
+    var binOp: BinOpType? = null
+    var key = entry.key
+    if (key.endsWith("+") || key.endsWith("-") || key.endsWith("*") || key.endsWith("/") || key.endsWith("%")) {
+      binOp = when (key.last()) {
+        '+' -> BinOpType.PLUS; '-' -> BinOpType.MINUS; '*' -> BinOpType.MULTIPLY; '/' -> BinOpType.DIVIDE; else -> BinOpType.MOD
+      }
+      key = key.substring(0, key.length - 1)
+    } else if (entry.value is JSON.Null) {
+      // check this kind of statement: a += 1
+      if (prog.hasNext()) {
+        val nxt = prog.next()
+        if (nxt.key == "+" || nxt.key == "-" || nxt.key == "*" || nxt.key == "/" || nxt.key == "%") {
+          binOp = when (nxt.key) {
+            "+" -> BinOpType.PLUS; "-" -> BinOpType.MINUS; "*" -> BinOpType.MULTIPLY; "/" -> BinOpType.DIVIDE; else -> BinOpType.MOD
+          }
+          entry = nxt
+        } else {
+          prog.previous() // rollback
+        }
+      }
+    }
+    val tokenizer = ExprTokenizer(key, entry.lineCol.inner())
     val parser = ExprParser(tokenizer)
     val expr = parser.parse()
     if (tokenizer.peek() != null) {
@@ -517,17 +610,27 @@ class ASTGen(_prog: JSON.Object) {
       )
     }
     return if (entry.value is JSON.Array) {
-      callFunction(expr, entry.value)
+      if (binOp != null) {
+        throw ParserException("unexpected token ${entry.value}, cannot be used with $binOp", entry.value.lineCol())
+      }
+      callFunction(expr, cast(entry.value))
     } else if (expr is NullLiteral) {
       if (entry.value !is JSON.String) {
         throw ParserException("unexpected token ${entry.value}, expecting type for the `null` literal", entry.value.lineCol())
       }
-      NullLiteral(Type(entry.value.toJavaObject()))
+      if (binOp != null) {
+        throw ParserException("unexpected token ${entry.key}, unexpected token $binOp", entry.lineCol)
+      }
+      NullLiteral(Type(cast(entry.value.toJavaObject())))
     } else {
       if (expr !is AssignableExpr) {
         throw ParserException("unable to assign value to $expr", expr.lineCol)
       }
-      Assignment(expr, expr(entry.value))
+      if (binOp != null) {
+        OpAssignment(binOp, expr, expr(entry.value))
+      } else {
+        Assignment(expr, expr(entry.value))
+      }
     }
   }
 

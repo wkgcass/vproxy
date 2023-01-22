@@ -32,7 +32,7 @@ data class ThrowStatement(val errMsgExpr: Expr? = null) : Statement() {
   override fun checkAST(ctx: TypeContext) {
     this.ctx = ctx
     if (errMsgExpr != null) {
-      val type = errMsgExpr.check(ctx)
+      val type = errMsgExpr.check(ctx, null)
       if (type !is StringType && type !is NullType && type !is ErrorType) {
         throw ParserException(
           "$this: throw statement expects string or null or error object, but got $errMsgExpr ($type)",

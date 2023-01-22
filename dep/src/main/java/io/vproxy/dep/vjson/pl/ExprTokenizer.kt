@@ -13,9 +13,11 @@
 package io.vproxy.dep.vjson.pl
 
 import io.vproxy.dep.vjson.CharStream
+import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.cs.LineColCharStream
 import io.vproxy.dep.vjson.ex.ParserException
+import io.vproxy.dep.vjson.parser.ObjectParser
 import io.vproxy.dep.vjson.parser.ParserOptions
 import io.vproxy.dep.vjson.parser.StringParser
 import io.vproxy.dep.vjson.pl.token.*
@@ -40,6 +42,8 @@ class ExprTokenizer(cs: CharStream, val offset: LineCol) {
     FullMatchTokenHandler(TokenType.RIGHT_PAR, ")"),
     FullMatchTokenHandler(TokenType.LEFT_BRACKET, "["),
     FullMatchTokenHandler(TokenType.RIGHT_BRACKET, "]"),
+    FullMatchTokenHandler(TokenType.LEFT_BRACE, "{"),
+    FullMatchTokenHandler(TokenType.RIGHT_BRACE, "}"),
     FullMatchTokenHandler(TokenType.PLUS, "+"),
     FullMatchTokenHandler(TokenType.MINUS, "-"),
     FullMatchTokenHandler(TokenType.MULTIPLY, "*"),
@@ -101,6 +105,25 @@ class ExprTokenizer(cs: CharStream, val offset: LineCol) {
         return tokenBuffer.removeFirst()
       }
     }
+  }
+
+  fun nextJsonObject(): JSON.Object {
+    var needBrace = false
+    if (!tokenBuffer.isEmpty()) {
+      if (tokenBuffer.size() != 1) {
+        throw IllegalStateException("cannot retrieve json object because current token buffer is neither empty nor containing only `{`")
+      }
+      if (tokenBuffer.get(0).type != TokenType.LEFT_BRACE) {
+        throw IllegalStateException("cannot retrieve json object because current token buffer is neither empty nor containing only `{`")
+      }
+      tokenBuffer.clear()
+      needBrace = true
+    }
+    val parser = ObjectParser(InterpreterBuilder.interpreterOptions().setEnd(false))
+    if (needBrace) {
+      parser.feed("{")
+    }
+    return parser.feed(cs) ?: throw IllegalStateException("cannot retrieve json object, expecting more input")
   }
 
   private fun readToken() {

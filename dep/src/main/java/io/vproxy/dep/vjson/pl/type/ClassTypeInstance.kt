@@ -20,6 +20,7 @@ class ClassTypeInstance(val cls: ClassDefinition) : TypeInstance {
   private val fields: MutableMap<String, VariableDefinition> = HashMap()
   private val functions: MutableMap<String, FunctionDefinition> = HashMap()
   var _templateType: TemplateClassTypeInstance? = null
+  var _concreteTypeName: String? = null
   var _templateTypeParams: List<TypeInstance>? = null
 
   init {
@@ -38,7 +39,7 @@ class ClassTypeInstance(val cls: ClassDefinition) : TypeInstance {
 
   override fun constructor(ctx: TypeContext): FunctionDescriptor {
     return ctx.getFunctionDescriptor(
-      constructorParams.map { ParamInstance(it.typeInstance(), it.memIndex) },
+      constructorParams.map { ParamInstance(it.name, it.typeInstance(), it.memIndex, it.defaultValue) },
       ctx.getType(Type("void")),
       cls
     )

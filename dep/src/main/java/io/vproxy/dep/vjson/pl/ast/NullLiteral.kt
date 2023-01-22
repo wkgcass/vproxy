@@ -12,9 +12,11 @@
 
 package io.vproxy.dep.vjson.pl.ast
 
+import io.vproxy.dep.vjson.ex.ParserException
 import io.vproxy.dep.vjson.pl.inst.Instruction
 import io.vproxy.dep.vjson.pl.inst.LiteralNull
 import io.vproxy.dep.vjson.pl.type.NullType
+import io.vproxy.dep.vjson.pl.type.PrimitiveTypeInstance
 import io.vproxy.dep.vjson.pl.type.TypeContext
 import io.vproxy.dep.vjson.pl.type.TypeInstance
 
@@ -25,16 +27,27 @@ data class NullLiteral(val type: Type? = null) : Expr() {
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
+    this.typeHint = typeHint
     if (type == null) {
+      if (typeHint != null && typeHint !is PrimitiveTypeInstance) {
+        return typeHint
+      }
       return NullType
     }
-    return type.check(ctx)
+    val tInst = type.check(ctx, typeHint)
+    if (tInst is PrimitiveTypeInstance) {
+      throw ParserException("cannot assign null to $tInst", lineCol)
+    }
+    return tInst
   }
 
   override fun typeInstance(): TypeInstance {
     if (type == null) {
+      if (typeHint != null && typeHint !is PrimitiveTypeInstance) {
+        return typeHint!!
+      }
       return NullType
     }
     return type.typeInstance()

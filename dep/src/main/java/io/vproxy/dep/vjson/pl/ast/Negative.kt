@@ -23,9 +23,9 @@ data class Negative(val expr: Expr) : Expr() {
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
-    val exprType = expr.check(ctx)
+    val exprType = expr.check(ctx, typeHint)
     if (exprType !is NumericTypeInstance) {
       throw ParserException("$this: type of $expr ($exprType) is not numeric", lineCol)
     }

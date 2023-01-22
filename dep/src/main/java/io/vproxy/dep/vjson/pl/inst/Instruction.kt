@@ -16,29 +16,38 @@ abstract class Instruction {
   abstract val stackInfo: StackInfo
   protected var recordStackInfo = false
 
-  suspend fun execute(ctx: ActionContext, values: ValueHolder) {
+  fun execute(ctx: ActionContext, exec: Execution) {
     if (ctx.returnImmediately) {
       return
     }
+    if (recordStackInfo) {
+      exec.stackTrace.add(stackInfo)
+    }
     try {
-      execute0(ctx, values)
+      execute0(ctx, exec)
     } catch (e: InstructionException) {
-      if (recordStackInfo) {
-        e.stackTrace.add(stackInfo)
-      }
       throw e
     } catch (e: Throwable) {
       val msg = e.message
+      val stackTrace = ArrayList<StackInfo>(exec.stackTrace.size + 1)
+      stackTrace.addAll(exec.stackTrace)
+      if (!recordStackInfo) {
+        stackTrace.add(stackInfo)
+      }
       val ex = if (msg == null) {
-        InstructionException(stackInfo, e)
+        InstructionException(stackTrace, e)
       } else {
-        InstructionException(msg, stackInfo, e)
+        InstructionException(msg, stackTrace, e)
       }
       throw ex
+    } finally {
+      if (recordStackInfo) {
+        exec.stackTrace.removeLast()
+      }
     }
   }
 
-  protected abstract suspend fun execute0(ctx: ActionContext, values: ValueHolder)
+  protected abstract fun execute0(ctx: ActionContext, exec: Execution)
 }
 
 abstract class InstructionWithStackInfo(override val stackInfo: StackInfo) : Instruction() {

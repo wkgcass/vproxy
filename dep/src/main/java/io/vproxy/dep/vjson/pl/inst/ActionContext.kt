@@ -31,4 +31,8 @@ class ActionContext(memTotal: RuntimeMemoryTotal, private val parent: ActionCont
     if (this.depth == depth) return this
     return parent!!.getContext(depth)
   }
+
+  override fun toString(): String {
+    return "Object@${(hashCode().toLong() and 0xffffffffL).toString(16)}"
+  }
 }

@@ -192,11 +192,11 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         cs.skipBlank()
         if (cs.hasNext()) {
           c = cs.peekNext()
-          if (!isColon(c) && opts.isAllowObjectEntryWithoutValue) {
+          if (c == '{' && opts.isAllowOmittingColonBeforeBraces) {
+            state = 3
+          } else if (!isColon(c) && opts.isAllowObjectEntryWithoutValue) {
             fillEntryWithoutValue(cs)
             state = 4
-          } else if (!isColon(c) && opts.isAllowOmittingColonBeforeBraces && c == '{') {
-            state = 3
           } else if (!isColon(c)) {
             err = "invalid key-value separator for json object, expecting `:`, but got $c"
             throw ParserUtils.err(cs, opts, err)

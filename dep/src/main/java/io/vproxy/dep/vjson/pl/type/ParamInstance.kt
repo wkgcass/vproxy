@@ -12,8 +12,12 @@
 
 package io.vproxy.dep.vjson.pl.type
 
+import io.vproxy.dep.vjson.pl.ast.Expr
+
 data class ParamInstance(
+  val name: String,
   val type: TypeInstance,
   val memIndex: Int,
+  val defaultValue: Expr? = null,
 ) {
 }

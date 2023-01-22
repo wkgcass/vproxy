@@ -18,10 +18,10 @@ import io.vproxy.dep.vjson.pl.type.TypeInstance
 
 interface TypedAST : AST {
   /* #ifndef KOTLIN_NATIVE {{ */ @Throws(ParserException::class) // }}
-  fun check(ctx: TypeContext): TypeInstance
+  fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance
   fun typeInstance(): TypeInstance
 
   override fun checkAST(ctx: TypeContext) {
-    check(ctx)
+    check(ctx, null)
   }
 }

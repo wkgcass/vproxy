@@ -15,7 +15,9 @@ package io.vproxy.dep.vjson.pl.ast
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.pl.inst.Instruction
 import io.vproxy.dep.vjson.pl.inst.LiteralDouble
+import io.vproxy.dep.vjson.pl.inst.LiteralFloat
 import io.vproxy.dep.vjson.pl.type.DoubleType
+import io.vproxy.dep.vjson.pl.type.FloatType
 import io.vproxy.dep.vjson.pl.type.TypeContext
 import io.vproxy.dep.vjson.pl.type.TypeInstance
 
@@ -26,16 +28,21 @@ data class FloatLiteral(val n: JSON.Double) : Expr() {
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
+    this.typeHint = typeHint
+    if (typeHint is FloatType) return FloatType
     return DoubleType
   }
 
   override fun typeInstance(): TypeInstance {
+    if (typeHint is FloatType) return FloatType
     return DoubleType
   }
 
   override fun generateInstruction(): Instruction {
+    if (typeInstance() is FloatType)
+      return LiteralFloat(n.doubleValue().toFloat(), ctx.stackInfo(lineCol))
     return LiteralDouble(n.doubleValue(), ctx.stackInfo(lineCol))
   }
 

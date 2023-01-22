@@ -13,8 +13,8 @@
 package io.vproxy.dep.vjson.pl.type
 
 import io.vproxy.dep.vjson.pl.inst.ActionContext
+import io.vproxy.dep.vjson.pl.inst.Execution
 import io.vproxy.dep.vjson.pl.inst.Instruction
-import io.vproxy.dep.vjson.pl.inst.ValueHolder
 
 open class Field(
   val name: String,
@@ -25,7 +25,7 @@ open class Field(
 ) {
 }
 
-abstract class ExecutableField(name: String, type: TypeInstance, memPos: MemPos) :
-  Field(name, type, memPos, modifiable = false, executor = null) {
-  abstract suspend fun execute(ctx: ActionContext, values: ValueHolder)
+abstract class ExecutableField(name: String, type: TypeInstance) :
+  Field(name, type, MemPos(0, 0), modifiable = false, executor = null) {
+  abstract fun execute(ctx: ActionContext, exec: Execution)
 }

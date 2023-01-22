@@ -314,26 +314,35 @@ class ExprParser(private val tokenizer: ExprTokenizer) {
     }
     val typeStr = typeToken.raw
     val mightBeBracketOrColon =
-      tokenizer.next() ?: throw ParserException(
+      tokenizer.peek() ?: throw ParserException(
         "unexpected end of expression when trying to identify type instantiation or array creation",
         lineCol
       )
     if (mightBeBracketOrColon.type == TokenType.COLON) {
       // call constructor
-      val bracket = tokenizer.next() ?: throw ParserException(
+      tokenizer.next()
+      val bracket = tokenizer.peek() ?: throw ParserException(
         "unexpected end of expression when invoking constructor of $typeStr, expecting `[`",
         lineCol
       )
-      if (bracket.type != TokenType.LEFT_BRACKET) {
-        throw ParserException("unexpected token $bracket, expecting `[` for invoking constructor of $typeStr", bracket.lineCol)
+      if (bracket.type == TokenType.LEFT_BRACE) {
+        parseNewInstanceWithJson(ctx, typeStr, lineCol)
+      } else {
+        tokenizer.next()
+        if (bracket.type != TokenType.LEFT_BRACKET) {
+          throw ParserException("unexpected token $bracket, expecting `[` for invoking constructor of $typeStr", bracket.lineCol)
+        }
+        val args = parseArguments(ctx, lineCol, "invoking constructor of $typeStr")
+        val newInst = NewInstance(Type(typeStr), args)
+        newInst.lineCol = lineCol
+        ctx.exprStack.push(newInst)
       }
-      val args = parseArguments(ctx, lineCol, "invoking constructor of $typeStr")
-      val newInst = NewInstance(Type(typeStr), args)
-      newInst.lineCol = lineCol
-      ctx.exprStack.push(newInst)
       exprContinue(ctx)
+    } else if (mightBeBracketOrColon.type == TokenType.LEFT_BRACE) {
+      parseNewInstanceWithJson(ctx, typeStr, lineCol)
     } else if (mightBeBracketOrColon.type == TokenType.LEFT_BRACKET) {
       // new array
+      tokenizer.next()
       val subCtx = ParserContext(ctx, TokenType.LEFT_BRACKET)
       exprEntry(subCtx)
       if (!subCtx.ends) {
@@ -369,6 +378,78 @@ class ExprParser(private val tokenizer: ExprTokenizer) {
         mightBeBracketOrColon.lineCol
       )
     }
+  }
+
+  private fun parseNewInstanceWithJson(ctx: ParserContext, typeStr: String, lineCol: LineCol) {
+    val jsonObj = tokenizer.nextJsonObject()
+    val expr = NewInstanceWithJson(Type(typeStr), newJsonConvert(ctx, jsonObj))
+    expr.lineCol = lineCol
+    ctx.exprStack.push(expr)
+  }
+
+  private fun newJsonConvert(ctx: ParserContext, v: JSON.Instance<*>): Any {
+    return when (v) {
+      is JSON.Integer, is JSON.Long -> {
+        val ret = IntegerLiteral(v as JSON.Number<*>)
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Double -> {
+        val ret = FloatLiteral(v)
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Bool -> {
+        val ret = BoolLiteral(v.booleanValue())
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Null -> {
+        val ret = NullLiteral()
+        ret.lineCol = v.lineCol()
+        ret
+      }
+      is JSON.Object -> newJsonConvert(ctx, v)
+      is JSON.Array -> newJsonConvert(ctx, v)
+      is JSON.String -> newJsonConvert(ctx, v)
+      else -> throw ParserException("unknown json instance $v", v.lineCol())
+    }
+  }
+
+  private fun newJsonConvert(ctx: ParserContext, jsonObj: JSON.Object): LinkedHashMap<String, Any> {
+    val map = LinkedHashMap<String, Any>()
+    for (k in jsonObj.keyList()) {
+      val v = jsonObj[k]
+      map[k] = newJsonConvert(ctx, v)
+    }
+    return map
+  }
+
+  private fun newJsonConvert(ctx: ParserContext, jsonArr: JSON.Array): ArrayList<Any> {
+    val ls = ArrayList<Any>()
+    for (i in 0 until jsonArr.length()) {
+      val e = jsonArr[i]
+      ls.add(newJsonConvert(ctx, e))
+    }
+    return ls
+  }
+
+  private fun newJsonConvert(ctx: ParserContext, jsonStr: JSON.String): Expr {
+    var str = jsonStr.toJavaObject()
+    if (!str.startsWith("\${") || !str.endsWith("}")) {
+      return StringLiteral(str)
+    }
+    str = str.substring(2, str.length - 1)
+    val subCtx = ParserContext(ctx, null)
+    val parser = ExprParser(ExprTokenizer(str, jsonStr.lineCol().inner()))
+    parser.exprEntry(subCtx)
+    if (subCtx.exprStack.isEmpty()) {
+      throw ParserException("empty expression", jsonStr.lineCol())
+    }
+    if (subCtx.exprStack.size() > 1) {
+      throw ParserException("early end of expression before finishing parsing", jsonStr.lineCol())
+    }
+    return subCtx.exprStack.pop()
   }
 
   private fun accessVar(ctx: ParserContext) {

@@ -14,9 +14,11 @@ package io.vproxy.dep.vjson.pl.ast
 
 import io.vproxy.dep.vjson.pl.type.MemoryAllocator
 import io.vproxy.dep.vjson.pl.type.TypeContext
+import io.vproxy.dep.vjson.pl.type.TypeInstance
 
 abstract class Expr : Statement(), TypedAST {
   protected var ctx: TypeContext = TypeContext(MemoryAllocator())
+  protected var typeHint: TypeInstance? = null
 
   abstract override fun copy(): Expr
 

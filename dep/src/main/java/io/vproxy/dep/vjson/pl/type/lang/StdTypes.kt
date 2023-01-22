@@ -31,7 +31,7 @@ class StdTypes : Types {
   init {
     stdObject.getCurrentMem().setRef(0, consoleObject)
     consoleObject.getCurrentMem().setRef(0, object : InstructionWithStackInfo(CONSOLE_LOG_STACK_INFO) {
-      override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
+      override fun execute0(ctx: ActionContext, exec: Execution) {
         val outputFunc = this@StdTypes.outputFunc
         val str = ctx.getCurrentMem().getRef(0)
         if (outputFunc == null)
@@ -56,6 +56,7 @@ class StdTypes : Types {
     val linkedHashSetType = TemplateLinkedHashSetType(iteratorTemplateType = iteratorType)
     ctx.addType(Type("std.LinkedHashSet"), linkedHashSetType)
     ctx.addType(Type("std.Map"), TemplateMapType(templateKeySetType = setType, templateKeySetIteratorType = iteratorType))
+    ctx.addType(Type("std.ArrayWrapper"), TemplateArrayWrapperType())
     ctx.addType(
       Type("std.LinkedHashMap"),
       TemplateLinkedHashMapType(templateKeySetType = linkedHashSetType, templateKeySetIteratorType = iteratorType)
@@ -87,7 +88,7 @@ class ConsoleClass : TypeInstance {
       "log" -> {
         val type =
           ctx.getFunctionDescriptorAsInstance(
-            listOf(ParamInstance(ctx.getType(Type("string")), 0)), ctx.getType(Type("void")),
+            listOf(ParamInstance("msg", ctx.getType(Type("string")), 0)), ctx.getType(Type("void")),
             FixedMemoryAllocatorProvider(RuntimeMemoryTotal(refTotal = 1))
           )
         return Field("log", type, MemPos(0, 0), false, null)
@@ -103,7 +104,7 @@ class TemplateIteratorType : TypeInstance {
     return typeParameters
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     return IteratorType(templateType = this, typeParams[0])
   }
 }
@@ -114,7 +115,7 @@ class TemplateListType(private val iteratorTemplateType: TypeInstance) : TypeIns
     return typeParameters
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     return ListType(this, IteratorType(iteratorTemplateType, typeParams[0]), typeParams[0])
   }
 }
@@ -125,7 +126,7 @@ class TemplateSetType(private val iteratorTemplateType: TypeInstance) : TypeInst
     return typeParameters
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     return SetType(this, IteratorType(iteratorTemplateType, typeParams[0]), typeParams[0])
   }
 }
@@ -136,7 +137,7 @@ class TemplateLinkedHashSetType(private val iteratorTemplateType: TypeInstance) 
     return typeParameters
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     return object : SetType(this@TemplateLinkedHashSetType, IteratorType(iteratorTemplateType, typeParams[0]), typeParams[0]) {
       override fun newCollection(initialCap: Int): Collection<*> {
         return LinkedHashSet<Any?>()
@@ -151,7 +152,7 @@ class TemplateMapType(private val templateKeySetType: TypeInstance, private val 
     return typeParameters
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     return MapType(
       templateType = this,
       templateKeySetType,
@@ -168,7 +169,7 @@ class TemplateLinkedHashMapType(private val templateKeySetType: TypeInstance, pr
     return typeParameters
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     return object : MapType(
       templateType = this@TemplateLinkedHashMapType,
       templateKeySetType,
@@ -179,5 +180,13 @@ class TemplateLinkedHashMapType(private val templateKeySetType: TypeInstance, pr
         return LinkedHashMap<Any?, Any?>(cap)
       }
     }
+  }
+}
+
+class TemplateArrayWrapperType : TypeInstance {
+  private val typeParameters = listOf(ParamType("E"))
+  override fun typeParameters() = typeParameters
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
+    return ArrayWrapperType(ctx, this@TemplateArrayWrapperType, typeParams[0])
   }
 }

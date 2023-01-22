@@ -14,24 +14,29 @@ package io.vproxy.dep.vjson.pl.ast
 
 import io.vproxy.dep.vjson.ex.ParserException
 import io.vproxy.dep.vjson.pl.inst.ActionContext
+import io.vproxy.dep.vjson.pl.inst.Execution
 import io.vproxy.dep.vjson.pl.inst.Instruction
 import io.vproxy.dep.vjson.pl.inst.InstructionWithStackInfo
-import io.vproxy.dep.vjson.pl.inst.ValueHolder
 import io.vproxy.dep.vjson.pl.type.*
 
 data class NewInstance(
   val type: Type,
   val args: List<Expr>,
 ) : Expr() {
+  var _typeInstance: TypeInstance? = null
+
   override fun copy(): NewInstance {
     val ret = NewInstance(type.copy(), args.map { it.copy() })
     ret.lineCol = lineCol
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
+    if (_typeInstance != null) {
+      return _typeInstance!!
+    }
     this.ctx = ctx
-    val typeInstance = type.check(ctx)
+    val typeInstance = type.check(ctx, typeHint)
     val constructor = typeInstance.constructor(ctx) ?: throw ParserException("$this: cannot instantiate $typeInstance", lineCol)
     if (args.size != constructor.params.size) {
       throw ParserException(
@@ -40,7 +45,7 @@ data class NewInstance(
       )
     }
     for (idx in args.indices) {
-      val argType = args[idx].check(ctx)
+      val argType = args[idx].check(ctx, constructor.params[idx].type)
       val paramType = constructor.params[idx]
       if (argType != paramType.type) {
         throw ParserException(
@@ -49,23 +54,27 @@ data class NewInstance(
         )
       }
     }
+    this._typeInstance = typeInstance
     return typeInstance
   }
 
   override fun typeInstance(): TypeInstance {
-    return type.typeInstance()
+    return _typeInstance!!
   }
 
   override fun generateInstruction(): Instruction {
-    val typeInstance = this.type.typeInstance()
+    val typeInstance = this.typeInstance()
     val cons = typeInstance.constructor(ctx)!!
+
+    val args = this.args.map { it.generateInstruction() }
 
     if (cons is ExecutableConstructorFunctionDescriptor) {
       return object : InstructionWithStackInfo(ctx.stackInfo(lineCol)) {
-        override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-          val newCtx = ActionContext(cons.mem.memoryAllocator().getTotal(), null)
-          cons.execute(newCtx, values)
-          values.refValue = newCtx
+        override fun execute0(ctx: ActionContext, exec: Execution) {
+          val newCtx = ActionContext(cons.mem.memoryAllocator().getTotal(), ctx)
+          setArgs(args, cons, newCtx, exec)
+          cons.execute(newCtx, exec)
+          exec.values.refValue = newCtx
         }
       }
     }
@@ -75,30 +84,33 @@ data class NewInstance(
     val memDepth = cls.getMemDepth()
     val total = cons.mem.memoryAllocator().getTotal()
 
-    val args = this.args.map { it.generateInstruction() }
     val code = cls.code.map { it.generateInstruction() }
 
     return object : InstructionWithStackInfo(ctx.stackInfo(lineCol)) {
-      override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
+      override fun execute0(ctx: ActionContext, exec: Execution) {
         val newCtx = ActionContext(total, ctx.getContext(memDepth))
-        for (i in args.indices) {
-          val param = cons.params[i]
-          args[i].execute(ctx, values)
-          when (param.type) {
-            is IntType -> newCtx.getCurrentMem().setInt(param.memIndex, values.intValue)
-            is LongType -> newCtx.getCurrentMem().setLong(param.memIndex, values.longValue)
-            is FloatType -> newCtx.getCurrentMem().setFloat(param.memIndex, values.floatValue)
-            is DoubleType -> newCtx.getCurrentMem().setDouble(param.memIndex, values.doubleValue)
-            is BoolType -> newCtx.getCurrentMem().setBool(param.memIndex, values.boolValue)
-            else -> newCtx.getCurrentMem().setRef(param.memIndex, values.refValue)
-          }
-        }
+        setArgs(args, cons, newCtx, exec)
 
         for (c in code) {
-          c.execute(newCtx, values)
+          c.execute(newCtx, exec)
         }
 
-        values.refValue = newCtx
+        exec.values.refValue = newCtx
+      }
+    }
+  }
+
+  private fun setArgs(args: List<Instruction>, cons: FunctionDescriptor, ctx: ActionContext, exec: Execution) {
+    for (i in args.indices) {
+      val param = cons.params[i]
+      args[i].execute(ctx, exec)
+      when (param.type) {
+        is IntType -> ctx.getCurrentMem().setInt(param.memIndex, exec.values.intValue)
+        is LongType -> ctx.getCurrentMem().setLong(param.memIndex, exec.values.longValue)
+        is FloatType -> ctx.getCurrentMem().setFloat(param.memIndex, exec.values.floatValue)
+        is DoubleType -> ctx.getCurrentMem().setDouble(param.memIndex, exec.values.doubleValue)
+        is BoolType -> ctx.getCurrentMem().setBool(param.memIndex, exec.values.boolValue)
+        else -> ctx.getCurrentMem().setRef(param.memIndex, exec.values.refValue)
       }
     }
   }

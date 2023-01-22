@@ -68,7 +68,7 @@ object ParserUtils {
     if (opts.isEnd) {
       cs.skipBlank()
       if (cs.hasNext()) {
-        val err = "input stream contain extra characters other than $type"
+        val err = "input stream contains extra characters other than $type"
         opts.listener.onError(err)
         throw JsonParseException(err, cs.lineCol())
       }
@@ -273,16 +273,45 @@ object ParserUtils {
     return parser(cs, opts).buildJavaObject(cs, true)
   }
 
-  fun extractNoQuotesString(cs: CharStream, opts: ParserOptions): Pair<String, Int> {
+  fun extractNoQuotesString(cs: CharStream, opts: ParserOptions, isObjectKey: Boolean): Pair<String, Int> {
     cs.skipBlank()
     val beginLineCol = cs.lineCol()
     val sb = StringBuilder()
     val symbolStack = Stack<Char>()
     var cursor = 0 // cursor is the character already read
+    var singleLineComment = false
+    var multiLineComments = false
     loop@ while (cs.hasNext(cursor + 1)) {
       ++cursor
-      when (val c = cs.peekNext(cursor)) {
-        ',', ';', '\n', '\r' -> {
+      val c = cs.peekNext(cursor)
+      if (singleLineComment) {
+        if (c == '\r' || c == '\n') {
+          singleLineComment = false
+          // fallthrough
+        } else {
+          continue@loop
+        }
+      } else if (multiLineComments) {
+        if (c == '*') {
+          if (cs.hasNext(cursor + 1)) {
+            val cc = cs.peekNext(cursor + 1)
+            if (cc == '/') {
+              ++cursor
+              multiLineComments = false
+              continue@loop
+            }
+          }
+        }
+        continue@loop
+      }
+      when (c) {
+        ',', ';', '\n', '\r', ':' -> {
+          if (c == ':') {
+            if (!isObjectKey) {
+              sb.append(c)
+              continue@loop
+            }
+          }
           if (c == ';') {
             if (!opts.isSemicolonAsComma) {
               // parser will hang on `;` if without this check
@@ -296,6 +325,25 @@ object ParserUtils {
           } else {
             sb.append(c)
           }
+        }
+        // handle comments
+        '#' -> {
+          singleLineComment = true
+        }
+        '/' -> {
+          if (cs.hasNext(cursor + 1)) {
+            val cc = cs.peekNext(cursor + 1)
+            if (cc == '/') {
+              ++cursor
+              singleLineComment = true
+              continue@loop
+            } else if (cc == '*') {
+              ++cursor
+              multiLineComments = true
+              continue@loop
+            }
+          }
+          sb.append('/')
         }
         '(' -> {
           sb.append(c)
@@ -359,7 +407,7 @@ object ParserUtils {
   }
 
   private fun parserForValueNoQuotes(cs: CharStream, opts: ParserOptions): Parser<*> {
-    val pair = extractNoQuotesString(cs, opts)
+    val pair = extractNoQuotesString(cs, opts, false)
     val str = pair.first
     // try number, bool and null
     try {

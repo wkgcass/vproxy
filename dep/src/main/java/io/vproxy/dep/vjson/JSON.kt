@@ -19,6 +19,7 @@ import io.vproxy.dep.vjson.parser.ParserMode
 import io.vproxy.dep.vjson.parser.ParserOptions
 import io.vproxy.dep.vjson.parser.ParserUtils.buildFrom
 import io.vproxy.dep.vjson.parser.ParserUtils.buildJavaObject
+import io.vproxy.dep.vjson.pl.ScriptifyContext
 import io.vproxy.dep.vjson.util.CastUtils.cast
 
 @Suppress("DuplicatedCode")
@@ -48,9 +49,16 @@ object JSON {
   @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun <T> deserialize(cs: CharStream, rule: Rule<T>): T {
+    return deserialize(cs, rule, ParserOptions())
+  }
+
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
+  @JvmStatic/*}}*/
+  fun <T> deserialize(cs: CharStream, rule: Rule<T>, opts: ParserOptions): T {
     val listener = DeserializeParserListener(rule)
     buildFrom(
-      cs, ParserOptions().setListener(listener)
+      cs, opts.setListener(listener)
         .setMode(ParserMode.JAVA_OBJECT)
         .setNullArraysAndObjects(true)
     )
@@ -76,6 +84,7 @@ object JSON {
     fun stringify(): kotlin.String
     fun pretty(): kotlin.String
     fun stringify(builder: StringBuilder, sfr: Stringifier)
+    fun scriptify(builder: StringBuilder, ctx: ScriptifyContext)
 
     /*#ifndef KOTLIN_NATIVE {{ */
     @Suppress("DEPRECATION")
@@ -360,13 +369,15 @@ object JSON {
     companion object {
       /*#ifndef KOTLIN_NATIVE {{ */
       @Suppress("DEPRECATION")
+      @JvmOverloads
       @JvmStatic/*}}*/
-      fun stringify(s: kotlin.String): kotlin.String {
+      fun stringify(s: kotlin.String, stringOptions: Stringifier.StringOptions? = null): kotlin.String {
         val sb = StringBuilder()
         sb.append("\"")
         val chars = s.toCharArray()
         for (c in chars) {
-          if (c.toInt() in 32..126) { // printable characters
+          val printableChar = stringOptions?.printableChar
+          if ((printableChar == null && c.toInt() in 32..126) || (printableChar != null && printableChar(c))) {
             when (c) {
               '\"' -> sb.append("\\\"")
               '\\' -> sb.append("\\\\")
@@ -409,11 +420,13 @@ object JSON {
     override fun toJavaObject(): T
   }
 
-  interface Integer : Number<Int> {
+  interface IntegerNumber<T : kotlin.Number> : Number<T>
+
+  interface Integer : IntegerNumber<Int> {
     fun intValue(): Int
   }
 
-  interface Long : Number<kotlin.Long> {
+  interface Long : IntegerNumber<kotlin.Long> {
     fun longValue(): kotlin.Long
   }
 

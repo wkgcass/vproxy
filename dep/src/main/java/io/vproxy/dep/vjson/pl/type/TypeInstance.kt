@@ -30,7 +30,7 @@ interface TypeInstance {
   fun typeParameters(): List<ParamType>? = null
 
   /* #ifndef KOTLIN_NATIVE {{ */ @Throws(ParserException::class) // }}
-  fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     throw ParserException("unsupported")
   }
 

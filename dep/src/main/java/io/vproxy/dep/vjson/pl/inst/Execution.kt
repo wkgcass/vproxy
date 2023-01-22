@@ -9,22 +9,10 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.vproxy.dep.vjson.util.functional
 
-/* #ifdef KOTLIN_JS {{
-interface Func1<T, R> {
-  fun invoke(t: T): R
-}
-}} */
+package io.vproxy.dep.vjson.pl.inst
 
-interface `Consumer$`<T> : /* #ifdef KOTLIN_JS {{ Func1 }} else {{ */Function1/* }} */<T, Unit> {
-  fun accept(t: T)
-
-  override
-  /*#ifndef KOTLIN_NATIVE {{ */
-  @Suppress("DEPRECATION")
-  @JvmDefault/*}}*/
-  fun invoke(t: T) {
-    accept(t)
-  }
+class Execution {
+  val stackTrace: MutableList<StackInfo> = ArrayList()
+  val values = ValueHolder()
 }

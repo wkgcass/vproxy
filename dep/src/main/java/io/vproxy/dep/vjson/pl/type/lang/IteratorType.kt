@@ -13,7 +13,7 @@
 package io.vproxy.dep.vjson.pl.type.lang
 
 import io.vproxy.dep.vjson.pl.inst.ActionContext
-import io.vproxy.dep.vjson.pl.inst.ValueHolder
+import io.vproxy.dep.vjson.pl.inst.Execution
 import io.vproxy.dep.vjson.pl.type.*
 
 class IteratorType(
@@ -21,62 +21,61 @@ class IteratorType(
   private val elementType: TypeInstance
 ) : TypeInstance {
   override fun field(ctx: TypeContext, name: String, accessFrom: TypeInstance?): Field? {
-    val mem = MemPos(0, 0)
     return when (name) {
-      "hasNext" -> object : ExecutableField(name, BoolType, mem) {
-        override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-          val obj = values.refValue as ActionContext
+      "hasNext" -> object : ExecutableField(name, BoolType) {
+        override fun execute(ctx: ActionContext, exec: Execution) {
+          val obj = exec.values.refValue as ActionContext
           val ite = obj.getCurrentMem().getRef(0) as Iterator<Any?>
-          values.boolValue = ite.hasNext()
+          exec.values.boolValue = ite.hasNext()
         }
       }
       "next" -> when (elementType) {
-        IntType -> object : ExecutableField(name, elementType, mem) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        IntType -> object : ExecutableField(name, elementType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             @Suppress("UNCHECKED_CAST") val ite = obj.getCurrentMem().getRef(0) as Iterator<Int>
             val nx = ite.next()
-            values.intValue = nx
+            exec.values.intValue = nx
           }
         }
-        LongType -> object : ExecutableField(name, elementType, mem) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        LongType -> object : ExecutableField(name, elementType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             @Suppress("UNCHECKED_CAST") val ite = obj.getCurrentMem().getRef(0) as Iterator<Long>
             val nx = ite.next()
-            values.longValue = nx
+            exec.values.longValue = nx
           }
         }
-        FloatType -> object : ExecutableField(name, elementType, mem) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        FloatType -> object : ExecutableField(name, elementType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             @Suppress("UNCHECKED_CAST") val ite = obj.getCurrentMem().getRef(0) as Iterator<Float>
             val nx = ite.next()
-            values.floatValue = nx
+            exec.values.floatValue = nx
           }
         }
-        DoubleType -> object : ExecutableField(name, elementType, mem) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        DoubleType -> object : ExecutableField(name, elementType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             @Suppress("UNCHECKED_CAST") val ite = obj.getCurrentMem().getRef(0) as Iterator<Double>
             val nx = ite.next()
-            values.doubleValue = nx
+            exec.values.doubleValue = nx
           }
         }
-        BoolType -> object : ExecutableField(name, elementType, mem) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        BoolType -> object : ExecutableField(name, elementType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             @Suppress("UNCHECKED_CAST") val ite = obj.getCurrentMem().getRef(0) as Iterator<Boolean>
             val nx = ite.next()
-            values.boolValue = nx
+            exec.values.boolValue = nx
           }
         }
-        else -> object : ExecutableField(name, elementType, mem) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        else -> object : ExecutableField(name, elementType) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             @Suppress("UNCHECKED_CAST") val ite = obj.getCurrentMem().getRef(0) as Iterator<Any?>
             val nx = ite.next()
-            values.refValue = nx
+            exec.values.refValue = nx
           }
         }
       }

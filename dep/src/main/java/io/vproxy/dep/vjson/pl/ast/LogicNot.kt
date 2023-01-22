@@ -26,9 +26,9 @@ data class LogicNot(val expr: Expr) : Expr() {
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
-    val exprType = expr.check(ctx)
+    val exprType = expr.check(ctx, BoolType)
     if (exprType !is BoolType) {
       throw ParserException("$this: type of $expr ($exprType) is not bool", lineCol)
     }

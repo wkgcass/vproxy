@@ -12,7 +12,7 @@
 package io.vproxy.dep.vjson.deserializer.rule
 
 import io.vproxy.dep.vjson.util.CastUtils.cast
-import io.vproxy.dep.vjson.util.functional.`BiConsumer$`
+import io.vproxy.dep.vjson.util.functional.BiConsumer_
 
 class ArrayRule<L : Any, E : Any?> : Rule<L> {
   val construct: () -> Any
@@ -21,7 +21,7 @@ class ArrayRule<L : Any, E : Any?> : Rule<L> {
   val elementRule: Rule<E>
 
   // for java
-  constructor(construct: () -> L, add: `BiConsumer$`<L, E>, elementRule: Rule<E>)
+  constructor(construct: () -> L, add: BiConsumer_<L, E>, elementRule: Rule<E>)
     : this(construct, add as (L, E) -> Unit, elementRule)
 
   // translate java version to kotlin version
@@ -58,7 +58,7 @@ class ArrayRule<L : Any, E : Any?> : Rule<L> {
     fun <T_LIST : Any, T_BUILDER : Any, T_ELEM : Any?> builder(
       construct: () -> T_BUILDER,
       build: (T_BUILDER) -> T_LIST,
-      add: `BiConsumer$`<T_BUILDER, T_ELEM>,
+      add: BiConsumer_<T_BUILDER, T_ELEM>,
       elementRule: Rule<T_ELEM>
     ): ArrayRule<T_LIST, T_ELEM> = ArrayRule(construct, cast(build), cast(add), elementRule)
 

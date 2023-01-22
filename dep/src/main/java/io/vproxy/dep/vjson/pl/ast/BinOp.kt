@@ -28,10 +28,10 @@ data class BinOp(
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
-    val leftType = left.check(ctx)
-    val rightType = right.check(ctx)
+    val leftType = left.check(ctx, null)
+    val rightType = right.check(ctx, null)
     return when (op) {
       PLUS, MINUS, MULTIPLY, DIVIDE, MOD, CMP_GT, CMP_GE, CMP_LT, CMP_LE -> {
         if (op == PLUS && (leftType is StringType || rightType is StringType)) {
@@ -45,27 +45,7 @@ data class BinOp(
               typeToStringCheck = rightType
               variableToStringCheck = right
             }
-            val toStringField = typeToStringCheck.field(ctx, "toString", ctx.getContextType())
-              ?: throw ParserException(
-                "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) does not have `toString` field",
-                lineCol
-              )
-            val toStringFunc = toStringField.type.functionDescriptor(ctx)
-              ?: throw ParserException(
-                "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) `toString` field is not a function",
-                lineCol
-              )
-            if (toStringFunc.params.isNotEmpty())
-              throw ParserException(
-                "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) `toString` function parameters list is not empty",
-                lineCol
-              )
-            if (toStringFunc.returnType !is StringType) {
-              throw ParserException(
-                "$this: cannot concat string, $variableToStringCheck ($typeToStringCheck) `toString` function return type (${toStringField.type}) is not $StringType",
-                lineCol
-              )
-            }
+            TypeUtils.checkImplicitStringCast(ctx, typeToStringCheck, variableToStringCheck, lineCol)
           }
           StringType
         } else {
@@ -156,7 +136,7 @@ data class BinOp(
               "toString",
               lineCol
             )
-            val callToStringFuncInst = buildToStringInstruction(ctx, (if (lType is StringType) rType else lType), toStringFuncInst)
+            val callToStringFuncInst = TypeUtils.buildToStringInstruction(ctx, (if (lType is StringType) rType else lType), toStringFuncInst, lineCol)
             if (lType is StringType)
               StringConcat(leftInst, callToStringFuncInst, ctx.stackInfo(lineCol))
             else
@@ -224,30 +204,6 @@ data class BinOp(
       }
       LOGIC_AND -> LogicAndBool(leftInst, rightInst, ctx.stackInfo(lineCol))
       LOGIC_OR -> LogicOrBool(leftInst, rightInst, ctx.stackInfo(lineCol))
-    }
-  }
-
-  private fun buildToStringInstruction(ctx: TypeContext, variableType: TypeInstance, getFuncInst: Instruction): Instruction {
-    val toStringField = variableType.field(ctx, "toString", ctx.getContextType())!!
-    val toStringFunc = toStringField.type.functionDescriptor(ctx)!!
-    val total = toStringFunc.mem.memoryAllocator().getTotal()
-
-    val depth = if (variableType is ClassTypeInstance) {
-      variableType.cls.getMemDepth()
-    } else 0
-
-    return object : InstructionWithStackInfo(ctx.stackInfo(lineCol)) {
-      override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-        if (getFuncInst is FunctionInstance) {
-          getFuncInst.ctxBuilder = { ActionContext(total, it) }
-          getFuncInst.execute(ctx, values)
-        } else {
-          getFuncInst.execute(ctx, values)
-          val func = values.refValue as Instruction
-          val newCtx = ActionContext(total, ctx.getContext(depth))
-          func.execute(newCtx, values)
-        }
-      }
     }
   }
 

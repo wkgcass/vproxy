@@ -28,10 +28,10 @@ data class Assignment(
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
-    val variableType = variable.check(ctx)
-    val valueType = value.check(ctx)
+    val variableType = variable.check(ctx, null)
+    val valueType = value.check(ctx, variableType)
     if (!TypeUtils.assignableFrom(variableType, valueType)) {
       throw ParserException("$this: cannot assign $valueType to $variableType, type mismatch", lineCol)
     }

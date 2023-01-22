@@ -43,12 +43,12 @@ data class FunctionDefinition(
     val codeCtx = TypeContext(ctx, ast = this)
     val paramTypes = ArrayList<ParamInstance>(params.size)
     for (p in params) {
-      val paramType = p.check(codeCtx)
+      val paramType = p.check(codeCtx, null)
       p.memIndex = memoryAllocator.nextIndexFor(paramType)
-      paramTypes.add(ParamInstance(paramType, p.memIndex))
+      paramTypes.add(ParamInstance(p.name, paramType, p.memIndex))
       codeCtx.addVariable(Variable(p.name, paramType, modifiable = true, executor = null, MemPos(codeCtx.getMemoryDepth(), p.memIndex)))
     }
-    val returnTypeInstance = returnType.check(codeCtx)
+    val returnTypeInstance = returnType.check(codeCtx, null)
     val funcType = ctx.getFunctionDescriptor(paramTypes, returnTypeInstance, this)
     variableIndex = ctx.getMemoryAllocator().nextRefIndex()
     ctx.addVariable(
@@ -81,7 +81,7 @@ data class FunctionDefinition(
     val composite = CompositeInstruction(ins)
     return object : Instruction() {
       override val stackInfo: StackInfo = ctx!!.stackInfo(lineCol)
-      override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
+      override fun execute0(ctx: ActionContext, exec: Execution) {
         ctx.getMem(memDepth).setRef(variableIndex, composite)
       }
     }
@@ -94,7 +94,7 @@ data class FunctionDefinition(
   fun descriptor(ctx: TypeContext): FunctionDescriptor {
     val paramTypes = ArrayList<ParamInstance>(params.size)
     for (p in params) {
-      paramTypes.add(ParamInstance(p.typeInstance(), p.memIndex))
+      paramTypes.add(ParamInstance(p.name, p.typeInstance(), p.memIndex))
     }
     val returnType = this.returnType.typeInstance()
     return ctx.getFunctionDescriptor(paramTypes, returnType, this)

@@ -40,7 +40,7 @@ data class ClassDefinition(
     ctx.addType(Type(name), thisType)
     val codeCtx = TypeContext(ctx, thisType, this)
     for (param in params) {
-      val paramType = param.check(ctx)
+      val paramType = param.check(ctx, null)
       param.memIndex = memoryAllocator.nextIndexFor(paramType)
       codeCtx.addVariable(
         Variable(

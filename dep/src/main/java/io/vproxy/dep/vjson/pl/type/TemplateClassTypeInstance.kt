@@ -21,7 +21,7 @@ class TemplateClassTypeInstance(val tmpl: TemplateClassDefinition) : TypeInstanc
     return tmpl.paramTypes
   }
 
-  override fun concrete(ctx: TypeContext, typeParams: List<TypeInstance>): TypeInstance {
+  override fun concrete(ctx: TypeContext, concreteName: String, typeParams: List<TypeInstance>): TypeInstance {
     val ast = tmpl.copy()
     val newCtx = TypeContext(tmpl.getCtx())
     for (i in 0 until ast.paramTypes.size) {
@@ -30,6 +30,7 @@ class TemplateClassTypeInstance(val tmpl: TemplateClassDefinition) : TypeInstanc
     ast.classDef.checkAST(newCtx)
     val clsTypeInstance = newCtx.getType(Type(ast.classDef.name)) as ClassTypeInstance
     clsTypeInstance._templateType = this
+    clsTypeInstance._concreteTypeName = concreteName
     clsTypeInstance._templateTypeParams = typeParams
     return clsTypeInstance
   }

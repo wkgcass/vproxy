@@ -12,17 +12,18 @@
 
 package io.vproxy.dep.vjson.pl
 
-/* #ifndef KOTLIN_NATIVE {{*/import kotlinx.coroutines.runBlocking/*}}*/
 import io.vproxy.dep.vjson.pl.ast.Statement
 import io.vproxy.dep.vjson.pl.inst.*
 import io.vproxy.dep.vjson.pl.type.MemoryAllocator
 import io.vproxy.dep.vjson.pl.type.TypeContext
 import io.vproxy.dep.vjson.pl.type.lang.Types
 
-class Interpreter(private val types: List<Types>, private val ast: List<Statement>) {
+class Interpreter(private val types: List<Types>, ast: List<Statement>) {
   private val typesOffset = ArrayList<RuntimeMemoryTotal>()
   private val typeContext = TypeContext(MemoryAllocator())
   private val valueForTypes = HashMap<Types, RuntimeMemory>()
+  private val explorer: RuntimeMemoryExplorer
+  private val instructions: List<Instruction>
 
   init {
     var offset = RuntimeMemoryTotal()
@@ -32,6 +33,12 @@ class Interpreter(private val types: List<Types>, private val ast: List<Statemen
     }
 
     typeContext.checkStatements(ast)
+
+    val explorerBuilder = RuntimeMemoryExplorer.Builder()
+    explorerBuilder.feed(ast)
+    explorer = explorerBuilder.build()
+
+    instructions = ast.map { it.generateInstruction() }
   }
 
   fun putValues(t: Types, values: RuntimeMemory) {
@@ -42,48 +49,24 @@ class Interpreter(private val types: List<Types>, private val ast: List<Statemen
     valueForTypes.remove(t)
   }
 
-  // #ifndef KOTLIN_NATIVE {{
-  fun executeBlock(): RuntimeMemory {
-    return runBlocking {
-      execute()
-    }
-  }
-  // }}
+  fun getExplorer(): RuntimeMemoryExplorer = explorer
 
-  suspend fun execute(): RuntimeMemory {
+  fun execute(): RuntimeMemory {
     val actionContext = ActionContext(typeContext.getMemoryAllocator().getTotal(), null)
     for (i in types.indices) {
       val t = types[i]
       t.initiateValues(actionContext, typesOffset[i], valueForTypes[t])
     }
 
-    val valueHolder = ValueHolder()
-    for (stmt in ast) {
-      val inst = stmt.generateInstruction()
+    val exec = Execution()
+    for (inst in instructions) {
       try {
-        inst.execute(actionContext, valueHolder)
+        inst.execute(actionContext, exec)
       } catch (e: InstructionException) {
-        throw formatException(e)
+        throw Exception(e.formatException(), e.cause)
       }
     }
 
     return actionContext.getCurrentMem()
-  }
-
-  private fun formatException(e: InstructionException): Exception {
-    val sb = StringBuilder()
-    if (e.message != null) {
-      sb.append(e.message).append("\n")
-    }
-    var isFirst = true
-    for (info in e.stackTrace) {
-      if (isFirst) {
-        isFirst = false
-      } else {
-        sb.append("\n")
-      }
-      sb.append("  ").append(info)
-    }
-    return Exception(sb.toString(), e.cause)
   }
 }

@@ -30,12 +30,13 @@ abstract class CollectionType(
   protected abstract fun newCollection(initialCap: Int): Collection<*>
 
   private val constructorDescriptor = object : ExecutableConstructorFunctionDescriptor(
-    listOf(ParamInstance(IntType, 0)),
+    listOf(ParamInstance("size", IntType, 0)),
     VoidType,
     FixedMemoryAllocatorProvider(RuntimeMemoryTotal(intTotal = 1, refTotal = 1))
   ) {
-    override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-      ctx.getCurrentMem().setRef(0, newCollection(values.intValue))
+    override fun execute(ctx: ActionContext, exec: Execution) {
+      val mem = ctx.getCurrentMem()
+      mem.setRef(0, newCollection(mem.getInt(0)))
     }
   }
 
@@ -57,84 +58,83 @@ abstract class CollectionType(
   }
 
   override fun field(ctx: TypeContext, name: String, accessFrom: TypeInstance?): Field? {
-    val memPos = MemPos(0, 0)
     return when (name) {
-      "size" -> object : ExecutableField(name, IntType, memPos) {
-        override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-          val obj = values.refValue as ActionContext
+      "size" -> object : ExecutableField(name, IntType) {
+        override fun execute(ctx: ActionContext, exec: Execution) {
+          val obj = exec.values.refValue as ActionContext
           val coll = obj.getCurrentMem().getRef(0) as Collection<*>
-          values.intValue = coll.size
+          exec.values.intValue = coll.size
         }
       }
       "add" -> {
         val type = ctx.getFunctionDescriptorAsInstance(
-          listOf(ParamInstance(elementType, 0)),
+          listOf(ParamInstance("e", elementType, 0)),
           BoolType,
           memoryAllocatorForSingleElementTypeFunction()
         )
         when (elementType) {
-          IntType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          IntType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Int>
-              values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.add(ctx.getCurrentMem().getInt(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.add(ctx.getCurrentMem().getInt(0))
                 }
               }
             }
           }
-          LongType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          LongType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Long>
-              values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.add(ctx.getCurrentMem().getLong(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.add(ctx.getCurrentMem().getLong(0))
                 }
               }
             }
           }
-          FloatType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          FloatType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Float>
-              values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.add(ctx.getCurrentMem().getFloat(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.add(ctx.getCurrentMem().getFloat(0))
                 }
               }
             }
           }
-          DoubleType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          DoubleType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Double>
-              values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.add(ctx.getCurrentMem().getDouble(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.add(ctx.getCurrentMem().getDouble(0))
                 }
               }
             }
           }
-          BoolType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          BoolType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Boolean>
-              values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.add(ctx.getCurrentMem().getBool(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.add(ctx.getCurrentMem().getBool(0))
                 }
               }
             }
           }
-          else -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          else -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Any?>
-              values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.add(ctx.getCurrentMem().getRef(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_ADD_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.add(ctx.getCurrentMem().getRef(0))
                 }
               }
             }
@@ -143,174 +143,221 @@ abstract class CollectionType(
       }
       "remove" -> {
         val type = ctx.getFunctionDescriptorAsInstance(
-          listOf(ParamInstance(elementType, 0)),
+          listOf(ParamInstance("e", elementType, 0)),
           BoolType,
           memoryAllocatorForSingleElementTypeFunction()
         )
         when (elementType) {
-          IntType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          IntType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Int>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.remove(ctx.getCurrentMem().getInt(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.remove(ctx.getCurrentMem().getInt(0))
                 }
               }
             }
           }
-          LongType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          LongType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Long>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.remove(ctx.getCurrentMem().getLong(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.remove(ctx.getCurrentMem().getLong(0))
                 }
               }
             }
           }
-          FloatType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          FloatType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Float>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.remove(ctx.getCurrentMem().getFloat(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.remove(ctx.getCurrentMem().getFloat(0))
                 }
               }
             }
           }
-          DoubleType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          DoubleType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Double>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.remove(ctx.getCurrentMem().getDouble(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.remove(ctx.getCurrentMem().getDouble(0))
                 }
               }
             }
           }
-          BoolType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          BoolType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Boolean>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.remove(ctx.getCurrentMem().getBool(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.remove(ctx.getCurrentMem().getBool(0))
                 }
               }
             }
           }
-          else -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          else -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Any?>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.remove(ctx.getCurrentMem().getRef(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.remove(ctx.getCurrentMem().getRef(0))
                 }
               }
+            }
+          }
+        }
+      }
+      "toArray" -> {
+        val type = ArrayTypeInstance(elementType)
+        when (elementType) {
+          IntType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
+              @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Int>
+              exec.values.refValue = coll.toIntArray()
+            }
+          }
+          LongType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
+              @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Long>
+              exec.values.refValue = coll.toLongArray()
+            }
+          }
+          FloatType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
+              @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Float>
+              exec.values.refValue = coll.toFloatArray()
+            }
+          }
+          DoubleType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
+              @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Double>
+              exec.values.refValue = coll.toDoubleArray()
+            }
+          }
+          BoolType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
+              @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Boolean>
+              exec.values.refValue = coll.toBooleanArray()
+            }
+          }
+          else -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
+              @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Any?>
+              exec.values.refValue = coll.toTypedArray()
             }
           }
         }
       }
       "contains" -> {
         val type = ctx.getFunctionDescriptorAsInstance(
-          listOf(ParamInstance(elementType, 0)),
+          listOf(ParamInstance("e", elementType, 0)),
           BoolType,
           memoryAllocatorForSingleElementTypeFunction()
         )
         when (elementType) {
-          IntType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          IntType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Int>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.contains(ctx.getCurrentMem().getInt(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.contains(ctx.getCurrentMem().getInt(0))
                 }
               }
             }
           }
-          LongType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          LongType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Long>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.contains(ctx.getCurrentMem().getLong(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.contains(ctx.getCurrentMem().getLong(0))
                 }
               }
             }
           }
-          FloatType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          FloatType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Float>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.contains(ctx.getCurrentMem().getFloat(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.contains(ctx.getCurrentMem().getFloat(0))
                 }
               }
             }
           }
-          DoubleType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          DoubleType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Double>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.contains(ctx.getCurrentMem().getDouble(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.contains(ctx.getCurrentMem().getDouble(0))
                 }
               }
             }
           }
-          BoolType -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          BoolType -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Boolean>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.contains(ctx.getCurrentMem().getBool(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.contains(ctx.getCurrentMem().getBool(0))
                 }
               }
             }
           }
-          else -> object : ExecutableField(name, type, memPos) {
-            override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-              val obj = values.refValue as ActionContext
+          else -> object : ExecutableField(name, type) {
+            override fun execute(ctx: ActionContext, exec: Execution) {
+              val obj = exec.values.refValue as ActionContext
               @Suppress("UNCHECKED_CAST") val coll = obj.getCurrentMem().getRef(0) as MutableCollection<Any?>
-              values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
-                override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                  values.boolValue = coll.contains(ctx.getCurrentMem().getRef(0))
+              exec.values.refValue = object : InstructionWithStackInfo(COLL_REMOVE_STACK_INFO) {
+                override fun execute0(ctx: ActionContext, exec: Execution) {
+                  exec.values.boolValue = coll.contains(ctx.getCurrentMem().getRef(0))
                 }
               }
             }
           }
         }
       }
-      "iterator" -> object : ExecutableField(name, iteratorType, memPos) {
-        override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-          val obj = values.refValue as ActionContext
+      "iterator" -> object : ExecutableField(name, iteratorType) {
+        override fun execute(ctx: ActionContext, exec: Execution) {
+          val obj = exec.values.refValue as ActionContext
           val coll = obj.getCurrentMem().getRef(0) as MutableCollection<*>
 
           val iteObj = ActionContext(RuntimeMemoryTotal(refTotal = 1), parent = null)
           iteObj.getCurrentMem().setRef(0, coll.iterator())
 
-          values.refValue = iteObj
+          exec.values.refValue = iteObj
         }
       }
       "toString" -> {
         val type = ctx.getFunctionDescriptorAsInstance(listOf(), StringType, DummyMemoryAllocatorProvider)
-        object : ExecutableField(name, type, memPos) {
-          override suspend fun execute(ctx: ActionContext, values: ValueHolder) {
-            val obj = values.refValue as ActionContext
+        object : ExecutableField(name, type) {
+          override fun execute(ctx: ActionContext, exec: Execution) {
+            val obj = exec.values.refValue as ActionContext
             val coll = obj.getCurrentMem().getRef(0) as MutableCollection<*>
-            values.refValue = object : InstructionWithStackInfo(COLL_TO_STRING_STACK_INFO) {
-              override suspend fun execute0(ctx: ActionContext, values: ValueHolder) {
-                values.refValue = coll.toString()
+            exec.values.refValue = object : InstructionWithStackInfo(COLL_TO_STRING_STACK_INFO) {
+              override fun execute0(ctx: ActionContext, exec: Execution) {
+                exec.values.refValue = coll.toString()
               }
             }
           }

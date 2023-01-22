@@ -16,6 +16,7 @@ import io.vproxy.dep.vjson.ex.ParserException
 import io.vproxy.dep.vjson.pl.inst.Instruction
 import io.vproxy.dep.vjson.pl.inst.NoOp
 import io.vproxy.dep.vjson.pl.type.TypeContext
+import io.vproxy.dep.vjson.pl.type.TypeInstance
 
 data class TemplateTypeInstantiation(val typeName: String, val templateType: Type, val typeParams: List<Type>) : Statement() {
   override fun copy(): TemplateTypeInstantiation {
@@ -28,14 +29,17 @@ data class TemplateTypeInstantiation(val typeName: String, val templateType: Typ
     return false
   }
 
+  var instantiatedTypeInstance: TypeInstance? = null
+    private set
+
   override fun checkAST(ctx: TypeContext) {
     if (ctx.hasTypeInThisContext(Type(typeName))) {
       throw ParserException("type `$typeName` is already defined", lineCol)
     }
-    val templateType = this.templateType.check(ctx)
+    val templateType = this.templateType.check(ctx, null)
     val astTypeParams = templateType.typeParameters() ?: throw ParserException("type `$templateType` is not a template class", lineCol)
 
-    val typeParams = this.typeParams.map { it.check(ctx) }
+    val typeParams = this.typeParams.map { it.check(ctx, null) }
 
     if (astTypeParams.size != typeParams.size) {
       throw ParserException(
@@ -45,11 +49,12 @@ data class TemplateTypeInstantiation(val typeName: String, val templateType: Typ
     }
 
     val typeInstance = try {
-      templateType.concrete(ctx, typeParams)
+      templateType.concrete(ctx, typeName, typeParams)
     } catch (e: ParserException) {
       throw ParserException("constructing concrete type $typeName failed: ${e.message}", e, this.lineCol)
     }
 
+    instantiatedTypeInstance = typeInstance
     ctx.addType(Type(typeName), typeInstance)
   }
 

@@ -27,8 +27,6 @@ data class ReturnStatement(val expr: Expr? = null) : Statement() {
   }
 
   override fun checkAST(ctx: TypeContext) {
-    val exprType = expr?.check(ctx)
-
     val astCtx = ctx.getContextAST { it is FunctionDefinition || it is ClassDefinition }
     if (astCtx == null || astCtx !is FunctionDefinition) {
       throw ParserException("`return` is not inside a function, current context is $astCtx", lineCol)
@@ -38,6 +36,7 @@ data class ReturnStatement(val expr: Expr? = null) : Statement() {
     val func = astCtx
     val returnType = func.returnType.typeInstance()
 
+    val exprType = expr?.check(ctx, returnType)
     if (exprType == null) {
       if (returnType !is VoidType) {
         throw ParserException("function ${func.name} returns $returnType, but the `return` statement does not have a value", lineCol)

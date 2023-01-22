@@ -23,14 +23,14 @@ data class AccessIndex(val from: Expr, val index: Expr) : AssignableExpr() {
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
-    val type = from.check(ctx)
+    val type = from.check(ctx, null)
     val elementType = type.elementType(ctx)
     if (elementType == null) {
       throw ParserException("$this: $elementType doesn't have elements", lineCol)
     }
-    val indexType = index.check(ctx)
+    val indexType = index.check(ctx, IntType)
     if (indexType !is IntType) {
       throw ParserException("$this: typeof $index ($indexType) is not `int`", lineCol)
     }

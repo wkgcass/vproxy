@@ -13,7 +13,9 @@ package io.vproxy.dep.vjson.util
 
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.simple.*
-import io.vproxy.dep.vjson.util.functional.`Consumer$`
+import io.vproxy.dep.vjson.util.functional.BiConsumer_
+import io.vproxy.dep.vjson.util.functional.Consumer_
+import io.vproxy.dep.vjson.util.functional.Supplier_
 
 class ArrayBuilder {
   private val list: MutableList<JSON.Instance<*>> = ArrayList()
@@ -21,6 +23,18 @@ class ArrayBuilder {
   fun addInst(inst: JSON.Instance<*>): ArrayBuilder {
     list.add(inst)
     return this
+  }
+
+  fun addNullableInst(isNull: Boolean, instSupplier: () -> JSON.Instance<*>): ArrayBuilder {
+    if (isNull) {
+      return add(null)
+    } else {
+      return addInst(instSupplier())
+    }
+  }
+
+  fun addNullableInst(isNull: Boolean, instSupplier: Supplier_<JSON.Instance<*>>): ArrayBuilder {
+    return addNullableInst(isNull, instSupplier as () -> JSON.Instance<*>)
   }
 
   fun add(bool: Boolean): ArrayBuilder {
@@ -57,7 +71,7 @@ class ArrayBuilder {
     return addInst(builder.build())
   }
 
-  fun addObject(func: `Consumer$`<ObjectBuilder>): ArrayBuilder {
+  fun addObject(func: Consumer_<ObjectBuilder>): ArrayBuilder {
     return addObject(func as (ObjectBuilder) -> Unit)
   }
 
@@ -67,8 +81,19 @@ class ArrayBuilder {
     return addInst(builder.build())
   }
 
-  fun addArray(func: `Consumer$`<ArrayBuilder>): ArrayBuilder {
+  fun addArray(func: Consumer_<ArrayBuilder>): ArrayBuilder {
     return addArray(func as (ArrayBuilder) -> Unit)
+  }
+
+  fun <T> iterable(ite: Iterable<T>, operator: ArrayBuilder.(T) -> Unit): ArrayBuilder {
+    for (e in ite) {
+      operator(this, e)
+    }
+    return this
+  }
+
+  fun <T> iterable(ite: Iterable<T>, operator: BiConsumer_<ArrayBuilder, T>): ArrayBuilder {
+    return iterable(ite, operator as ArrayBuilder.(T) -> Unit)
   }
 
   fun build(): JSON.Array {

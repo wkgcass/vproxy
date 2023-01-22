@@ -13,13 +13,8 @@
 package io.vproxy.dep.vjson.pl.ast
 
 import io.vproxy.dep.vjson.JSON
-import io.vproxy.dep.vjson.pl.inst.Instruction
-import io.vproxy.dep.vjson.pl.inst.LiteralInt
-import io.vproxy.dep.vjson.pl.inst.LiteralLong
-import io.vproxy.dep.vjson.pl.type.IntType
-import io.vproxy.dep.vjson.pl.type.LongType
-import io.vproxy.dep.vjson.pl.type.TypeContext
-import io.vproxy.dep.vjson.pl.type.TypeInstance
+import io.vproxy.dep.vjson.pl.inst.*
+import io.vproxy.dep.vjson.pl.type.*
 
 data class IntegerLiteral(val n: JSON.Number<*>) : Expr() {
   override fun copy(): IntegerLiteral {
@@ -28,20 +23,32 @@ data class IntegerLiteral(val n: JSON.Number<*>) : Expr() {
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
+    this.typeHint = typeHint
+    if (typeHint is LongType) return LongType
+    if (typeHint is FloatType) return FloatType
+    if (typeHint is DoubleType) return DoubleType
     return if (n is JSON.Long) LongType else IntType
   }
 
   override fun typeInstance(): TypeInstance {
+    if (typeHint is LongType) return LongType
+    if (typeHint is FloatType) return FloatType
+    if (typeHint is DoubleType) return DoubleType
     return if (n is JSON.Long) LongType else IntType
   }
 
   override fun generateInstruction(): Instruction {
-    return if (n is JSON.Long) {
-      LiteralLong(n.toJavaObject(), ctx.stackInfo(lineCol))
+    val t = typeInstance()
+    return if (t is LongType) {
+      LiteralLong(n.toJavaObject().toLong(), ctx.stackInfo(lineCol))
+    } else if (t is FloatType) {
+      LiteralFloat(n.toJavaObject().toFloat(), ctx.stackInfo(lineCol))
+    } else if (t is DoubleType) {
+      LiteralDouble(n.toJavaObject().toDouble(), ctx.stackInfo(lineCol))
     } else {
-      LiteralInt((n as JSON.Integer).toJavaObject(), ctx.stackInfo(lineCol))
+      LiteralInt(n.toJavaObject().toInt(), ctx.stackInfo(lineCol))
     }
   }
 

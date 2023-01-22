@@ -16,6 +16,7 @@ import io.vproxy.dep.vjson.JSON.String.Companion.stringify
 import io.vproxy.dep.vjson.Stringifier
 import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.parser.TrustedFlag
+import io.vproxy.dep.vjson.pl.ScriptifyContext
 
 open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, JSON.Object {
   private val map: MutableList<SimpleObjectEntry<JSON.Instance<*>>>
@@ -107,7 +108,7 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
         sfr.afterObjectComma(builder, this)
       }
       sfr.beforeObjectKey(builder, this, entry.key)
-      builder.append(stringify(entry.key))
+      builder.append(stringify(entry.key, sfr.stringOptions()))
       sfr.afterObjectKey(builder, this, entry.key)
       sfr.beforeObjectColon(builder, this)
       builder.append(":")
@@ -119,6 +120,219 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
     sfr.beforeObjectEnd(builder, this)
     builder.append("}")
     sfr.afterObjectEnd(builder, this)
+  }
+
+  override fun scriptify(builder: StringBuilder, ctx: ScriptifyContext) {
+    val isTopLevel = ctx.isTopLevel
+    ctx.unsetTopLevel()
+    if (map.isEmpty()) {
+      builder.append("{ }")
+      return
+    }
+    if (map.size <= 2) {
+
+      builder.append("{ ")
+      val ite = map.iterator()
+      var isFirst = true
+      while (ite.hasNext()) {
+        if (isFirst) {
+          isFirst = false
+        } else {
+          builder.append(", ")
+        }
+        scriptifyEntry(ite, builder, ctx)
+      }
+      builder.append(" }")
+
+    } else {
+
+      builder.append("{\n")
+      if (!isTopLevel) {
+        ctx.increaseIndent()
+      }
+
+      val ite = map.iterator()
+      var addIndent = true
+      while (ite.hasNext()) {
+        if (addIndent) {
+          ctx.appendIndent(builder)
+        }
+        val finished = scriptifyEntry(ite, builder, ctx)
+        addIndent = finished
+        if (addIndent) {
+          builder.append("\n")
+        }
+      }
+
+      if (!isTopLevel) {
+        ctx.decreaseIndent()
+      }
+      ctx.appendIndent(builder)
+      builder.append("}")
+
+    }
+    if (isTopLevel) {
+      builder.append("\n")
+    }
+  }
+
+  private fun scriptifyEntry(ite: Iterator<SimpleObjectEntry<JSON.Instance<*>>>, builder: StringBuilder, ctx: ScriptifyContext): Boolean {
+    val entry = ite.next()
+    val key = entry.key
+    val value = entry.value
+
+    when (key) {
+      "function" -> {
+        builder.append("function ")
+        return appendNameAndParams(value, ite, builder, ctx)
+      }
+      "class" -> {
+        builder.append("class ")
+        return appendNameAndParams(value, ite, builder, ctx)
+      }
+      "template" -> {
+        builder.append("template ")
+        if (value !is JSON.Object) {
+          value.scriptify(builder, ctx)
+          return true
+        }
+        builder.append("{ ")
+        var isFirst = true
+        for (e in value.entryList()) {
+          if (isFirst) isFirst = false
+          else builder.append(", ")
+          scriptifyKey(e.key, builder)
+          if (e.value !is JSON.Null) {
+            e.value.scriptify(builder, ctx)
+          }
+        }
+        builder.append(" } ")
+        return false
+      }
+      "var" -> {
+        builder.append("var ")
+        if (value !is JSON.Null) {
+          value.scriptify(builder, ctx)
+          return true
+        }
+        if (!ite.hasNext()) {
+          return true
+        }
+        val kv = ite.next()
+        scriptifyKey(kv.key, builder)
+        builder.append(" = ")
+        kv.value.scriptify(builder, ctx)
+        return true
+      }
+      "if" -> {
+        builder.append("if: ")
+        value.scriptify(builder, ctx)
+        builder.append("; ")
+        return false
+      }
+      "for" -> {
+        builder.append("for: ")
+        if (value !is JSON.Array) {
+          value.scriptify(builder, ctx)
+          return true
+        }
+        builder.append("[")
+        var isFirst = true
+        for (i in 0 until value.length()) {
+          if (isFirst) isFirst = false
+          else builder.append("; ")
+          val e = value[i]
+          e.scriptify(builder, ctx)
+        }
+        builder.append("] ")
+        return false
+      }
+      "while" -> {
+        builder.append("while: ")
+        value.scriptify(builder, ctx)
+        builder.append("; ")
+        return false
+      }
+      "return" -> {
+        builder.append("return: ")
+        value.scriptify(builder, ctx)
+        return true
+      }
+      "throw" -> {
+        builder.append("throw: ")
+        value.scriptify(builder, ctx)
+        return true
+      }
+      "null" -> {
+        builder.append("null: ")
+        value.scriptify(builder, ctx)
+        return true
+      }
+      else -> {
+        scriptifyKey(key, builder)
+        if (value is JSON.Null) {
+          builder.append(" ")
+          return false
+        }
+        if (value is JSON.Object) {
+          if (value.size() == 1 && value.keyList()[0] == "null") {
+            builder.append(" = ")
+          } else {
+            builder.append(" ")
+          }
+        } else if (value is JSON.Array) {
+          builder.append(":")
+        } else {
+          builder.append(" = ")
+        }
+        value.scriptify(builder, ctx)
+        return true
+      }
+    }
+  }
+
+  private fun appendNameAndParams(
+    value: JSON.Instance<*>,
+    ite: Iterator<SimpleObjectEntry<JSON.Instance<*>>>,
+    builder: StringBuilder,
+    ctx: ScriptifyContext
+  ): Boolean {
+    if (value !is JSON.Null) {
+      value.scriptify(builder, ctx)
+      return true
+    }
+    if (!ite.hasNext()) {
+      return true
+    }
+    val nameAndParams = ite.next()
+    val name = nameAndParams.key
+    scriptifyKey(name, builder)
+    builder.append(" ")
+    val params = nameAndParams.value
+    if (params !is JSON.Object) {
+      builder.append("= ")
+      params.scriptify(builder, ctx)
+      return true
+    }
+    appendParams(params, builder, ctx)
+    return false
+  }
+
+  private fun appendParams(params: JSON.Object, builder: StringBuilder, ctx: ScriptifyContext) {
+    builder.append("{")
+    var isFirst = true
+    for (e in params.entryList()) {
+      if (isFirst) isFirst = false
+      else builder.append(", ")
+      scriptifyKey(e.key, builder)
+      builder.append(": ")
+      e.value.scriptify(builder, ctx)
+    }
+    builder.append("} ")
+  }
+
+  private fun scriptifyKey(key: String, builder: StringBuilder) {
+    builder.append(ScriptifyContext.scriptifyString(key))
   }
 
   override fun _toString(): String {

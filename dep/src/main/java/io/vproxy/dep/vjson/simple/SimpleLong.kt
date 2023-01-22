@@ -14,6 +14,7 @@ package io.vproxy.dep.vjson.simple
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Stringifier
 import io.vproxy.dep.vjson.cs.LineCol
+import io.vproxy.dep.vjson.pl.ScriptifyContext
 
 class SimpleLong /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   private val value: Long,
@@ -24,6 +25,10 @@ class SimpleLong /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   }
 
   override fun stringify(builder: StringBuilder, sfr: Stringifier) {
+    builder.append(value)
+  }
+
+  override fun scriptify(builder: StringBuilder, ctx: ScriptifyContext) {
     builder.append(value)
   }
 

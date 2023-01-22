@@ -14,6 +14,7 @@ package io.vproxy.dep.vjson.ex
 
 import io.vproxy.dep.vjson.cs.LineCol
 
+// #ifdef COVERAGE {{@lombok.Generated}}
 open class ParserException : RuntimeException {
   var lineCol: LineCol? = null
     private set

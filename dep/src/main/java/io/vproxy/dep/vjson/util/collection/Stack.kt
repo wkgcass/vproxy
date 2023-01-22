@@ -12,7 +12,7 @@
 package io.vproxy.dep.vjson.util.collection
 
 class Stack<E> {
-  private val list = VList<E>()
+  private val list = ArrayList<E>()
 
   fun push(e: E) {
     list.add(e)
@@ -31,7 +31,7 @@ class Stack<E> {
   }
 
   fun size(): Int {
-    return list.size()
+    return list.size
   }
 
   fun clearAndReverse(): Stack<E> {

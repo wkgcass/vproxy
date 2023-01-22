@@ -27,18 +27,24 @@ data class OpAssignment(
     return ret
   }
 
-  override fun check(ctx: TypeContext): TypeInstance {
+  override fun check(ctx: TypeContext, typeHint: TypeInstance?): TypeInstance {
     this.ctx = ctx
     if (op != BinOpType.PLUS && op != BinOpType.MINUS && op != BinOpType.MULTIPLY && op != BinOpType.DIVIDE && op != BinOpType.MOD) {
       throw ParserException("invalid operator for assigning: $op", lineCol)
     }
-    val variableType = variable.check(ctx)
-    val valueType = value.check(ctx)
-    if (!TypeUtils.assignableFrom(variableType, valueType)) {
-      throw ParserException("$this: cannot calculate and assign $valueType to $variableType, type mismatch", lineCol)
-    }
-    if (valueType !is NumericTypeInstance) {
-      throw ParserException("$this: cannot execute $op on type $valueType, not numeric", lineCol)
+    val variableType = variable.check(ctx, null)
+    val valueType = value.check(ctx, variableType)
+    if (op == BinOpType.PLUS && variableType is StringType) {
+      if (valueType !is StringType) {
+        TypeUtils.checkImplicitStringCast(ctx, valueType, value, lineCol)
+      }
+    } else {
+      if (!TypeUtils.assignableFrom(variableType, valueType)) {
+        throw ParserException("$this: cannot calculate and assign $valueType to $variableType, type mismatch", lineCol)
+      }
+      if (valueType !is NumericTypeInstance) {
+        throw ParserException("$this: cannot execute $op on type $valueType, not numeric", lineCol)
+      }
     }
     if (op == BinOpType.MOD) {
       if (valueType !is IntType && valueType !is LongType) {
@@ -50,7 +56,7 @@ data class OpAssignment(
       throw ParserException("$this: cannot assign values to $variable, the variable/field is unmodifiable", lineCol)
     }
 
-    return valueType
+    return variableType
   }
 
   override fun typeInstance(): TypeInstance {
@@ -64,6 +70,19 @@ data class OpAssignment(
         is LongType -> PlusLong(variable.generateInstruction(), value.generateInstruction(), ctx.stackInfo(lineCol))
         is FloatType -> PlusFloat(variable.generateInstruction(), value.generateInstruction(), ctx.stackInfo(lineCol))
         is DoubleType -> PlusDouble(variable.generateInstruction(), value.generateInstruction(), ctx.stackInfo(lineCol))
+        is StringType -> if (value.typeInstance() is StringType) {
+          StringConcat(variable.generateInstruction(), value.generateInstruction(), ctx.stackInfo(lineCol))
+        } else {
+          val toStringFuncInst = Access.buildGetFieldInstruction(
+            ctx,
+            value.generateInstruction(),
+            value.typeInstance(),
+            "toString",
+            lineCol
+          )
+          val callToStringFuncInst = TypeUtils.buildToStringInstruction(ctx, value.typeInstance(), toStringFuncInst, lineCol)
+          StringConcat(variable.generateInstruction(), callToStringFuncInst, ctx.stackInfo(lineCol))
+        }
         else -> throw IllegalStateException()
       }
       BinOpType.MINUS -> when (variable.typeInstance()) {
