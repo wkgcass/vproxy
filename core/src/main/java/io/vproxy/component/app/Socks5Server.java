@@ -62,8 +62,10 @@ public class Socks5Server extends TcpLB {
             if (type == AddressType.domain && !IP.isIpLiteral(address) /*some implementation may always send domain socks5 request even if it's plain ip*/) {
                 Hint hint = Hint.ofHostPort(address, port);
                 Connector connector = upstream.seek(accepted.remote, hint);
-                providedCallback.accept(connector);
-                return;
+                if (connector != null) {
+                    providedCallback.accept(connector);
+                    return;
+                }
             } else {
                 // we do a search regardless of the `allowNonBackend` flag
                 // because connection and netflow can be recorded, and down process can be accelerated
