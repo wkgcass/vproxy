@@ -56,8 +56,8 @@ class TestVPWSAgentConfig {
         "    groups = [\n" +
         "      {\n" +
         "        servers = [\n" +
-        "          websockss://127.0.0.1:18686\n" +
-        "          websockss:kcp://example.com:443\n" +
+        "          'websockss://127.0.0.1:18686'\n" +
+        "          'websockss:kcp://example.com:443'\n" +
         "        ]\n" +
         "        domains = [\n" +
         "          /.*google\\.com.*/\n" +
@@ -78,7 +78,7 @@ class TestVPWSAgentConfig {
         "      {\n" +
         "        name = TEST\n" +
         "        servers = [\n" +
-        "          websocks://127.0.0.1:18687\n" +
+        "          'websocks://127.0.0.1:18687'\n" +
         "        ]\n" +
         "        domains = [\n" +
         "          :14000\n" +
