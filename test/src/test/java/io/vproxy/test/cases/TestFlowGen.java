@@ -1193,6 +1193,15 @@ public class TestFlowGen {
     }
 
     @Test
+    public void log() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.Log");
+        actions = List.of("helper.log(pkb, \"hello-world\");\n" +
+            "return FilterResult.PASS;");
+        tables = genTable(0, EXECUTE0);
+        check("actions=log:hello-world,pass");
+    }
+
+    @Test
     public void realworld() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.RealWorld");
         imports = List.of(

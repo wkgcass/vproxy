@@ -286,6 +286,10 @@ public class FlowParser {
                 assertValidMethodName(value);
                 action.invoke = value;
                 return;
+            case "log":
+                assertValidMessage(value);
+                action.log = value;
+                return;
         }
         throw new Exception("unknown action: " + s);
     }
@@ -388,6 +392,24 @@ public class FlowParser {
                 continue;
             }
             throw new Exception(c + "(" + ((int) c) + ")" + " is not allowed in a method name: " + value);
+        }
+    }
+
+    private void assertValidMessage(String value) throws Exception {
+        char[] chars = value.toCharArray();
+        if (chars.length == 0) {
+            throw new Exception("no message provided");
+        }
+        for (char c : chars) {
+            if (('a' <= c && c <= 'z')
+                || ('A' <= c && c <= 'Z')
+                || ('0' <= c && c <= '9')
+                || c == '$'
+                || c == '_'
+                || c == '-') {
+                continue;
+            }
+            throw new Exception(c + "(" + ((int) c) + ")" + " is not allowed in message: " + value);
         }
     }
 

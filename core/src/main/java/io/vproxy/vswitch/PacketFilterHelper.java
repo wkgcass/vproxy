@@ -306,4 +306,8 @@ public class PacketFilterHelper {
             return false;
         }
     }
+
+    public void log(PacketBuffer pkb, String msg) {
+        Logger.trace(LogType.PROBE, msg + "\t\t" + pkb);
+    }
 }

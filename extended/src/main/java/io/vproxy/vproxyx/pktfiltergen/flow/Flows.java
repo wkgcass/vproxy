@@ -82,8 +82,6 @@ public class Flows {
     }
 
     private static final String GEN_CLASS_TEMPLATE = "" +
-        "package {{PackageName}};\n" +
-        "\n" +
         "{{Imports}}" +
         "\n" +
         "public class {{ClassSimpleName}} extends BasePacketFilter {\n" +
@@ -125,8 +123,22 @@ public class Flows {
                 }
             }
         }
-        String packageName = fullClassName.substring(0, fullClassName.lastIndexOf("."));
-        String classSimpleName = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+
+        String packagePrefix;
+        if (fullClassName.contains(".")) {
+            String packageName = fullClassName.substring(0, fullClassName.lastIndexOf("."));
+            packagePrefix = "" +
+                "package " + packageName + ";\n" +
+                "\n";
+        } else {
+            packagePrefix = "";
+        }
+        String classSimpleName;
+        if (fullClassName.contains(".")) {
+            classSimpleName = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+        } else {
+            classSimpleName = fullClassName;
+        }
         String enableIngressCache = genEnableIngressCache();
         String registerIfaceHolders = genRegisterIfaceHolders(ctx);
         String flowTables = genFlowTables(ctx);
@@ -134,8 +146,7 @@ public class Flows {
         String imports = genImports(ctx);
         String actions = formatActions(ctx);
 
-        return GEN_CLASS_TEMPLATE
-            .replace("{{PackageName}}", packageName)
+        return packagePrefix + GEN_CLASS_TEMPLATE
             .replace("{{Imports}}", imports)
             .replace("{{ClassSimpleName}}", classSimpleName)
             .replace("{{Fields}}", fields)

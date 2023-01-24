@@ -3,6 +3,7 @@ package io.vproxy.vproxyx.pktfiltergen.flow;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.net.SNatIPPortPool;
+import io.vproxy.dep.vjson.simple.SimpleString;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv6;
@@ -36,6 +37,7 @@ public class FlowAction {
 
     public String run;
     public String invoke;
+    public String log;
 
     public String toStatementString(Flows.GenContext ctx) {
         if (normal) {
@@ -64,6 +66,8 @@ public class FlowAction {
             return castTransport(ctx) + ".setDstPort(" + mod_tp_dst + ")";
         } else if (output != null) {
             return "helper.sendPacket(pkb, ifaces[" + ctx.ifaceIndex(output) + "].iface)";
+        } else if (log != null) {
+            return "helper.log(pkb, " + new SimpleString(log).stringify() + ")";
         } else if (limit_bps != 0) {
             return "if (!helper.ratelimitByBitsPerSecond(pkb, ratelimiters[" + ctx.newBPSRateLimiter(limit_bps) + "])) {\n" +
                 "\treturn FilterResult.DROP;\n" +
@@ -164,6 +168,8 @@ public class FlowAction {
             return "run:" + run;
         } else if (invoke != null) {
             return "invoke:" + invoke;
+        } else if (log != null) {
+            return "log:" + log;
         } else {
             return "???";
         }
