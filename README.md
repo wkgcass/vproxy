@@ -169,6 +169,23 @@ cd ./misc/auto-setup/
 
 </details>
 
+<details><summary>ui</summary>
+
+<br>
+
+vproxy provides some ui tools.
+
+```shell
+./gradlew ui:jar
+java -cp ./ui/build/libs/vproxy-ui.jar $mainClassName
+```
+
+Current available ui tools:
+
+1. `io.vproxy.ui.calculator.CalculatorMain`: an IPv4 network calculator
+
+</details>
+
 ## Aim
 
 * Zero dependency: no dependency other than java and kotlin standard library.

@@ -7,4 +7,5 @@ include 'extended'
 include 'app'
 include 'test'
 include 'all'
+include 'ui'
 

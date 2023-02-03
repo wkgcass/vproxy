@@ -7,6 +7,8 @@ plugins {
     id 'org.jetbrains.dokka' version "1.5.30"
     id 'maven-publish'
     id 'signing'
+
+    id 'org.openjfx.javafxplugin' version '0.0.10' apply false
 }
 
 ext {
@@ -79,7 +81,7 @@ subprojects {
         from "$buildDir/docs/javadoc"
     }
 
-    if (!['test'].contains(project.name)) {
+    if (!['test', 'ui'].contains(project.name)) {
     publishing {
         publications {
             maven(MavenPublication) {
@@ -91,7 +93,7 @@ subprojects {
                 pom {
                     name = 'io.vproxy.' + project.name
                     description = 'vproxy component ' + project.name
-                    url = 'http://vproxy.io'
+                    url = 'https://vproxy.io'
                     licenses {
                         license {
                             name = 'MIT License'
@@ -220,6 +222,31 @@ project(':all') {
         api project(':core')
         api project(':extended')
         api project(':app')
+    }
+}
+
+project(':ui') {
+    apply plugin: 'org.openjfx.javafxplugin'
+
+    javafx {
+        version = '11'
+        modules = ['javafx.controls', 'javafx.swing', 'javafx.media']
+    }
+
+    compileKotlin {
+        destinationDir = compileJava.destinationDir
+    }
+
+    dependencies {
+        api project(':all')
+        api group: 'io.vproxy', name: 'vfx', version: '1.2.0'
+    }
+
+    jar {
+        archiveName 'vproxy-ui.jar'
+        exclude 'module-info.class'
+        from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+        duplicatesStrategy 'exclude'
     }
 }
 

@@ -167,6 +167,23 @@ cd ./misc/auto-setup/
 
 </details>
 
+<details><summary>ui</summary>
+
+<br>
+
+vproxy提供了一些ui工具
+
+```shell
+./gradlew ui:jar
+java -cp ./ui/build/libs/vproxy-ui.jar $mainClassName
+```
+
+目前可用的ui工具:
+
+1. `io.vproxy.ui.calculator.CalculatorMain`: IPv4网段计算器
+
+</details>
+
 ## 目标
 
 * 零依赖: 除了java和kotlin标准库外不加任何依赖。

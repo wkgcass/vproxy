@@ -181,7 +181,7 @@ public abstract class Network {
     public static void eraseToNetwork(byte[] addr, byte[] mask) {
         if (addr.length < mask.length)
             throw new IllegalArgumentException();
-        // few bytes set to bitwise-and
+        // first few bytes set to bitwise-and
         for (int i = 0; i < mask.length; ++i) {
             byte a = addr[i];
             byte m = mask[i];
