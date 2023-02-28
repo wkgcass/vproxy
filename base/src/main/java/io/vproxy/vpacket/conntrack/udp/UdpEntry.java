@@ -1,6 +1,5 @@
 package io.vproxy.vpacket.conntrack.udp;
 
-import io.vproxy.base.Config;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Timer;
@@ -36,7 +35,7 @@ public class UdpEntry {
         if (timeout == -1) {
             this.timer = null;
         } else {
-            this.timer = new Timer(conntrack.loop, Config.udpTimeout) {
+            this.timer = new Timer(conntrack.loop, timeout) {
                 @Override
                 public void cancel() {
                     assert Logger.lowLevelDebug("udp entry " + remote + "/" + local + " canceled");
