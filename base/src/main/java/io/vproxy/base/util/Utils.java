@@ -18,7 +18,6 @@ import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -681,59 +680,6 @@ public class Utils {
             }
             cb.succeeded(sb.toString());
         }, "read-output-of-stream-" + descr).start();
-    }
-
-    public static void writeFileWithBackup(String filepath, String content) throws Exception {
-        Logger.alert("Trying to write into file: " + filepath + ".new");
-        File f = new File(filepath + ".new");
-        if (f.exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            f.delete();
-        }
-        if (!f.createNewFile()) {
-            throw new Exception("Create new file " + filepath + ".new failed");
-        }
-        try (FileOutputStream fos = new FileOutputStream(f)) {
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
-            bw.write(content);
-            bw.flush();
-        }
-
-        Logger.alert("Backup old file " + filepath);
-        backupAndRemove(filepath);
-
-        Logger.alert("Move new file to " + filepath);
-        Files.move(Path.of(f.getAbsolutePath()), Path.of(filepath), StandardCopyOption.REPLACE_EXISTING);
-
-        Logger.alert("Writing into file done: " + filepath);
-    }
-
-    private static void backupAndRemove(String filepath) throws Exception {
-        File f = new File(filepath);
-        File bakF = new File(filepath + ".bak");
-
-        if (!f.exists())
-            return; // do nothing if no need to backup
-        if (bakF.exists() && !bakF.delete()) // remove old backup file
-            throw new Exception("remove old backup file failed: " + bakF.getPath());
-        if (f.exists() && !f.renameTo(bakF)) // do rename (backup)
-            throw new Exception("backup the file failed: " + bakF.getPath());
-    }
-
-    public static String writeTemporaryFile(String prefix, String suffix, byte[] content) throws IOException {
-        return writeTemporaryFile(prefix, suffix, content, false);
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public static String writeTemporaryFile(String prefix, String suffix, byte[] content, boolean executable) throws IOException {
-        File f = File.createTempFile("vproxy-" + ProcessHandle.current().pid() + "-" + prefix, "." + suffix);
-        f.deleteOnExit();
-        Files.write(f.toPath(), content);
-        f.setReadable(true);
-        if (executable) {
-            f.setExecutable(true);
-        }
-        return f.getAbsolutePath();
     }
 
     // the returned array would be without getStackTrace() and this method
