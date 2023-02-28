@@ -6,6 +6,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.commons.util.IOUtils;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vfd.*;
 import io.vproxy.vswitch.RouteTable;
@@ -88,7 +89,7 @@ public class UdpOverTcpSetup {
         } else {
             bpfObject = BPFObject.handleDstPortProgram(port);
         }
-        String bpfpath = Utils.writeTemporaryFile("kern", "o", bpfObject.toJavaArray());
+        String bpfpath = IOUtils.writeTemporaryFile("kern", "o", bpfObject.toJavaArray());
         BPFObject obj = BPFObject.loadAndAttachToNic(bpfpath, BPFObject.DEFAULT_XDP_PROG_NAME, nicname, BPFMode.SKB, true);
         BPFMap bpfMap = obj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME);
 

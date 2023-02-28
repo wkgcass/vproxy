@@ -7,6 +7,7 @@ import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.coll.IntMap;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.commons.util.IOUtils;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vfd.*;
 import io.vproxy.vswitch.Switch;
@@ -444,7 +445,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             sb.append(s).append("\n");
         }
         try {
-            Utils.writeFileWithBackup(PERSISTENT_CONFIG_FILE, sb.toString());
+            IOUtils.writeFileWithBackup(PERSISTENT_CONFIG_FILE, sb.toString());
         } catch (Exception e) {
             Logger.error(LogType.FILE_ERROR, "persist configuration failed: " + PERSISTENT_CONFIG_FILE, e);
             return;
@@ -472,7 +473,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             sb.append("ip link set ").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append(" up\n");
         }
         try {
-            Utils.writeFileWithBackup(PERSISTENT_SCRIPT, sb.toString());
+            IOUtils.writeFileWithBackup(PERSISTENT_SCRIPT, sb.toString());
         } catch (Exception e) {
             Logger.error(LogType.FILE_ERROR, "persist script failed: " + PERSISTENT_SCRIPT, e);
         }

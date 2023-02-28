@@ -5,6 +5,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.net.Nic;
+import io.vproxy.commons.util.IOUtils;
 import io.vproxy.vfd.MacAddress;
 
 import java.io.IOException;
@@ -41,7 +42,7 @@ public class BPFObject {
             genfilename = generateDefault(nicName);
         } else if (filepath.equals(PREBUILT_HANDLE_ALL)) {
             byte[] bytes = BPFObject.handleAllProgram().toJavaArray();
-            genfilename = Utils.writeTemporaryFile("kern", "o", bytes);
+            genfilename = IOUtils.writeTemporaryFile("kern", "o", bytes);
         }
 
         long bpfobj = NativeXDP.get().loadAndAttachBPFProgramToNic(genfilename, programName, nicName, mode.mode, forceAttach);
@@ -69,7 +70,7 @@ public class BPFObject {
         Logger.alert("generating ebpf object for nic " + nicname + " with mac " + mac);
 
         byte[] bytes = BPFObject.skipDstMacProgram(mac).toJavaArray();
-        return Utils.writeTemporaryFile("kern", "o", bytes);
+        return IOUtils.writeTemporaryFile("kern", "o", bytes);
     }
 
     public BPFMap getMap(String name) throws IOException {

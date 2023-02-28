@@ -17,6 +17,7 @@ import io.vproxy.base.util.anno.Blocking;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.commons.util.IOUtils;
 import io.vproxy.component.app.Socks5Server;
 import io.vproxy.component.app.TcpLB;
 import io.vproxy.component.secure.SecurityGroup;
@@ -225,7 +226,7 @@ public class Shutdown {
         }
         filepath = Utils.filename(filepath);
         long pid = ProcessHandle.current().pid();
-        Utils.writeFileWithBackup(filepath, pid + "\n");
+        IOUtils.writeFileWithBackup(filepath, pid + "\n");
     }
 
     @Blocking
@@ -247,7 +248,7 @@ public class Shutdown {
         }
         filepath = Utils.filename(filepath);
         Logger.alert("Trying to save config into file: " + filepath);
-        Utils.writeFileWithBackup(filepath, currentConfig());
+        IOUtils.writeFileWithBackup(filepath, currentConfig());
     }
 
     public static String currentConfig() {
