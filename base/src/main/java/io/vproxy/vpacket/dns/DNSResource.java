@@ -1,4 +1,4 @@
-package io.vproxy.base.dns;
+package io.vproxy.vpacket.dns;
 
 /*
  *                                     1  1  1  1  1  1
@@ -23,7 +23,7 @@ package io.vproxy.base.dns;
  *     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  */
 
-import io.vproxy.base.dns.rdata.RData;
+import io.vproxy.vpacket.dns.rdata.RData;
 import io.vproxy.base.util.ByteArray;
 
 import java.util.Objects;

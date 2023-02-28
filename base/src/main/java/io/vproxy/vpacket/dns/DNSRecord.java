@@ -1,4 +1,4 @@
-package io.vproxy.base.dns;
+package io.vproxy.vpacket.dns;
 
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;

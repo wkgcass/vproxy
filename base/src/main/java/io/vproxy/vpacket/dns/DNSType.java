@@ -1,4 +1,4 @@
-package io.vproxy.base.dns;
+package io.vproxy.vpacket.dns;
 
 // only record what we might care for
 public enum DNSType {

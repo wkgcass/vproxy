@@ -1,4 +1,4 @@
-package io.vproxy.base.dns;
+package io.vproxy.vpacket.dns;
 
 public enum DNSClass {
     IN(1), // internet

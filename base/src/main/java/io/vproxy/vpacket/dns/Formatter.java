@@ -1,6 +1,6 @@
-package io.vproxy.base.dns;
+package io.vproxy.vpacket.dns;
 
-import io.vproxy.base.dns.rdata.RData;
+import io.vproxy.vpacket.dns.rdata.RData;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 

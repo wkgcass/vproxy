@@ -1,4 +1,4 @@
-package io.vproxy.base.dns.rdata;
+package io.vproxy.vpacket.dns.rdata;
 
 /*
  *     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -6,8 +6,8 @@ package io.vproxy.base.dns.rdata;
  *     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  */
 
-import io.vproxy.base.dns.DNSType;
-import io.vproxy.base.dns.InvalidDNSPacketException;
+import io.vproxy.vpacket.dns.DNSType;
+import io.vproxy.vpacket.dns.InvalidDNSPacketException;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv4;
