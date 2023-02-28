@@ -13,7 +13,6 @@ module io.vproxy.base {
     exports io.vproxy.base.connection;
     exports io.vproxy.base.connection.util;
     exports io.vproxy.base.dhcp;
-    exports io.vproxy.base.dhcp.options;
     exports io.vproxy.base.dns;
     exports io.vproxy.base.dns.dnsserverlistgetter;
     exports io.vproxy.base.http;
@@ -85,6 +84,8 @@ module io.vproxy.base {
     exports io.vproxy.vpacket.conntrack;
     exports io.vproxy.vpacket.conntrack.tcp;
     exports io.vproxy.vpacket.conntrack.udp;
+    exports io.vproxy.vpacket.dhcp;
+    exports io.vproxy.vpacket.dhcp.options;
     exports io.vproxy.vpacket.dns;
     exports io.vproxy.vpacket.dns.rdata;
     exports io.vproxy.vpacket.tuples;

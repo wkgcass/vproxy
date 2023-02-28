@@ -1,6 +1,6 @@
-package io.vproxy.base.dhcp.options;
+package io.vproxy.vpacket.dhcp.options;
 
-import io.vproxy.base.dhcp.DHCPOption;
+import io.vproxy.vpacket.dhcp.DHCPOption;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 

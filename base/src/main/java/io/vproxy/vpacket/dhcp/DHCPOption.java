@@ -1,4 +1,4 @@
-package io.vproxy.base.dhcp;
+package io.vproxy.vpacket.dhcp;
 
 import io.vproxy.base.util.ByteArray;
 

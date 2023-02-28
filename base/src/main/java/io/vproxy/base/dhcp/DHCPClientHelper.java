@@ -1,8 +1,7 @@
 package io.vproxy.base.dhcp;
 
-import io.vproxy.base.dhcp.options.DNSOption;
-import io.vproxy.base.dhcp.options.MessageTypeOption;
-import io.vproxy.base.dhcp.options.ParameterRequestListOption;
+import io.vproxy.vpacket.dhcp.DHCPPacket;
+import io.vproxy.vpacket.dhcp.options.*;
 import io.vproxy.base.selector.Handler;
 import io.vproxy.base.selector.HandlerContext;
 import io.vproxy.base.selector.SelectorEventLoop;
