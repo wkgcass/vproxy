@@ -40,6 +40,12 @@ public class IPv4CalculatorScene extends VScene {
     private final TextField addressBin = new TextField() {{
         setPrefWidth(VALUE_WIDTH);
     }};
+    private final TextField bigEndian = new TextField() {{
+        setPrefWidth(VALUE_WIDTH);
+    }};
+    private final TextField littleEndian = new TextField() {{
+        setPrefWidth(VALUE_WIDTH);
+    }};
     private final ThemeLabel maskBin = new ValueLabel();
     private final ThemeLabel mask = new ValueLabel();
     private final ThemeLabel maskIpFormat = new ValueLabel();
@@ -73,6 +79,12 @@ public class IPv4CalculatorScene extends VScene {
         var addressBinaryLabel = new DescLabel("Binary Address") {{
             setPadding(new Insets(5.5, 0, 0, 0));
         }};
+        var bigEndianLabel = new DescLabel("Big Endian") {{
+            setPadding(new Insets(5.5, 0, 0, 0));
+        }};
+        var littleEndianLabel = new DescLabel("Little Endian") {{
+            setPadding(new Insets(5.5, 0, 0, 0));
+        }};
         var maskBinaryLabel = new DescLabel("Binary Mask");
         var maskLabel = new DescLabel("Mask");
         var maskIpFormatLabel = new DescLabel("Mask in IP Format");
@@ -94,6 +106,18 @@ public class IPv4CalculatorScene extends VScene {
         FontManager.get().setFont(addressBinInput.getLabel());
         addressBinInput.getLabel().setPrefWidth(VALUE_WIDTH);
         addressBinInput.getLabel().setPadding(new Insets(0, 0, 0, 10));
+
+        var bigEndianInput = new FusionW(bigEndian);
+        FontManager.get().setFont(bigEndian);
+        FontManager.get().setFont(bigEndianInput.getLabel());
+        bigEndianInput.getLabel().setPrefWidth(VALUE_WIDTH);
+        bigEndianInput.getLabel().setPadding(new Insets(0, 0, 0, 10));
+
+        var littleEndianInput = new FusionW(littleEndian);
+        FontManager.get().setFont(littleEndian);
+        FontManager.get().setFont(littleEndianInput.getLabel());
+        littleEndianInput.getLabel().setPrefWidth(VALUE_WIDTH);
+        littleEndianInput.getLabel().setPadding(new Insets(0, 0, 0, 10));
 
         sceneButton = new FusionButton() {{
             setDisableAnimation(true);
@@ -121,6 +145,8 @@ public class IPv4CalculatorScene extends VScene {
         rootVBox.getChildren().addAll(
             new HBox(cidrLabel, new HPadding(W_KV_PADDING), cidrInput),
             new HBox(addressBinaryLabel, new HPadding(W_KV_PADDING), addressBinInput),
+            new HBox(bigEndianLabel, new HPadding(W_KV_PADDING), bigEndianInput),
+            new HBox(littleEndianLabel, new HPadding(W_KV_PADDING), littleEndianInput),
             new VPadding(LINE_PADDING),
             new HBox(maskBinaryLabel, new HPadding(KV_PADDING), maskBin),
             new VPadding(LINE_PADDING),
@@ -146,6 +172,8 @@ public class IPv4CalculatorScene extends VScene {
 
         cidr.textProperty().addListener((ob, old, now) -> cidrUpdated());
         addressBin.textProperty().addListener((ob, old, now) -> addressBinUpdated());
+        bigEndian.textProperty().addListener((ob, old, now) -> bigEndianUpdated());
+        littleEndian.textProperty().addListener((ob, old, now) -> littleEndianUpdated());
 
         cidr.setText("192.168.0.1/24");
     }
@@ -174,7 +202,7 @@ public class IPv4CalculatorScene extends VScene {
                 SimpleAlert.show(Alert.AlertType.WARNING, "This calculator is only made for IPv4");
                 return;
             }
-            updateAddressBin(ip);
+            updateActive(ip, 32, false, true, true, true);
             updatePassive(ip, 32);
         } finally {
             finishUpdating();
@@ -210,7 +238,7 @@ public class IPv4CalculatorScene extends VScene {
             SimpleAlert.show(Alert.AlertType.WARNING, "This calculator is only made for IPv4");
             return;
         }
-        updateAddressBin(ip);
+        updateActive(ip, mask, false, true, true, true);
         updatePassive(ip, mask);
     }
 
@@ -250,6 +278,80 @@ public class IPv4CalculatorScene extends VScene {
             var mask = Integer.parseInt(maskStr);
             var ip = IP.from(intToV4Bytes(n));
             cidr.setText(ip.formatToIPString() + "/" + maskStr);
+            updateActive(ip, mask,
+                true,
+                false,
+                true,
+                true);
+            updatePassive(ip, mask);
+        } finally {
+            finishUpdating();
+        }
+    }
+
+    private void bigEndianUpdated() {
+        if (isUpdating) {
+            return;
+        }
+        isUpdating = true;
+        try {
+            var str = bigEndian.getText();
+            long n;
+            try {
+                n = Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                clearForBigEndian();
+                return;
+            }
+            if (n > 0xffffffffL || n < 0) {
+                clearForBigEndian();
+                return;
+            }
+            var maskStr = mask.getText();
+            if (maskStr.isBlank()) {
+                maskStr = "32";
+            }
+            var mask = Integer.parseInt(maskStr);
+            var ip = IP.from(intToV4Bytes((int) n));
+            updateActive(ip, mask, true, true, false, true);
+            updatePassive(ip, mask);
+        } finally {
+            finishUpdating();
+        }
+    }
+
+    private void littleEndianUpdated() {
+        if (isUpdating) {
+            return;
+        }
+        isUpdating = true;
+        try {
+            var str = littleEndian.getText();
+            long n;
+            try {
+                n = Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                clearForLittleEndian();
+                return;
+            }
+            if (n > 0xffffffffL || n < 0) {
+                clearForLittleEndian();
+                return;
+            }
+            var maskStr = mask.getText();
+            if (maskStr.isBlank()) {
+                maskStr = "32";
+            }
+            var mask = Integer.parseInt(maskStr);
+            var b = intToV4Bytes((int) n);
+            var tmp = b[0];
+            b[0] = b[3];
+            b[3] = tmp;
+            tmp = b[1];
+            b[1] = b[2];
+            b[2] = tmp;
+            var ip = IP.from(b);
+            updateActive(ip, mask, true, true, true, false);
             updatePassive(ip, mask);
         } finally {
             finishUpdating();
@@ -260,14 +362,47 @@ public class IPv4CalculatorScene extends VScene {
         addressBin.setText(formatBinary(ByteArray.allocate(4).int32(0, n)));
     }
 
+    private void clearActive(boolean cidr, boolean addressBin, boolean bigEndian, boolean littleEndian) {
+        if (cidr)
+            this.cidr.setText("");
+        if (addressBin)
+            this.addressBin.setText("");
+        if (bigEndian)
+            this.bigEndian.setText("");
+        if (littleEndian)
+            this.littleEndian.setText("");
+    }
+
     private void clearForCidr() {
-        addressBin.setText("");
+        clearActive(false, true, true, true);
         clearPassiveFields();
     }
 
     private void clearForAddressBin() {
-        cidr.setText("");
+        clearActive(true, false, true, true);
         clearPassiveFields();
+    }
+
+    private void clearForBigEndian() {
+        clearActive(true, true, false, true);
+        clearPassiveFields();
+    }
+
+    private void clearForLittleEndian() {
+        clearActive(true, true, true, false);
+        clearPassiveFields();
+    }
+
+    public void updateActive(IP ip, int mask,
+                             boolean cidr, boolean addressBin, boolean bigEndian, boolean littleEndian) {
+        if (cidr)
+            this.cidr.setText(ip.formatToIPString() + "/" + mask);
+        if (addressBin)
+            updateAddressBin(ip);
+        if (bigEndian)
+            updateBigEndian(ip);
+        if (littleEndian)
+            updateLittleEndian(ip);
     }
 
     private void updatePassive(IP ip, int mask) {
@@ -323,6 +458,19 @@ public class IPv4CalculatorScene extends VScene {
     private void updateAddressBin(IP ip) {
         var b = ip.bytes;
         addressBin.setText(formatBinary(b));
+    }
+
+    private void updateBigEndian(IP ip) {
+        bigEndian.setText("" + ((long) ip.bytes.int32(0) & 0xffffffffL));
+    }
+
+    private void updateLittleEndian(IP ip) {
+        var a = ip.bytes.get(0);
+        var b = ip.bytes.get(1);
+        var c = ip.bytes.get(2);
+        var d = ip.bytes.get(3);
+        var n = ((long) (d & 0xff) << 24) | ((c & 0xff) << 16) | ((b & 0xff) << 8) | (a & 0xff);
+        littleEndian.setText("" + n);
     }
 
     private void updateMaskBin(int mask) {
