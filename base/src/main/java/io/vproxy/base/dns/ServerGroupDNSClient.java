@@ -9,6 +9,7 @@ import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.dns.DNSPacket;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
