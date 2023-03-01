@@ -4,6 +4,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public abstract class Callback<T, E extends Throwable> {
     private boolean called = false;
@@ -66,6 +67,19 @@ public abstract class Callback<T, E extends Throwable> {
             @Override
             protected void onFailed(E err) {
                 cb.accept(err, null);
+            }
+        };
+    }
+
+    public static <T, E extends Throwable> Callback<T, E> ofIgnoreExceptionFunction(Consumer<T> cb) {
+        return new Callback<T, E>() {
+            @Override
+            protected void onSucceeded(T value) {
+                cb.accept(value);
+            }
+
+            @Override
+            protected void onFailed(E err) {
             }
         };
     }
