@@ -10,7 +10,7 @@ import io.vproxy.base.Config;
 import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.OS;
+import io.vproxy.base.util.MainUtils;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.JoinCallback;
@@ -25,9 +25,6 @@ import io.vproxy.vproxyx.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class Main {
     static final String _HELP_STR_ = "" +
@@ -156,48 +153,8 @@ public class Main {
         }
     }
 
-    public static String[] checkFlagDeployInArguments(String[] args) {
-        List<String> returnArgs = new ArrayList<>(args.length);
-        for (final var arg : args) {
-            if (!arg.startsWith("-D")) {
-                returnArgs.add(arg);
-                continue;
-            }
-            String kv = arg.substring("-D".length());
-            if (!kv.contains("=")) {
-                // not valid -Dkey=value format
-                returnArgs.add(arg);
-                continue;
-            }
-            String key = kv.substring(0, kv.indexOf("="));
-            String value = kv.substring(kv.indexOf("=") + 1);
-
-            if (Utils.getSystemProperty(key) != null) {
-                throw new IllegalArgumentException("Cannot set -D" + key + " both in system properties " +
-                    "and in program arguments");
-            }
-
-            System.setProperty(key, value);
-        }
-        // set dhcpGetDnsListNics if not specified in some conditions
-        String deploy = Utils.getSystemProperty("deploy");
-        String dhcpGetDnsListNics = Utils.getSystemProperty("dhcp_get_dns_list_nics");
-        if (dhcpGetDnsListNics == null) {
-            if (deploy != null) {
-                if (OS.isWindows() && Arrays.asList("WebSocksProxyAgent", "WebSocksAgent", "wsagent").contains(deploy)) {
-                    dhcpGetDnsListNics = "all";
-                }
-            }
-            if (dhcpGetDnsListNics != null) {
-                System.setProperty("vproxy.DhcpGetDnsListNics", dhcpGetDnsListNics);
-            }
-        }
-        //noinspection ToArrayCallWithZeroLengthArrayArgument
-        return returnArgs.toArray(new String[returnArgs.size()]);
-    }
-
     public static void main(String[] args) {
-        args = checkFlagDeployInArguments(args);
+        args = MainUtils.checkFlagDeployInArguments(args);
         beforeStart();
 
         // check for system properties and may run an app
