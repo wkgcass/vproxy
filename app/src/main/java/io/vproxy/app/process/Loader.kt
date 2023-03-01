@@ -69,7 +69,7 @@ object Loader {
         }
       }
 
-      assert(io.vproxy.base.util.Logger.lowLevelDebug(io.vproxy.base.util.LogType.BEFORE_PARSING_CMD.toString() + " - " + line))
+      assert(io.vproxy.base.util.Logger.lowLevelDebug(io.vproxy.base.util.LogType.ALERT.toString() + " - " + line))
 
       if (isSystemCommand) {
         line = line.substring("System: ".length)
@@ -77,10 +77,10 @@ object Loader {
       val cmd = try {
         io.vproxy.app.app.cmd.Command.parseStrCmd(line)
       } catch (e: Exception) {
-        io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.AFTER_PARSING_CMD, "parse command `$line` failed")
+        io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.ALERT, "parse command `$line` failed")
         throw e
       }
-      assert(io.vproxy.base.util.Logger.lowLevelDebug(io.vproxy.base.util.LogType.AFTER_PARSING_CMD.toString() + " - " + cmd))
+      assert(io.vproxy.base.util.Logger.lowLevelDebug(io.vproxy.base.util.LogType.ALERT.toString() + " - " + cmd))
       executeCommand(isSystemCommand, cmd)
     }
   }

@@ -33,10 +33,10 @@ public class Command {
             sb.append(c);
             sb.append(" "); // the last space is not visible, print it any way
         }
-        assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb);
+        assert Logger.lowLevelDebug(LogType.ALERT + " - " + sb);
 
         Command cmd = statm(_cmd);
-        assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd);
+        assert Logger.lowLevelDebug(LogType.ALERT + " - " + cmd);
 
         return cmd;
     }

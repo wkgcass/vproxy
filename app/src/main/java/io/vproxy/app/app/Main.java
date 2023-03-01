@@ -222,7 +222,7 @@ public class Main {
             try {
                 Shutdown.writePid(ctx.get("pidFilePath", null));
             } catch (Exception e) {
-                Logger.fatal(LogType.UNEXPECTED, "writing pid failed: " + Utils.formatErr(e));
+                Logger.fatal(LogType.FILE_ERROR, "writing pid failed: " + Utils.formatErr(e));
                 // failed on writing pid file is not a critical error
                 // so we don't quit
             }
