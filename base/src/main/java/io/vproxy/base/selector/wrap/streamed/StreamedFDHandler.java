@@ -9,6 +9,8 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.selector.wrap.arqudp.ArqUDPSocketFD;
 import io.vproxy.base.util.*;
+import io.vproxy.base.util.log.LogLevel;
+import io.vproxy.base.util.log.ProbeType;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vfd.IP;
@@ -798,7 +800,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 Logger.warn(LogType.ALERT, "the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
                 return;
             }
-            if (Config.probe.contains("streamed-arq-udp-event")) {
+            if (Config.probe.contains(ProbeType.STREAMED_ARQ_UDP_EVENT)) {
                 Logger.probe("receiving keepalive ack message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
             }
             ++keepaliveSuccessCount;
@@ -809,7 +811,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         } else {
             // it's keepalive request, do respond
             // add at the most front of the queue
-            if (Config.probe.contains("streamed-arq-udp-event")) {
+            if (Config.probe.contains(ProbeType.STREAMED_ARQ_UDP_EVENT)) {
                 Logger.probe("receiving remote keepalive message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
             }
             pushMessageToWrite(keepaliveMessage(kId, true));
@@ -841,13 +843,13 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }));
             // add to the first of the queue
             pushMessageToWrite(keepaliveMessage(kId, false));
-            if (Config.probe.contains("streamed-arq-udp-event")) {
+            if (Config.probe.contains(ProbeType.STREAMED_ARQ_UDP_EVENT)) {
                 Logger.probe("keepalive message 0x" + Long.toHexString(kId) + " sent on arq udp socket " + fd);
             }
         }
         // do probe
         // check recorded connections
-        if (Config.probe.contains("streamed-arq-udp-record")) {
+        if (Config.probe.contains(ProbeType.STREAMED_ARQ_UDP_RECORD)) {
             try {
                 Logger.probe("isClient=" + client + ", state=" + state);
                 IPPort arqSockLocal = fd.getLocalAddress();
@@ -863,7 +865,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                             + " -> " + streamId
                             + " -> " + local
                             + " -> " + remote
-                            + " [" + sfd.getState().probeColor + sfd.getState().toString().toUpperCase() + Logger.RESET_COLOR + "]"
+                            + " [" + sfd.getState().probeColor + sfd.getState().toString().toUpperCase() + LogLevel.RESET_COLOR + "]"
                     );
                 }
             } catch (Throwable t) {

@@ -11,6 +11,7 @@ import io.vproxy.base.selector.wrap.arqudp.ArqUDPSocketFD;
 import io.vproxy.base.selector.wrap.udp.UDPBasedFDs;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.log.ProbeType;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.ServerSocketFD;
@@ -49,7 +50,7 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     }
 
     private void initProbe() {
-        if (Config.probe.contains("streamed-arq-udp-record")) {
+        if (Config.probe.contains(ProbeType.STREAMED_ARQ_UDP_RECORD)) {
             loop.period(30_000, () -> {
                 String localStr = local.formatToIPPortString();
                 for (Map.Entry<ArqUDPSocketFD, StreamedFDHandler> entry : currentHandlers.entrySet()) {

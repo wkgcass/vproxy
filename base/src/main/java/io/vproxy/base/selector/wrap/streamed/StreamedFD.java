@@ -6,6 +6,7 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.log.LogLevel;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.SocketFD;
@@ -38,13 +39,13 @@ public class StreamedFD implements SocketFD, VirtualFD {
     final MirrorDataFactory writingMirrorDataFactory;
 
     public enum State {
-        none(Logger.DEBUG_COLOR, false),
-        syn_sent(Logger.WARN_COLOR, false),
-        established(Logger.INFO_COLOR, false),
-        fin_sent(Logger.WARN_COLOR, false),
-        fin_recv(Logger.WARN_COLOR, true),
-        dead(Logger.ERROR_COLOR, true),
-        real_closed(Logger.ERROR_COLOR, true),
+        none(LogLevel.DEBUG.color, false),
+        syn_sent(LogLevel.WARN.color, false),
+        established(LogLevel.INFO.color, false),
+        fin_sent(LogLevel.WARN.color, false),
+        fin_recv(LogLevel.WARN.color, true),
+        dead(LogLevel.ERROR.color, true),
+        real_closed(LogLevel.ERROR.color, true),
         ;
         public final String probeColor;
         public final boolean readReturnNegative1;

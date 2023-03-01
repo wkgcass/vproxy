@@ -1,5 +1,9 @@
 package io.vproxy.base.util;
 
+import io.vproxy.base.util.log.LogDispatcher;
+import io.vproxy.base.util.log.LogLevel;
+import io.vproxy.base.util.log.LogRecord;
+import io.vproxy.base.util.log.STDOutLogHandler;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.FDProvider;
@@ -8,7 +12,6 @@ import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Date;
 import java.util.Set;
 
 public class Logger {
@@ -16,12 +19,8 @@ public class Logger {
     public static final boolean lowLevelDebugOn;
     public static final boolean lowLevelNetDebugOn;
 
-    public static final String DEBUG_COLOR = "\033[0;36m";
-    public static final String INFO_COLOR = "\033[0;32m";
-    public static final String WARN_COLOR = "\033[0;33m";
-    public static final String ERROR_COLOR = "\033[0;31m";
-    public static final String RESET_COLOR = "\033[0m";
-
+    public static final LogDispatcher logDispatcher = new LogDispatcher();
+    private static final STDOutLogHandler stdoutLogHandler;
     private static DatagramFD logChannel;
 
     static {
@@ -43,6 +42,11 @@ public class Logger {
                 stackTraceOn = !"off".equals(stackTrace);
             }
         }
+
+        {
+            stdoutLogHandler = new STDOutLogHandler(stackTraceOn);
+            logDispatcher.addLogHandler(stdoutLogHandler);
+        }
     }
 
     public static boolean debugOn() {
@@ -50,29 +54,6 @@ public class Logger {
     }
 
     private Logger() {
-    }
-
-    private static String fillToTen(int n) {
-        return (n < 10 ? "0" : "") + n;
-    }
-
-    private static String fillToHundred(int n) {
-        return (n < 10 ? "00" : (n < 100 ? "0" : "")) + n;
-    }
-
-    @SuppressWarnings("deprecation")
-    private static String current() {
-        long cur = FDProvider.get().currentTimeMillis();
-        Date d = new Date(cur);
-        return "[" +
-            (d.getYear() + 1900) + "-" +
-            fillToTen(d.getMonth() + 1) + "-" +
-            fillToTen(d.getDate()) + " " +
-            fillToTen(d.getHours()) + ":" +
-            fillToTen(d.getMinutes()) + ":" +
-            fillToTen(d.getSeconds()) + "." +
-            fillToHundred((int) (cur % 1000)) +
-            "] ";
     }
 
     private static StackTraceElement getFirstElementOutOfLoggerLib() {
@@ -114,7 +95,15 @@ public class Logger {
     private static boolean debugLog(String msg) {
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = getFirstElementOutOfLoggerLib();
-        System.out.println(DEBUG_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + getDebugInfo(elem) + msg);
+        var record = new LogRecord(
+            threadName,
+            elem,
+            LogLevel.DEBUG,
+            null,
+            FDProvider.get().currentTimeMillis(),
+            getDebugInfo(elem) + msg,
+            null);
+        logDispatcher.publish(record);
         return true;
     }
 
@@ -129,77 +118,86 @@ public class Logger {
         }
         if (addDebugInfo) {
             String debugInfo = VProxyThread.current().debugInfo;
-            return debugInfo + " - ";
+            if (debugInfo != null && !debugInfo.isBlank()) {
+                return debugInfo + " - ";
+            }
         }
         return "";
     }
 
-    private static void privateErr(String err) {
+    private static void privateErr(LogLevel level, LogType type, String err, Throwable t) {
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = getFirstElementOutOfLoggerLib();
-        System.out.println(ERROR_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + err);
-    }
-
-    private static void privatePrintStackTrace(Throwable t) {
-        if (stackTraceOn || !(t instanceof Exception) || (t instanceof RuntimeException)) { // always print runtime exceptions and errors
-            t.printStackTrace(System.out);
-        } else {
-            StringBuilder sb = new StringBuilder();
-            formatExceptionStackTrace(t, sb);
-            System.out.println(sb);
-        }
-    }
-
-    private static void formatExceptionStackTrace(Throwable t, StringBuilder sb) {
-        String msg = t.getMessage();
-        if (msg == null || msg.isBlank()) {
-            sb.append(t.getClass().getName());
-        } else {
-            sb.append(t.getClass().getName()).append(": ").append(msg.trim());
-        }
-        if (t.getCause() != null) {
-            sb.append(" <= ");
-            formatExceptionStackTrace(t.getCause(), sb);
-        }
+        var record = new LogRecord(
+            threadName,
+            elem,
+            level,
+            type,
+            FDProvider.get().currentTimeMillis(),
+            err,
+            t
+        );
+        logDispatcher.publish(record);
     }
 
     // unexpected errors, or situation should happen
     public static void fatal(LogType logType, String err) {
-        privateErr(logType + " - " + err);
+        privateErr(LogLevel.FATAL, logType, err, null);
     }
 
     public static void fatal(LogType logType, String err, Throwable ex) {
-        privateErr(logType + " - " + err);
-        privatePrintStackTrace(ex);
+        privateErr(LogLevel.FATAL, logType, err, ex);
     }
 
     // expected errors, but not normal condition
     public static void error(LogType logType, String err) {
-        privateErr(logType + " - " + err);
+        privateErr(LogLevel.ERROR, logType, err, null);
     }
 
     public static void error(LogType logType, String err, Throwable ex) {
-        privateErr(logType + " - " + err);
-        privatePrintStackTrace(ex);
+        privateErr(LogLevel.ERROR, logType, err, ex);
     }
 
     // expected errors, maybe user misuse, and we can recover
-    public static void warn(LogType logType, String err) {
-        System.out.println(WARN_COLOR + current() + logType + " - " + RESET_COLOR + err);
+    public static void warn(LogType logType, String msg) {
+        var record = new LogRecord(null, null,
+            LogLevel.WARN,
+            logType,
+            FDProvider.get().currentTimeMillis(),
+            msg,
+            null);
+        logDispatcher.publish(record);
     }
 
     public static void warn(LogType logType, String err, Throwable t) {
-        System.out.println(WARN_COLOR + current() + logType + " - " + RESET_COLOR + err);
-        privatePrintStackTrace(t);
+        var record = new LogRecord(null, null,
+            LogLevel.WARN,
+            logType,
+            FDProvider.get().currentTimeMillis(),
+            err,
+            t);
+        logDispatcher.publish(record);
     }
 
     // expected condition
     public static void info(LogType logType, String msg) {
-        System.out.println(INFO_COLOR + current() + logType + " - " + RESET_COLOR + msg);
+        var record = new LogRecord(null, null,
+            LogLevel.INFO,
+            logType,
+            FDProvider.get().currentTimeMillis(),
+            msg,
+            null);
+        logDispatcher.publish(record);
     }
 
     public static void trace(LogType logType, String msg) {
-        System.out.println(DEBUG_COLOR + current() + logType + " - " + RESET_COLOR + msg);
+        var record = new LogRecord(null, null,
+            LogLevel.TRACE,
+            logType,
+            FDProvider.get().currentTimeMillis(),
+            msg,
+            null);
+        logDispatcher.publish(record);
     }
 
     public static void shouldNotHappen(String msg) {
@@ -216,7 +214,13 @@ public class Logger {
 
     public static void probe(String msg) {
         String threadName = Thread.currentThread().getName();
-        String log = DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg + "\r\n";
+        var record = new LogRecord(threadName, null,
+            LogLevel.PROBE,
+            LogType.PROBE,
+            FDProvider.get().currentTimeMillis(),
+            msg,
+            null);
+        String log = record.toStringNoColor(stackTraceOn);
         DatagramFD chnl = getLogChannel();
         try {
             chnl.send(ByteBuffer.wrap(log.getBytes()), getLogAddress());
@@ -262,7 +266,7 @@ public class Logger {
     }
 
     public static boolean printStackTrace(Throwable t) {
-        t.printStackTrace(System.out); // do not use privatePrintStackTrace, always print here
+        t.printStackTrace(System.out);
         return true;
     }
 

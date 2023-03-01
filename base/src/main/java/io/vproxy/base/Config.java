@@ -3,9 +3,11 @@ package io.vproxy.base;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.OS;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.log.ProbeType;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -94,7 +96,7 @@ public class Config {
     public static final String appClass;
 
     // -Dprobe=...
-    public static final Set<String> probe;
+    public static final Set<ProbeType> probe;
 
     private static int supportReusePortLB = 0;
     // do not initialize the field statically
@@ -117,9 +119,19 @@ public class Config {
         appClass = Utils.getSystemProperty("deploy");
         String probeConf = Utils.getSystemProperty("probe", "");
         if (probeConf.equals("all")) {
-            probe = Set.of("virtual-fd-event", "streamed-arq-udp-event", "streamed-arq-udp-record");
+            probe = Set.of(ProbeType.VIRTUAL_FD_EVENT, ProbeType.STREAMED_ARQ_UDP_EVENT, ProbeType.STREAMED_ARQ_UDP_RECORD);
         } else {
-            probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
+            var names = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
+            var res = new HashSet<ProbeType>();
+            for (var n : names) {
+                var t = ProbeType.of(n);
+                if (t == null) {
+                    System.out.println("unknown probe type: " + n);
+                } else {
+                    res.add(t);
+                }
+            }
+            probe = res;
         }
         domainWhichShouldResolve = Utils.getSystemProperty("domain_which_should_resolve", "127.0.0.1.special.vproxy.io");
         mirrorConfigPath = Utils.getSystemProperty("mirror_conf", "");
