@@ -8,9 +8,9 @@ import java.util.Set;
 
 public abstract class AbstractRingBuffer implements RingBuffer {
     private boolean operating = false;
-    private Set<RingBufferETHandler> handler = new HashSet<>();
-    private Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
-    private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
+    private final Set<RingBufferETHandler> handler = new HashSet<>();
+    private final Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
+    private final Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
     protected boolean isOperating() {
         return operating;

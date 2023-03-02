@@ -6,7 +6,7 @@ import io.vproxy.base.util.time.TimeQueue;
 import java.util.PriorityQueue;
 
 public class TimeQueueImpl<T> implements TimeQueue<T> {
-    PriorityQueue<TimeElemImpl<T>> queue = new PriorityQueue<>((a, b) -> (int) (a.triggerTime - b.triggerTime));
+    final PriorityQueue<TimeElemImpl<T>> queue = new PriorityQueue<>((a, b) -> (int) (a.triggerTime - b.triggerTime));
 
     @Override
     public TimeElem<T> add(long currentTimestamp, int timeout, T elem) {

@@ -22,9 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class ServerAddressUpdater implements ResolveListener {
-    private static ServerAddressUpdater updater = new ServerAddressUpdater();
+    private static final ServerAddressUpdater updater = new ServerAddressUpdater();
 
-    private ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
 
     private ServerAddressUpdater() {
     }

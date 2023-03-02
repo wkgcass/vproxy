@@ -7,8 +7,8 @@ public class Serializer {
     private Serializer() {
     }
 
-    private static String _nullStr = "$-1\r\n";
-    private static byte[] _null = _nullStr.getBytes();
+    private static final String _nullStr = "$-1\r\n";
+    private static final byte[] _null = _nullStr.getBytes();
 
     public static byte[] fromNull() {
         return _null;

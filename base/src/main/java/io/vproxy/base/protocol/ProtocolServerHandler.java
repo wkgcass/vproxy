@@ -10,7 +10,7 @@ import io.vproxy.vfd.SocketFD;
 import java.io.IOException;
 
 public class ProtocolServerHandler implements ServerHandler {
-    private NetEventLoop eventLoop;
+    private final NetEventLoop eventLoop;
     private final int inBufferSize;
     private final int outBufferSize;
 

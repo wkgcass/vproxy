@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public class CertKeyHolder {
-    private Map<String, CertKey> map = new HashMap<>();
+    private final Map<String, CertKey> map = new HashMap<>();
 
     public List<String> names() {
         return new ArrayList<>(map.keySet());

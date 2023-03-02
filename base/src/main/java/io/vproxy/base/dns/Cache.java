@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cache {
-    private AbstractResolver abstractResolver;
+    private final AbstractResolver abstractResolver;
     public final String host;
     public final List<IPv4> ipv4;
     public final List<IPv6> ipv6;
