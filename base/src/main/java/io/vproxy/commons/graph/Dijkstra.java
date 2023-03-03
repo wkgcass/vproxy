@@ -1,6 +1,6 @@
 package io.vproxy.commons.graph;
 
-import kotlin.Pair;
+import io.vproxy.base.util.coll.Tuple;
 
 import java.util.*;
 
@@ -16,36 +16,36 @@ public class Dijkstra {
         if (skipNodes.contains(from)) {
             throw new IllegalArgumentException("`skipNodes`=" + skipNodes + " contains `from`=" + from);
         }
-        var distances = new HashMap<N, Pair<Long, List<GraphEdge<N>>>>();
-        distances.put(from, new Pair<>(0L, new ArrayList<>()));
+        var distances = new HashMap<N, Tuple<Long, List<GraphEdge<N>>>>();
+        distances.put(from, new Tuple<>(0L, new ArrayList<>()));
         var visited = new HashSet<N>();
         visited.add(from);
         dijkstra(new HashSet<>(skipNodes), visited, distances);
 
         var res = new HashMap<N, GraphPath<N>>();
         for (var entry : distances.entrySet()) {
-            if (entry.getValue().component2().isEmpty())
+            if (entry.getValue()._2.isEmpty())
                 continue;
-            res.put(entry.getKey(), new GraphPath<>(entry.getValue().component2()));
+            res.put(entry.getKey(), new GraphPath<>(entry.getValue()._2));
         }
         return res;
     }
 
     private static <N extends GraphNode<N>> void dijkstra(Set<N> skipNodes,
                                                           Set<N> visited,
-                                                          Map<N, Pair<Long, List<GraphEdge<N>>>> distances) {
+                                                          Map<N, Tuple<Long, List<GraphEdge<N>>>> distances) {
         for (var from : visited) {
-            long len = distances.get(from).component1();
+            long len = distances.get(from)._1;
             for (var edge : from.edges.values()) {
                 var edgeTo = edge.to;
                 if (skipNodes.contains(edgeTo)) {
                     continue;
                 }
                 var totalLen = len + edge.distance;
-                var ls = new ArrayList<>(distances.get(from).component2());
+                var ls = new ArrayList<>(distances.get(from)._2);
                 ls.add(edge);
-                if (!distances.containsKey(edgeTo) || distances.get(edgeTo).component1() > totalLen) {
-                    distances.put(edgeTo, new Pair<>(totalLen, ls));
+                if (!distances.containsKey(edgeTo) || distances.get(edgeTo)._1 > totalLen) {
+                    distances.put(edgeTo, new Tuple<>(totalLen, ls));
                 }
             }
         }
@@ -55,7 +55,7 @@ public class Dijkstra {
             if (visited.contains(entry.getKey())) {
                 continue;
             }
-            var l = entry.getValue().component1();
+            var l = entry.getValue()._1;
             if (nextNode == null) {
                 nextNode = entry.getKey();
                 nextLen = l;
