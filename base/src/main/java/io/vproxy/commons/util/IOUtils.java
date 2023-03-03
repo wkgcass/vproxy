@@ -3,6 +3,7 @@ package io.vproxy.commons.util;
 import io.vproxy.base.util.Logger;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -22,7 +23,7 @@ public class IOUtils {
             throw new Exception("Create new file " + filepath + ".new failed");
         }
         try (FileOutputStream fos = new FileOutputStream(f)) {
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
             bw.write(content);
             bw.flush();
         }
