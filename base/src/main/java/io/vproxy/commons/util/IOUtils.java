@@ -18,6 +18,14 @@ public class IOUtils {
         if (f.exists()) {
             //noinspection ResultOfMethodCallIgnored
             f.delete();
+        } else {
+            var parent = f.getParentFile();
+            if (parent != null && !parent.exists()) {
+                var ok = parent.mkdirs();
+                if (!ok) {
+                    throw new Exception("failed creating parent dir for " + f);
+                }
+            }
         }
         if (!f.createNewFile()) {
             throw new Exception("Create new file " + filepath + ".new failed");
