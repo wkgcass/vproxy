@@ -13,6 +13,7 @@ import io.vproxy.vfd.IPPort;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class Logger {
     public static final boolean stackTraceOn;
@@ -50,17 +51,23 @@ public class Logger {
     }
 
     public static boolean debugOn() {
-        return lowLevelDebugOn || lowLevelNetDebugOn;
+        return Utils.assertOn() && (lowLevelDebugOn || lowLevelNetDebugOn);
     }
 
     private Logger() {
     }
 
+    private static final Pattern loggerPattern1 = Pattern.compile(".*Logger\\b.*");
+
     private static StackTraceElement getFirstElementOutOfLoggerLib() {
         var arr = Thread.currentThread().getStackTrace();
         boolean intoLoggerLib = false;
         for (StackTraceElement e : arr) {
-            if (e.getClassName().matches(".*Logger\\b.*")) {
+            var cls = e.getClassName();
+            if (loggerPattern1.matcher(cls).matches()
+                || cls.equals("io.vproxy.adaptor.vertx.VProxyLogDelegate")
+                || cls.equals("io.vertx.core.impl.logging.LoggerAdapter")
+            ) {
                 intoLoggerLib = true;
             } else {
                 if (intoLoggerLib) {

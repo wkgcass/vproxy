@@ -273,6 +273,10 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
+    public NetEventLoop getEventLoop() {
+        return _eventLoop;
+    }
+
     public String id() {
         return _id;
     }

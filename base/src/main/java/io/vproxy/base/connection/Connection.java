@@ -204,6 +204,10 @@ public class Connection implements NetFlowRecorder {
         return local;
     }
 
+    public IPPort getRemote() {
+        return remote;
+    }
+
     // --- START statistics ---
     public long getFromRemoteBytes() {
         return fromRemoteBytes;
@@ -258,10 +262,15 @@ public class Connection implements NetFlowRecorder {
         return writeClosed;
     }
 
+    public boolean isRealWriteClosed() {
+        return realWriteClosed;
+    }
+
     public boolean isRemoteClosed() {
         return remoteClosed;
     }
 
+    // this method will be called again and again until $realWriteClosed
     public void closeWrite() {
         if (realWriteClosed || closed)
             return; // do not close again if already closed
@@ -286,14 +295,23 @@ public class Connection implements NetFlowRecorder {
 
         realWriteClosed = true; // will do real shutdown, so set real write closed flag to true
 
-        // call jdk to close the write end of the connection
-        try {
-            channel.shutdownOutput();
-        } catch (IOException e) {
-            // we can do nothing about it
-        }
+        if (remoteClosed) {
+            // close the connection if necessary
+            var cctx = this._cctx;
+            close();
+            if (cctx != null) {
+                cctx.invokeClosedCallback();
+            }
+        } else {
+            // call jdk to close the write end of the connection
+            try {
+                channel.shutdownOutput();
+            } catch (IOException e) {
+                // we can do nothing about it
+            }
 
-        // here we do not release buffers
+            // here we do not release buffers
+        }
     }
 
     public void close() {
@@ -348,6 +366,7 @@ public class Connection implements NetFlowRecorder {
         getOutBuffer().removeHandler(outBufferETHandler);
 
         NetEventLoop eventLoop = _eventLoop;
+        ConnectionHandlerContext cctx = _cctx;
         _eventLoop = null;
         if (eventLoop != null) {
             eventLoop.removeConnection(this);
@@ -372,6 +391,10 @@ public class Connection implements NetFlowRecorder {
             getOutBuffer().clean();
         } else {
             assert Logger.lowLevelDebug("buffers are NOT released for conn " + this);
+        }
+
+        if (cctx != null && cctx.handler.triggerClosedCallbackOnExplicitClosing()) {
+            cctx.invokeClosedCallback();
         }
     }
 

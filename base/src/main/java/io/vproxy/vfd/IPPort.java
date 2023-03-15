@@ -40,6 +40,9 @@ public class IPPort extends SockAddr {
 
     public static IPPort from(SocketAddress sockAddr) {
         InetSocketAddress l4addr = (InetSocketAddress) sockAddr;
+        if (l4addr instanceof UnixDomainSocketAddress) {
+            return ((UnixDomainSocketAddress) l4addr).path;
+        }
         return new IPPort(IP.from(l4addr.getAddress()), l4addr.getPort());
     }
 

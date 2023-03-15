@@ -92,6 +92,11 @@ public class EventLoopWrapper extends NetEventLoop {
             handler.removed(ctx);
             connections.remove(ctx.connection);
         }
+
+        @Override
+        public boolean triggerClosedCallbackOnExplicitClosing() {
+            return handler.triggerClosedCallbackOnExplicitClosing();
+        }
     }
 
     class ConnectableConnectionHandlerWrapper extends ConnectionHandlerWrapper implements ConnectableConnectionHandler {

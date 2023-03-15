@@ -14,4 +14,8 @@ public interface ConnectionHandler {
     void closed(ConnectionHandlerContext ctx);
 
     void removed(ConnectionHandlerContext ctx);
+
+    default boolean triggerClosedCallbackOnExplicitClosing() {
+        return false;
+    }
 }

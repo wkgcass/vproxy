@@ -1,5 +1,6 @@
 package io.vproxy.vfd;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 
 public class UDSPath extends IPPort {
@@ -27,6 +28,11 @@ public class UDSPath extends IPPort {
     @Override
     public String formatToIPPortString() {
         return toString();
+    }
+
+    @Override
+    public InetSocketAddress toInetSocketAddress() {
+        return new UnixDomainSocketAddress(this);
     }
 
     @Override

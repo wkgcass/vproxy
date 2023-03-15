@@ -76,6 +76,15 @@ public class RingQueue<E> {
         }
     }
 
+    public E peek() {
+        if (eAfterS) {
+            if (start == end) {
+                return null;
+            }
+        }
+        return get(start);
+    }
+
     public E poll() {
         if (eAfterS) {
             if (start == end) {

@@ -32,7 +32,7 @@ public class ServerSocketChannelFD extends ChannelFD implements ServerSocketFD {
 
     @Override
     public void bind(IPPort l4addr) throws IOException {
-        channel.bind(l4addr.toInetSocketAddress());
+        channel.bind(l4addr.toInetSocketAddress(), 512);
     }
 
     @Override

@@ -146,6 +146,8 @@ public class NetEventLoop {
             }
         }
     }
+
+    public Object __nettyEventLoopRef;
 }
 
 class HandlerForTCPServer implements Handler<ServerSocketFD> {
@@ -241,7 +243,7 @@ class NetEventLoopUtils {
         cctx.handler.exception(cctx, err);
         if (!cctx.connection.isClosed()) {
             cctx.connection.close(true);
-            cctx.handler.closed(cctx);
+            cctx.invokeClosedCallback();
         }
     }
 
@@ -343,6 +345,12 @@ class HandlerForConnection implements Handler<SocketFD> {
                 cctx.connection.remoteClosed = true;
                 assert Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
                 cctx.handler.remoteClosed(cctx);
+                if (cctx.connection.isRealWriteClosed() && !cctx.connection.isClosed()) {
+                    // both directions closed.
+                    // close the connection
+                    cctx.connection.close();
+                    cctx.invokeClosedCallback();
+                }
             }
             if (!cctx.connection.isClosed()) {
                 ctx.rmOps(EventSet.read()); // do not read anymore, it will always fire OP_READ with EOF
@@ -438,14 +446,7 @@ class HandlerForConnection implements Handler<SocketFD> {
             assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
             ctx.rmOps(EventSet.write());
             if (cctx.connection.isWriteClosed()) {
-                if (cctx.connection.remoteClosed) {
-                    // both directions closed
-                    // close the connection
-                    cctx.connection.close();
-                    cctx.handler.closed(cctx);
-                } else {
-                    cctx.connection.closeWrite();
-                }
+                cctx.connection.closeWrite();
             }
         }
     }
@@ -478,11 +479,14 @@ class HandlerForConnectableConnection extends HandlerForConnection {
             Logger.shouldNotHappen("the connection is not connected, should not fire the event");
         }
 
+        // user might want to write some data in the callback
+        // so call the callback before setting events
+        cctx.handler.connected(cctx);
+
         EventSet ops = EventSet.read();
         if (cctx.connection.getOutBuffer().used() > 0) {
             ops = ops.combine(EventSet.write());
         }
         ctx.modify(ops);
-        cctx.handler.connected(cctx);
     }
 }

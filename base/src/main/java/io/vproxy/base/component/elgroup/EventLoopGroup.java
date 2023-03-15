@@ -266,6 +266,10 @@ public class EventLoopGroup implements IEventLoopGroup {
         return result;
     }
 
+    public boolean isClosed() {
+        return closed;
+    }
+
     @Override
     @Blocking
     // closing selectorEventLoop is blocking, so this is blocking as well
