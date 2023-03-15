@@ -1,0 +1,12 @@
+compileJava {
+    doFirst {
+        options.compilerArgs << '--module-path' << classpath.asPath
+    }
+    options.compilerArgs << '--add-modules' << [
+        'io.vproxy.base',
+    ].join(',')
+}
+
+jar {
+    archiveName "vproxy-netty.jar"
+}

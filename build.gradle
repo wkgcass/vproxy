@@ -81,7 +81,7 @@ subprojects {
         from "$buildDir/docs/javadoc"
     }
 
-    if (!['test', 'ui'].contains(project.name)) {
+    if (['dep', 'base', 'adaptor-netty', 'adaptor-vertx'].contains(project.name)) {
     publishing {
         publications {
             maven(MavenPublication) {
@@ -171,6 +171,25 @@ project(':lib') {
 
     dependencies {
         api project(':base')
+    }
+}
+
+project(':adaptor-netty') {
+    dependencies {
+        api project(':base')
+        api group: 'io.netty', name: 'netty-transport', version: '4.1.89.Final'
+        testImplementation group: 'io.netty', name: 'netty-codec-http', version: '4.1.89.Final'
+        testImplementation 'io.netty.incubator:netty-incubator-codec-native-quic:0.0.37.Final:osx-x86_64'
+        testImplementation 'io.netty.incubator:netty-incubator-codec-native-quic:0.0.37.Final:linux-x86_64'
+        testImplementation 'io.netty.incubator:netty-incubator-codec-native-quic:0.0.37.Final:windows-x86_64'
+    }
+}
+
+project(':adaptor-vertx') {
+    dependencies {
+        api project(':adaptor-netty')
+        api group: 'io.vertx', name: 'vertx-core', version: '4.4.0'
+        testImplementation group: 'io.vertx', name: 'vertx-web', version: '4.4.0'
     }
 }
 
