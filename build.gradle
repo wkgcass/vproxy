@@ -253,6 +253,11 @@ project(':ui') {
         from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
         duplicatesStrategy 'exclude'
     }
+
+    task runIPv4Calculator(type: JavaExec) {
+        classpath = sourceSets.main.runtimeClasspath
+        main = "io.vproxy.ui.calculator.CalculatorMain"
+    }
 }
 
 project(':test') {
