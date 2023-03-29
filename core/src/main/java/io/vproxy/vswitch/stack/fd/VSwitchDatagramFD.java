@@ -104,7 +104,7 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
             udpListenEntry.sendingQueue.apiSend(new Datagram(remote, ByteArray.from(array)));
         }
 
-        ctx.L4.sendUdp(ctx.network, udpListenEntry);
+        ctx.udpOutput.sendUdp(ctx.network, udpListenEntry);
 
         return len;
     }

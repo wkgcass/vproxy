@@ -3,11 +3,17 @@ package io.vproxy.commons.graph;
 import java.util.Objects;
 
 public class GraphEdge<N extends GraphNode<N>> {
+    public final String name;
     public final N from;
     public final N to;
     public final long distance;
 
     public GraphEdge(N from, N to, long distance) {
+        this(null, from, to, distance);
+    }
+
+    public GraphEdge(String name, N from, N to, long distance) {
+        this.name = name;
         this.from = from;
         this.to = to;
         this.distance = distance;
@@ -15,6 +21,8 @@ public class GraphEdge<N extends GraphNode<N>> {
 
     @Override
     public String toString() {
+        if (name != null)
+            return "{" + name + ":" + from + "---" + distance + "-->" + to + "}";
         return "{" + from + "---" + distance + "-->" + to + "}";
     }
 

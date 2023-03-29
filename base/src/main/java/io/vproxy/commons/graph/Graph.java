@@ -1,14 +1,12 @@
 package io.vproxy.commons.graph;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Graph<N extends GraphNode<N>> {
     private final Set<N> nodes;
 
-    public Graph(Set<N> nodes) {
-        this.nodes = nodes;
+    public Graph(Collection<N> nodes) {
+        this.nodes = new HashSet<>(nodes);
     }
 
     public Map<N, GraphPath<N>> shortestPaths(N from) {

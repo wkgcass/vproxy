@@ -3,28 +3,27 @@ package io.vproxy.vswitch;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.vswitch.iface.Iface;
-import io.vproxy.vswitch.stack.NetworkStack;
+import io.vproxy.vswitch.node.NodeGraphScheduler;
 import io.vproxy.vswitch.util.UserInfo;
 
 import java.util.Collection;
-import java.util.function.Supplier;
 
-public class SwitchContext {
-    SwitchContext(Switch sw,
-                  Supplier<NetworkStack> netStack,
-                  LoopRemovalStop loopRemovalStop,
-                  SendingPacket sendPacketFunc,
-                  GetIfaces getIfacesFunc,
-                  GetTable getTableFunc,
-                  GetUserInfo getUserInfo,
-                  GetSelectorEventLoop getSelectorEventLoopFunc,
-                  AlertPacketsArrive alertPacketsArriveFunc,
-                  DestroyIface destroyIfaceFunc,
-                  InitIface initIfaceFunc,
-                  RecordIface recordIfaceFunc) {
+public class SwitchDelegate {
+    SwitchDelegate(Switch sw,
+                   NodeGraphScheduler scheduler,
+                   LoopRemovalStop loopRemovalStopFunc,
+                   SendingPacket sendPacketFunc,
+                   GetIfaces getIfacesFunc,
+                   GetTable getTableFunc,
+                   GetUserInfo getUserInfo,
+                   GetSelectorEventLoop getSelectorEventLoopFunc,
+                   AlertPacketsArrive alertPacketsArriveFunc,
+                   DestroyIface destroyIfaceFunc,
+                   InitIface initIfaceFunc,
+                   RecordIface recordIfaceFunc) {
         this.sw = sw;
-        this.netStack = netStack;
-        this.loopRemovalStopFunc = loopRemovalStop;
+        this.scheduler = scheduler;
+        this.loopRemovalStopFunc = loopRemovalStopFunc;
         this.sendPacketFunc = sendPacketFunc;
         this.getIfacesFunc = getIfacesFunc;
         this.getTableFunc = getTableFunc;
@@ -37,7 +36,7 @@ public class SwitchContext {
     }
 
     public final Switch sw;
-    public final Supplier<NetworkStack> netStack;
+    public final NodeGraphScheduler scheduler;
 
     public interface LoopRemovalStop {
         void loopRemovalStop();

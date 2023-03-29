@@ -9,8 +9,10 @@ import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.vpacket.conntrack.udp.UdpNat;
+import io.vproxy.vswitch.IPMac;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
+import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.vswitch.plugin.FilterResult;
 import io.vproxy.vswitch.plugin.PacketFilter;
@@ -502,5 +504,78 @@ public class SwitchUtils {
         }
         pkt.setSrcPort(local.getPort());
         pkt.setDstPort(remote.getPort());
+    }
+
+    public static IPMac getRoutedSrcIpAndMac(VirtualNetwork network, IP dstIp) {
+        assert Logger.lowLevelDebug("getRoutedSrcIpAndMac(" + network + "," + dstIp + ")");
+
+        // find an ip in that network to be used for the src mac address
+        if (dstIp instanceof IPv4) {
+            return network.ips.findAnyIPv4ForRouting();
+        } else {
+            return network.ips.findAnyIPv6ForRouting();
+        }
+    }
+
+    public static MacAddress getRoutedSrcMac(VirtualNetwork network, IP dstIp) {
+        assert Logger.lowLevelDebug("getRoutedSrcMac(" + network + "," + dstIp + ")");
+        var entry = getRoutedSrcIpAndMac(network, dstIp);
+        if (entry == null) {
+            return null;
+        }
+        return entry.mac;
+    }
+
+    public static EthernetPacket buildArpReq(VirtualNetwork network, IP dstIp, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("buildArpReq(" + network + "," + dstIp + "," + dstMac + ")");
+
+        var optIp = network.ips.findAnyIPv4ForRouting();
+        if (optIp == null) {
+            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the network");
+            return null;
+        }
+        IP reqIp = optIp.ip;
+        MacAddress reqMac = optIp.mac;
+
+        ArpPacket req = new ArpPacket();
+        req.setHardwareType(Consts.ARP_HARDWARE_TYPE_ETHER);
+        req.setProtocolType(Consts.ARP_PROTOCOL_TYPE_IP);
+        req.setHardwareSize(6);
+        req.setProtocolSize(4);
+        req.setOpcode(Consts.ARP_PROTOCOL_OPCODE_REQ);
+        req.setSenderMac(reqMac.bytes);
+        req.setSenderIp(reqIp.bytes);
+        req.setTargetMac(ByteArray.allocate(6));
+        req.setTargetIp(dstIp.bytes);
+
+        EthernetPacket ether = new EthernetPacket();
+        ether.setDst(dstMac);
+        ether.setSrc(reqMac);
+        ether.setType(Consts.ETHER_TYPE_ARP);
+        ether.setPacket(req);
+
+        return ether;
+    }
+
+    public static EthernetPacket buildNdpNeighborSolicitation(VirtualNetwork network, IP dstIp, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("buildNdpNeighborSolicitation(" + network + "," + dstIp + "," + dstMac + ")");
+
+        var optIp = network.ips.findAnyIPv6ForRouting();
+        if (optIp == null) {
+            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the network");
+            return null;
+        }
+        IP reqIp = optIp.ip;
+        MacAddress reqMac = optIp.mac;
+
+        Ipv6Packet ipv6 = SwitchUtils.buildNeighborSolicitationPacket((IPv6) dstIp, reqMac, (IPv6) reqIp);
+
+        EthernetPacket ether = new EthernetPacket();
+        ether.setDst(dstMac);
+        ether.setSrc(reqMac);
+        ether.setType(Consts.ETHER_TYPE_IPv6);
+        ether.setPacket(ipv6);
+
+        return ether;
     }
 }

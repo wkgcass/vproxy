@@ -18,7 +18,7 @@ import java.util.Set;
 public class MacTable {
     public static final int MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME = 60 * 1000;
 
-    private final SwitchContext swCtx;
+    private final SwitchDelegate swCtx;
     private SelectorEventLoop loop;
     private final VirtualNetwork net;
     private int timeout;
@@ -27,7 +27,7 @@ public class MacTable {
     private final Map<MacAddress, MacEntry> macMap = new HashMap<>();
     private final Map<Iface, Set<MacEntry>> ifaceMap = new HashMap<>();
 
-    public MacTable(SwitchContext swCtx, SelectorEventLoop loop, VirtualNetwork net, int timeout) {
+    public MacTable(SwitchDelegate swCtx, SelectorEventLoop loop, VirtualNetwork net, int timeout) {
         this.swCtx = swCtx;
         this.loop = loop;
         this.net = net;

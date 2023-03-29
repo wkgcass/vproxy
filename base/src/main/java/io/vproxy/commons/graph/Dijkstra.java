@@ -36,7 +36,7 @@ public class Dijkstra {
                                                           Map<N, Tuple<Long, List<GraphEdge<N>>>> distances) {
         for (var from : visited) {
             long len = distances.get(from)._1;
-            for (var edge : from.edges.values()) {
+            for (var edge : from.allEdges()) {
                 var edgeTo = edge.to;
                 if (skipNodes.contains(edgeTo)) {
                     continue;

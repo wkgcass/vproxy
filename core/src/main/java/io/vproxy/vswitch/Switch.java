@@ -25,16 +25,14 @@ import io.vproxy.vmirror.Mirror;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv4Packet;
 import io.vproxy.vpacket.Ipv6Packet;
-import io.vproxy.vpacket.PartialPacket;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.iface.*;
+import io.vproxy.vswitch.node.*;
 import io.vproxy.vswitch.plugin.FilterResult;
 import io.vproxy.vswitch.plugin.IfaceWatcher;
-import io.vproxy.vswitch.stack.NetworkStack;
 import io.vproxy.vswitch.stack.conntrack.EnhancedTCPEntry;
 import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 import io.vproxy.vswitch.stack.conntrack.Fastpath;
-import io.vproxy.vswitch.util.CSumRecalcType;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.vswitch.util.UserInfo;
@@ -69,9 +67,22 @@ public class Switch {
 
     private final Map<String, UMem> umems = new HashMap<>();
 
-    private final SwitchContext swCtx = new SwitchContext(
+    private final NodeGraph nodeGraph = new NodeGraph();
+    private final NodeGraphScheduler scheduler = new NodeGraphScheduler(nodeGraph) {
+        @Override
+        protected void packetDroppedOrStolen(PacketBuffer pkb) {
+            Switch.this.recordTrace(pkb);
+        }
+
+        @Override
+        protected boolean tracePacket(PacketBuffer pkb) {
+            return Switch.this.tracePacket(pkb);
+        }
+    };
+
+    private final SwitchDelegate sw = new SwitchDelegate(
         this,
-        () -> this.netStack,
+        scheduler,
         () -> {
             var foo = wantStart;
             stop();
@@ -90,7 +101,6 @@ public class Switch {
     private final PacketFilterHelper packetFilterHelper = new PacketFilterHelper(
         this::sendPacket
     );
-    private final NetworkStack netStack = new NetworkStack(swCtx);
 
     public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
                   int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess)
@@ -111,6 +121,20 @@ public class Switch {
             Logger.error(LogType.IMPROPER_USE, "the event loop group is already closed", e);
             throw e;
         }
+
+        initNodeGraph();
+    }
+
+    private final DevInput devInputNode = new DevInput();
+    private final NeighborResolve neighborResolveNode = new NeighborResolve(sw);
+    private final IPOutput ipOutputNode = new IPOutput(sw);
+    private final L4Output l4outputNode = new L4Output(sw);
+
+    private void initNodeGraph() {
+        nodeGraph.addNode(devInputNode);
+        nodeGraph.addNode(neighborResolveNode);
+        nodeGraph.addNode(ipOutputNode);
+        nodeGraph.addNode(l4outputNode);
     }
 
     private void releaseSock() {
@@ -152,7 +176,7 @@ public class Switch {
         }
 
         var loop = netLoop.getSelectorEventLoop();
-        loop.add(sock, EventSet.read(), null, new DatagramInputHandler(swCtx));
+        loop.add(sock, EventSet.read(), null, new DatagramInputHandler(sw));
         eventLoop = netLoop;
         refreshCacheEvent = eventLoop.getSelectorEventLoop().period(40_000, this::refreshCache);
         networks.values().forEach(t -> t.setLoop(loop));
@@ -220,11 +244,11 @@ public class Switch {
         }
     }
 
-    private void refreshArpCache(VirtualNetwork t, IP ip, MacAddress mac) {
+    private void refreshArpCache(VirtualNetwork n, IP ip, MacAddress mac) {
         VProxyThread.current().newUuidDebugInfo();
         assert Logger.lowLevelDebug("trigger arp cache refresh for " + ip.formatToIPString() + " " + mac);
 
-        netStack.resolve(t, ip, mac);
+        neighborResolveNode.resolve(n, ip, mac);
     }
 
     public int getMacTableTimeout() {
@@ -268,7 +292,7 @@ public class Switch {
         if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        VirtualNetwork t = new VirtualNetwork(swCtx, vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
+        VirtualNetwork t = new VirtualNetwork(sw, vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
         networks.put(vni, t);
         return t;
     }
@@ -815,7 +839,7 @@ public class Switch {
 
         // init vpc network
         int vni = pkb.vni;
-        VirtualNetwork network = swCtx.getNetwork(vni);
+        VirtualNetwork network = sw.getNetwork(vni);
         if (network == null) {
             assert Logger.lowLevelDebug("vni not defined: " + vni);
             return false;
@@ -934,11 +958,11 @@ public class Switch {
             return;
         } else if (res == FilterResult.L3_TX) {
             assert Logger.lowLevelDebug("ingress filter returns L3_TX: " + pkb);
-            netStack.L3.output(pkb);
+            ipOutputNode.output(pkb);
             return;
         } else if (res == FilterResult.L4_TX) {
             assert Logger.lowLevelDebug("ingress filter returns L4_TX: " + pkb);
-            netStack.L4.output(pkb);
+            l4outputNode.output(pkb);
             return;
         }
         Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet ingress");
@@ -1006,56 +1030,23 @@ public class Switch {
         pkb.replacePacket(ether);
     }
 
+    private final CursorList<ByteArray> fullbufBackupList = new CursorList<>();
+
     private void handleInputPkb() {
-        for (PacketBuffer pkb : packetBuffersToBeHandled) {
-            // clear csum if required
-            if (pkb.devin.getParams().getCSumRecalc() != CSumRecalcType.none) {
-                if (pkb.ipPkt != null) {
-                    if (pkb.ipPkt.getPacket() != null) {
-                        assert Logger.lowLevelDebug("checksum cleared for " + pkb.ipPkt.getPacket().description());
-                        pkb.ipPkt.getPacket().clearChecksum();
-                    }
-                    if (pkb.devin.getParams().getCSumRecalc() == CSumRecalcType.all) {
-                        assert Logger.lowLevelDebug("checksum cleared for " + pkb.ipPkt.description());
-                        pkb.ipPkt.clearChecksum();
-                    }
-                }
-            }
-
+        for (var pkb : packetBuffersToBeHandled) {
             // the umem chunk need to be released after processing
-            var fullbufBackup = pkb.fullbuf;
-
-            // try fastpath
-            boolean fastpathHandled = false;
-            if (pkb.fastpath) {
-                pkb.fastpath = false; // clear the field
-                if (pkb.udp != null) {
-                    assert Logger.lowLevelDebug("fastpath for udp on input: " + pkb);
-                    pkb.udp.update();
-                    pkb.ensurePartialPacketParsed(PartialPacket.LEVEL_HANDLED_FIELDS);
-                    pkb.udp.listenEntry.receivingQueue.store(
-                        pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(),
-                        pkb.udpPkt.getData().getRawPacket(0));
-                    fastpathHandled = true;
-                } else {
-                    assert Logger.lowLevelDebug("fastpath set but pkb.udp is null");
-                }
-            }
-
-            if (!fastpathHandled) {
-                assert Logger.lowLevelDebug("no fastpath, handle normally: " + pkb);
-
-                // normal input
-                try {
-                    netStack.devInput(pkb);
-                } catch (Throwable t) {
-                    Logger.error(LogType.IMPROPER_USE, "unexpected exception in devInput", t);
-                }
-            }
-
-            releaseUMemChunkIfPossible(fullbufBackup);
+            fullbufBackupList.add(pkb.fullbuf);
+            pkb.next = devInputNode;
         }
-        packetBuffersToBeHandled.clear();
+        try {
+            scheduler.schedule(packetBuffersToBeHandled);
+        } finally {
+            for (var b : fullbufBackupList) {
+                releaseUMemChunkIfPossible(b);
+            }
+            fullbufBackupList.clear();
+            packetBuffersToBeHandled.clear();
+        }
 
         for (Iface iface : ifaces.keySet()) {
             iface.completeTx();
@@ -1177,5 +1168,46 @@ public class Switch {
             super.cancel();
             utilRemoveIface(iface);
         }
+    }
+
+    private int traceCount = 0;
+    private final List<String> traceRecorder = new ArrayList<>();
+
+    public int getTraceCount() {
+        if (traceCount < 0) {
+            traceCount = 0;
+            return 0;
+        }
+        return traceCount;
+    }
+
+    public void setTraceCount(int traceCount) {
+        this.traceCount = traceCount;
+    }
+
+    public List<String> getTraces() {
+        return new ArrayList<>(traceRecorder);
+    }
+
+    public void clearTraces() {
+        traceRecorder.clear();
+    }
+
+    public void removeTrace(int index) throws NotFoundException {
+        if (index < 0 || index >= traceRecorder.size())
+            throw new NotFoundException("trace", "" + index);
+        traceRecorder.remove(index);
+    }
+
+    private void recordTrace(PacketBuffer pkb) {
+        if (pkb.debugger.isDebugOn()) {
+            traceRecorder.add(pkb.debugger.toString());
+        }
+    }
+
+    private boolean tracePacket(@SuppressWarnings("unused") PacketBuffer pkb) {
+        if (traceCount <= 0) return false;
+        --traceCount;
+        return true;
     }
 }

@@ -25,6 +25,7 @@ public enum ResourceType {
     vpc("vpc"),
     arp("arp"),
     conntrack("ct"),
+    trace("trace"),
     iface("iface"),
     user("user"),
     tap("tap"),

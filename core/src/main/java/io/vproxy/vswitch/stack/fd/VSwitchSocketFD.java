@@ -102,7 +102,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         } else {
             Logger.shouldNotHappen("should not reach here: " + entry.getState());
         }
-        ctx.L4.tcpStartRetransmission(ctx.network, entry);
+        ctx.tcpStack.tcpStartRetransmission(ctx.network, entry);
     }
 
     @Override
@@ -158,7 +158,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         }
 
         // need to send ack
-        ctx.L4.tcpAck(ctx.network, entry);
+        ctx.tcpStack.tcpAck(ctx.network, entry);
         // reset window
         entry.receivingQueue.resetWindow();
 
@@ -180,7 +180,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
         // start retransmission
         if (wrote > 0) {
-            ctx.L4.tcpStartRetransmission(ctx.network, entry);
+            ctx.tcpStack.tcpStartRetransmission(ctx.network, entry);
         }
 
         // handle events
@@ -225,10 +225,10 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
             // wait until all data sent
             assert Logger.lowLevelDebug("fd " + this + " is closed, but more data to send, so do not close the connection for now");
             entry.doClose();
-            ctx.L4.tcpStartRetransmission(ctx.network, entry);
+            ctx.tcpStack.tcpStartRetransmission(ctx.network, entry);
         } else {
             // send reset
-            ctx.L4.resetTcpConnection(ctx.network, entry);
+            ctx.tcpStack.resetTcpConnection(ctx.network, entry);
         }
     }
 

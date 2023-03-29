@@ -20,8 +20,8 @@ module io.vproxy.core {
     exports io.vproxy.vswitch.dispatcher;
     exports io.vproxy.vswitch.dispatcher.impl;
     exports io.vproxy.vswitch.iface;
+    exports io.vproxy.vswitch.node;
     exports io.vproxy.vswitch.plugin;
-    exports io.vproxy.vswitch.stack;
     exports io.vproxy.vswitch.stack.conntrack;
     exports io.vproxy.vswitch.stack.fd;
     exports io.vproxy.vswitch.util;

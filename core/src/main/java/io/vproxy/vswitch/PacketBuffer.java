@@ -9,10 +9,11 @@ import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.udp.UdpEntry;
-import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpNat;
 import io.vproxy.vpacket.tuples.PacketFullTuple;
 import io.vproxy.vswitch.iface.Iface;
+import io.vproxy.vswitch.node.Node;
+import io.vproxy.vswitch.node.TraceDebugger;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,9 +50,13 @@ public class PacketBuffer extends PacketDataBuffer {
     }
 
     // ----- context -----
+    public Node next;
+    public final TraceDebugger debugger = new TraceDebugger();
     public boolean ifaceInput; // the packet is input into switch from iface
     public Iface devin; // not null if it's an input packet
-    public Iface devout; // this will only be set before passing to packet filters, and cleared after it's handled
+    // this will be set when tx dev is determined
+    // this will be set before passing to packet filters, and cleared after it's handled
+    public Iface devout;
     public int vni; // vni or vlan number, must always be valid
     public VirtualNetwork network; // might be null
     public int flags;
@@ -69,8 +74,6 @@ public class PacketBuffer extends PacketDataBuffer {
     public Collection<IP> matchedIps;
     // l4
     public TcpEntry tcp = null;
-    public boolean needTcpReset = false; // this field is only used in L4.input
-    public UdpListenEntry udpListen = null;
     public UdpEntry udp = null;
     public TcpNat tcpNat = null;
     public UdpNat udpNat = null;
@@ -192,7 +195,6 @@ public class PacketBuffer extends PacketDataBuffer {
 
     public void clearHelperFields() {
         matchedIps = null;
-        needTcpReset = false;
     }
 
     public void clearFilterFields() {
@@ -210,6 +212,18 @@ public class PacketBuffer extends PacketDataBuffer {
             this.pkt = pkt;
         }
         super.clearBuffers();
+    }
+
+    public void clearAndSetPacket(VirtualNetwork network, EthernetPacket pkt) {
+        replacePacket(pkt);
+        setNetwork(network);
+        devin = null;
+    }
+
+    public void clearAndSetPacket(VirtualNetwork network, AbstractIpPacket pkt) {
+        replacePacket(pkt);
+        setNetwork(network);
+        devin = null;
     }
 
     public void replacePacket(EthernetPacket pkt) {
@@ -361,7 +375,9 @@ public class PacketBuffer extends PacketDataBuffer {
     }
 
     public PacketBuffer copy() {
-        return new PacketBuffer(network, pkt.copy());
+        var pkb = new PacketBuffer(network, pkt.copy());
+        pkb.debugger.setDebugOn(this.debugger.isDebugOn());
+        return pkb;
     }
 
     public Object getUserData(Object key) {

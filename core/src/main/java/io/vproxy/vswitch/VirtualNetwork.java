@@ -32,7 +32,7 @@ public class VirtualNetwork {
 
     private final FDs fds;
 
-    public VirtualNetwork(SwitchContext swCtx,
+    public VirtualNetwork(SwitchDelegate swCtx,
                           int vni, NetEventLoop loop,
                           Network v4network, Network v6network,
                           int macTableTimeout, int arpTableTimeout,

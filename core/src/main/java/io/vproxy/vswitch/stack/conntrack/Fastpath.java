@@ -5,7 +5,7 @@ import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv4Packet;
 import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.SwitchContext;
+import io.vproxy.vswitch.SwitchDelegate;
 import io.vproxy.vswitch.iface.Iface;
 
 public class Fastpath {
@@ -21,12 +21,12 @@ public class Fastpath {
         this.remote = remote;
     }
 
-    public boolean validateAndSetInto(SwitchContext swCtx, PacketBuffer pkb) {
+    public boolean validateAndSetInto(SwitchDelegate sw, PacketBuffer pkb) {
         if (output.isDestroyed()) {
             return false;
         }
         if (vni != pkb.vni) {
-            var net = swCtx.getNetwork(pkb.vni);
+            var net = sw.getNetwork(pkb.vni);
             if (net == null) {
                 return false;
             }

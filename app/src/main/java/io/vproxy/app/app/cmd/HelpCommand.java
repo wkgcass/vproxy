@@ -429,6 +429,7 @@ public class HelpCommand {
         mtu("mtu", null, "max transmission unit"),
         flood("flood", null, "flooding traffic"),
         csumrecalc("csum-recalc", null, "recalculate checksum of the received packet"),
+        trace("trace", null, "trace packets in the switch"),
         offload("offload", null, "offload operations from java"),
         path("path", null, "file path"),
         program("program", "prog", "program name"),
@@ -1074,11 +1075,11 @@ public class HelpCommand {
                         )
                     ))
             )),
-        sw("switch", "sw", "a switch for vproxy wrapped vxlan packets",
+        sw("switch", "sw", "sdn virtual switch",
             Arrays.asList(
                 new ResActMan(ActMan.add, "create a switch",
                     Arrays.asList(
-                        new ResActParamMan(ParamMan.address, "binding udp address of the switch for wrapped vxlan packets"),
+                        new ResActParamMan(ParamMan.address, "binding udp address of the switch for wrapped vxlan packets", "disable udp binding"),
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "" + SwitchHandle.MAC_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "" + SwitchHandle.ARP_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
@@ -1087,7 +1088,11 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports", "allow"),
                         new ResActParamMan(ParamMan.csumrecalc, "default checksum recalculation type for new connected ports", "none")
                     ),
-                    Collections.singletonList(
+                    Arrays.asList(
+                        new Tuple<>(
+                            "add switch sw0",
+                            "\"OK\""
+                        ),
                         new Tuple<>(
                             "add switch sw0 address 0.0.0.0:4789",
                             "\"OK\""
@@ -1106,7 +1111,7 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "list-detail switch",
-                            "1) \"sw0\" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000 bare-vxlan-access (allow-all)"
+                            "1) \"sw0\" -> event-loop-group worker bind 0.0.0.0:4789 mac-table-timeout 300000 arp-table-timeout 14400000 bare-vxlan-access (allow-all) trace 0"
                         )
                     )),
                 new ResActMan(ActMan.update, "update a switch",
@@ -1116,11 +1121,16 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed"),
                         new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones. set to -1 for ignoring this config", "not changed"),
                         new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed"),
-                        new ResActParamMan(ParamMan.csumrecalc, "default checksum recalculation type for new connected ports, updating it will not affect the existing ones", "not changed")
+                        new ResActParamMan(ParamMan.csumrecalc, "default checksum recalculation type for new connected ports, updating it will not affect the existing ones", "not changed"),
+                        new ResActParamMan(ParamMan.trace, "the number of packets to trace in the switch", "not changed")
                     ),
-                    Collections.singletonList(
+                    Arrays.asList(
                         new Tuple<>(
                             "update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000",
+                            "\"OK\""
+                        ),
+                        new Tuple<>(
+                            "update switch sw0 trace 10",
                             "\"OK\""
                         )
                     )),
@@ -1140,6 +1150,25 @@ public class HelpCommand {
                 new ResActMan(ActMan.removefrom, "remove a remote switch ref from a local switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove switch sw1 from switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        trace("trace", null, "trace of packets in a switch",
+            Arrays.asList(
+                new ResActMan(ActMan.list, "show trace of packets in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list trace in switch sw0",
+                        "## ... very long output ... ##"
+                    )
+                )),
+                new ResActMan(ActMan.removefrom, "clear switch trace", Collections.emptyList(), Arrays.asList(
+                    new Tuple<>(
+                        "remove trace * from switch sw0",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "remove trace 0 from switch sw0",
                         "\"OK\""
                     )
                 ))

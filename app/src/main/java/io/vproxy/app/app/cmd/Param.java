@@ -46,6 +46,7 @@ public enum Param {
     mtu("mtu"),
     flood("flood"),
     csumrecalc("csum-recalc"),
+    trace("trace"),
 
     offload("offload"),
 

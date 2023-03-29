@@ -21,7 +21,7 @@ import io.vproxy.vswitch.util.SwitchUtils;
 
 public class PacketFilterHelper {
     public PacketFilterHelper(
-        SwitchContext.SendingPacket sendPacketFunc
+        SwitchDelegate.SendingPacket sendPacketFunc
     ) {
         this.sendPacketFunc = sendPacketFunc;
     }
@@ -30,7 +30,7 @@ public class PacketFilterHelper {
         void send(PacketBuffer pkb, Iface iface);
     }
 
-    private final SwitchContext.SendingPacket sendPacketFunc;
+    private final SwitchDelegate.SendingPacket sendPacketFunc;
 
     public void sendPacket(PacketBuffer pkb, Iface toIface) {
         if (toIface == null) {

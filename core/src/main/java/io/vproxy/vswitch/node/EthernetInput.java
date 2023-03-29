@@ -1,31 +1,44 @@
-package io.vproxy.vswitch.stack;
+package io.vproxy.vswitch.node;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.commons.graph.GraphBuilder;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.MacAddress;
-import io.vproxy.vpacket.*;
+import io.vproxy.vpacket.AbstractIpPacket;
+import io.vproxy.vpacket.AbstractPacket;
+import io.vproxy.vpacket.ArpPacket;
+import io.vproxy.vpacket.IcmpPacket;
 import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.SwitchContext;
-import io.vproxy.vswitch.iface.Iface;
 
-import java.util.HashSet;
-import java.util.Set;
+public class EthernetInput extends Node {
+    private final NodeEgress unicastInput = new NodeEgress("unicast-input");
+    private final NodeEgress multicastInput = new NodeEgress("multicast-input");
 
-public class L2 {
-    private final SwitchContext swCtx;
-    public final L3 L3;
-
-    public L2(SwitchContext swCtx) {
-        this.swCtx = swCtx;
-        this.L3 = new L3(swCtx, this);
+    public EthernetInput() {
+        super("ethernet-input");
     }
 
-    public void input(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("L2.input(" + pkb + " :: " + pkb.network + ")");
+    @Override
+    protected void initGraph(GraphBuilder<Node> builder) {
+        builder.addEdge("ethernet-input", "unicast-input", "unicast-input", DEFAULT_EDGE_DISTANCE);
+        builder.addEdge("ethernet-input", "multicast-input", "multicast-input", DEFAULT_EDGE_DISTANCE);
+    }
 
+    @Override
+    protected void initNode() {
+        fillEdges(unicastInput);
+        fillEdges(multicastInput);
+    }
+
+    @Override
+    protected HandleResult preHandle(PacketBuffer pkb) {
+        return HandleResult.PASS;
+    }
+
+    @Override
+    protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
         MacAddress src = pkb.pkt.getSrc();
 
         // record iface in the mac table
@@ -42,90 +55,9 @@ public class L2 {
         // check whether we should accept the packet and process
         MacAddress dst = pkb.pkt.getDst();
         if (dst.isUnicast()) {
-            assert Logger.lowLevelDebug("packet is unicast");
-
-            // for unicast, we first check whether we can forward this packet out
-
-            Iface output = pkb.network.macTable.lookup(dst);
-            if (output != null) {
-                if (pkb.devin == null || pkb.devin != output) {
-                    sendPacket(pkb, output);
-                } else {
-                    assert Logger.lowLevelDebug("drop the packet which would be forwarded out to the same interface as the input interface: " + pkb);
-                }
-                return;
-            }
-
-            assert Logger.lowLevelDebug("dst not recorded in mac table");
-            // then we search whether we have virtual hosts can accept the packet
-
-            var ips = pkb.network.ips.lookupByMac(dst);
-            if (ips != null) {
-                pkb.setMatchedIps(ips);
-                L3.input(pkb);
-                return;
-            }
-
-            assert Logger.lowLevelDebug("no synthetic ip found");
-            // the packet will be dropped or flooded
-
+            return _returnnext(pkb, unicastInput);
         } else {
-            assert Logger.lowLevelDebug("packet is broadcast/multicast");
-            // forward the broadcast message
-            // and send the packet to local virtual hosts
-
-            sendBroadcast(pkb);
-            broadcastLocal(pkb);
-            return;
-        }
-        handleInputDroppedPacket(pkb);
-    }
-
-    public void reinput(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("reinput");
-        pkb.devin = null; // clear devin before re-input
-        input(pkb);
-    }
-
-    private void handleInputDroppedPacket(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("no path for this packet in l2: " + pkb);
-        flood(pkb);
-    }
-
-    private void flood(PacketBuffer pkb) {
-        if (pkb.pkt.getPacket() instanceof PacketBytes) {
-            assert Logger.lowLevelDebug("do not flood packet with unknown ether type, maybe it's randomly generated: "
-                + pkb.pkt.description());
-            return;
-        }
-
-        Logger.warn(LogType.ALERT, "flood packet: " + pkb);
-        for (Iface iface : swCtx.getIfaces()) {
-            if (pkb.devin != null && iface == pkb.devin) {
-                continue;
-            }
-            if (iface.getLocalSideVni(pkb.vni) != pkb.vni) {
-                continue;
-            }
-            if (!iface.getParams().isFloodAllowed()) {
-                assert Logger.lowLevelDebug("flood not allowed");
-                continue;
-            }
-            if (pkb.ensurePartialPacketParsed()) return;
-            var copied = pkb.copy();
-            sendPacket(copied, iface);
-        }
-
-        // also, send arp/ndp request for these addresses if they are ip packet
-        if (pkb.pkt.getPacket() instanceof AbstractIpPacket) {
-            AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
-
-            if (pkb.network.v4network.contains(ip.getDst()) || (pkb.network.v6network != null && pkb.network.v6network.contains(ip.getDst()))) {
-                assert Logger.lowLevelDebug("try to resolve " + ip.getDst() + " when flooding");
-                L3.resolve(pkb.network, ip.getDst(), null);
-            } else {
-                assert Logger.lowLevelDebug("cannot resolve " + ip.getDst() + " when flooding because dst is not in current network");
-            }
+            return _returnnext(pkb, multicastInput);
         }
     }
 
@@ -255,108 +187,5 @@ public class L2 {
             // ============================================================
             assert Logger.lowLevelDebug("refresh arp table by ndp done");
         }
-    }
-
-    public void output(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("L2.output(" + pkb + ")");
-        var packet = pkb.pkt;
-
-        var dst = packet.getDst();
-
-        if (dst.isUnicast()) {
-            assert Logger.lowLevelDebug("packet is unicast");
-
-            // for unicast, we first check whether we can forward this packet out
-            Iface iface = pkb.network.macTable.lookup(dst);
-            if (iface != null) {
-                sendPacket(pkb, iface);
-                return;
-            }
-
-            assert Logger.lowLevelDebug("dst not recorded in mac table");
-
-            // then we search whether we have virtual hosts can accept the packet
-
-            var ips = pkb.network.ips.lookupByMac(dst);
-            if (ips != null) {
-                pkb.setMatchedIps(ips);
-                L3.input(pkb);
-                return;
-            }
-
-            assert Logger.lowLevelDebug("no synthetic ip found");
-            // the packet will be dropped
-
-        } else {
-            assert Logger.lowLevelDebug("packet is broadcast/multicast");
-            // forward the broadcast message
-            // and send the packet to local virtual hosts except the one that generated this message
-
-            sendBroadcast(pkb);
-            outputBroadcastLocal(pkb);
-            return;
-        }
-        handleOutputDroppedPacket(pkb);
-    }
-
-    private void handleOutputDroppedPacket(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("no path for this packet in l2: " + pkb);
-        flood(pkb);
-    }
-
-    private void sendPacket(PacketBuffer pkb, Iface iface) {
-        assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface.name() + ")");
-        swCtx.sendPacket(pkb, iface);
-    }
-
-    private void sendBroadcast(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("sendBroadcast(" + pkb + ")");
-
-        Set<Iface> sent = new HashSet<>();
-        if (pkb.devin != null) {
-            sent.add(pkb.devin);
-        }
-        for (Iface f : swCtx.getIfaces()) {
-            if (f.getLocalSideVni(pkb.vni) == pkb.vni) { // send if vni matches or is a remote switch
-                if (sent.add(f)) {
-                    if (pkb.ensurePartialPacketParsed()) return;
-                    var copied = pkb.copy();
-                    sendPacket(copied, f);
-                }
-            }
-        }
-    }
-
-    private void outputBroadcastLocal(PacketBuffer pkb) {
-        pkb.devin = null; // clear devin info before re-input
-        broadcastLocal(pkb);
-    }
-
-    private void broadcastLocal(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("broadcastLocal(" + pkb + ")");
-
-        var allMac = pkb.network.ips.allMac();
-        boolean handled = false;
-        for (MacAddress mac : allMac) {
-            if (mac.equals(pkb.pkt.getSrc())) { // skip the sender
-                continue;
-            }
-            var ips = pkb.network.ips.lookupByMac(mac);
-            if (ips == null) {
-                Logger.shouldNotHappen("cannot find synthetic ips by mac " + mac + " in vpc " + pkb.vni);
-                continue;
-            }
-            assert Logger.lowLevelDebug("broadcast to " + ips);
-
-            if (pkb.ensurePartialPacketParsed()) return;
-
-            var copied = pkb.copy();
-
-            copied.setMatchedIps(ips);
-            L3.input(copied);
-            handled = true;
-        }
-
-        assert handled || Logger.lowLevelDebug("not handled");
     }
 }

@@ -7,6 +7,7 @@ import io.vproxy.app.app.cmd.Param;
 import io.vproxy.app.app.cmd.Resource;
 import io.vproxy.app.app.cmd.handle.param.AddrHandle;
 import io.vproxy.app.app.cmd.handle.param.TimeoutHandle;
+import io.vproxy.app.app.cmd.handle.param.TraceIntHandle;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.component.secure.SecurityGroup;
@@ -48,7 +49,12 @@ public class SwitchHandle {
 
         String alias = cmd.resource.alias;
         EventLoopGroup eventLoopGroup = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
-        IPPort addr = AddrHandle.get(cmd);
+        IPPort addr;
+        if (cmd.args.containsKey(Param.addr)) {
+            addr = AddrHandle.get(cmd);
+        } else {
+            addr = new IPPort("255.255.255.255:65535");
+        }
         int macTableTimeout;
         if (cmd.args.containsKey(Param.mactabletimeout)) {
             macTableTimeout = TimeoutHandle.get(cmd, Param.mactabletimeout);
@@ -95,6 +101,9 @@ public class SwitchHandle {
         if (cmd.args.containsKey(Param.secg)) {
             sw.bareVXLanAccess = SecurityGroupHandle.get(cmd.args.get(Param.secg));
         }
+        if (cmd.args.containsKey(Param.trace)) {
+            sw.setTraceCount(TraceIntHandle.get(cmd));
+        }
         IfaceParamsHandleHelper.update(cmd, sw.defaultIfaceParams);
     }
 
@@ -117,6 +126,7 @@ public class SwitchHandle {
                 + " mac-table-timeout " + sw.getMacTableTimeout()
                 + " arp-table-timeout " + sw.getArpTableTimeout()
                 + " bare-vxlan-access " + sw.bareVXLanAccess.alias
+                + " trace " + sw.getTraceCount()
                 + " " + sw.defaultIfaceParams;
         }
     }

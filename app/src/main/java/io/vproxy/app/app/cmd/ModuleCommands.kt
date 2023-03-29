@@ -557,7 +557,7 @@ class ModuleCommands private constructor() : Commands() {
         relation = ResourceType.sw,
         action = ActType.add,
         params = {
-          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.addr) { AddrHandle.check(it) }
           it + ResActParam(Param.mactabletimeout) { TimeoutHandle.check(it, Param.mactabletimeout) }
           it + ResActParam(Param.arptabletimeout) { TimeoutHandle.check(it, Param.arptabletimeout) }
           it + ResActParam(Param.elg)
@@ -595,6 +595,7 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
           it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
+          it + ResActParam(Param.trace) { TraceIntHandle.check(it) }
         },
         exec = execUpdate { SwitchHandle.update(it) }
       )
@@ -614,6 +615,24 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActFlag(Flag.noswitchflag)
         },
         exec = execUpdate { SwitchHandle.attach(it) }
+      )
+    }
+    it + Res(ResourceType.trace) {
+      it + ResAct(
+        relation = ResourceType.trace,
+        action = ActType.list,
+        targetRelation = ResRelation(ResourceType.sw),
+        exec = {
+          val ls = TraceHandle.list(it.resource.parentResource)
+          CmdResult(ls, ls, utilJoinList(ls))
+        }
+      )
+      it + ResAct(
+        relation = ResourceType.trace,
+        action = ActType.removefrom,
+        targetRelation = ResRelation(ResourceType.sw),
+        check = { TraceHandle.checkTraceNum(it.resource) },
+        exec = execUpdate { TraceHandle.remove(it) }
       )
     }
     it + Res(ResourceType.vpc) {

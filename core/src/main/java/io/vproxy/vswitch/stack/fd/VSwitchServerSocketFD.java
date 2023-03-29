@@ -97,11 +97,11 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
         }
         for (var e : entry.synBacklog) {
             PacketBuffer pkb = PacketBuffer.fromPacket(ctx.network, TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e)));
-            ctx.L4.output(pkb);
+            ctx.tcpStack.output(pkb);
         }
         for (var e : entry.backlog) {
             PacketBuffer pkb = PacketBuffer.fromPacket(ctx.network, TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e)));
-            ctx.L4.output(pkb);
+            ctx.tcpStack.output(pkb);
         }
         ctx.conntrack.removeTcpListen(local);
         entry.destroy();

@@ -12,7 +12,7 @@ import io.vproxy.vpacket.PacketDataBuffer;
 import io.vproxy.vpacket.VProxyEncryptedPacket;
 import io.vproxy.vpacket.VXLanPacket;
 import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.SwitchContext;
+import io.vproxy.vswitch.SwitchDelegate;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UserInfo;
 
@@ -23,12 +23,12 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
     private static final int TOTAL_LEN = SwitchUtils.TOTAL_RCV_BUF_LEN;
     private static final int PRESERVED_LEN = SwitchUtils.RCV_HEAD_PRESERVE_LEN;
 
-    private final SwitchContext swCtx;
+    private final SwitchDelegate swCtx;
     private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(TOTAL_LEN);
     private final ByteArray raw = ByteArray.from(rcvBuf.array());
     private final RingQueue<PacketBuffer> rcvQ = new RingQueue<>(1);
 
-    public DatagramInputHandler(SwitchContext swCtx) {
+    public DatagramInputHandler(SwitchDelegate swCtx) {
         this.swCtx = swCtx;
     }
 
