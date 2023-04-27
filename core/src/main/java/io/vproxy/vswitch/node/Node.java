@@ -62,7 +62,7 @@ public abstract class Node extends GraphNode<Node> {
     protected HandleResult _next(PacketBuffer pkb, NodeEgress egress) {
         assert Logger.lowLevelDebug("try _next: " + egress.name);
         if (pkb.debugger.isDebugOn()) {
-            pkb.debugger.append("select node on edge ").append(egress.name).append(": ");
+            pkb.debugger.append("select node on edge ").append(name).append("/").append(egress.name).append(": ");
         }
         if (egress.edges == null) {
             if (pkb.debugger.isDebugOn()) {

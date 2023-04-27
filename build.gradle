@@ -81,7 +81,11 @@ subprojects {
         from "$buildDir/docs/javadoc"
     }
 
-    if (['dep', 'base', 'adaptor-netty', 'adaptor-vertx'].contains(project.name)) {
+    def releaseProjects = ['dep', 'base', 'adaptor-netty', 'adaptor-vertx']
+    if (System.getProperty("MavenLocalInstall", "false") == "true") {
+        releaseProjects.addAll(['lib', 'core', 'extended', 'app', 'all'])
+    }
+    if (releaseProjects.contains(project.name)) {
     publishing {
         publications {
             maven(MavenPublication) {

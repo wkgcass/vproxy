@@ -619,12 +619,19 @@ class ModuleCommands private constructor() : Commands() {
     }
     it + Res(ResourceType.trace) {
       it + ResAct(
-        relation = ResourceType.trace,
+        relation = ResRelation(ResourceType.trace, ResRelation(ResourceType.sw)),
         action = ActType.list,
-        targetRelation = ResRelation(ResourceType.sw),
         exec = {
           val ls = TraceHandle.list(it.resource.parentResource)
-          CmdResult(ls, ls, utilJoinList(ls))
+          CmdResult(ls, ls.map { it.split("\n") }, utilJoinList(ls))
+        }
+      )
+      it + ResAct(
+        relation = ResRelation(ResourceType.trace, ResRelation(ResourceType.sw)),
+        action = ActType.listdetail,
+        exec = {
+          val ls = TraceHandle.list(it.resource.parentResource)
+          CmdResult(ls, ls.map { it.split("\n") }, utilJoinList(ls))
         }
       )
       it + ResAct(

@@ -184,6 +184,7 @@ public class NodeGraphScheduler {
                             pkb.debugger.append("dropped: next node is not set");
                             pkb.debugger.newLine();
                         }
+                        packetDroppedOrStolen(pkb);
                     } else {
                         add(pkb);
                     }
@@ -191,9 +192,11 @@ public class NodeGraphScheduler {
                 case CONTINUE:
                 case DROP:
                     assert Logger.lowLevelDebug("dropped");
+                    packetDroppedOrStolen(pkb);
                     break;
                 case STOLEN:
                     assert Logger.lowLevelDebug("stolen");
+                    packetDroppedOrStolen(pkb);
                     break;
             }
         }
@@ -209,7 +212,7 @@ public class NodeGraphScheduler {
             for (var q : nextMap.values()) {
                 var pkb = q.poll();
                 if (pkb == null) {
-                    break;
+                    continue;
                 }
                 doSchedule(pkb);
                 handled = true;

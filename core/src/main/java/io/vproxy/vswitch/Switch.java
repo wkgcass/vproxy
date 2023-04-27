@@ -1262,7 +1262,7 @@ public class Switch {
 
     private void recordTrace(PacketBuffer pkb) {
         if (pkb.debugger.isDebugOn()) {
-            traceRecorder.add(pkb.debugger.toString());
+            traceRecorder.add(pkb.description() + "\n" + pkb.debugger);
         }
     }
 

@@ -376,6 +376,8 @@ public class PacketBuffer extends PacketDataBuffer {
 
     public PacketBuffer copy() {
         var pkb = new PacketBuffer(network, pkt.copy());
+        pkb.ifaceInput = this.ifaceInput;
+        pkb.devin = this.devin;
         pkb.debugger.setDebugOn(this.debugger.isDebugOn());
         if (pkb.debugger.isDebugOn()) {
             pkb.debugger.resetIndent();
@@ -419,9 +421,27 @@ public class PacketBuffer extends PacketDataBuffer {
         }
         return "PacketBuffer{" +
             "in=" + devin +
+            ", out=" + devout +
             ", vni=" + vni +
             ", pktBuf=" + (pktBuf == null ? "" : pktBuf.toHexString()) +
             ", pkt=" + (pkt == null ? "" : pkt.description()) +
             "}@" + Utils.toHexString(super.hashCode());
+    }
+
+    public String description() {
+        AbstractPacket pkt = this.pkt;
+        if (pkt == null) {
+            pkt = ipPkt;
+        }
+        if (pkt == null) {
+            pkt = tcpPkt;
+        }
+        if (pkt == null) {
+            pkt = udpPkt;
+        }
+        return "in=" + (devin == null ? "null" : devin.name()) +
+            ",out=" + (devout == null ? "null" : devout.name()) +
+            ",vni=" + vni +
+            (pkt == null ? "" : "," + pkt.description());
     }
 }

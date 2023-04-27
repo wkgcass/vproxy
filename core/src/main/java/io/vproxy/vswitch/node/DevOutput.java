@@ -35,6 +35,9 @@ public class DevOutput extends Node {
             }
             return HandleResult.DROP;
         }
+        if (pkb.debugger.isDebugOn()) {
+            pkb.debugger.line(d -> d.append("out=").append(pkb.devout.name()));
+        }
         sw.sendPacket(pkb, pkb.devout);
         return _return(HandleResult.STOLEN, pkb);
     }

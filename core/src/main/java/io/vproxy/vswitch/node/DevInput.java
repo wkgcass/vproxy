@@ -30,6 +30,10 @@ public class DevInput extends Node {
 
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
+        if (pkb.debugger.isDebugOn()) {
+            pkb.debugger.line(d -> d.append("in=").append(pkb.devin == null ? "null" : pkb.devin.name()));
+        }
+
         // clear csum if required
         if (pkb.devin.getParams().getCSumRecalc() != CSumRecalcType.none) {
             if (pkb.ipPkt != null) {
