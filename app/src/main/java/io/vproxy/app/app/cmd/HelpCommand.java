@@ -51,7 +51,7 @@ public class HelpCommand {
     }
 
     public static String helpString() {
-        int maxLenOfFullName = "man ...".length();
+        int maxLenOfFullName = "man $resource $action".length();
         {
             for (ActMan actMan : ActMan.values()) {
                 int len = actMan.act.length();
@@ -129,8 +129,13 @@ public class HelpCommand {
             .append("\n        ")
             .append(withSpaces("man ...", maxLenOfFullName))
             .append(withSpaces(null, maxLenOfShortName))
-            .append(withMaxLen("use `man action|resource|param_name` to get detailed doc." +
+            .append(withMaxLen("use `man action|resource|param_name` to get detailed doc. " +
                     "use `man add-to|remove-from` to see info about `add-to` or `remove-from`",
+                descrMaxLen, descrSpaces))
+            .append("\n        ")
+            .append(withSpaces("man $resource $action", maxLenOfFullName))
+            .append(withSpaces(null, maxLenOfShortName))
+            .append(withMaxLen("show detailed doc about how an action operates a resource",
                 descrMaxLen, descrSpaces))
             .append("\n    Available actions:");
         for (ActMan actMan : ActMan.values()) {

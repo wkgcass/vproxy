@@ -92,6 +92,7 @@ public class NodeGraphScheduler {
     }
 
     private void doSchedule(PacketBuffer pkb) {
+        loop:
         while (true) {
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.resetIndent();
@@ -106,6 +107,7 @@ public class NodeGraphScheduler {
                 packetDroppedOrStolen(pkb);
                 break;
             }
+            assert Logger.lowLevelDebug("next node is " + next.name);
 
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.append("node: ").append(next.name);
@@ -117,8 +119,9 @@ public class NodeGraphScheduler {
                 pkb.debugger.incIndent();
             }
             resetForNewPacket();
+            pkb.next = null;
             var res = next.handle(pkb, this);
-            assert Logger.lowLevelDebug("handle result: " + res);
+            assert Logger.lowLevelDebug("handle result: " + res + ", next: " + (pkb.next == null ? "null" : pkb.next.name));
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.decIndent();
                 pkb.debugger.append("result: ").append(res);
@@ -137,13 +140,13 @@ public class NodeGraphScheduler {
                     packetDroppedOrStolen(pkb);
 
                     scheduleNextMap(next);
-                    break;
+                    break loop;
                 case STOLEN:
                     assert Logger.lowLevelDebug("stolen");
                     packetDroppedOrStolen(pkb);
 
                     scheduleNextMap(next);
-                    break;
+                    break loop;
             }
         }
     }
@@ -163,8 +166,9 @@ public class NodeGraphScheduler {
                 pkb.debugger.incIndent();
             }
             resetForNewPacket();
+            pkb.next = null;
             var res = next.handle(pkb, this);
-            assert Logger.lowLevelDebug("handle result: " + res);
+            assert Logger.lowLevelDebug("handle result: " + res + ", next: " + (pkb.next == null ? "null" : pkb.next.name));
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.decIndent();
                 pkb.debugger.append("result: ").append(res);
@@ -204,6 +208,9 @@ public class NodeGraphScheduler {
             var handled = false;
             for (var q : nextMap.values()) {
                 var pkb = q.poll();
+                if (pkb == null) {
+                    break;
+                }
                 doSchedule(pkb);
                 handled = true;
             }

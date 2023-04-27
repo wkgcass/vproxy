@@ -239,6 +239,36 @@ public class SwitchUtils {
         return buildEtherIpPacket(dstMac, srcMac, ipPkt);
     }
 
+    public static AbstractIpPacket buildIpPacket(IP srcIp, IP dstIp, int proto, AbstractPacket pkt) {
+        AbstractIpPacket ipPkt;
+        if (srcIp instanceof IPv4) {
+            var ipv4 = new Ipv4Packet();
+            ipv4.setVersion(4);
+            ipv4.setIhl(5);
+            ipv4.setTotalLength(20 + pkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length());
+            ipv4.setTtl(64);
+            ipv4.setProtocol(proto);
+            ipv4.setSrc((IPv4) srcIp);
+            ipv4.setDst((IPv4) dstIp);
+            ipv4.setOptions(ByteArray.allocate(0));
+            ipv4.setPacket(pkt);
+            ipPkt = ipv4;
+        } else {
+            assert srcIp instanceof IPv6;
+            var ipv6 = new Ipv6Packet();
+            ipv6.setVersion(6);
+            ipv6.setNextHeader(proto);
+            ipv6.setHopLimit(64);
+            ipv6.setSrc((IPv6) srcIp);
+            ipv6.setDst((IPv6) dstIp);
+            ipv6.setExtHeaders(Collections.emptyList());
+            ipv6.setPacket(pkt);
+            ipv6.setPayloadLength(pkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length());
+            ipPkt = ipv6;
+        }
+        return ipPkt;
+    }
+
     public static EthernetPacket buildEtherIpPacket(MacAddress dstMac, MacAddress srcMac, AbstractIpPacket ipPkt) {
         var srcIp = ipPkt.getSrc();
 

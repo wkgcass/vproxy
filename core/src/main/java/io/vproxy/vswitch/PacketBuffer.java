@@ -377,6 +377,10 @@ public class PacketBuffer extends PacketDataBuffer {
     public PacketBuffer copy() {
         var pkb = new PacketBuffer(network, pkt.copy());
         pkb.debugger.setDebugOn(this.debugger.isDebugOn());
+        if (pkb.debugger.isDebugOn()) {
+            pkb.debugger.resetIndent();
+            pkb.debugger.line(d -> d.append("packet cloned"));
+        }
         return pkb;
     }
 

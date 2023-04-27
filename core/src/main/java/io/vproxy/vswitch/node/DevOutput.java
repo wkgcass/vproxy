@@ -22,7 +22,7 @@ public class DevOutput extends Node {
 
     @Override
     protected HandleResult preHandle(PacketBuffer pkb) {
-        return pkb.devout == null ? HandleResult.CONTINUE : HandleResult.PASS;
+        return HandleResult.PASS;
     }
 
     @Override
@@ -30,7 +30,7 @@ public class DevOutput extends Node {
         if (pkb.devout == null) {
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger
-                    .append("devout not found")
+                    .append("devout is not set")
                     .newLine();
             }
             return HandleResult.DROP;

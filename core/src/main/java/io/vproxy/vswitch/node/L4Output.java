@@ -77,6 +77,7 @@ public class L4Output extends Node {
     }
 
     public void output(PacketBuffer pkb) {
+        pkb.next = null;
         var res = handle(pkb, null);
         if (res != HandleResult.DROP) {
             sw.scheduler.schedule(pkb);

@@ -16,10 +16,6 @@ public class GraphNode<N extends GraphNode<N>> {
         return edges.containsKey(node);
     }
 
-    public boolean hasNamedEdge(String name) {
-        return nameMap.containsKey(name);
-    }
-
     public void register(GraphEdge<N> edge) {
         var set = edges.get(edge.to);
         //noinspection Java8MapApi

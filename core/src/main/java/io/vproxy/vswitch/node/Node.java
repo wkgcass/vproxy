@@ -1,5 +1,6 @@
 package io.vproxy.vswitch.node;
 
+import io.vproxy.base.util.Logger;
 import io.vproxy.commons.graph.GraphBuilder;
 import io.vproxy.commons.graph.GraphNode;
 import io.vproxy.vswitch.PacketBuffer;
@@ -59,6 +60,7 @@ public abstract class Node extends GraphNode<Node> {
 
     // will always return DROP or PICK
     protected HandleResult _next(PacketBuffer pkb, NodeEgress egress) {
+        assert Logger.lowLevelDebug("try _next: " + egress.name);
         if (pkb.debugger.isDebugOn()) {
             pkb.debugger.append("select node on edge ").append(egress.name).append(": ");
         }

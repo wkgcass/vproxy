@@ -41,6 +41,6 @@ public class MulticastInput extends Node {
         }
         var p = pkb.copy();
         _schedule(scheduler, p, multicastOutput);
-        return _returnnext(p, localMulticastInput);
+        return _returnnext(pkb, localMulticastInput);
     }
 }

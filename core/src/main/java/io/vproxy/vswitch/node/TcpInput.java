@@ -69,6 +69,6 @@ public class TcpInput extends Node {
             }
             return _returnnext(pkb, tcpReset);
         }
-        return _returnnext(pkb, tcpStack);
+        return _returnnext(pkb, tcpReset);
     }
 }

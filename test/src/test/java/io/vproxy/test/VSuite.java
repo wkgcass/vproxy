@@ -30,6 +30,7 @@ import org.junit.runners.Suite;
     TestPromise.class,
     TestUtilities.class,
     TestByteArrayBuilder.class,
+    TestSwitch.class,
     TestFlowParser.class,
     TestFlowGen.class,
     TestVPWSAgentConfig.class,

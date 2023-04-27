@@ -54,9 +54,6 @@ public class GraphBuilder<N extends GraphNode<N>> {
         if (!nodes.containsValue(edge.to)) {
             throw new IllegalArgumentException("`to`=" + edge.to + " is not a registered node");
         }
-        if (edge.name != null && edge.from.hasNamedEdge(edge.name)) {
-            throw new IllegalArgumentException("`from`=" + edge.from + " already has a named edge `" + edge.name + "`");
-        }
         edge.from.register(edge);
         return this;
     }

@@ -8,6 +8,7 @@ import java.util.Objects;
 
 public class MacAddress implements ToByteArray {
     public static final MacAddress ZERO = new MacAddress(new byte[]{0, 0, 0, 0, 0, 0});
+    public static final MacAddress BROADCAST = new MacAddress("ff:ff:ff:ff:ff:ff");
 
     public final ByteArray bytes;
     private final int value0;

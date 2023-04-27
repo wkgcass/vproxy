@@ -68,6 +68,7 @@ public class FloodOutput extends AbstractNeighborResolve {
             }
             if (isFirst) {
                 isFirst = false;
+                pkb.devout = iface;
                 res = _next(pkb, devOutput);
             } else {
                 var copied = pkb.copy();

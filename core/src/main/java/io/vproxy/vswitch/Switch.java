@@ -131,10 +131,39 @@ public class Switch {
     private final L4Output l4outputNode = new L4Output(sw);
 
     private void initNodeGraph() {
+        nodeGraph.addNode(new ArpBroadcastInput());
+        nodeGraph.addNode(new ArpInput());
+        nodeGraph.addNode(new BroadcastOutput(sw));
         nodeGraph.addNode(devInputNode);
-        nodeGraph.addNode(neighborResolveNode);
+        nodeGraph.addNode(new DevOutput(sw));
+        nodeGraph.addNode(new EthernetInput());
+        nodeGraph.addNode(new EthernetOutput());
+        nodeGraph.addNode(new EthernetReInput());
+        nodeGraph.addNode(new FloodOutput(sw));
+        nodeGraph.addNode(new IcmpBroadcastInput());
+        nodeGraph.addNode(new IcmpInput());
+        nodeGraph.addNode(new IcmpNeighborSolicitationInput());
+        nodeGraph.addNode(new IcmpPortUnreachableOutput());
+        nodeGraph.addNode(new IPBroadcastInput());
+        nodeGraph.addNode(new IPInput());
+        nodeGraph.addNode(new IPInputRoute(sw));
         nodeGraph.addNode(ipOutputNode);
+        nodeGraph.addNode(new IPOutputRoute(sw));
         nodeGraph.addNode(l4outputNode);
+        nodeGraph.addNode(new LocalBroadcastInput());
+        nodeGraph.addNode(new LocalUnicastInput());
+        nodeGraph.addNode(new MulticastInput());
+        nodeGraph.addNode(neighborResolveNode);
+        nodeGraph.addNode(new TcpInput());
+        nodeGraph.addNode(new TcpReset());
+        nodeGraph.addNode(new TcpStack(sw));
+        nodeGraph.addNode(new UdpInput());
+        nodeGraph.addNode(new UdpOutput(sw));
+        nodeGraph.addNode(new UnicastInput());
+        nodeGraph.addNode(new VXLanLoopDetect());
+
+        nodeGraph.initGraph();
+        nodeGraph.initNode();
     }
 
     private void releaseSock() {
@@ -585,6 +614,38 @@ public class Switch {
         var iface = blockingCallback.block();
 
         blockAndAddPersistentIface(loop, iface);
+
+        return iface;
+    }
+
+    public ProgramIface addProgramIface(String alias, int vni) throws XException, AlreadyExistException, NotFoundException {
+        NetEventLoop netEventLoop = eventLoop;
+        if (netEventLoop == null) {
+            throw new XException("the switch " + this.alias + " is not bond to any event loop, cannot add vlan adaptor");
+        }
+
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof ProgramIface)) {
+                continue;
+            }
+            ProgramIface iface = (ProgramIface) i;
+            if (alias.equals(iface.alias)) {
+                throw new AlreadyExistException("ProgramIface", alias);
+            }
+        }
+        var net = networks.get(vni);
+        if (net == null) {
+            throw new NotFoundException("vpc", "" + vni);
+        }
+
+        var iface = new ProgramIface(alias, net);
+        try {
+            initIface(iface);
+        } catch (Exception e) {
+            iface.destroy();
+            throw new XException(Utils.formatErr(e));
+        }
+        blockAndAddPersistentIface(netEventLoop.getSelectorEventLoop(), iface);
 
         return iface;
     }
