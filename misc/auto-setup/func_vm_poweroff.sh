@@ -9,7 +9,7 @@ function vm_poweroff() {
 	xecho "waiting for vm '$VBOX_VM' to poweroff"
 	while [ 1 ]
 	do
-		sleep 2s
+		sleep 2
 		foo=`VBoxManage showvminfo $VBOX_VM | grep "State:" | grep "powered off"`
 		if [ -z "$foo" ]
 		then

@@ -38,11 +38,11 @@ then
 	xecho "verify docker plugin"
 	v_exec /bin/mkdir -p /var/vproxy/docker-network-plugin/post-scripts
 	v_exec /bin/mkdir -p /var/vproxy/auto-save
-	v_exec /usr/bin/docker plugin enable vproxy
+	v_exec /usr/bin/docker plugin enable vproxyio/docker-plugin:latest
 	alpine_version=`v_exec /usr/bin/docker image list | grep alpine | awk '{print $2}'`
-	v_exec /usr/bin/docker network create --ipv6 --driver=vproxy:latest --subnet=172.20.0.0/16 --subnet=2002:ac14:0000::/48 vproxy6
-	v_exec /usr/bin/docker run --name=container-1 -d --rm --net=vproxy6 alpine:$alpine_version sh -c 'while true; do sleep 1s; done'
-	sleep 2s
+	v_exec /usr/bin/docker network create --ipv6 --driver=vproxyio/docker-plugin:latest --subnet=172.20.0.0/16 --subnet=2002:ac14:0000::/48 vproxy6
+	v_exec /usr/bin/docker run --name=container-1 -d --rm --net=vproxy6 alpine:$alpine_version sh -c 'while true; do sleep 1; done'
+	sleep 2
 	ips=`v_exec /usr/bin/docker exec container-1 ip a | grep inet | grep -v '127.0.0.1' | grep -v '::1' | grep -v '\bfe80::' | awk '{print $2}' | cut -d '/' -f 1`
 	for ip in $ips
 	do
@@ -50,7 +50,7 @@ then
 	done
 	v_exec /usr/bin/docker kill container-1
 	v_exec /usr/bin/docker network rm vproxy6
-	v_exec /usr/bin/docker plugin disable vproxy
+	v_exec /usr/bin/docker plugin disable vproxyio/docker-plugin:latest
 
 fi
 
@@ -86,13 +86,13 @@ then
 	if [ "$RUN_VPCTL" == "1" ]
 	then
 		xecho "wait a few seconds before verifying (20s)"
-		sleep 5s
+		sleep 5
 		xecho "wait a few seconds before verifying (15s)"
-		sleep 5s
+		sleep 5
 		xecho "wait a few seconds before verifying (10s)"
-		sleep 5s
+		sleep 5
 		xecho "wait a few seconds before verifying (5s)"
-		sleep 5s
+		sleep 5
 	fi
 
 	gateway_podname=`./exec-it kubectl -n vproxy-system get pod | grep 'vproxy-gateway' | grep 'Running' | awk '{print $1}'`

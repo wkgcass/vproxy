@@ -43,7 +43,10 @@ if [ -z "$res" ]
 then
 	echo "installing software ..."
 	tryrun apt-get -y update
-	apt-get -y install build-essential git python iproute2 iputils-ping wget procps iptables
+	apt-get -y install build-essential git python2 iproute2 iputils-ping wget procps iptables
+	if [ ! -f /usr/bin/python ]; then
+		ln -s `which python2` /usr/bin/python
+	fi
 	touch software
 else
 	echo "software installed"

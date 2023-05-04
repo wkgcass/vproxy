@@ -11,7 +11,7 @@ function vm_start() {
 	xecho "waiting for vm '$VBOX_VM' to launch..."
 	while [ 1 ]
 	do
-		sleep 2s
+		sleep 2
 		foo=`VBoxManage showvminfo "$VBOX_VM" | grep "State:" | grep "running"`
 		if [ -z "$foo" ]
 		then

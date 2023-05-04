@@ -28,7 +28,7 @@ then
 	xecho "  1. create a vm named '$VBOX_VM'"
 	xecho "  2. ensure enough cpu/memory/disk (required by native-image and k8s)"
 	xecho "  3. set nic1 to use Host-Only (for host access)"
-	xecho "  4. set nic2 to use Host-Only and use chipset to 82545EM (for DPDK)"
+	xecho "  4. set nic2 to use Host-Only and use chipset to 82545EM (for DPDK) and allow promiscuous mode"
 	xecho "  5. set nic3 to use NAT (for external network access)"
 	exit 1
 fi
@@ -39,7 +39,7 @@ if [ -z "$foo" ]
 then
 	xecho "cannot find snapshot '$VBOX_SNAP_INSTALLED'"
 	xecho "please take the following steps:"
-	xecho "  1. install Ubuntu server 18.04 in vm '$VBOX_VM'"
+	xecho "  1. install Ubuntu server in vm '$VBOX_VM'"
 	xecho "       https://ubuntu.com/download/server"
 	xecho "  2. enable root with password '$ROOT_PASS' $ROOT_PASS_DESCR"
 	xecho "       https://www.computernetworkingnotes.com/linux-tutorials/how-to-enable-and-disable-root-login-in-ubuntu.html"
@@ -92,14 +92,19 @@ then
 
 		xecho "install softwares"
 		set -e
-		v_exec /usr/bin/apt-get install -y git openssh-server lsof procps net-tools iproute2 tcpdump strace curl iputils-ping wget build-essential autoconf netcat binutils socat dnsutils vim python python3 libnuma-dev libssl-dev gawk zlib1g-dev
+		v_exec /usr/bin/apt-get install -y git openssh-server lsof procps net-tools iproute2 tcpdump strace curl iputils-ping wget build-essential autoconf netcat binutils socat dnsutils vim python2 python3 libnuma-dev libssl-dev gawk zip zlib1g-dev libelf-dev
+		v_exec /usr/bin/apt-get remove -y unattended-upgrades
+		set +e
+		v_exec /usr/bin/apt-get remove -y python-is-python3
+		v_exec /usr/bin/ln -s /usr/bin/python2 /usr/bin/python
+		set -e
 
 		xecho "configure ssh"
 		v_exec /bin/sed '/PermitRootLogin/d' /etc/ssh/sshd_config > /tmp/sshd_config
 		echo "PermitRootLogin prohibit-password" >> /tmp/sshd_config
 		v_copyto /etc/ssh/ /tmp/sshd_config
 		v_exec /bin/mkdir -p /root/.ssh
-		v_copyto /root/.ssh/ ./authorized_keys
+		v_copyto /root/.ssh/ `pwd`/authorized_keys
 		v_exec /bin/chmod 400 /root/.ssh/authorized_keys
 		v_exec /usr/sbin/service ssh restart
 		rm /tmp/sshd_config
@@ -141,6 +146,8 @@ then
 		v_exec /bin/bash -c '/usr/bin/add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"'
 		v_exec /usr/bin/apt-get update -y
 		v_exec /usr/bin/apt-get install -y docker-ce docker-ce-cli containerd.io
+		v_exec /usr/bin/mkdir -p /etc/docker
+		v_exec /usr/bin/echo '{"ipv6": true,"fixed-cidr-v6":"fd00::a:0/120"}' \> /etc/docker/daemon.json
 
 		xecho "docker installed, shutdown the vm '$VBOX_VM'"
 		vm_poweroff
@@ -160,8 +167,18 @@ then
 		rollbacked=1
 
 		vm_start
+		while [ 1 ]
+		do
+			set +e
+			ssh_exec /usr/bin/snap install microk8s --classic
+			if [ "$?" == "0" ]
+			then
+				break
+			fi
+			xecho "installing microk8s failed, retrying ..."
+			sleep 2
+		done
 		set -e
-		ssh_exec /usr/bin/snap install microk8s --classic
 		v_exec /bin/bash -c '/bin/echo "alias kubectl=microk8s.kubectl" >> /root/.bashrc'
 		v_exec /snap/bin/microk8s.enable registry
 
@@ -231,10 +248,10 @@ then
 
 		vm_start
 		set -e
-		ssh_exec /usr/bin/wget https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.2.0/graalvm-ce-java11-linux-amd64-20.2.0.tar.gz
-		ssh_exec /bin/tar zxf graalvm-ce-java11-linux-amd64-20.2.0.tar.gz
-		ssh_exec /root/graalvm-ce-java11-20.2.0/bin/gu install native-image
-		v_exec /bin/bash -c '/bin/echo "export PATH=\$PATH:/root/graalvm-ce-java11-20.2.0/bin" >> /root/.bashrc'
+		ssh_exec /usr/bin/wget https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.2/graalvm-ce-java11-linux-amd64-22.3.2.tar.gz
+		ssh_exec /bin/tar zxf graalvm-ce-java11-linux-amd64-22.3.2.tar.gz
+		ssh_exec /root/graalvm-ce-java11-22.3.2/bin/gu install native-image
+		v_exec /bin/bash -c '/bin/echo "export PATH=\$PATH:/root/graalvm-ce-java11-22.3.2/bin" >> /root/.bashrc'
 
 		xecho "graal installed, shutdown the vm '$VBOX_VM'"
 		vm_poweroff
@@ -258,8 +275,8 @@ then
 		ssh_exec docker pull alpine:3.9.2
 		ssh_exec docker pull ubuntu:18.04
 		v_exec /bin/mkdir -p /root/docker-vproxy-base
-		v_copyto /root/docker-vproxy-base ./vproxy-base/Dockerfile
-		v_copyto /root/docker-vproxy-base ./vproxy-base/sources.list
+		v_copyto /root/docker-vproxy-base/ `pwd`/vproxy-base/Dockerfile
+		v_copyto /root/docker-vproxy-base/ `pwd`/vproxy-base/sources.list
 		ssh_exec docker build --no-cache -t vproxy-base:latest ./docker-vproxy-base
 		v_exec /usr/bin/docker image tag vproxy-base:latest 127.0.0.1:32000/vproxy-base:latest
 		ssh_exec docker push 127.0.0.1:32000/vproxy-base:latest
@@ -284,8 +301,8 @@ then
 		vm_start
 		set -e
 		v_exec /bin/mkdir -p /root/gradle-init/gradle
-		v_copyto /root/gradle-init/ ./gradlew
-		v_copyto /root/gradle-init/gradle ./gradle
+		v_copyto /root/gradle-init/ `pwd`/gradlew
+		v_copyto /root/gradle-init/gradle `pwd`/gradle
 		v_exec /bin/chmod +x /root/gradle-init/gradlew
 		ssh_exec 'cd /root/gradle-init/ && ./gradlew --version'
 
@@ -309,11 +326,11 @@ then
 	xecho "test the setup"
 	vm_start
 	xecho "wait for a few seconds for the services to launch... (15s)"
-	sleep 5s
+	sleep 5
 	xecho "wait for a few seconds for the services to launch... (10s)"
-	sleep 5s
+	sleep 5
 	xecho "wait for a few seconds for the services to launch... (5s)"
-	sleep 5s
+	sleep 5
 	set -e
 	ssh_exec docker image list
 	ssh_exec kubectl get nodes
