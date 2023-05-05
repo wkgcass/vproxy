@@ -287,11 +287,11 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             }
             sw = Application.get().switchHolder.add(
                 SWITCH_NAME,
-                new IPPort("0.0.0.0", 4789),
+                new IPPort("255.255.255.255", 65535),
                 elg,
                 SwitchHandle.MAC_TABLE_TIMEOUT,
                 SwitchHandle.ARP_TABLE_TIMEOUT,
-                SecurityGroup.allowAll());
+                SecurityGroup.denyAll());
             Logger.alert("switch " + SWITCH_NAME + " created");
         }
         return sw;
