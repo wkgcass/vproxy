@@ -1,6 +1,6 @@
 FROM vproxyio/runtime:latest
 
-RUN apt-get install -y ethtool
+RUN apt-get update -y && apt-get install -y ethtool
 
 ADD init.sh /init.sh
 ADD default-mirror.json /default-mirror.json
