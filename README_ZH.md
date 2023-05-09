@@ -122,7 +122,7 @@ MacOS TUN、Linux TAP和TUN均无特殊依赖。
 
 <br>
 
-推荐使用5.10（或者至少5.14）内核来启用switch模块的xdp支持。  
+推荐使用5.10（或者至少5.4）内核来启用switch模块的xdp支持。  
 如果使用比较低的版本，则无法在不同xdp网口之间共享umem。
 
 要编译xdp，你需要这些软件包：`apt-get install -y linux-headers-$(uname -r) build-essential libelf-dev clang llvm`，然后执行：
@@ -203,7 +203,8 @@ java -cp ./ui/build/libs/vproxy-ui.jar $mainClassName
 **gradle**
 
 ```
-implementation group: 'io.vproxy', name: 'vproxy-all', version: '1.0.0-BETA-12'
+implementation group: 'io.vproxy', name: 'vproxy-adaptor-netty', version: '1.0.0-BETA-12'
+// 可用的artifact有：dep, base, adaptor-netty, adaptor-vertx
 ```
 
 **maven**
@@ -211,15 +212,39 @@ implementation group: 'io.vproxy', name: 'vproxy-all', version: '1.0.0-BETA-12'
 ```
 <dependency>
     <groupId>io.vproxy</groupId>
-    <artifactId>vproxy-all</artifactId>
+    <artifactId>adaptor-netty</artifactId>
     <version>1.0.0-BETA-12</version>
 </dependency>
+<!-- 可用的artifact有：dep, base, adaptor-netty, adaptor-vertx -->
 ```
 
 **module-info.java**
 
 ```
-requires io.vproxy.all;
+requires io.vproxy.dep;
+requires io.vproxy.base;
+requires io.vproxy.adaptor.netty;
+requires io.vproxy.adaptor.vertx;
+```
+
+**netty**
+
+```java
+var acceptelg = new VProxyEventLoopGroup();
+var elg = new VProxyEventLoopGroup(4);
+var bootstrap = new ServerBootstrap();
+bootstrap
+    .channel(VProxyInetServerSocketChannel.class)
+    .childHandler(new ChannelInitializer<>() {
+        @Override
+        protected void initChannel(Channel ch) {
+            ChannelPipeline p = ch.pipeline();
+            p.addLast(new HttpServerCodec());
+            p.addLast(new HttpHelloWorldServerHandler());
+        }
+    });
+bootstrap.group(acceptelg, elg);
+bootstrap.bind(hostname, port).sync();
 ```
 
 </details>
