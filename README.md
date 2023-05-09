@@ -204,14 +204,14 @@ Current available ui tools:
 
 **gradle**
 
-```
+```groovy
 implementation group: 'io.vproxy', name: 'vproxy-adaptor-netty', version: '1.0.0-BETA-12'
 // all available artifacts: dep, base, adaptor-netty, adaptor-vertx
 ```
 
 **maven**
 
-```
+```xml
 <dependency>
     <groupId>io.vproxy</groupId>
     <artifactId>vproxy-adaptor-netty</artifactId>
@@ -222,7 +222,7 @@ implementation group: 'io.vproxy', name: 'vproxy-adaptor-netty', version: '1.0.0
 
 **module-info.java**
 
-```
+```java
 requires io.vproxy.dep;
 requires io.vproxy.base;
 requires io.vproxy.adaptor.netty;

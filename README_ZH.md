@@ -202,14 +202,14 @@ java -cp ./ui/build/libs/vproxy-ui.jar $mainClassName
 
 **gradle**
 
-```
+```groovy
 implementation group: 'io.vproxy', name: 'vproxy-adaptor-netty', version: '1.0.0-BETA-12'
 // 可用的artifact有：dep, base, adaptor-netty, adaptor-vertx
 ```
 
 **maven**
 
-```
+```xml
 <dependency>
     <groupId>io.vproxy</groupId>
     <artifactId>adaptor-netty</artifactId>
@@ -220,7 +220,7 @@ implementation group: 'io.vproxy', name: 'vproxy-adaptor-netty', version: '1.0.0
 
 **module-info.java**
 
-```
+```java
 requires io.vproxy.dep;
 requires io.vproxy.base;
 requires io.vproxy.adaptor.netty;
