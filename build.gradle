@@ -81,6 +81,10 @@ subprojects {
         from "$buildDir/docs/javadoc"
     }
 
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
+
     def releaseProjects = ['dep', 'base', 'adaptor-netty', 'adaptor-vertx']
     if (System.getProperty("MavenLocalInstall", "false") == "true") {
         releaseProjects.addAll(['lib', 'core', 'extended', 'app', 'all'])
@@ -115,6 +119,14 @@ subprojects {
                         connection = 'scm:git:git://github.com/wkgcass/vproxy.git'
                         developerConnection = 'scm:git:git://github.com/wkgcass/vproxy.git'
                         url = 'https://github.com/wkgcass/vproxy'
+                    }
+                }
+                pom.withXml {
+                    def pomNode = asNode()
+                    pomNode.dependencies.'*'.findAll() {
+                        it.groupId.text() == 'org.jetbrains.kotlin' || it.groupId.text() == 'org.jetbrains.kotlinx'
+                    }.each {
+                        it.parent().remove(it)
                     }
                 }
             }
