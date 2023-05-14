@@ -506,8 +506,8 @@ class ModuleCommands private constructor() : Commands() {
         relation = ResourceType.ck,
         action = ActType.listdetail,
         exec = {
-          val names = CertKeyHandle.names()
-          CmdResult(names, names, utilJoinList(names))
+          val certs = CertKeyHandle.detail()
+          CmdResult(certs, certs.map { it.toString() }, utilJoinList(certs))
         }
       )
       it + ResAct(

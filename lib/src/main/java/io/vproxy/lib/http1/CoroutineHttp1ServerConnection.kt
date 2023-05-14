@@ -40,16 +40,24 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
       }
       resp.headers = headers
       resp.body = body
+
+      headersSent = true
       conn.write(resp.toByteArray())
     }
 
     override suspend fun sendHeadersBeforeChunks() {
+      if (headersSent) {
+        return
+      }
+
       val resp = io.vproxy.base.processor.http1.entity.Response()
       resp.version = "HTTP/1.1"
       resp.statusCode = status
       resp.reason = reason
       headers.add(io.vproxy.base.processor.http1.entity.Header("transfer-encoding", "chunked"))
       resp.headers = headers
+
+      headersSent = true
       conn.write(resp.toByteArray())
     }
 

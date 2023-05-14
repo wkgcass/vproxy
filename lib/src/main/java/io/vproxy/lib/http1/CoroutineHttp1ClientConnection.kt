@@ -84,16 +84,24 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       }
       req.headers = headers
       req.body = body
+
+      headersSent = true
       conn.write(req.toByteArray())
     }
 
     override suspend fun sendHeadersBeforeChunks() {
+      if (headersSent) {
+        return
+      }
+
       val req = Request()
       req.method = method
       req.uri = url
       req.version = "HTTP/1.1"
       headers.add(Header("transfer-encoding", "chunked"))
       req.headers = headers
+
+      headersSent = true
       conn.write(req.toByteArray())
     }
   }

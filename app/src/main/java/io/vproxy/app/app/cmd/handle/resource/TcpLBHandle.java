@@ -130,13 +130,27 @@ public class TcpLBHandle {
 
         @Override
         public String toString() {
-            return tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
+            StringBuilder res = new StringBuilder(tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
                 + " bind " + tcpLB.bindAddress.getAddress().formatToIPString() + ":" + tcpLB.bindAddress.getPort()
                 + " backend " + tcpLB.backend.alias
-                + " timeout " + tcpLB.getTimeout()
+            );
+            var certs = tcpLB.getCertKeys();
+            if (certs != null && certs.length > 0) {
+                res.append(" cert-key ");
+                var isFirst = true;
+                for (var ck : tcpLB.getCertKeys()) {
+                    if (isFirst) isFirst = false;
+                    else res.append(",");
+                    res.append(ck.alias);
+                }
+            }
+            //noinspection StringConcatenationInsideStringBufferAppend
+            res.append(" timeout " + tcpLB.getTimeout()
                 + " in-buffer-size " + tcpLB.getInBufferSize() + " out-buffer-size " + tcpLB.getOutBufferSize()
                 + " protocol " + tcpLB.protocol
-                + " security-group " + tcpLB.securityGroup.alias;
+                + " security-group " + tcpLB.securityGroup.alias
+            );
+            return res.toString();
         }
     }
 }

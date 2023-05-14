@@ -3,15 +3,13 @@ package io.vproxy.lib.http1
 import io.vproxy.lib.tcp.CoroutineConnection
 
 abstract class CoroutineHttp1Common(private val conn: CoroutineConnection) {
-  private var headersSent = false
+  protected var headersSent = false
 
-  protected abstract suspend fun sendHeadersBeforeChunks()
+  fun isHeadersSent(): Boolean = headersSent
+  abstract suspend fun sendHeadersBeforeChunks()
 
   open suspend fun sendChunk(payload: io.vproxy.base.util.ByteArray): CoroutineHttp1Common {
-    if (!headersSent) {
-      headersSent = true
-      sendHeadersBeforeChunks()
-    }
+    sendHeadersBeforeChunks()
     val chunk = io.vproxy.base.processor.http1.entity.Chunk()
     chunk.size = payload.length()
     chunk.content = payload

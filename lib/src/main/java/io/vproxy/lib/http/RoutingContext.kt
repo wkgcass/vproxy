@@ -27,6 +27,7 @@ interface HttpServerRequest {
 interface HttpServerResponse {
   fun header(key: String, value: String): HttpServerResponse
   suspend fun send(body: io.vproxy.base.util.ByteArray?)
+  fun isHeadersSent():Boolean
   suspend fun sendHeadersBeforeChunks()
   suspend fun sendChunk(payload: io.vproxy.base.util.ByteArray): HttpServerResponse
   suspend fun endChunks(trailers: List<io.vproxy.base.processor.http1.entity.Header>)
