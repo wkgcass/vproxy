@@ -120,6 +120,10 @@ public interface ByteArray extends ToByteArray {
         return uint8(offset) << 16 | uint8(offset + 1) << 8 | uint8(offset + 2);
     }
 
+    default int uint24ReverseNetworkByteOrder(int offset) {
+        return uint8(offset + 2) << 16 | uint8(offset + 1) << 8 | uint8(offset);
+    }
+
     default long int64(int offset) {
         return uint8long(offset) << 56
             | uint8long(offset + 1) << 48
@@ -131,16 +135,39 @@ public interface ByteArray extends ToByteArray {
             | uint8long(offset + 7);
     }
 
+    default long int64ReverseNetworkByteOrder(int offset) {
+        return uint8long(offset + 7) << 56
+            | uint8long(offset + 6) << 48
+            | uint8long(offset + 5) << 40
+            | uint8long(offset + 4) << 32
+            | uint8long(offset + 3) << 24
+            | uint8long(offset + 2) << 16
+            | uint8long(offset + 1) << 8
+            | uint8long(offset);
+    }
+
     default int int32(int offset) {
         return uint8(offset) << 24 | uint8(offset + 1) << 16 | uint8(offset + 2) << 8 | uint8(offset + 3);
+    }
+
+    default int int32ReverseNetworkByteOrder(int offset) {
+        return uint8(offset + 3) << 24 | uint8(offset + 2) << 16 | uint8(offset + 1) << 8 | uint8(offset);
     }
 
     default long uint32(int offset) {
         return (((long) uint8(offset)) << 24) | (((long) uint8(offset + 1)) << 16) | (((long) uint8(offset + 2)) << 8) | (((long) uint8(offset + 3)));
     }
 
+    default long uint32ReverseNetworkByteOrder(int offset) {
+        return (((long) uint8(offset + 3)) << 24) | (((long) uint8(offset + 2)) << 16) | (((long) uint8(offset + 1)) << 8) | (((long) uint8(offset)));
+    }
+
     default int uint16(int offset) {
         return uint8(offset) << 8 | uint8(offset + 1);
+    }
+
+    default int uint16ReverseNetworkByteOrder(int offset) {
+        return uint8(offset + 1) << 8 | uint8(offset);
     }
 
     default int uint8(int offset) {
@@ -148,7 +175,7 @@ public interface ByteArray extends ToByteArray {
     }
 
     default long uint8long(int offset) {
-        return get(offset) & 0xFFFFFFFFL;
+        return get(offset) & 0xffL;
     }
 
     default ByteArray int24(int offset, int val) {
