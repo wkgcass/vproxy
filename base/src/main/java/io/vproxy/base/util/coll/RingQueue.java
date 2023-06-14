@@ -1,6 +1,8 @@
 package io.vproxy.base.util.coll;
 
-public class RingQueue<E> {
+import java.util.Iterator;
+
+public class RingQueue<E> implements Iterable<E> {
     private Object[] array;
     private boolean eAfterS = true;
     private int start = 0;
@@ -137,5 +139,42 @@ public class RingQueue<E> {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+        return new RingQueueIterator<>();
+    }
+
+    private class RingQueueIterator<E> implements Iterator<E> {
+        private int nextIndex = start;
+        private int step = 0;
+
+        @Override
+        public boolean hasNext() {
+            if (eAfterS) {
+                return nextIndex < end;
+            } else if (step == 0) {
+                return nextIndex < array.length;
+            } else {
+                return nextIndex < end;
+            }
+        }
+
+        @Override
+        public E next() {
+            if (!hasNext()) {
+                throw new IndexOutOfBoundsException();
+            }
+            //noinspection unchecked
+            E e = (E) array[nextIndex];
+            nextIndex++;
+            if (!eAfterS) {
+                if (nextIndex == array.length) {
+                    nextIndex = 0;
+                }
+            }
+            return e;
+        }
     }
 }

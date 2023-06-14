@@ -1,13 +1,12 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.*;
+import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vfd.WritableByteStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Deque;
-import java.util.LinkedList;
 
 public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     protected class WritableHandler implements RingBufferETHandler {
@@ -27,7 +26,7 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     /*might be replaced when switching*/ ByteBufferRingBuffer plainBufferForApp;
     protected final SimpleRingBuffer encryptedBufferForInput;
     protected final WritableHandler writableHandler = new WritableHandler();
-    private final Deque<ByteBufferRingBuffer> intermediateBuffers = new LinkedList<>();
+    private final RingQueue<ByteBufferRingBuffer> intermediateBuffers = new RingQueue<>();
     private ByteBuffer temporaryBuffer = null;
 
     private boolean triggerWritable = false;
@@ -135,73 +134,73 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     }
 
     private void _generalUnwrap() {
-        if ((intermediateBuffers.isEmpty() || plainBufferForApp.free() == 0)
-            // cannot write
-            && // and
-            // cannot read
-            (encryptedBufferForInput.used() == 0 || intermediateBufferCap() > MAX_INTERMEDIATE_BUFFER_CAPACITY)) {
-            return;
-        }
-
-        // check the intermediate buffers
-        while (!intermediateBuffers.isEmpty()) {
-            ByteBufferRingBuffer buf = intermediateBuffers.peekFirst();
-            int wrote = 0;
-            if (buf.used() != 0) {
-                wrote = buf.writeTo(plainBufferForApp, Integer.MAX_VALUE);
-            }
-            assert Logger.lowLevelDebug("wrote " + wrote + " bytes to plain buffer");
-            // remove the buffer if all data wrote
-            if (buf.used() == 0) {
-                intermediateBuffers.pollFirst();
-                triggerWritable = true;
-            }
-            // break the process if no space for app buffer
-            if (plainBufferForApp.free() == 0) {
-                break;
-            }
-        }
-
-        // then check the input encrypted buffer
-        //noinspection ConstantConditions
         do {
-            try {
-                if (encryptedBufferForInput.used() == 0) {
+            if ((intermediateBuffers.isEmpty() || plainBufferForApp.free() == 0)
+                // cannot write
+                && // and
+                // cannot read
+                (encryptedBufferForInput.used() == 0 || intermediateBufferCap() > MAX_INTERMEDIATE_BUFFER_CAPACITY)) {
+                return;
+            }
+
+            // check the intermediate buffers
+            while (!intermediateBuffers.isEmpty()) {
+                ByteBufferRingBuffer buf = intermediateBuffers.peek();
+                int wrote = 0;
+                if (buf.used() != 0) {
+                    wrote = buf.writeTo(plainBufferForApp, Integer.MAX_VALUE);
+                }
+                assert Logger.lowLevelDebug("wrote " + wrote + " bytes to plain buffer");
+                // remove the buffer if all data wrote
+                if (buf.used() == 0) {
+                    intermediateBuffers.poll();
+                    triggerWritable = true;
+                }
+                // break the process if no space for app buffer
+                if (plainBufferForApp.free() == 0) {
                     break;
                 }
-                // check the intermediate capacity
-                if (intermediateBufferCap() > MAX_INTERMEDIATE_BUFFER_CAPACITY) {
-                    break; // should not run the operation when capacity reaches the limit
-                }
-                boolean canDefragment = encryptedBufferForInput.canDefragment();
-                boolean[] underflow = {false};
-                boolean[] errored = {false};
-                IOException[] ex = {null};
-                encryptedBufferForInput.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
-                    encryptedBuffer -> handleEncryptedBuffer(encryptedBuffer, underflow, errored, ex));
-                if (underflow[0]) {
-                    if (canDefragment) {
-                        encryptedBufferForInput.defragment();
-                    } else {
-                        assert Logger.lowLevelDebug("got underflow, but the encrypted buffer cannot defragment, maybe buffer limit to small, or data not enough yet");
-                        errored[0] = true;
-                    }
-                }
-                if (ex[0] != null) {
-                    assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
-                    exceptionToThrow = ex[0];
-                }
-                if (errored[0]) {
-                    return; // exit if error occurred
-                }
-            } catch (IOException e) {
-                // it's memory operation, should not happen
-                Logger.shouldNotHappen("got exception when unwrapping", e);
             }
-        } while (false); // use do-while to implement goto
 
-        // finally recursively call the method to make sure everything is done
-        _generalUnwrap();
+            // then check the input encrypted buffer
+            //noinspection ConstantConditions
+            do {
+                try {
+                    if (encryptedBufferForInput.used() == 0) {
+                        break;
+                    }
+                    // check the intermediate capacity
+                    if (intermediateBufferCap() > MAX_INTERMEDIATE_BUFFER_CAPACITY) {
+                        break; // should not run the operation when capacity reaches the limit
+                    }
+                    boolean canDefragment = encryptedBufferForInput.canDefragment();
+                    boolean[] underflow = {false};
+                    boolean[] errored = {false};
+                    IOException[] ex = {null};
+                    encryptedBufferForInput.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
+                        encryptedBuffer -> handleEncryptedBuffer(encryptedBuffer, underflow, errored, ex));
+                    if (underflow[0]) {
+                        if (canDefragment) {
+                            encryptedBufferForInput.defragment();
+                        } else {
+                            assert Logger.lowLevelDebug("got underflow, but the encrypted buffer cannot defragment, maybe buffer limit to small, or data not enough yet");
+                            errored[0] = true;
+                        }
+                    }
+                    if (ex[0] != null) {
+                        assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
+                        exceptionToThrow = ex[0];
+                    }
+                    if (errored[0]) {
+                        return; // exit if error occurred
+                    }
+                } catch (IOException e) {
+                    // it's memory operation, should not happen
+                    Logger.shouldNotHappen("got exception when unwrapping", e);
+                }
+            } while (false); // use do-while to implement goto
+        } while (true);
+        // run a loop to make sure everything is done
     }
 
     abstract protected void handleEncryptedBuffer(ByteBufferEx buf, boolean[] underflow, boolean[] errored, IOException[] exception);

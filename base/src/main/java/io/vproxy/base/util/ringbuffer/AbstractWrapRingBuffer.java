@@ -1,13 +1,12 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.*;
+import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vfd.WritableByteStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Deque;
-import java.util.LinkedList;
 
 public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implements RingBuffer {
     // this handler is for plain data buffer
@@ -28,7 +27,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     private /*might change when switching*/ ByteBufferRingBuffer plainBufferForApp;
     private final SimpleRingBuffer encryptedBufferForOutput;
     private final ReadableHandler readableHandler = new ReadableHandler();
-    private final Deque<ByteBufferRingBuffer> intermediateBuffers = new LinkedList<>();
+    private final RingQueue<ByteBufferRingBuffer> intermediateBuffers = new RingQueue<>();
     private ByteBuffer temporaryBuffer = null;
     private boolean triggerReadable = false;
     protected boolean transferring = false;
@@ -135,65 +134,63 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     }
 
     private void _generalWrap() {
-        assert Logger.lowLevelDebug("calling _generalWrap");
-        // first try to flush intermediate buffers into the output buffer
-        while (!intermediateBuffers.isEmpty()) {
-            ByteBufferRingBuffer buffer = intermediateBuffers.peekFirst();
-            int wrote = 0;
-            if (buffer.used() != 0) {
-                wrote = buffer.writeTo(encryptedBufferForOutput, Integer.MAX_VALUE);
-            }
-            assert Logger.lowLevelDebug("wrote " + wrote + " bytes encrypted data to the output buffer");
-            if (wrote > 0) {
-                triggerReadable = true;
-            }
-            // remove the buffer when all data flushed
-            if (buffer.used() == 0) {
-                intermediateBuffers.pollFirst();
-            }
-            if (encryptedBufferForOutput.free() == 0) {
-                // break the loop when there are no space in the output buffer
-                break;
-            }
-        }
-
-        // then try to read data from the plain buffer
-        //noinspection ConstantConditions
         do {
-            // check the intermediate capacity
-            int intermediateBufferCap = intermediateBufferCap();
-            if (intermediateBufferCap > MAX_INTERMEDIATE_BUFFER_CAPACITY) {
-                assert Logger.lowLevelDebug("intermediateBufferCap = " + intermediateBufferCap + " > " + MAX_INTERMEDIATE_BUFFER_CAPACITY);
-                break; // should not run the operation when capacity reaches the limit
-            }
-            try {
-                assert Logger.lowLevelDebug("before handling data in plain buffer");
-                // here, we should not check whether the plain buffer is empty or now
-                // because when handshaking, the plain buffer can be empty but the connection
-                // should still send handshaking data
-                boolean[] errored = {false};
-                IOException[] ex = {null};
-                plainBufferForApp.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
-                    bufferPlain -> handlePlainBuffer(bufferPlain, errored, ex));
-                if (ex[0] != null) {
-                    assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
-                    exceptionToThrow = ex[0];
+            assert Logger.lowLevelDebug("calling _generalWrap");
+            // first try to flush intermediate buffers into the output buffer
+            while (!intermediateBuffers.isEmpty()) {
+                ByteBufferRingBuffer buffer = intermediateBuffers.peek();
+                int wrote = 0;
+                if (buffer.used() != 0) {
+                    wrote = buffer.writeTo(encryptedBufferForOutput, Integer.MAX_VALUE);
                 }
-                if (errored[0]) {
-                    assert Logger.lowLevelDebug("handling data in plain buffer failed");
-                    return; // end the process if errored
+                assert Logger.lowLevelDebug("wrote " + wrote + " bytes encrypted data to the output buffer");
+                if (wrote > 0) {
+                    triggerReadable = true;
                 }
-            } catch (IOException e) {
-                // it's memory operation, should not happen
-                Logger.shouldNotHappen("got exception when wrapping", e);
+                // remove the buffer when all data flushed
+                if (buffer.used() == 0) {
+                    intermediateBuffers.poll();
+                }
+                if (encryptedBufferForOutput.free() == 0) {
+                    // break the loop when there are no space in the output buffer
+                    break;
+                }
             }
-        } while (false); // use do-while to implement goto
 
+            // then try to read data from the plain buffer
+            //noinspection ConstantConditions
+            do {
+                // check the intermediate capacity
+                int intermediateBufferCap = intermediateBufferCap();
+                if (intermediateBufferCap > MAX_INTERMEDIATE_BUFFER_CAPACITY) {
+                    assert Logger.lowLevelDebug("intermediateBufferCap = " + intermediateBufferCap + " > " + MAX_INTERMEDIATE_BUFFER_CAPACITY);
+                    break; // should not run the operation when capacity reaches the limit
+                }
+                try {
+                    assert Logger.lowLevelDebug("before handling data in plain buffer");
+                    // here, we should not check whether the plain buffer is empty or now
+                    // because when handshaking, the plain buffer can be empty but the connection
+                    // should still send handshaking data
+                    boolean[] errored = {false};
+                    IOException[] ex = {null};
+                    plainBufferForApp.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
+                        bufferPlain -> handlePlainBuffer(bufferPlain, errored, ex));
+                    if (ex[0] != null) {
+                        assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
+                        exceptionToThrow = ex[0];
+                    }
+                    if (errored[0]) {
+                        assert Logger.lowLevelDebug("handling data in plain buffer failed");
+                        return; // end the process if errored
+                    }
+                } catch (IOException e) {
+                    // it's memory operation, should not happen
+                    Logger.shouldNotHappen("got exception when wrapping", e);
+                }
+            } while (false); // use do-while to implement goto
+        } while ((!intermediateBuffers.isEmpty() && encryptedBufferForOutput.free() != 0));
         // check whether something should be handled
-        // and recursively call the method to make sure everything is done
-        if ((!intermediateBuffers.isEmpty() && encryptedBufferForOutput.free() != 0)) {
-            _generalWrap();
-        }
+        // and run a loop to make sure everything is done
     }
 
     abstract protected void handlePlainBuffer(ByteBufferEx buf, boolean[] errored, IOException[] ex);
