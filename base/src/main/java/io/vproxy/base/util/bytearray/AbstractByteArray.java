@@ -4,6 +4,8 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public abstract class AbstractByteArray implements ByteArray {
     public static final ByteArray EMPTY = new SimpleByteArray(Utils.getZeroLengthByteArray());
@@ -79,6 +81,10 @@ public abstract class AbstractByteArray implements ByteArray {
 
     @Override
     public String toString() {
-        return new String(toJavaArray());
+        return toString(StandardCharsets.UTF_8);
+    }
+
+    public String toString(Charset charset) {
+        return new String(toJavaArray(), charset);
     }
 }
