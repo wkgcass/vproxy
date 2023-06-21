@@ -54,7 +54,13 @@ public class TcpInput extends Node {
         } else if (tcpPkt.getFlags() == Consts.TCP_FLAGS_SYN) {
             // only consider the packets with only SYN on it
             var listenEntry = pkb.network.conntrack.lookupTcpListen(dst);
-            if (listenEntry != null) {
+            if (listenEntry == null) {
+                assert Logger.lowLevelDebug("no tcp entry nor tcp listen entry found");
+                if (pkb.debugger.isDebugOn()) {
+                    pkb.debugger.line(d -> d.append("no tcp entry nor tcp listen entry found"));
+                }
+                return _returnnext(pkb, tcpReset);
+            } else {
                 assert Logger.lowLevelDebug("got new connection");
 
                 // check backlog
