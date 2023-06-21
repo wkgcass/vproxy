@@ -4,6 +4,7 @@ import io.vproxy.base.Config;
 import io.vproxy.base.util.Logger;
 import io.vproxy.commons.graph.GraphBuilder;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.PartialPacket;
 import io.vproxy.vpacket.UdpPacket;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
@@ -32,6 +33,14 @@ public class UdpInput extends Node {
 
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
+        if (pkb.ensurePartialPacketParsed(PartialPacket.LEVEL_HANDLED_FIELDS)) {
+            assert Logger.lowLevelDebug("invalid packet");
+            if (pkb.debugger.isDebugOn()) {
+                pkb.debugger.line(d -> d.append("invalid packet"));
+                return _returnnext(pkb, errorDrop);
+            }
+        }
+
         var ipPkt = pkb.ipPkt;
         var udpPkt = (UdpPacket) ipPkt.getPacket();
         IPPort dst = new IPPort(ipPkt.getDst(), udpPkt.getDstPort());

@@ -4,6 +4,7 @@ import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.commons.graph.GraphBuilder;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.PartialPacket;
 import io.vproxy.vpacket.TcpPacket;
 import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 import io.vproxy.vswitch.PacketBuffer;
@@ -35,6 +36,14 @@ public class TcpInput extends Node {
 
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
+        if (pkb.ensurePartialPacketParsed(PartialPacket.LEVEL_HANDLED_FIELDS)) {
+            assert Logger.lowLevelDebug("invalid packet");
+            if (pkb.debugger.isDebugOn()) {
+                pkb.debugger.line(d -> d.append("invalid packet"));
+                return _returnnext(pkb, errorDrop);
+            }
+        }
+
         var ipPkt = pkb.ipPkt;
         var tcpPkt = (TcpPacket) ipPkt.getPacket();
         IPPort src = tcpPkt.getSrc(ipPkt);
