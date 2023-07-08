@@ -4,6 +4,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.vswitch.PacketBuffer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -209,7 +210,7 @@ public class NodeGraphScheduler {
     private void postHandle() {
         while (true) {
             var handled = false;
-            for (var q : nextMap.values()) {
+            for (var q : new ArrayList<>(nextMap.values())) {
                 var pkb = q.poll();
                 if (pkb == null) {
                     continue;
