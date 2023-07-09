@@ -118,6 +118,10 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
         return true;
     }
 
+    protected boolean handleIface(@SuppressWarnings("unused") Iface iface) {
+        return true;
+    }
+
     @SuppressWarnings("unused")
     protected final void registerIfaceHolder(IfaceHolder holder) {
         ifaces.put(holder.name, holder);
@@ -131,8 +135,10 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
         } else {
             holder.iface = iface;
         }
-        iface.addIngressFilter(this);
-        iface.addEgressFilter(this);
+        if (handleIface(iface)) {
+            iface.addIngressFilter(this);
+            iface.addEgressFilter(this);
+        }
     }
 
     @Override
@@ -205,6 +211,14 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
             }
         }
         this.enableIngressCache = enableIngressCache;
+    }
+
+    protected void clearIngressCache() {
+        if (enableIngressCache) {
+            ingressMicroFlow = ingressMicroFlowConstructor.get();
+        } else {
+            ingressMicroFlow = null;
+        }
     }
 
     @Override

@@ -81,10 +81,11 @@ public class Flows {
         }
     }
 
+    @SuppressWarnings("ConcatenationWithEmptyString")
     private static final String GEN_CLASS_TEMPLATE = "" +
         "{{Imports}}" +
         "\n" +
-        "public class {{ClassSimpleName}} extends BasePacketFilter {\n" +
+        "public class {{ClassSimpleName}} extends {{ParentSimpleName}} {\n" +
         "{{Fields}}" +
         "    public {{ClassSimpleName}}() {\n" +
         "        super();" +
@@ -99,6 +100,7 @@ public class Flows {
         "{{FlowTables}}" +
         "{{Actions}}" +
         "}\n";
+    @SuppressWarnings("ConcatenationWithEmptyString")
     private static final String DEFAULT_EMPTY_TABLE_0 = "" +
         "\n" +
         "    private FilterResult table0(PacketFilterHelper helper, PacketBuffer pkb) {\n" +
@@ -106,9 +108,13 @@ public class Flows {
         "    }\n";
 
     public String gen(String fullClassName) {
+        return gen(fullClassName, "io.vproxy.app.plugin.impl.BasePacketFilter");
+    }
+
+    public String gen(String fullClassName, String parentFullClassname) {
         GenContext ctx = new GenContext();
 
-        ctx.ensureImport("io.vproxy.app.plugin.impl.BasePacketFilter");
+        ctx.ensureImport(parentFullClassname);
         ctx.ensureImport(FilterResult.class);
         ctx.ensureImport(PacketFilterHelper.class);
         ctx.ensureImport(PacketBuffer.class);
@@ -127,6 +133,7 @@ public class Flows {
         String packagePrefix;
         if (fullClassName.contains(".")) {
             String packageName = fullClassName.substring(0, fullClassName.lastIndexOf("."));
+            //noinspection ConcatenationWithEmptyString
             packagePrefix = "" +
                 "package " + packageName + ";\n" +
                 "\n";
@@ -139,6 +146,12 @@ public class Flows {
         } else {
             classSimpleName = fullClassName;
         }
+        String parentSimpleName;
+        if (parentFullClassname.contains(".")) {
+            parentSimpleName = parentFullClassname.substring(parentFullClassname.lastIndexOf(".") + 1);
+        } else {
+            parentSimpleName = fullClassName;
+        }
         String enableIngressCache = genEnableIngressCache();
         String registerIfaceHolders = genRegisterIfaceHolders(ctx);
         String flowTables = genFlowTables(ctx);
@@ -149,6 +162,7 @@ public class Flows {
         return packagePrefix + GEN_CLASS_TEMPLATE
             .replace("{{Imports}}", imports)
             .replace("{{ClassSimpleName}}", classSimpleName)
+            .replace("{{ParentSimpleName}}", parentSimpleName)
             .replace("{{Fields}}", fields)
             .replace("{{EnableIngressCache}}", enableIngressCache)
             .replace("{{RegisterIfaceHolders}}", registerIfaceHolders)

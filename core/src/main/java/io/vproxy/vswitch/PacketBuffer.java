@@ -226,17 +226,26 @@ public class PacketBuffer extends PacketDataBuffer {
         devin = null;
     }
 
-    public void replacePacket(EthernetPacket pkt) {
+    private void clearPackets() {
         clearBuffers();
         clearHelperFields();
+        this.pkt = null;
+        this.ipPkt = null;
+        this.tcp = null;
+        this.tcpPkt = null;
+        this.udp = null;
+        this.udpPkt = null;
         this.flags = 0;
+    }
+
+    public void replacePacket(EthernetPacket pkt) {
+        clearPackets();
         this.pkt = pkt;
         initPackets(false, true, false);
     }
 
     public void replacePacket(AbstractIpPacket pkt) {
-        clearBuffers();
-        clearHelperFields();
+        clearPackets();
         this.flags = FLAG_IP;
         this.ipPkt = pkt;
         initPackets(false, false, true);

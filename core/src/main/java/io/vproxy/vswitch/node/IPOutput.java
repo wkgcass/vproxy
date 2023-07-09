@@ -57,17 +57,21 @@ public class IPOutput extends AbstractNeighborResolve {
             }
             srcMac = ipmac.mac;
         }
-        // the dstMac is not important, will be filled
-        MacAddress dstMac = MacAddress.ZERO;
 
-        // form a ethernet packet
-        EthernetPacket ether = new EthernetPacket();
-        ether.setDst(dstMac);
-        ether.setSrc(srcMac);
-        ether.setType((pkb.ipPkt instanceof Ipv4Packet) ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
-        ether.setPacket(pkb.ipPkt);
+        if (pkb.pkt != null) {
+            var ether = pkb.pkt;
+            ether.setSrc(srcMac);
+        } else {
+            // form a ethernet packet
+            var ether = new EthernetPacket();
+            // the dstMac is not important, will be filled
+            ether.setDst(MacAddress.ZERO);
+            ether.setSrc(srcMac);
+            ether.setType((pkb.ipPkt instanceof Ipv4Packet) ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
+            ether.setPacket(pkb.ipPkt);
 
-        pkb.replacePacket(ether);
+            pkb.replacePacket(ether);
+        }
 
         // route out
         return _returnnext(pkb, ipOutputRoute);

@@ -23,6 +23,7 @@ public class EthernetOutput extends Node {
     @Override
     protected void initNode() {
         fillEdges(devOutput);
+        fillEdges(multicastOutput);
     }
 
     @Override

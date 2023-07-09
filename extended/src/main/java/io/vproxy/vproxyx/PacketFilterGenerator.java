@@ -8,11 +8,14 @@ import java.io.File;
 import java.nio.file.Files;
 
 public class PacketFilterGenerator {
+    @SuppressWarnings("ConcatenationWithEmptyString")
     private static final String HELP_STR = "" +
         "PacketFilterGenerator:" +
         "\n    class={classname}             class name to be generated" +
         "\n    in={filename}                 the input file which contains flow tables" +
-        "\n    out={filename}                output java code file";
+        "\n    out={filename}                output java code file" +
+        "\n    [parent={classname}]          parent class name, default is io.vproxy.app.plugin.impl.BasePacketFilter" +
+        "";
 
     public static void main0(String[] args) throws Exception {
         if (args.length == 0) {
@@ -22,6 +25,7 @@ public class PacketFilterGenerator {
         }
 
         String cls = null;
+        String parent = "io.vproxy.app.plugin.impl.BasePacketFilter";
         String in = null;
         String out = null;
         for (String arg : args) {
@@ -31,6 +35,8 @@ public class PacketFilterGenerator {
             }
             if (arg.startsWith("class=")) {
                 cls = arg.substring("class=".length());
+            } else if (arg.startsWith("parent=")) {
+                parent = arg.substring("parent=".length());
             } else if (arg.startsWith("in=")) {
                 in = arg.substring("in=".length()).trim();
             } else if (arg.startsWith("out=")) {
@@ -78,7 +84,7 @@ public class PacketFilterGenerator {
         }
         String output;
         try {
-            output = flows.gen(cls);
+            output = flows.gen(cls, parent);
         } catch (Exception e) {
             Logger.warn(LogType.ALERT, e.getMessage());
             System.exit(1);

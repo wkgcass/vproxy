@@ -55,12 +55,12 @@ public class SwitchUtils {
         if (!(((AbstractIpPacket) pkb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
             return; // only tcp requires modification
         }
-        if (pkb.ensurePartialPacketParsed()) return;
         AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
         TcpPacket tcp = (TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket();
         if ((tcp.getFlags() & Consts.TCP_FLAGS_SYN) != Consts.TCP_FLAGS_SYN) {
             return; // only handle syn and syn-ack
         }
+        if (pkb.ensurePartialPacketParsed()) return;
         if (tcp.getOptions() == null) {
             tcp.setOptions(new ArrayList<>(1));
         }

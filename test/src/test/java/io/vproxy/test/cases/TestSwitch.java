@@ -1,26 +1,31 @@
 package io.vproxy.test.cases;
 
 import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
+import io.vproxy.app.plugin.impl.BasePacketFilter;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Network;
+import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
+import io.vproxy.vswitch.PacketBuffer;
+import io.vproxy.vswitch.PacketFilterHelper;
 import io.vproxy.vswitch.RouteTable;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.iface.ProgramIface;
+import io.vproxy.vswitch.plugin.FilterResult;
 import io.vproxy.vswitch.util.SwitchUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Collections;
+import java.util.ArrayList;
 
 import static org.junit.Assert.*;
 
@@ -418,16 +423,20 @@ public class TestSwitch {
     }
 
     private EthernetPacket buildTcp(String srcMac, String srcIP, int sport, String dstMac, String dstIp, int dport, long seq) {
+        return buildTcp(srcMac, srcIP, sport, dstMac, dstIp, dport, seq, Consts.TCP_FLAGS_SYN);
+    }
+
+    private EthernetPacket buildTcp(String srcMac, String srcIP, int sport, String dstMac, String dstIp, int dport, long seq, int flags) {
         var tcpPkt = new TcpPacket();
         tcpPkt.setSrcPort(sport);
         tcpPkt.setDstPort(dport);
         tcpPkt.setSeqNum(seq);
         tcpPkt.setAckNum(0);
         tcpPkt.setDataOffset(5);
-        tcpPkt.setFlags(Consts.TCP_FLAGS_SYN);
+        tcpPkt.setFlags(flags);
         tcpPkt.setWindow(1024);
         tcpPkt.setUrgentPointer(0);
-        tcpPkt.setOptions(Collections.emptyList());
+        tcpPkt.setOptions(new ArrayList<>());
         tcpPkt.setData(ByteArray.allocate(0));
 
         if (IP.isIpv4(srcIP)) {
@@ -576,5 +585,87 @@ public class TestSwitch {
         var icmp = (IcmpPacket) ip.getPacket();
         assertEquals(Consts.ICMPv6_PROTOCOL_TYPE_DEST_UNREACHABLE, icmp.getType());
         assertEquals(Consts.ICMPv6_PROTOCOL_CODE_PORT_UNREACHABLE, icmp.getCode());
+    }
+
+    @Test
+    public void snat() throws Exception {
+        sw.addIfaceWatcher(new BasePacketFilter() {
+            private final SNatIPPortPool snatIPPortPool = new SNatIPPortPool("192.168.1.198:3000-4000");
+
+            @Override
+            protected FilterResult handleIngress(PacketFilterHelper helper, PacketBuffer pkb) {
+                if (pkb.devin == null) {
+                    return FilterResult.PASS;
+                }
+                if (pkb.devin.name().equals("program:eth0")) {
+                    if (!helper.executeSNat(pkb, snatIPPortPool)) {
+                        return FilterResult.DROP;
+                    }
+                    return FilterResult.L4_TX;
+                } else if (pkb.devin.name().equals("program:eth1")) {
+                    if (!helper.executeNat(pkb)) {
+                        return FilterResult.DROP;
+                    }
+                    return FilterResult.L4_TX;
+                }
+                return FilterResult.PASS;
+            }
+        });
+
+        var net1 = sw.getNetwork(1);
+        net1.ips.add(IP.from("192.168.1.198"), new MacAddress("00:00:00:00:00:01"), new Annotations());
+        net1.arpTable.record(new MacAddress("aa:bb:cc:dd:ee:00"), IP.from("192.168.1.0"));
+        net1.macTable.record(new MacAddress("aa:bb:cc:dd:ee:00"), eth0);
+        net1.arpTable.record(new MacAddress("aa:bb:cc:dd:ee:01"), IP.from("192.168.1.1"));
+        net1.macTable.record(new MacAddress("aa:bb:cc:dd:ee:01"), eth1);
+
+        var e = buildTcp("aa:bb:cc:dd:ee:00", "192.168.1.0", 34567, "aa:bb:cc:dd:ee:01", "192.168.1.1", 443, 12345678, Consts.TCP_FLAGS_SYN);
+        var x = new EthernetPacket();
+        x.from(new PacketDataBuffer(e.getRawPacket(0)), true);
+        eth0.injectPacket(x);
+
+        var pkt = waitForPacket(eth1).pkt;
+
+        assertNull(eth0.poll());
+        assertNull(eth2.poll());
+        assertNull(eth3.poll());
+        assertNull(eth24.poll());
+        assertNull(eth25.poll());
+        assertNull(eth36.poll());
+        assertNull(eth47.poll());
+
+        assertNull(pkt.getPacketBytes()); // requires mss update, so it's null
+        assertEquals(new MacAddress("aa:bb:cc:dd:ee:01"), pkt.getDst());
+        assertEquals(new MacAddress("00:00:00:00:00:01"), pkt.getSrc());
+        var ip = (Ipv4Packet) pkt.getPacket();
+        assertEquals(IP.from("192.168.1.198"), ip.getSrc());
+        assertEquals(IP.from("192.168.1.1"), ip.getDst());
+        var tcp = (TcpPacket) ip.getPacket();
+        assertTrue(3000 <= tcp.getSrcPort() && tcp.getSrcPort() <= 4000);
+        assertEquals(443, tcp.getDstPort());
+
+        e = buildTcp("aa:bb:cc:dd:ee:01", "192.168.1.1", 443, "00:00:00:00:00:01", "192.168.1.198", tcp.getSrcPort(), 12345678, Consts.TCP_FLAGS_PSH);
+        x.from(new PacketDataBuffer(e.getRawPacket(0)), true);
+        eth1.injectPacket(x);
+
+        pkt = waitForPacket(eth0).pkt;
+
+        assertNull(eth1.poll());
+        assertNull(eth2.poll());
+        assertNull(eth3.poll());
+        assertNull(eth24.poll());
+        assertNull(eth25.poll());
+        assertNull(eth36.poll());
+        assertNull(eth47.poll());
+
+        assertNotNull(pkt.getPacketBytes());
+        assertEquals(new MacAddress("aa:bb:cc:dd:ee:00"), pkt.getDst());
+        assertEquals(new MacAddress("00:00:00:00:00:01"), pkt.getSrc());
+        ip = (Ipv4Packet) pkt.getPacket();
+        assertEquals(IP.from("192.168.1.1"), ip.getSrc());
+        assertEquals(IP.from("192.168.1.0"), ip.getDst());
+        tcp = (TcpPacket) ip.getPacket();
+        assertEquals(443, tcp.getSrcPort());
+        assertEquals(34567, tcp.getDstPort());
     }
 }

@@ -106,7 +106,7 @@ public class LogRecord {
     private String exToString(boolean stackTraceOn) {
         if (ex == null)
             return "";
-        if (stackTraceOn) {
+        if (stackTraceOn || ex instanceof RuntimeException) {
             if (fullStackTrace == null) {
                 fullStackTrace = "\n" + privateFormatStackTrace(true, ex);
             }

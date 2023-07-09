@@ -124,6 +124,14 @@ public class XDPIface extends Iface {
                     chunk.updateNative();
                 } else {
                     assert Logger.lowLevelDebug("no modification on chunk packet addresses");
+                    var flags = SwitchUtils.checksumFlagsFor(pkb.pkt);
+                    if (flags != 0) {
+                        statistics.incrCsumSkip();
+                    }
+                    if (chunk.csumFlags != flags) {
+                        chunk.csumFlags = flags;
+                        chunk.updateNative();
+                    }
                 }
                 chunk.referenceInNative(); // no need to increase ref in java, only required in native
 
