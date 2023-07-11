@@ -89,4 +89,19 @@ public class UdpEntry {
             conntrack.removeUdp(remote, local);
         }
     }
+
+    @Override
+    public String toString() {
+        return "UdpEntry{" +
+            "listenEntry=" + listenEntry +
+            ", remote=" + remote +
+            ", local=" + local +
+            ", destroyed=" + destroyed +
+            ", nat=" + nat +
+            '}';
+    }
+
+    public String description() {
+        return (listenEntry == null ? "null" : listenEntry.description()) + ",remote=" + remote + ",local=" + local;
+    }
 }

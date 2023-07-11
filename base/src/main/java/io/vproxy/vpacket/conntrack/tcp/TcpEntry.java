@@ -476,9 +476,15 @@ public class TcpEntry {
     @Override
     public String toString() {
         return "TcpEntry{" +
-            "remote=" + remote +
+            "parent=" + parent +
+            ", remote=" + remote +
             ", local=" + local +
             ", state=" + state +
+            ", nat=" + nat +
             '}';
+    }
+
+    public String description() {
+        return (parent == null ? "null" : parent.description()) + ",remote=" + remote + ",local=" + local;
     }
 }

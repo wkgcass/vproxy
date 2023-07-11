@@ -110,8 +110,8 @@ public class TcpNat extends Tuple<TcpEntry, TcpEntry> {
     @Override
     public String toString() {
         return "TcpNat{" +
-            "active=" + _1 +
-            ", passive=" + _2 +
+            "active=" + _1.description() +
+            ", passive=" + _2.description() +
             ", state=" + state +
             ", timer=" + timer.getTTL() +
             ", pp=" + proxyProtocolHelper +

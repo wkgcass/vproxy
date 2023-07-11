@@ -29,4 +29,15 @@ public class TcpListenEntry {
         backlog.clear();
         synBacklog.clear();
     }
+
+    @Override
+    public String toString() {
+        return "TcpListenEntry{" +
+            "listening=" + listening +
+            '}';
+    }
+
+    public String description() {
+        return "listen=" + listening;
+    }
 }

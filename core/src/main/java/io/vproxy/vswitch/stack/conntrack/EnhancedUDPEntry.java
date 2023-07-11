@@ -16,4 +16,12 @@ public class EnhancedUDPEntry extends UdpEntry {
                             Conntrack conntrack, int timeout) {
         super(listenEntry, remote, local, conntrack, timeout);
     }
+
+    @Override
+    public String toString() {
+        return "EnhancedUDPEntry{" +
+            super.toString() +
+            ", fastpath=" + fastpath +
+            '}';
+    }
 }

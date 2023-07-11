@@ -14,4 +14,12 @@ public class EnhancedTCPEntry extends TcpEntry {
     public EnhancedTCPEntry(IPPort source, IPPort destination) {
         super(source, destination);
     }
+
+    @Override
+    public String toString() {
+        return "EnhancedTCPEntry{" +
+            super.toString() +
+            ", fastpath=" + fastpath +
+            '}';
+    }
 }

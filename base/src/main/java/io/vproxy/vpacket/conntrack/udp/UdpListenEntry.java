@@ -32,6 +32,19 @@ public class UdpListenEntry {
         isClosed = true;
     }
 
+    @Override
+    public String toString() {
+        return "UdpListenEntry{" +
+            "listening=" + listening +
+            ", connect=" + connect +
+            ", isClosed=" + isClosed +
+            '}';
+    }
+
+    public String description() {
+        return "listen=" + listening;
+    }
+
     public class ReceivingQueue {
         private final LinkedList<Datagram> q = new LinkedList<>();
 

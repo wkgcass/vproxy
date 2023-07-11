@@ -49,7 +49,7 @@ public class Fastpath {
     @Override
     public String toString() {
         return "Fastpath{" +
-            "output=" + output +
+            "output=" + (output == null ? "null" : output.name()) +
             ", vni=" + vni +
             ", local=" + local +
             ", remote=" + remote +
