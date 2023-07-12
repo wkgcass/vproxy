@@ -48,6 +48,13 @@ Java运行时可以从[这里](https://adoptium.net/releases.html?variant=openjd
 
 </details>
 
+<details><summary>打包前置需求</summary>
+
+需要一个java-agent，用作gradle的一个patch。  
+在编译前，复制`misc/modify-gradle-compiler-args-agent.jar`到`~/.gradle/`目录即可。
+
+</details>
+
 <details><summary>打jar包</summary>
 
 <br>

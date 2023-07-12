@@ -70,3 +70,6 @@ test/src/test/java/io/vproxy/test/gen/packetfilters/*.java
 
 # vim
 *.swp
+
+# javaagent
+!misc/modify-gradle-compiler-args-agent.jar

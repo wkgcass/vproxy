@@ -1115,4 +1115,10 @@ public class ReItrLinkedList<E> extends AbstractSequentialList<E>
             linkLast((E) s.readObject());
     }
 
+    @Override
+    public ReItrLinkedList<E> reversed() {
+        var ls = new ReItrLinkedList<>(this);
+        Collections.reverse(ls);
+        return ls;
+    }
 }

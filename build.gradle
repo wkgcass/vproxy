@@ -42,10 +42,12 @@ subprojects {
 
     java {
         withSourcesJar()
+
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
     }
 
-    sourceCompatibility = 11.0
-    targetCompatibility = 11.0
     compileKotlin {
         kotlinOptions {
             jvmTarget = '11'
@@ -60,8 +62,10 @@ subprojects {
             freeCompilerArgs += '-Xassertions=jvm'
         }
     }
-    compileJava.options.encoding = "UTF-8"
-    compileTestJava.options.encoding = "UTF-8"
+    tasks.withType(JavaCompile) {
+        options.encoding = "UTF-8"
+        options.incremental = false
+    }
 
     repositories {
         mavenLocal()
