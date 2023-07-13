@@ -173,7 +173,6 @@ project(':dep') {
 project(':base') {
     compileJava {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=io.vproxy.base'
-        options.compilerArgs += ["-h", project.rootProject.projectDir.absolutePath + "/base/src/main/c"]
     }
     compileKotlin {
         destinationDir = compileJava.destinationDir
