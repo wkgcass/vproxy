@@ -2,11 +2,6 @@
     #define VFD_POSIX_H 1
     #define byte char
 
-
-    #ifdef FSTACK
-        #define HAVE_FF_KQUEUE 1
-        #include <ff_api.h>
-    #endif
     #include "ae.h"
     #ifdef __linux__
         #include <sys/eventfd.h>
@@ -37,32 +32,13 @@
     #define V_SHUT_WR      SHUT_WR
     typedef struct linger v_linger;
 
-    #ifdef FSTACK
-        // disable, let it fail
-        #define V_IP_TRANSPARENT -1
-    #else
         #ifdef IP_TRANSPARENT
             #define V_IP_TRANSPARENT IP_TRANSPARENT
         #else
             // unsupported, let it fail
             #define V_IP_TRANSPARENT -1
         #endif
-    #endif
 
-    #ifdef FSTACK
-        #define v_socket      ff_socket
-        #define v_bind        ff_bind
-        #define v_listen      ff_listen
-        #define v_accept      ff_accept
-        #define v_setsockopt  ff_setsockopt
-        #define v_connect     ff_connect
-        #define v_shutdown    ff_shutdown
-        #define v_getsockname ff_getsockname
-        #define v_getpeername ff_getpeername
-        #define v_sendto      ff_sendto
-        #define v_recvfrom    ff_recvfrom
-        typedef struct linux_sockaddr v_sockaddr;
-    #else
         #define v_socket      socket
         #define v_bind        bind
         #define v_listen      listen
@@ -75,7 +51,6 @@
         #define v_sendto      sendto
         #define v_recvfrom    recvfrom
         typedef struct sockaddr v_sockaddr;
-    #endif
 
 
 
@@ -86,16 +61,11 @@
 
     #include <unistd.h>
 
-    #ifdef FSTACK
-        #define v_close       ff_close
-        #define v_read        ff_read
-        #define v_write       ff_write
-    #else
         #define v_close       close
         #define v_read        read
         #define v_write       write
         #define v_pipe        pipe
-    #endif
+
     typedef struct sockaddr_in  v_sockaddr_in;
     typedef struct sockaddr_in6 v_sockaddr_in6;
     #include <sys/un.h>
@@ -107,12 +77,7 @@
 
 
     #include <sys/time.h>
-
-    #ifdef FSTACK
-        #define v_gettimeofday ff_gettimeofday
-    #else
         #define v_gettimeofday gettimeofday
-    #endif
     typedef struct timeval v_timeval;
 
 
@@ -125,11 +90,7 @@
     #define V_FIONBIO FIONBIO
     #define V_SIOCGIFFLAGS SIOCGIFFLAGS
     #define V_SIOCSIFFLAGS SIOCSIFFLAGS
-    #ifdef FSTACK
-        #define v_ioctl ff_ioctl
-    #else
         #define v_ioctl ioctl
-    #endif
 
 
 

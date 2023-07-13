@@ -46,9 +46,6 @@
 
 /* Include the best multiplexing layer supported by this system.
  * The following should be ordered by performances, descending. */
- #ifdef HAVE_FF_KQUEUE
-#include "ae_ff_kqueue.c"
-#else
     #ifdef HAVE_EVPORT
     #include "ae_evport.c"
     #else
@@ -62,7 +59,6 @@
             #endif
         #endif
     #endif
-#endif
 
 aeEventLoop *aeCreateEventLoop(int setsize) {
     return aeCreateEventLoop2(setsize, 0);
@@ -203,12 +199,7 @@ int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {
 static void aeGetTime(long *seconds, long *milliseconds)
 {
     struct timeval tv;
-
-#ifdef HAVE_FF_KQUEUE
-        ff_gettimeofday(&tv, NULL);
-#else
     gettimeofday(&tv, NULL);
-#endif
     *seconds = tv.tv_sec;
     *milliseconds = tv.tv_usec/1000;
 }

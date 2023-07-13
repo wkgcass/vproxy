@@ -19,9 +19,7 @@ object HelloWorld {
     val sLoop = io.vproxy.base.selector.SelectorEventLoop.open()
     val nLoop = sLoop.ensureNetEventLoop()
     sLoop.loop { r -> io.vproxy.base.util.thread.VProxyThread.create(r, "hello-world-main") }
-    if (io.vproxy.vfd.VFDConfig.useFStack) {
-      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.ALERT, "DHCP will not run when using FStack")
-    } else if (!io.vproxy.base.Config.dhcpGetDnsListEnabled) {
+    if (!io.vproxy.base.Config.dhcpGetDnsListEnabled) {
       io.vproxy.base.util.Logger.alert("Feature 'dhcp to get dns list' NOT enabled.")
       io.vproxy.base.util.Logger.alert("You may set -DhcpGetDnsListNics=all or eth0,eth1,... to enable the feature.")
     } else {
@@ -57,11 +55,7 @@ object HelloWorld {
       server.start()
     }
     io.vproxy.base.util.Logger.alert("HTTP server is listening on $listenPort")
-    if (io.vproxy.vfd.VFDConfig.useFStack) {
-      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.ALERT, "F-Stack does not support 127.0.0.1 nor to request self ip address.")
-      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.ALERT, "You may run `curl \$ip:$listenPort/hello` to see if the TCP server is working.")
-      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.ALERT, "Or you may run -Deploy=Simple to start a simple loadbalancer to verify the TCP client functions.")
-    } else {
+    if (true) {
       sLoop.launch {
         sleep(1000)
         io.vproxy.base.util.Logger.alert("HTTP client now starts ...")
@@ -127,12 +121,7 @@ object HelloWorld {
       }
     })
     io.vproxy.base.util.Logger.alert("UDP server is listening on $listenPort")
-    if (io.vproxy.vfd.VFDConfig.useFStack) {
-      io.vproxy.base.util.Logger.warn(
-        io.vproxy.base.util.LogType.ALERT,
-        "You may run `nc -u \$ip $listenPort` to see if the UDP server is working. It's an echo server, it will respond with anything you input."
-      )
-    } else {
+    if (true) {
       sLoop.delay(2000) {
         io.vproxy.base.util.Logger.alert("UDP client now starts ...")
         try {

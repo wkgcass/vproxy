@@ -110,8 +110,6 @@ make vfdposix
 java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
-
 此外，Windows有一个特别版本用于支持Tap设备：`-Dvfd=windows`，但是普通fd和事件循环依旧是jdk selector channel.
 
 ```
@@ -329,7 +327,6 @@ java -Deploy=Simple -jar vproxy.jar \
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
 * [vproxy-kcp-tunnel.md](https://github.com/wkgcass/vproxy/blob/master/doc/vproxy-kcp-tunnel.md): The KCP Tunnel Protocol.
 * [using-application-layer-protocols.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md): 关于如何使用(自定义的)应用层协议。
-* [fstack-how-to.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): 如何在`F-Stack`上运行vproxy。
 * [vpws-direct-relay.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/vpws-direct-relay.md): 如何使用`vpws-agent`的`direct-relay`功能。
 
 ## 产品

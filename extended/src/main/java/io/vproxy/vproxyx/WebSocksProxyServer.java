@@ -21,7 +21,6 @@ import io.vproxy.component.proxy.Proxy;
 import io.vproxy.component.proxy.ProxyNetConfig;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vfd.VFDConfig;
 import io.vproxy.vproxyx.websocks.*;
 import io.vproxy.vproxyx.websocks.uot.UdpOverTcpSetup;
 
@@ -227,9 +226,6 @@ public class WebSocksProxyServer {
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
-        if (VFDConfig.useFStack) {
-            threads = 1;
-        }
         int workers = threads;
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors

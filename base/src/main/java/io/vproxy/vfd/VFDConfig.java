@@ -10,10 +10,6 @@ public class VFDConfig {
     // see FDProvider
     public static final String vfdImpl;
 
-    // -Dfstack="--conf /etc/f-stack.conf"
-    public static final String fstack;
-    public static final boolean useFStack;
-
     // this field is generated
     public static String vfdlibname;
 
@@ -25,16 +21,10 @@ public class VFDConfig {
     public static final int aesetsize;
 
     static {
-        fstack = Utils.getSystemProperty("fstack", "");
-        useFStack = !fstack.isBlank();
-        vfdImpl = useFStack ? "posix" : Utils.getSystemProperty("vfd", "provided");
+        vfdImpl = Utils.getSystemProperty("vfd", "provided");
         if (!vfdImpl.equals("provided")) {
             if (vfdImpl.equals("posix")) {
-                if (useFStack) {
-                    vfdlibname = "vfdfstack";
-                } else {
-                    vfdlibname = "vfdposix";
-                }
+                vfdlibname = "vfdposix";
             } else if (vfdImpl.equals("windows")) {
                 vfdlibname = "vfdwindows";
             }

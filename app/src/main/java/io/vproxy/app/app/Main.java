@@ -17,9 +17,7 @@ import io.vproxy.base.util.callback.JoinCallback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.thread.VProxyThreadJsonParserCacheHolder;
 import io.vproxy.dep.vjson.parser.ParserUtils;
-import io.vproxy.fstack.FStackUtil;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vfd.VFDConfig;
 import io.vproxy.vmirror.Mirror;
 import io.vproxy.vproxyx.*;
 
@@ -59,14 +57,6 @@ public class Main {
     private static void beforeStart() {
         ParserUtils.setParserCacheHolder(new VProxyThreadJsonParserCacheHolder());
         OOMHandler.handleOOM();
-        if (VFDConfig.useFStack) {
-            try {
-                FStackUtil.init();
-            } catch (IOException e) {
-                Logger.shouldNotHappen("initiate f-stack failed", e);
-                Utils.exit(1);
-            }
-        }
 
         if (!Config.mirrorConfigPath.isBlank()) {
             try {
@@ -162,9 +152,6 @@ public class Main {
         String appClass = Config.appClass;
         if (appClass != null) {
             runApp(appClass, args);
-            if (VFDConfig.useFStack) {
-                FStackUtil.run();
-            }
             boolean exit = true;
             if (DockerNetworkPluginControllerInit.isInitiated()) {
                 Logger.alert("Launch with docker network plugin controller");
@@ -261,10 +248,6 @@ public class Main {
         Shutdown.initSignal();
         // start scheduled saving task
         Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
-
-        if (VFDConfig.useFStack) {
-            FStackUtil.run();
-        }
     }
 
     private static void saveConfig() {

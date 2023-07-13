@@ -96,11 +96,7 @@ public class SelectorEventLoop implements AutoCloseable {
         }
         this.selector = new WrappedSelector(fdSelector);
         this.fds = fds;
-        if (VFDConfig.useFStack) {
-            CLOSE_LOCK = Lock.createMock();
-        } else {
-            CLOSE_LOCK = Lock.create();
-        }
+        CLOSE_LOCK = Lock.create();
         this.initOptions = opts;
     }
 
@@ -129,30 +125,11 @@ public class SelectorEventLoop implements AutoCloseable {
         }
     }
 
-    private static volatile SelectorEventLoop theLoop = null; // this field is used when using fstack
-
     public static SelectorEventLoop open() throws IOException {
         return open(InitOptions.DEFAULT);
     }
 
     public static SelectorEventLoop open(InitOptions opts) throws IOException {
-        if (VFDConfig.useFStack) {
-            // we use only one event loop if it's using f-stack
-            // considering the program code base, it will take too much time
-            // modifying code everywhere,
-            // so we let all the components share the same event loop
-            // and loop is handled at the entrance of the program
-            if (theLoop == null) {
-                synchronized (SelectorEventLoop.class) {
-                    if (theLoop == null) {
-                        theLoop = new SelectorEventLoop(FDProvider.get().getProvided(), opts);
-                    }
-                }
-            }
-            return theLoop;
-            // no need to consider whether the loop would be closed
-            // when the loop closes, the program will exit
-        }
         return new SelectorEventLoop(FDProvider.get().getProvided(), opts);
     }
 
@@ -161,11 +138,6 @@ public class SelectorEventLoop implements AutoCloseable {
     }
 
     public static SelectorEventLoop open(FDs fds, InitOptions opts) throws IOException {
-        if (VFDConfig.useFStack) {
-            if (FDProvider.get().getProvided() == fds) {
-                throw new IllegalArgumentException("should not call SelectorEventLoop.open(fds) with the default fds impl");
-            }
-        }
         return new SelectorEventLoop(fds, opts);
     }
 
@@ -299,10 +271,6 @@ public class SelectorEventLoop implements AutoCloseable {
 
     @Blocking // will block until the loop actually starts
     public void loop(Function<Runnable, ? extends VProxyThread> constructThread) {
-        if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
-            // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
-            return;
-        }
         constructThread.apply(this::loop).start();
         while (runningThread == null) {
             try {
@@ -344,9 +312,7 @@ public class SelectorEventLoop implements AutoCloseable {
 
         final Collection<SelectedEntry> selected;
         try {
-            if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) { // f-stack main loop does not wait
-                selected = selector.selectNow();
-            } else if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
+            if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
                 selected = selector.select(); // let it sleep
             } else if (!runOnLoopEvents.isEmpty()) {
                 selected = selector.selectNow(); // immediately return when tasks registered into the loop
@@ -401,25 +367,6 @@ public class SelectorEventLoop implements AutoCloseable {
                 Logger.alert("core affinity set: " + Long.toBinaryString(initOptions.coreAffinity));
             } else {
                 Logger.warn(LogType.ALERT, "core affinity is not set (" + Long.toBinaryString(initOptions.coreAffinity) + "), continue without core affinity");
-            }
-        }
-
-        if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
-            // when using f-stack, the MAIN loop is started by ff_loop (non-main loops can still run)
-            // we should not start any loop inside ff_loop
-            // but considering the base code, this method is used everywhere
-            // so we simply block the thread and never exit
-
-            // there is no need to consider to break the loop when selector closes
-            // echo f-stack program only have one main thread, and that means one loop only
-
-            //noinspection InfiniteLoopStatement
-            while (true) {
-                try {
-                    //noinspection BusyWait
-                    Thread.sleep(365L * 24 * 60 * 60 * 1000 /*very long time, 1 year*/);
-                } catch (Throwable ignore) {
-                }
             }
         }
 

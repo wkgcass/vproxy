@@ -112,8 +112,6 @@ make vfdposix
 java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-For info about `F-Stack`, check the doc [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
-
 And there's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are stll based on jdk selector channel.
 
 ```
@@ -333,7 +331,6 @@ See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) a
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
 * [vproxy-kcp-tunnel.md](https://github.com/wkgcass/vproxy/blob/master/doc/vproxy-kcp-tunnel.md): The KCP Tunnel Protocol.
 * [using-application-layer-protocols.md](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md): About how to use (customized) application layer protocols.
-* [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): How to run vproxy upon `F-Stack`. Chinese version only for now.
 * [vpws-direct-relay.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/vpws-direct-relay.md): How to use `direct-relay` in `vpws-agent`.
 
 ## Products

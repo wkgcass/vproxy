@@ -19,7 +19,6 @@ clean-jar:
 clean: clean-jar
 	rm -f ./base/src/main/c/libvfdposix.dylib
 	rm -f ./base/src/main/c/libvfdposix.so
-	rm -f ./base/src/main/c/libvfdfstack.so
 	rm -f ./base/src/main/c/libvpxdp.so
 	rm -f ./base/src/main/c/vfdwindows.dll
 	cd ./base/src/main/c/xdp && make clean
@@ -114,10 +113,6 @@ endif
 .PHONY: vfdwindows
 vfdwindows:
 	cd ./base/src/main/c && ./make-windows.sh
-
-.PHONY: fstack
-fstack:
-	cd ./base/src/main/c && /usr/bin/env bash ./make-fstack.sh
 
 .PHONY: image
 image: jar

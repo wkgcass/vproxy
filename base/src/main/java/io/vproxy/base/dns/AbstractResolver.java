@@ -14,7 +14,6 @@ import io.vproxy.base.util.callback.RunOnLoopCallback;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.*;
-import io.vproxy.vfd.jdk.ChannelFDs;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -108,15 +107,7 @@ public abstract class AbstractResolver implements Resolver {
         synchronized (AbstractResolver.class) {
             if (defaultResolver != null)
                 return defaultResolver;
-            // the fstack is usually exposed to public network
-            // and services usually do dns resolving in the idc network, which will fail if use fstack to do resolve
-            // so we start the resolver using traditional network stack
-            FDs fds;
-            if (VFDConfig.useFStack) {
-                fds = ChannelFDs.get();
-            } else {
-                fds = FDProvider.get().getProvided();
-            }
+            FDs fds = FDProvider.get().getProvided();
             try {
                 defaultResolver = new VResolver("Resolver", fds);
             } catch (IOException e) {

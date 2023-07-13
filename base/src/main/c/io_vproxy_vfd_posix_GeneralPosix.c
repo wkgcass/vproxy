@@ -23,20 +23,12 @@
 
 JNIEXPORT jboolean JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_pipeFDSupported
   (JNIEnv* env, jobject self) {
-    #ifdef HAVE_FF_KQUEUE
-        return JNI_FALSE;
-    #else
-        return JNI_TRUE;
-    #endif
+    return JNI_TRUE;
 }
 
 JNIEXPORT jboolean JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_onlySelectNow
   (JNIEnv* env, jobject self) {
-    #ifdef HAVE_FF_KQUEUE
-        return JNI_TRUE;
-    #else
-        return JNI_FALSE;
-    #endif
+    return JNI_FALSE;
 }
 
 JNIEXPORT jint JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeReadable
@@ -51,9 +43,6 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeWritable
 
 JNIEXPORT jintArray JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_openPipe
   (JNIEnv* env, jobject self) {
-    #ifdef HAVE_FF_KQUEUE
-        return NULL;
-    #else
         #ifdef __linux__
             int fd = eventfd(0, EFD_NONBLOCK);
             if (fd < 0) {
@@ -87,7 +76,6 @@ JNIEXPORT jintArray JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_openPipe
             (*env)->SetIntArrayRegion(env, ret, 0, 2, elems);
             return ret;
         #endif
-    #endif
 }
 
 JNIEXPORT jlong JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
@@ -229,14 +217,11 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setSoLinger
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setReusePort
   (JNIEnv* env, jobject self, jint fd, jboolean v) {
-    #ifndef FSTACK
         int optval = v ? 1 : 0;
         int res = v_setsockopt(fd, V_SOL_SOCKET, V_SO_REUSEPORT, &optval, sizeof(int));
         if (res < 0) {
             throwIOExceptionBasedOnErrno(env);
         }
-    #endif
-    // do nothing for FSTACK
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setRcvBuf

@@ -10,7 +10,6 @@ import io.vproxy.base.util.Version;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
-import io.vproxy.vfd.VFDConfig;
 
 import java.io.IOException;
 
@@ -101,9 +100,6 @@ public class Application {
         }
         // use the current core count
         int cores = Runtime.getRuntime().availableProcessors();
-        if (VFDConfig.useFStack) {
-            cores = 1; // f-stack applications have only one thread
-        }
         if (minimum) {
             cores = 1;
         }
@@ -116,7 +112,7 @@ public class Application {
                 throw new IOException("create default worker event loop failed", e);
             }
         }
-        if (VFDConfig.useFStack || (ServerSock.supportReusePort() && Config.supportReusePortLB()) || minimum) {
+        if ((ServerSock.supportReusePort() && Config.supportReusePortLB()) || minimum) {
             assert Logger.lowLevelDebug("use worker event loop as the acceptor event loop");
             application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME,
                 new DelegateEventLoopGroup(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME,

@@ -14,7 +14,6 @@ import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.SocketFD;
-import io.vproxy.vfd.VFDConfig;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -220,10 +219,6 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     public void loop() {
-        if (VFDConfig.useFStack) {
-            // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
-            return;
-        }
         if (getSelectorEventLoop().getRunningThread() != null) {
             throw new IllegalStateException();
         }

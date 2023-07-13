@@ -43,11 +43,7 @@ public class WrappedSelector implements FDSelector {
 
     public WrappedSelector(FDSelector selector) {
         this.selector = selector;
-        if (VFDConfig.useFStack) {
-            VIRTUAL_LOCK = Lock.createMock();
-        } else {
-            VIRTUAL_LOCK = Lock.create();
-        }
+        VIRTUAL_LOCK = Lock.create();
     }
 
     @Override
