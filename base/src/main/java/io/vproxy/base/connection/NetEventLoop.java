@@ -482,6 +482,10 @@ class HandlerForConnectableConnection extends HandlerForConnection {
         // user might want to write some data in the callback
         // so call the callback before setting events
         cctx.handler.connected(cctx);
+        // user might have closed this fd
+        if (!channel.isOpen()) {
+            return;
+        }
 
         EventSet ops = EventSet.read();
         if (cctx.connection.getOutBuffer().used() > 0) {
