@@ -3,6 +3,7 @@ package io.vproxy.vfd.posix;
 import io.vproxy.vfd.TapInfo;
 
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 public interface Posix {
@@ -18,7 +19,7 @@ public interface Posix {
 
     long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException;
 
-    int aeApiPoll(long ae, long wait, int[] fdArray, int[] eventsArray) throws IOException;
+    int aeApiPoll(long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
 
     void aeCreateFileEvent(long ae, int fd, int mask);
 

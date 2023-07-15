@@ -7,6 +7,8 @@ import io.vproxy.dep.vjson.parser.ArrayParser;
 import io.vproxy.dep.vjson.parser.ObjectParser;
 import io.vproxy.dep.vjson.parser.StringParser;
 import io.vproxy.dep.vjson.util.StringDictionary;
+import io.vproxy.panama.JEnv;
+import io.vproxy.panama.Panama;
 import io.vproxy.xdp.Chunk;
 
 import java.util.UUID;
@@ -71,7 +73,16 @@ public interface VProxyThread {
         public final int[] XDPChunk_pktlenArray = new int[XDPChunk_arrayLen];
         public final PrototypeObjectList<Chunk> XDPChunk_chunkPool = new PrototypeObjectList<>(XDPChunk_arrayLen, Chunk::new);
 
+        private JEnv jenv;
+
         public String debugInfo;
+
+        public JEnv getEnv() {
+            if (jenv == null) {
+                jenv = new JEnv(Panama.get().allocateNative(JEnv.layout.byteSize()));
+            }
+            return jenv;
+        }
 
         public void newUuidDebugInfo() {
             assert ((BooleanSupplier) (() -> {

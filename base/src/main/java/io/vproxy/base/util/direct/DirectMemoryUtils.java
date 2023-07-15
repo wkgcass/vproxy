@@ -282,7 +282,7 @@ public class DirectMemoryUtils {
     }
 
     static boolean free(DirectByteBuffer buffer, boolean tryCache) {
-        assert Logger.lowLevelDebug("run Utils.clean");
+        assert Logger.lowLevelDebug("run DirectMemoryUtils.free");
         if (!buffer.realBuffer().isDirect()) {
             assert Logger.lowLevelDebug("not direct buffer");
             return true; // return true because it does not need cleaning
@@ -295,8 +295,8 @@ public class DirectMemoryUtils {
             }
         }
         assert Logger.lowLevelDebug("is direct buffer, do clean");
-        SunUnsafe.invokeCleaner(buffer.realBuffer());
         GlobalInspection.getInstance().directBufferFree(buffer.capacity());
+        SunUnsafe.invokeCleaner(buffer.realBuffer());
         return true;
     }
 }

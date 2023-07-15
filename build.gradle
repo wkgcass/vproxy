@@ -173,6 +173,7 @@ project(':dep') {
 project(':base') {
     compileJava {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=io.vproxy.base'
+        options.compilerArgs += '--enable-preview'
     }
     compileKotlin {
         destinationDir = compileJava.destinationDir

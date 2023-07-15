@@ -5,10 +5,7 @@ import io.vproxy.base.util.log.LogLevel;
 import io.vproxy.base.util.log.LogRecord;
 import io.vproxy.base.util.log.STDOutLogHandler;
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.vfd.DatagramFD;
-import io.vproxy.vfd.FDProvider;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -107,11 +104,15 @@ public class Logger {
             elem,
             LogLevel.DEBUG,
             null,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             getDebugInfo(elem) + msg,
             null);
         logDispatcher.publish(record);
         return true;
+    }
+
+    private static long currentTimeMillis() {
+        return FDProvider.get().currentTimeMillis();
     }
 
     private static String getDebugInfo(StackTraceElement elem) {
@@ -140,7 +141,7 @@ public class Logger {
             elem,
             level,
             type,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             err,
             t
         );
@@ -170,7 +171,7 @@ public class Logger {
         var record = new LogRecord(null, null,
             LogLevel.WARN,
             logType,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             msg,
             null);
         logDispatcher.publish(record);
@@ -180,7 +181,7 @@ public class Logger {
         var record = new LogRecord(null, null,
             LogLevel.WARN,
             logType,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             err,
             t);
         logDispatcher.publish(record);
@@ -191,7 +192,7 @@ public class Logger {
         var record = new LogRecord(null, null,
             LogLevel.INFO,
             logType,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             msg,
             null);
         logDispatcher.publish(record);
@@ -201,7 +202,7 @@ public class Logger {
         var record = new LogRecord(null, null,
             LogLevel.TRACE,
             logType,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             msg,
             null);
         logDispatcher.publish(record);
@@ -224,7 +225,7 @@ public class Logger {
         var record = new LogRecord(threadName, null,
             LogLevel.PROBE,
             LogType.PROBE,
-            FDProvider.get().currentTimeMillis(),
+            currentTimeMillis(),
             msg,
             null);
         String log = record.toStringNoColor(stackTraceOn);

@@ -8,6 +8,9 @@ import io.vproxy.base.util.objectpool.PrototypeObjectList;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
 import java.util.*;
@@ -27,8 +30,9 @@ public class AESelector implements FDSelector {
     private final int aeWritable;
     private final boolean onlySelectNow;
 
-    private final int[] pollFDsArray;
-    private final int[] pollEventsArray;
+    private final Arena memArena;
+    private final MemorySegment pollFDsArray;
+    private final MemorySegment pollEventsArray;
 
     public AESelector(Posix posix, long ae, int[] pipefd, int setsize) {
         this.posix = posix;
@@ -46,8 +50,9 @@ public class AESelector implements FDSelector {
         for (int i = 0; i < setsize; ++i) {
             attachments[i] = new Att();
         }
-        pollFDsArray = new int[setsize];
-        pollEventsArray = new int[setsize];
+        memArena = Arena.ofShared();
+        pollFDsArray = memArena.allocate(setsize * ValueLayout.JAVA_INT.byteSize());
+        pollEventsArray = memArena.allocate(setsize * ValueLayout.JAVA_INT.byteSize());
         onlySelectNow = posix.onlySelectNow();
     }
 
@@ -110,8 +115,9 @@ public class AESelector implements FDSelector {
 
     private void fillFDsList(int n) {
         for (int i = 0; i < n; ++i) {
-            int fd = pollFDsArray[i];
-            fdInfoList.add(fd, pollEventsArray[i], attachments[fd]);
+            int fd = pollFDsArray.get(ValueLayout.JAVA_INT, i * 4L);
+            int evt = pollEventsArray.get(ValueLayout.JAVA_INT, i * 4L);
+            fdInfoList.add(fd, evt, attachments[fd]);
         }
     }
 
@@ -300,9 +306,10 @@ public class AESelector implements FDSelector {
                 }
             }
         }
+        memArena.close();
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"removal"})
     @Override
     protected void finalize() {
         close();

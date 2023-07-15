@@ -3,13 +3,16 @@ package io.vproxy.base.util.direct;
 import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.util.ByteBufferEx;
 
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 public class DirectByteBuffer extends ByteBufferEx {
     private boolean cleaned = false;
+    protected final MemorySegment seg;
 
     DirectByteBuffer(ByteBuffer buffer) {
         super(buffer);
+        this.seg = MemorySegment.ofBuffer(buffer);
     }
 
     @Override
@@ -18,6 +21,10 @@ public class DirectByteBuffer extends ByteBufferEx {
             return null;
         }
         return buffer;
+    }
+
+    public MemorySegment getMemorySegment() {
+        return seg;
     }
 
     @Override
@@ -32,7 +39,7 @@ public class DirectByteBuffer extends ByteBufferEx {
         cleaned = DirectMemoryUtils.free(this, tryCache);
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"removal"})
     @Override
     protected void finalize() throws Throwable {
         try {
