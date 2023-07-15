@@ -16,7 +16,7 @@ import static io.vproxy.panama.Panama.format;
 
 @SuppressWarnings({"Convert2MethodRef", "CodeBlock2Expr"})
 public class GeneralPosix implements Posix {
-    GeneralPosix() {
+    public GeneralPosix() {
     }
 
     private static final WrappedFunction pipeFDSupported =
