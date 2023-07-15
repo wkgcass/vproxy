@@ -300,6 +300,9 @@ project(':ui') {
 }
 
 project(':test') {
+    compileTestJava {
+        options.compilerArgs += '--enable-preview'
+    }
     compileTestKotlin {
         destinationDir = compileTestJava.destinationDir
     }
@@ -322,6 +325,8 @@ project(':test') {
     }
 
     task runSuite(type: Test) {
+        jvmArgs += '--enable-preview'
+        jvmArgs += '--enable-native-access=ALL-UNNAMED'
         jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
 
         testLogging {
@@ -337,6 +342,8 @@ project(':test') {
     }
 
     task runCI(type: Test) {
+        jvmArgs += '--enable-preview'
+        jvmArgs += '--enable-native-access=ALL-UNNAMED'
         jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
 
         testLogging {
@@ -368,6 +375,8 @@ project(':test') {
                 throw new Exception(message)
             }
 
+            jvmArgs += '--enable-preview'
+            jvmArgs += '--enable-native-access=ALL-UNNAMED'
             jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
 
             testLogging {
@@ -381,6 +390,26 @@ project(':test') {
 
             include '**/' + c + '.class'
         }
+    }
+
+    task runPanamaTest(type: Test) {
+        jvmArgs += '--enable-preview'
+        jvmArgs += '--enable-native-access=ALL-UNNAMED'
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+        jvmArgs += '-Djava.library.path=' +
+            project.rootProject.rootDir.getAbsolutePath() + '/base/src/main/c'
+        jvmArgs += '-Dvfd=posix'
+
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+            maxGranularity 100
+            exceptionFormat "full"
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+
+        include '**/TestPanamaGeneralPosix.class'
     }
 
     task XDPPoc(type: JavaExec) {
