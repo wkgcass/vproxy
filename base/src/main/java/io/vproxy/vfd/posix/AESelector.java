@@ -168,7 +168,7 @@ public class AESelector implements FDSelector {
             throw new UnsupportedOperationException("does not support wakeup");
         }
         checkOpen();
-        bufferForPipeFD.limit(8).position(0).putLong(1L);
+        bufferForPipeFD.getMemorySegment().set(ValueLayout.JAVA_LONG, 0, 1L);
         try {
             posix.write(pipefd[1], bufferForPipeFD.realBuffer(), 0, 8);
         } catch (IOException e) {
