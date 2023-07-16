@@ -66,6 +66,13 @@ subprojects {
         options.encoding = "UTF-8"
         options.incremental = false
     }
+    tasks.withType(JavaExec) {
+        jvmArgs += '--enable-preview'
+        jvmArgs += '--enable-native-access=ALL-UNNAMED'
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
+        javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    }
 
     repositories {
         mavenLocal()
@@ -432,6 +439,21 @@ project(':test') {
         if (System.getProperty("ifname") != null) {
             args = [System.getProperty("ifname")]
         }
+    }
+
+    task WinTap(type: JavaExec) {
+        if (!org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+            return
+        }
+
+        if ("true" == System.getProperty("enableAssertions")) {
+            enableAssertions = true
+        }
+        classpath = sourceSets.test.runtimeClasspath
+        workingDir = project.rootProject.rootDir.getAbsolutePath()
+        systemProperty("java.library.path", "base\\src\\main\\c")
+        systemProperty("vfd", "windows")
+        main = "io.vproxy.poc.WinTap"
     }
 
     task GenerateModuleInfo(type: JavaExec) {

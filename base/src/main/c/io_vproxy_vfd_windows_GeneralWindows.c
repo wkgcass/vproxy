@@ -1,28 +1,28 @@
 #include "io_vproxy_vfd_windows_GeneralWindows.h"
 #include "vfd_windows.h"
-#include "exception.h"
 
-JNIEXPORT jboolean JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
-  (JNIEnv* env, jobject self) {
-    return JNI_FALSE;
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
+  (JEnv* env) {
+    env->return_z = JNI_FALSE;
 }
 
-JNIEXPORT jlong JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
-  (JNIEnv* env, jobject self) {
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
+  (JEnv* env) {
     OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
     memset(ov, 0, sizeof(OVERLAPPED));
     HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (event == NULL) {
         throwIOExceptionBasedOnLastError(env, "create event failed");
         free(ov);
-        return 0;
+        env->return_j = 0;
+        return;
     }
     ov->hEvent = event;
-    return (jlong) ov;
+    env->return_j = (jlong) ov;
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
-  (JNIEnv* env, jobject self, jlong ovJ) {
+  (JEnv* env, jlong ovJ) {
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
     HANDLE event = ov->hEvent;
     BOOL status = CloseHandle(event);
@@ -35,7 +35,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapp
 
 #define GUID_MAX_LEN 256
 
-BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, const char* dev, char* guid) {
+BOOL findTapGuidByNameInNetworkPanel(JEnv* env, const char* dev, char* guid) {
     LONG res;
     HKEY network_connections_key;
     res = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
@@ -97,7 +97,7 @@ BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, const char* dev, char* guid) {
     return FALSE;
 }
 
-BOOL openTapDevice(JNIEnv* env, char* guid, HANDLE* outHandle) {
+BOOL openTapDevice(JEnv* env, char* guid, HANDLE* outHandle) {
     char tuntap_device_path[1024];
     sprintf(tuntap_device_path, "%s%s%s", USERMODEDEVICEDIR, guid, TAP_WIN_SUFFIX);
     HANDLE handle = CreateFile(tuntap_device_path,
@@ -115,7 +115,7 @@ BOOL openTapDevice(JNIEnv* env, char* guid, HANDLE* outHandle) {
     return TRUE;
 }
 
-BOOL plugCableToTabDevice(JNIEnv* env, HANDLE handle) {
+BOOL plugCableToTabDevice(JEnv* env, HANDLE handle) {
     ULONG x = TRUE;
     DWORD len;
     if (DeviceIoControl(handle, TAP_WIN_IOCTL_SET_MEDIA_STATUS, &x, sizeof(x), &x, sizeof(x), &len, NULL)) {
@@ -126,35 +126,32 @@ BOOL plugCableToTabDevice(JNIEnv* env, HANDLE handle) {
     }
 }
 
-JNIEXPORT jlong JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
-  (JNIEnv* env, jobject self, jstring dev) {
-    const char* devChars = (*env)->GetStringUTFChars(env, dev, NULL);
-
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
+  (JEnv* env, char* devChars) {
     BOOL status;
     char guid[GUID_MAX_LEN];
     HANDLE handle;
     status = findTapGuidByNameInNetworkPanel(env, devChars, guid);
     if (!status) {
-        (*env)->ReleaseStringUTFChars(env, dev, devChars);
-        return 0;
+        env->return_j = 0;
+        return;
     }
     status = openTapDevice(env, guid, &handle);
     if (!status) {
-        (*env)->ReleaseStringUTFChars(env, dev, devChars);
-        return 0;
+        env->return_j = 0;
+        return;
     }
     status = plugCableToTabDevice(env, handle);
     if (!status) {
-        (*env)->ReleaseStringUTFChars(env, dev, devChars);
         CloseHandle(handle);
-        return 0;
+        env->return_j = 0;
+        return;
     }
-    (*env)->ReleaseStringUTFChars(env, dev, devChars);
-    return (jlong) handle;
+    env->return_j = (jlong) handle;
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
-  (JNIEnv* env, jobject self, jlong handleJ) {
+  (JEnv* env, jlong handleJ) {
     HANDLE handle = (HANDLE) handleJ;
     BOOL status = CloseHandle(handle);
     if (!status) {
@@ -162,12 +159,13 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
     }
 }
 
-JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
-  (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len, jlong ovJ) {
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
+  (JEnv* env, jlong handleJ, void* directBuffer, jint off, jint len, jlong ovJ) {
     if (len == 0) {
-        return 0;
+        env->return_i = 0;
+        return;
     }
-    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    byte* buf = (void*) directBuffer;
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
@@ -176,7 +174,7 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
         DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
             throwIOExceptionBasedOnLastError(env, "wait failed when reading");
-            return 0;
+            return;
         } else if (waitStatus != WAIT_OBJECT_0) {
             if (waitStatus == WAIT_ABANDONED) {
                 throwIOException(env, "WAIT_ABANDONED when reading");
@@ -185,7 +183,7 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
             } else {
                 throwIOException(env, "unknown WAIT error when reading");
             }
-            return 0;
+            return;
         }
         status = GetOverlappedResult(handle, ov, &n, TRUE);
         if (status) {
@@ -198,17 +196,18 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
     }
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "read failed");
-        return 0;
+        return;
     }
-    return (jint) n;
+    env->return_i = (jint) n;
 }
 
-JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
-  (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len, jlong ovJ) {
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
+  (JEnv* env, jlong handleJ, void * directBuffer, jint off, jint len, jlong ovJ) {
     if (len == 0) {
-        return 0;
+        env->return_i = 0;
+        return;
     }
-    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    byte* buf = (void*) directBuffer;
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
@@ -217,7 +216,7 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
         DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
             throwIOExceptionBasedOnLastError(env, "wait failed when writing");
-            return 0;
+            return;
         } else if (waitStatus != WAIT_OBJECT_0) {
             if (waitStatus == WAIT_ABANDONED) {
                 throwIOException(env, "WAIT_ABANDONED when writing");
@@ -226,7 +225,7 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
             } else {
                 throwIOException(env, "unknown WAIT error when writing");
             }
-            return 0;
+            return;
         }
         status = GetOverlappedResult(handle, ov, &n, TRUE);
         if (status) {
@@ -239,7 +238,7 @@ JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
     }
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "write failed");
-        return 0;
+        return;
     }
-    return (jint) n;
+    env->return_i = (jint) n;
 }

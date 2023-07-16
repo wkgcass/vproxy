@@ -6,7 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef __linux__
+#if defined(__linux__) || defined(WIN32)
 void strlcpy(char *dst, const char *src, size_t size) {
     strncpy(dst, src, size);
     dst[size - 1] = '\0';
@@ -51,7 +51,7 @@ static inline void throwIOExceptionBasedOnErrno(JEnv* env) {
     throwIOException(env, msg);
 }
 
-#ifdef _WIN32
+#if defined(WIN32)
 #include <windows.h>
 
 static inline void throwIOExceptionBasedOnLastError(JEnv* env, char* msgPrefix) {
