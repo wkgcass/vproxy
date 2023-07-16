@@ -14,11 +14,11 @@ id=`docker run --rm "$image" uuid 2>/dev/null | cut -d '-' -f 1`
 echo "random id: \`$id'"
 name="vproxy-test-$id"
 
-docker run -d -v `pwd`:/vproxy-2 --name "$name" "$image" /bin/bash -c 'sleep 300s'
+docker run -d --privileged --net=host -v `pwd`:/vproxy-2 --name "$name" "$image" /bin/bash -c 'sleep 300s'
 
 docker exec "$name" /bin/bash -c 'cp -r /vproxy-2/* /vproxy/'
 
-docker exec "$name" ./gradlew clean --no-daemon
+docker exec "$name" make clean
 
 for cls in $testclasses
 do
@@ -48,6 +48,21 @@ then
 	docker rm "$name"
 	exit $exit_code
 fi
+set -e
+
+docker kill "$name"
+docker start "$name"
+set +e
+docker exec "$name" make vfdposix
+docker exec "$name" ./gradlew runPanamaTest --no-daemon
+exit_code="$?"
+if [ "$exit_code" != "0" ]
+then
+	docker kill "$name"
+	docker rm "$name"
+	exit "$exit_code"
+fi
+set -e
 
 docker kill "$name"
 docker rm "$name"
