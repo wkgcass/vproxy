@@ -73,6 +73,20 @@ subprojects {
 
         javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     }
+    tasks.withType(Test) {
+        jvmArgs += '--enable-preview'
+        jvmArgs += '--enable-native-access=ALL-UNNAMED'
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+            maxGranularity 100
+            exceptionFormat "full"
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+    }
 
     repositories {
         mavenLocal()
@@ -332,36 +346,10 @@ project(':test') {
     }
 
     task runSuite(type: Test) {
-        jvmArgs += '--enable-preview'
-        jvmArgs += '--enable-native-access=ALL-UNNAMED'
-        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
-
-        testLogging {
-            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
-            maxGranularity 100
-            exceptionFormat "full"
-            showCauses true
-            showExceptions true
-            showStackTraces true
-        }
-
         include '**/VSuite.class'
     }
 
     task runCI(type: Test) {
-        jvmArgs += '--enable-preview'
-        jvmArgs += '--enable-native-access=ALL-UNNAMED'
-        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
-
-        testLogging {
-            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
-            maxGranularity 100
-            exceptionFormat "full"
-            showCauses true
-            showExceptions true
-            showStackTraces true
-        }
-
         include '**/CI.class'
     }
 
@@ -382,39 +370,14 @@ project(':test') {
                 throw new Exception(message)
             }
 
-            jvmArgs += '--enable-preview'
-            jvmArgs += '--enable-native-access=ALL-UNNAMED'
-            jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
-
-            testLogging {
-                events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
-                maxGranularity 100
-                exceptionFormat "full"
-                showCauses true
-                showExceptions true
-                showStackTraces true
-            }
-
             include '**/' + c + '.class'
         }
     }
 
     task runPanamaTest(type: Test) {
-        jvmArgs += '--enable-preview'
-        jvmArgs += '--enable-native-access=ALL-UNNAMED'
-        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         jvmArgs += '-Djava.library.path=' +
             project.rootProject.rootDir.getAbsolutePath() + '/base/src/main/c'
         jvmArgs += '-Dvfd=posix'
-
-        testLogging {
-            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
-            maxGranularity 100
-            exceptionFormat "full"
-            showCauses true
-            showExceptions true
-            showStackTraces true
-        }
 
         include '**/TestPanamaGeneralPosix.class'
     }
