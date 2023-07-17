@@ -36,7 +36,7 @@ public class XDPPoc2 {
         EventLoopGroup elg = new EventLoopGroup("elg");
         elg.add("el");
         Switch sw = new Switch("sw0", new IPPort("127.30.30.30:30"), elg,
-            1000, 1000,
+            60_000, 60_000,
             SecurityGroup.allowAll());
         sw.start();
 
