@@ -16,7 +16,7 @@ extern "C" {
  * Method:    tapNonBlockingSupported
  * Signature: ()Z
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
   (JEnv *);
 
 /*
@@ -24,7 +24,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingS
  * Method:    allocateOverlapped
  * Signature: ()J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
   (JEnv *);
 
 /*
@@ -32,7 +32,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlap
  * Method:    releaseOverlapped
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
   (JEnv *, uint64_t);
 
 /*
@@ -40,7 +40,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapp
  * Method:    createTapHandle
  * Signature: (Ljava/lang/String;)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
   (JEnv *, char *);
 
 /*
@@ -48,7 +48,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
  * Method:    closeHandle
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
   (JEnv *, uint64_t);
 
 /*
@@ -56,7 +56,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
  * Method:    read
  * Signature: (JLjava/nio/ByteBuffer;IIJ)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
   (JEnv *, uint64_t, void *, uint32_t, uint32_t, uint64_t);
 
 /*
@@ -64,7 +64,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
  * Method:    write
  * Signature: (JLjava/nio/ByteBuffer;IIJ)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
   (JEnv *, uint64_t, void *, uint32_t, uint32_t, uint64_t);
 
 #ifdef __cplusplus

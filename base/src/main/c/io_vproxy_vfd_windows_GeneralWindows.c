@@ -1,36 +1,36 @@
 #include "io_vproxy_vfd_windows_GeneralWindows.h"
 #include "vfd_windows.h"
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
   (JEnv* env) {
     env->return_z = JNI_FALSE;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
   (JEnv* env) {
     OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
     memset(ov, 0, sizeof(OVERLAPPED));
     HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (event == NULL) {
-        throwIOExceptionBasedOnLastError(env, "create event failed");
         free(ov);
-        env->return_j = 0;
-        return;
+        return throwIOExceptionBasedOnLastError(env, "create event failed");
     }
     ov->hEvent = event;
     env->return_j = (jlong) ov;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
   (JEnv* env, uint64_t ovJ) {
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
     HANDLE event = ov->hEvent;
     BOOL status = CloseHandle(event);
     if (!status) {
-        throwIOExceptionBasedOnLastError(env, "close event failed");
-        return;
+        return throwIOExceptionBasedOnLastError(env, "close event failed");
     }
     free(ov);
+    return 0;
 }
 
 #define GUID_MAX_LEN 256
@@ -126,44 +126,43 @@ BOOL plugCableToTabDevice(JEnv* env, HANDLE handle) {
     }
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
   (JEnv* env, char* devChars) {
     BOOL status;
     char guid[GUID_MAX_LEN];
     HANDLE handle;
     status = findTapGuidByNameInNetworkPanel(env, devChars, guid);
     if (!status) {
-        env->return_j = 0;
-        return;
+        return -1;
     }
     status = openTapDevice(env, guid, &handle);
     if (!status) {
-        env->return_j = 0;
-        return;
+        return -1;
     }
     status = plugCableToTabDevice(env, handle);
     if (!status) {
         CloseHandle(handle);
-        env->return_j = 0;
-        return;
+        return -1;
     }
     env->return_j = (jlong) handle;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
   (JEnv* env, uint64_t handleJ) {
     HANDLE handle = (HANDLE) handleJ;
     BOOL status = CloseHandle(handle);
     if (!status) {
-        throwIOExceptionBasedOnLastError(env, "close failed");
+        return throwIOExceptionBasedOnLastError(env, "close failed");
     }
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
   (JEnv* env, uint64_t handleJ, void* directBuffer, uint32_t off, uint32_t len, uint64_t ovJ) {
     if (len == 0) {
         env->return_i = 0;
-        return;
+        return 0;
     }
     byte* buf = (void*) directBuffer;
     DWORD n = 0;
@@ -173,17 +172,15 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
     if (!status && GetLastError() == ERROR_IO_PENDING) {
         DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
-            throwIOExceptionBasedOnLastError(env, "wait failed when reading");
-            return;
+            return throwIOExceptionBasedOnLastError(env, "wait failed when reading");
         } else if (waitStatus != WAIT_OBJECT_0) {
             if (waitStatus == WAIT_ABANDONED) {
-                throwIOException(env, "WAIT_ABANDONED when reading");
+                return throwIOException(env, "WAIT_ABANDONED when reading");
             } else if (waitStatus == WAIT_TIMEOUT) {
-                throwIOException(env, "WAIT_TIMEOUT when reading");
+                return throwIOException(env, "WAIT_TIMEOUT when reading");
             } else {
-                throwIOException(env, "unknown WAIT error when reading");
+                return throwIOException(env, "unknown WAIT error when reading");
             }
-            return;
         }
         status = GetOverlappedResult(handle, ov, &n, TRUE);
         if (status) {
@@ -195,17 +192,17 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
         }
     }
     if (!status) {
-        throwIOExceptionBasedOnLastError(env, "read failed");
-        return;
+        return throwIOExceptionBasedOnLastError(env, "read failed");
     }
     env->return_i = (jint) n;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
   (JEnv* env, uint64_t handleJ, void * directBuffer, uint32_t off, uint32_t len, uint64_t ovJ) {
     if (len == 0) {
         env->return_i = 0;
-        return;
+        return 0;
     }
     byte* buf = (void*) directBuffer;
     DWORD n = 0;
@@ -215,17 +212,15 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
     if (!status && GetLastError() == ERROR_IO_PENDING) {
         DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
-            throwIOExceptionBasedOnLastError(env, "wait failed when writing");
-            return;
+            return throwIOExceptionBasedOnLastError(env, "wait failed when writing");
         } else if (waitStatus != WAIT_OBJECT_0) {
             if (waitStatus == WAIT_ABANDONED) {
-                throwIOException(env, "WAIT_ABANDONED when writing");
+                return throwIOException(env, "WAIT_ABANDONED when writing");
             } else if (waitStatus == WAIT_TIMEOUT) {
-                throwIOException(env, "WAIT_TIMEOUT when writing");
+                return throwIOException(env, "WAIT_TIMEOUT when writing");
             } else {
-                throwIOException(env, "unknown WAIT error when writing");
+                return throwIOException(env, "unknown WAIT error when writing");
             }
-            return;
         }
         status = GetOverlappedResult(handle, ov, &n, TRUE);
         if (status) {
@@ -237,8 +232,8 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
         }
     }
     if (!status) {
-        throwIOExceptionBasedOnLastError(env, "write failed");
-        return;
+        return throwIOExceptionBasedOnLastError(env, "write failed");
     }
     env->return_i = (jint) n;
+    return 0;
 }

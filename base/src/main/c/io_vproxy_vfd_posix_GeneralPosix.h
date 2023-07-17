@@ -14,7 +14,7 @@ extern "C" {
  * Method:    aeReadable
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeReadable
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeReadable
   (JEnv *);
 
 /*
@@ -22,7 +22,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeReadable
  * Method:    aeWritable
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeWritable
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeWritable
   (JEnv *);
 
 /*
@@ -30,7 +30,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeWritable
  * Method:    openPipe
  * Signature: ()[I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_openPipe
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_openPipe
   (JEnv *, uint32_t *);
 
 /*
@@ -38,7 +38,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_openPipe
  * Method:    aeCreateEventLoop
  * Signature: (IZ)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
   (JEnv *, uint32_t, uint8_t);
 
 /*
@@ -46,7 +46,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
  * Method:    aeApiPoll0
  * Signature: (JJ[I[I)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll
   (JEnv *, void *, uint64_t, uint32_t *, uint32_t *);
 
 /*
@@ -54,7 +54,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll
  * Method:    aeApiPollNow0
  * Signature: (J[I[I)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPollNow
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPollNow
   (JEnv *, void *, uint32_t *, uint32_t *);
 
 /*
@@ -62,7 +62,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPollNow
  * Method:    aeCreateFileEvent0
  * Signature: (JII)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent
   (JEnv *, void *, jint, jint);
 
 /*
@@ -70,7 +70,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent
  * Method:    aeUpdateFileEvent0
  * Signature: (JII)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent
   (JEnv *, void *, jint, jint);
 
 /*
@@ -78,7 +78,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent
  * Method:    aeDeleteFileEvent0
  * Signature: (JI)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent
   (JEnv *, void *, jint);
 
 /*
@@ -86,7 +86,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent
  * Method:    aeDeleteEventLoop
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeDeleteEventLoop
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeDeleteEventLoop
   (JEnv *, void *);
 
 /*
@@ -94,7 +94,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeDeleteEventLoop
  * Method:    setBlocking
  * Signature: (IZ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setBlocking
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setBlocking
   (JEnv *, uint32_t, uint8_t);
 
 /*
@@ -102,7 +102,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setBlocking
  * Method:    setSoLinger
  * Signature: (II)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setSoLinger
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setSoLinger
   (JEnv *, uint32_t, int32_t);
 
 /*
@@ -110,7 +110,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setSoLinger
  * Method:    setReusePort
  * Signature: (IZ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setReusePort
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setReusePort
   (JEnv *, uint32_t, uint8_t);
 
 /*
@@ -118,7 +118,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setReusePort
  * Method:    setRcvBuf
  * Signature: (II)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setRcvBuf
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setRcvBuf
   (JEnv *, uint32_t, uint32_t);
 
 /*
@@ -126,7 +126,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setRcvBuf
  * Method:    setTcpNoDelay
  * Signature: (IZ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setTcpNoDelay
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setTcpNoDelay
   (JEnv *, uint32_t, uint8_t);
 
 /*
@@ -134,7 +134,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setTcpNoDelay
  * Method:    setBroadcast
  * Signature: (IZ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setBroadcast
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setBroadcast
   (JEnv *, uint32_t, uint8_t);
 
 /*
@@ -142,7 +142,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setBroadcast
  * Method:    setIpTransparent
  * Signature: (IZ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setIpTransparent
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setIpTransparent
   (JEnv *, uint32_t, uint8_t);
 
 /*
@@ -150,7 +150,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setIpTransparent
  * Method:    close
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_close
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_close
   (JEnv *, uint32_t);
 
 /*
@@ -158,7 +158,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_close
  * Method:    createIPv4TcpFD
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv4TcpFD
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv4TcpFD
   (JEnv *);
 
 /*
@@ -166,7 +166,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv4TcpFD
  * Method:    createIPv6TcpFD
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv6TcpFD
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv6TcpFD
   (JEnv *);
 
 /*
@@ -174,7 +174,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv6TcpFD
  * Method:    createIPv4UdpFD
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv4UdpFD
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv4UdpFD
   (JEnv *);
 
 /*
@@ -182,7 +182,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv4UdpFD
  * Method:    createIPv6UdpFD
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv6UdpFD
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv6UdpFD
   (JEnv *);
 
 /*
@@ -190,7 +190,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createIPv6UdpFD
  * Method:    createUnixDomainSocketFD
  * Signature: ()I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createUnixDomainSocketFD
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createUnixDomainSocketFD
   (JEnv *);
 
 /*
@@ -198,7 +198,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createUnixDomainSoc
  * Method:    bindIPv4
  * Signature: (III)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv4
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv4
   (JEnv *, uint32_t, uint32_t, uint32_t);
 
 /*
@@ -206,7 +206,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv4
  * Method:    bindIPv6
  * Signature: (ILjava/lang/String;I)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv6
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv6
   (JEnv *, uint32_t, char *, uint32_t);
 
 /*
@@ -214,7 +214,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv6
  * Method:    bindUnixDomainSocket
  * Signature: (ILjava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindUnixDomainSocket
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindUnixDomainSocket
   (JEnv *, uint32_t, char *);
 
 /*
@@ -222,7 +222,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindUnixDomainSocke
  * Method:    accept
  * Signature: (I)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_accept
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_accept
   (JEnv *, uint32_t);
 
 /*
@@ -230,7 +230,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_accept
  * Method:    connectIPv4
  * Signature: (III)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectIPv4
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectIPv4
   (JEnv *, uint32_t, uint32_t, uint32_t);
 
 /*
@@ -238,7 +238,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectIPv4
  * Method:    connectIPv6
  * Signature: (ILjava/lang/String;I)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectIPv6
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectIPv6
   (JEnv *, uint32_t, char *, uint32_t);
 
 /*
@@ -246,7 +246,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectIPv6
  * Method:    connectUDS
  * Signature: (ILjava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectUDS
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectUDS
   (JEnv *, uint32_t, char *);
 
 /*
@@ -254,7 +254,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_connectUDS
  * Method:    finishConnect
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_finishConnect
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_finishConnect
   (JEnv *, uint32_t);
 
 /*
@@ -262,7 +262,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_finishConnect
  * Method:    shutdownOutput
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_shutdownOutput
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_shutdownOutput
   (JEnv *, uint32_t);
 
 typedef struct {
@@ -275,7 +275,7 @@ typedef struct {
  * Method:    getIPv4Local
  * Signature: (I)Lio/vproxy/vfd/posix/VSocketAddress;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv4Local
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv4Local
   (JEnv *, uint32_t, SocketAddressIPv4_st *);
 
 typedef struct {
@@ -288,7 +288,7 @@ typedef struct {
  * Method:    getIPv6Local
  * Signature: (I)Lio/vproxy/vfd/posix/VSocketAddress;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv6Local
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv6Local
   (JEnv *, uint32_t, SocketAddressIPv6_st *);
 
 /*
@@ -296,7 +296,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv6Local
  * Method:    getIPv4Remote
  * Signature: (I)Lio/vproxy/vfd/posix/VSocketAddress;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv4Remote
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv4Remote
   (JEnv *, uint32_t, SocketAddressIPv4_st *);
 
 /*
@@ -304,7 +304,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv4Remote
  * Method:    getIPv6Remote
  * Signature: (I)Lio/vproxy/vfd/posix/VSocketAddress;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv6Remote
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getIPv6Remote
   (JEnv *, uint32_t, SocketAddressIPv6_st *);
 
 typedef struct {
@@ -316,7 +316,7 @@ typedef struct {
  * Method:    getUDSLocal
  * Signature: (I)Lio/vproxy/vfd/posix/VSocketAddress;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getUDSLocal
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getUDSLocal
   (JEnv *, uint32_t, SocketAddressUDS_st *);
 
 /*
@@ -324,7 +324,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getUDSLocal
  * Method:    getUDSRemote
  * Signature: (I)Lio/vproxy/vfd/posix/VSocketAddress;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getUDSRemote
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getUDSRemote
   (JEnv *, uint32_t, SocketAddressUDS_st *);
 
 /*
@@ -332,7 +332,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_getUDSRemote
  * Method:    read
  * Signature: (ILjava/nio/ByteBuffer;II)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_read
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_read
   (JEnv *, uint32_t, void *, uint32_t, uint32_t);
 
 /*
@@ -340,7 +340,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_read
  * Method:    write
  * Signature: (ILjava/nio/ByteBuffer;II)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_write
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_write
   (JEnv *, uint32_t, void *, uint32_t, uint32_t);
 
 /*
@@ -348,7 +348,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_write
  * Method:    sendtoIPv4
  * Signature: (ILjava/nio/ByteBuffer;IIII)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_sendtoIPv4
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_sendtoIPv4
   (JEnv *, uint32_t, void *, uint32_t, uint32_t, uint32_t, uint32_t);
 
 /*
@@ -356,7 +356,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_sendtoIPv4
  * Method:    sendtoIPv6
  * Signature: (ILjava/nio/ByteBuffer;IILjava/lang/String;I)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_sendtoIPv6
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_sendtoIPv6
   (JEnv *, uint32_t, void *, uint32_t, uint32_t, char *, uint32_t);
 
 typedef struct {
@@ -369,7 +369,7 @@ typedef struct {
  * Method:    recvfromIPv4
  * Signature: (ILjava/nio/ByteBuffer;II)Lio/vproxy/vfd/posix/UDPRecvResult;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_recvfromIPv4
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_recvfromIPv4
   (JEnv *, uint32_t, void *, uint32_t, uint32_t, UDPRecvResultIPv4_st *);
 
 typedef struct {
@@ -382,7 +382,7 @@ typedef struct {
  * Method:    recvfromIPv6
  * Signature: (ILjava/nio/ByteBuffer;II)Lio/vproxy/vfd/posix/UDPRecvResult;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_recvfromIPv6
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_recvfromIPv6
   (JEnv *, jint, jlong, jint, jint, UDPRecvResultIPv6_st *);
 
 /*
@@ -390,7 +390,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_recvfromIPv6
  * Method:    currentTimeMillis
  * Signature: ()J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_currentTimeMillis
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_currentTimeMillis
   (JEnv *);
 
 /*
@@ -398,7 +398,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_currentTimeMillis
  * Method:    tapNonBlockingSupported
  * Signature: ()Z
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_tapNonBlockingSupported
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_tapNonBlockingSupported
   (JEnv *);
 
 /*
@@ -406,7 +406,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_tapNonBlockingSuppo
  * Method:    tunNonBlockingSupported
  * Signature: ()Z
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_tunNonBlockingSupported
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_tunNonBlockingSupported
   (JEnv *);
 
 typedef struct {
@@ -419,7 +419,7 @@ typedef struct {
  * Method:    createTapFD
  * Signature: (Ljava/lang/String;Z)Lio/vproxy/vfd/TapInfo;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createTapFD
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createTapFD
   (JEnv *, char *, jboolean, TapInfo_st *);
 
 /*
@@ -427,7 +427,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_createTapFD
  * Method:    setCoreAffinityForCurrentThread
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurrentThread
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurrentThread
   (JEnv *, jlong);
 
 #ifdef __cplusplus

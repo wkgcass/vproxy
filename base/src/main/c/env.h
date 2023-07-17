@@ -28,31 +28,32 @@ typedef struct {
     };
 } __attribute__((packed)) JEnv;
 
-static inline void JEnvThrowNew(JEnv* env, const char* extype, char* message) {
+static inline int JEnvThrowNew(JEnv* env, const char* extype, char* message) {
     env->ex.type = (char*) extype;
     strlcpy(env->ex.message, message, 4096);
+    return -1;
 }
 
-static inline void throwUnsupportedOperationException(JEnv* env, char* message) {
-    JEnvThrowNew(env, "java.lang.UnsupportedOperationException", message);
+static inline int throwUnsupportedOperationException(JEnv* env, char* message) {
+    return JEnvThrowNew(env, "java.lang.UnsupportedOperationException", message);
 }
 
-static inline void throwIOException(JEnv* env, char* message) {
-    JEnvThrowNew(env, "java.io.IOException", message);
+static inline int throwIOException(JEnv* env, char* message) {
+    return JEnvThrowNew(env, "java.io.IOException", message);
 }
 
-static inline void throwIOExceptionBasedOnErrno(JEnv* env) {
+static inline int throwIOExceptionBasedOnErrno(JEnv* env) {
     char* msg = strerror(errno);
-    throwIOException(env, msg);
+    return throwIOException(env, msg);
 }
 
 #if defined(WIN32)
 #include <windows.h>
 
-static inline void throwIOExceptionBasedOnLastError(JEnv* env, char* msgPrefix) {
+static inline int throwIOExceptionBasedOnLastError(JEnv* env, char* msgPrefix) {
     char errMsg[4096];
     sprintf(errMsg, "%s: %d", msgPrefix, GetLastError());
-    throwIOException(env, errMsg);
+    return throwIOException(env, errMsg);
 }
 #endif
 

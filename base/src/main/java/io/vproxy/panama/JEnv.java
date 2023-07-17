@@ -5,7 +5,6 @@ import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.VarHandle;
-import java.lang.reflect.InvocationTargetException;
 
 public class JEnv {
     public static final MemoryLayout layout = MemoryLayout.structLayout(
@@ -42,11 +41,6 @@ public class JEnv {
     );
 
     public int returnInt() {
-        return returnInt(null);
-    }
-
-    public <EX extends Exception> int returnInt(Class<EX> exClass) throws EX {
-        checkException(exClass);
         return (int) return_iVH.get(seg);
     }
 
@@ -56,11 +50,6 @@ public class JEnv {
     );
 
     public long returnLong() {
-        return returnLong(null);
-    }
-
-    public <EX extends Exception> long returnLong(Class<EX> exClass) throws EX {
-        checkException(exClass);
         return (long) return_jVH.get(seg);
     }
 
@@ -70,11 +59,6 @@ public class JEnv {
     );
 
     public boolean returnBool() {
-        return returnBool(null);
-    }
-
-    public <EX extends Exception> boolean returnBool(Class<EX> exClass) throws EX {
-        checkException(exClass);
         return (boolean) return_zVH.get(seg);
     }
 
@@ -84,11 +68,6 @@ public class JEnv {
     );
 
     public MemorySegment returnPointer() {
-        return returnPointer(null);
-    }
-
-    public <EX extends Exception> MemorySegment returnPointer(Class<EX> exClass) throws EX {
-        checkException(exClass);
         var seg = (MemorySegment) return_pVH.get(this.seg);
         if (seg.address() == 0) {
             return null;
@@ -96,49 +75,7 @@ public class JEnv {
         return seg;
     }
 
-    public void returnNothing() {
-        returnNothing(null);
-    }
-
-    public <EX extends Exception> void returnNothing(Class<EX> exClass) throws EX {
-        checkException(exClass);
-    }
-
-    private <EX extends Exception> void checkException(Class<EX> exClass) throws EX {
-        var exType = ex().type();
-        if (exType == null) {
-            return;
-        }
-        var msg = ex().message();
-        if (exClass == null) {
-            throw new RuntimeException("unexpected exception " + exType + ", original error message: " + msg);
-        }
-        Class<?> cls;
-        try {
-            cls = Class.forName(exType);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("exception type " + exType + " not found, original error message: " + msg, e);
-        }
-        if (!exClass.isAssignableFrom(cls)) {
-            throw new RuntimeException("expected exception class " + exClass.getName() +
-                " is not assignable from actual exception class " + cls.getName() + ", original error message: " + msg);
-        }
-        try {
-            //noinspection unchecked
-            throw (EX) cls.getConstructor(String.class).newInstance(msg);
-        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException e) {
-            throw new RuntimeException("constructing exception object failed, original error message: " + msg, e);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException("constructing exception object failed, original error message: " + msg, e.getCause());
-        }
-    }
-
-    public void resetP() {
+    public void reset() {
         return_pVH.set(seg, MemorySegment.NULL);
-    }
-
-    public void resetAll() {
-        resetP();
-        ex().resetType();
     }
 }

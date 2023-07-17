@@ -28,11 +28,7 @@ public class ExceptionStruct {
         return type.reinterpret(Integer.MAX_VALUE).getUtf8String(0);
     }
 
-    public void resetType() {
-        typeVH.set(seg, MemorySegment.NULL);
-    }
-
     public String message() {
-        return seg.getUtf8String(ValueLayout.JAVA_INT.byteSize());
+        return seg.getUtf8String(ValueLayout.ADDRESS.byteSize());
     }
 }

@@ -9,16 +9,15 @@ import java.nio.ByteBuffer;
 
 import static io.vproxy.panama.Panama.format;
 
-@SuppressWarnings({"Convert2MethodRef", "CodeBlock2Expr"})
 public class GeneralWindows implements Windows {
     private static final WrappedFunction tapNonBlockingSupported =
         Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported");
 
     @Override
     public boolean tapNonBlockingSupported() throws IOException {
-        return tapNonBlockingSupported.invoke((h, e) -> {
-            h.invokeExact(e);
-        }).returnBool(IOException.class);
+        return tapNonBlockingSupported.invoke(IOException.class, (h, e) ->
+            (int) h.invokeExact(e)
+        ).returnBool();
     }
 
     private static final WrappedFunction allocateOverlapped =
@@ -26,9 +25,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public long allocateOverlapped() throws IOException {
-        return allocateOverlapped.invoke((h, e) -> {
-            h.invokeExact(e);
-        }).returnLong(IOException.class);
+        return allocateOverlapped.invoke(IOException.class, (h, e) ->
+            (int) h.invokeExact(e)
+        ).returnLong();
     }
 
     private static final WrappedFunction releaseOverlapped =
@@ -37,9 +36,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void releaseOverlapped(long overlapped) throws IOException {
-        releaseOverlapped.invoke((h, e) -> {
-            h.invokeExact(e, overlapped);
-        }).returnNothing(IOException.class);
+        releaseOverlapped.invoke(IOException.class, (h, e) ->
+            (int) h.invokeExact(e, overlapped)
+        );
     }
 
     private static final WrappedFunction createTapHandle =
@@ -49,9 +48,9 @@ public class GeneralWindows implements Windows {
     @Override
     public long createTapHandle(String dev) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            return createTapHandle.invoke((h, e) -> {
-                h.invokeExact(e, format(dev, arena));
-            }).returnLong(IOException.class);
+            return createTapHandle.invoke(IOException.class, (h, e) ->
+                (int) h.invokeExact(e, format(dev, arena))
+            ).returnLong();
         }
     }
 
@@ -61,9 +60,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void closeHandle(long handle) throws IOException {
-        closeHandle.invoke((h, e) -> {
-            h.invokeExact(e, handle);
-        }).returnNothing(IOException.class);
+        closeHandle.invoke(IOException.class, (h, e) ->
+            (int) h.invokeExact(e, handle)
+        );
     }
 
     private static final WrappedFunction read =
@@ -72,9 +71,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public int read(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return read.invoke((h, e) -> {
-            h.invokeExact(e, handle, format(directBuffer), off, len, overlapped);
-        }).returnInt(IOException.class);
+        return read.invoke(IOException.class, (h, e) ->
+            (int) h.invokeExact(e, handle, format(directBuffer), off, len, overlapped)
+        ).returnInt();
     }
 
     private static final WrappedFunction write =
@@ -83,8 +82,8 @@ public class GeneralWindows implements Windows {
 
     @Override
     public int write(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return write.invoke((h, e) -> {
-            h.invokeExact(e, handle, format(directBuffer), off, len, overlapped);
-        }).returnInt(IOException.class);
+        return write.invoke(IOException.class, (h, e) ->
+            (int) h.invokeExact(e, handle, format(directBuffer), off, len, overlapped)
+        ).returnInt();
     }
 }

@@ -47,7 +47,7 @@ public class Panama {
         for (int i = 0; i < parameterTypes.length; ++i) {
             layouts[i + 1] = buildMemoryLayout(parameterTypes[i]);
         }
-        return FunctionDescriptor.ofVoid(layouts);
+        return FunctionDescriptor.of(ValueLayout.JAVA_INT, layouts);
     }
 
     private MemoryLayout buildMemoryLayout(Object type) {

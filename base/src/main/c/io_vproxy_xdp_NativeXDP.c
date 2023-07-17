@@ -4,7 +4,7 @@
 
 #include "xdp/vproxy_xdp.h"
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
   (JEnv* env, char * filepath_chars, char * prog_chars, char * ifname_chars, uint32_t mode, uint8_t force_attach) {
     int flags = 0;
     switch (mode) {
@@ -24,50 +24,55 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
 
     struct bpf_object* bpfobj = vp_bpfobj_attach_to_if(filepath_chars, prog_chars, ifname_chars, flags);
     if (bpfobj == NULL) {
-        throwIOException(env, "vp_bpfobj_attach_to_if failed");
+        return throwIOException(env, "vp_bpfobj_attach_to_if failed");
     }
 
     env->return_j = (jlong) bpfobj;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_detachBPFProgramFromNic
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_detachBPFProgramFromNic
   (JEnv* env, char * ifname_chars) {
     int err = vp_bpfobj_detach_from_if((char*)ifname_chars);
     if (err) {
-        throwIOExceptionBasedOnErrno(env);
+        return throwIOExceptionBasedOnErrno(env);
     }
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_findMapByNameInBPF
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_findMapByNameInBPF
   (JEnv* env, uint64_t bpfobj_o, char * name_chars) {
     struct bpf_object* bpfobj = (struct bpf_object*) bpfobj_o;
 
     struct bpf_map* map = vp_bpfobj_find_map_by_name(bpfobj, (char*)name_chars);
     if (map == NULL) {
-        throwIOException(env, "vp_bpfobj_find_map_by_name failed");
+        return throwIOException(env, "vp_bpfobj_find_map_by_name failed");
     }
 
     env->return_j = (jlong) map;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_createUMem
   (JEnv* env, uint32_t chunk_size, uint32_t fill_ring_size, uint32_t comp_ring_size,
                               uint32_t frame_size, uint32_t headroom) {
     struct vp_umem_info* umem = vp_umem_create(chunk_size, fill_ring_size, comp_ring_size,
                                                frame_size, headroom);
     if (umem == NULL) {
-        throwIOException(env, "vp_umem_create failed");
+        return throwIOException(env, "vp_umem_create failed");
     }
     env->return_j = (jlong) umem;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_shareUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_shareUMem
   (JEnv* env, uint64_t umem_o) {
     struct vp_umem_info* umem = (struct vp_umem_info*)umem_o;
     env->return_j = (jlong) vp_umem_share(umem);
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem
   (JEnv* env, uint64_t umem_o, buf_st* result) {
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
 
@@ -77,15 +82,18 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem
     result->buffer = buffer;
     result->len = len;
     env->return_p = result;
+
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferAddressFromUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferAddressFromUMem
   (JEnv* env, uint64_t umem_o) {
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
     env->return_j = (jlong) umem->buffer;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createXSK
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_createXSK
   (JEnv* env, char* ifname_chars, uint32_t queue_id, uint64_t umem_o,
                              uint32_t rx_ring_size, uint32_t tx_ring_size,
                              uint32_t mode, uint8_t zero_copy,
@@ -121,48 +129,53 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createXSK
                                             busy_poll_budget,
                                             flags);
     if (xsk == NULL) {
-        throwIOException(env, "vp_xsk_create failed");
+        return throwIOException(env, "vp_xsk_create failed");
     }
 
     env->return_j = (jlong) xsk;
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap
   (JEnv* env, uint64_t map_o, uint32_t key, uint64_t xsk_o) {
     struct bpf_map* map = (struct bpf_map*) map_o;
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
 
     int ret = vp_xsk_add_into_map(map, key, xsk);
     if (ret) {
-        throwIOException(env, "vp_xsk_add_into_map failed");
+        return throwIOException(env, "vp_xsk_add_into_map failed");
     }
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap
   (JEnv* env, uint64_t map_o, char* mac, uint64_t xsk_o) {
     struct bpf_map* map = (struct bpf_map*) map_o;
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
 
     int ret = vp_mac_add_into_map(map, mac, xsk->ifindex);
     if (ret) {
-        throwIOException(env, "vp_mac_add_into_map failed");
+        return throwIOException(env, "vp_mac_add_into_map failed");
     }
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap
   (JEnv* env, uint64_t map_o, char* mac) {
     struct bpf_map* map = (struct bpf_map*) map_o;
 
     int ret = vp_mac_remove_from_map(map, mac);
     if (ret) {
-        throwIOException(env, "vp_mac_remove_from_map failed");
+        return throwIOException(env, "vp_mac_remove_from_map failed");
     }
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getFDFromXSK
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_getFDFromXSK
   (JEnv* env, uint64_t xsk_o) {
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
     env->return_i = vp_xsk_socket_fd(xsk);
+    return 0;
 }
 
 inline static void io_vproxy_xdp_NativeXDP_fillUpFillRing0
@@ -170,12 +183,13 @@ inline static void io_vproxy_xdp_NativeXDP_fillUpFillRing0
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
     vp_xdp_fill_ring_fillup(umem);
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fillUpFillRing
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_fillUpFillRing
   (JEnv* env, uint64_t umem_o) {
     io_vproxy_xdp_NativeXDP_fillUpFillRing0(umem_o);
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
   (JEnv* env, uint64_t xsk_o,
    uint32_t capacity,
    uint64_t* umemArray, uint64_t* chunkArray, uint32_t* refArray,
@@ -187,7 +201,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
     int cnt = vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
     if (cnt <= 0) {
         env->return_i = cnt;
-        return;
+        return 0;
     }
     if (cnt > capacity) {
         cnt = capacity;
@@ -205,6 +219,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
         pktlenArray[i]  = chunk->pktlen;
     }
     env->return_i = cnt;
+    return 0;
 }
 
 inline static void io_vproxy_xdp_NativeXDP_rxRelease0
@@ -212,9 +227,10 @@ inline static void io_vproxy_xdp_NativeXDP_rxRelease0
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
     vp_xdp_rx_release(xsk, cnt);
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_rxRelease
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_rxRelease
   (JEnv* env, uint64_t xsk_o, uint32_t cnt) {
     io_vproxy_xdp_NativeXDP_rxRelease0(xsk_o, cnt);
+    return 0;
 }
 
 inline static jboolean io_vproxy_xdp_NativeXDP_writePacket0
@@ -229,9 +245,10 @@ inline static jboolean io_vproxy_xdp_NativeXDP_writePacket0
         return JNI_TRUE;
     }
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_writePacket
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_writePacket
   (JEnv* env, uint64_t xsk_o, uint64_t chunk_o) {
     env->return_z = io_vproxy_xdp_NativeXDP_writePacket0(xsk_o, chunk_o);
+    return 0;
 }
 
 inline static int io_vproxy_xdp_NativeXDP_writePackets0
@@ -239,15 +256,16 @@ inline static int io_vproxy_xdp_NativeXDP_writePackets0
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
     return vp_xdp_write_pkts(xsk, size, (long*) ptrs);
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_writePackets
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_writePackets
   (JEnv* env, uint64_t xsk_o, uint32_t size, uint64_t* ptrs) {
     jboolean is_copy = false;
     if (ptrs == NULL) {
         env->return_i = 0;
-        return;
+        return 0;
     }
     int ret = io_vproxy_xdp_NativeXDP_writePackets0(xsk_o, size, ptrs);
     env->return_i = ret;
+    return 0;
 }
 
 inline static void io_vproxy_xdp_NativeXDP_completeTx0
@@ -255,12 +273,13 @@ inline static void io_vproxy_xdp_NativeXDP_completeTx0
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
     vp_xdp_complete_tx(xsk);
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_completeTx
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_completeTx
   (JEnv* env, uint64_t xsk_o) {
     io_vproxy_xdp_NativeXDP_completeTx0(xsk_o);
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
   (JEnv* env, uint64_t umem_o,
    uint64_t* umemArray, uint64_t* chunkArray, uint32_t* refArray,
    uint32_t* addrArray, uint32_t* endaddrArray, uint32_t* pktaddrArray, uint32_t* pktlenArray) {
@@ -268,7 +287,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
     struct vp_chunk_info* chunk = vp_chunk_fetch(umem->chunks);
     if (chunk == NULL) {
         env->return_z = JNI_FALSE;
-        return;
+        return 0;
     }
 
     umemArray[0]    = (size_t) chunk->umem;
@@ -280,6 +299,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
     pktlenArray[0]  = chunk->pktlen;
 
     env->return_z = JNI_TRUE;
+    return 0;
 }
 
 inline static void io_vproxy_xdp_NativeXDP_setChunk0
@@ -289,9 +309,10 @@ inline static void io_vproxy_xdp_NativeXDP_setChunk0
     chunk->pktlen = pktlen;
     chunk->csum_flags = csumFlags;
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_setChunk
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_setChunk
   (JEnv* env, uint64_t chunk_o, uint32_t pktaddr, uint32_t pktlen, uint32_t csumFlags) {
     io_vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen, csumFlags);
+    return 0;
 }
 
 inline static void io_vproxy_xdp_NativeXDP_releaseChunk0
@@ -300,9 +321,10 @@ inline static void io_vproxy_xdp_NativeXDP_releaseChunk0
     struct vp_chunk_info* chunk = (struct vp_chunk_info*) chunk_o;
     vp_chunk_release(umem->chunks, chunk);
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseChunk
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseChunk
   (JEnv* env, uint64_t umem_o, uint64_t chunk_o) {
     io_vproxy_xdp_NativeXDP_releaseChunk0(umem_o, chunk_o);
+    return 0;
 }
 
 inline static void io_vproxy_xdp_NativeXDP_addChunkRefCnt0
@@ -310,25 +332,29 @@ inline static void io_vproxy_xdp_NativeXDP_addChunkRefCnt0
     struct vp_chunk_info* chunk = (struct vp_chunk_info*) chunk_o;
     chunk->ref++;
 }
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addChunkRefCnt
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_addChunkRefCnt
   (JEnv* env, uint64_t chunk_o) {
     io_vproxy_xdp_NativeXDP_addChunkRefCnt0(chunk_o);
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseXSK
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseXSK
   (JEnv* env, uint64_t xsk_o) {
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
     vp_xsk_close(xsk);
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseUMem
   (JEnv* env, uint64_t umem_o, uint8_t release_buffer) {
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
     vp_umem_close(umem, release_buffer);
+    return 0;
 }
 
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseBPFObject
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseBPFObject
   (JEnv* env, uint64_t bpfobj_o) {
     struct bpf_object* bpfobj = (struct bpf_object*) bpfobj_o;
     vp_bpfobj_release(bpfobj);
+    return 0;
 }

@@ -21,7 +21,7 @@ extern "C" {
  * Method:    loadAndAttachBPFProgramToNic0
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IZ)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
   (JEnv *, char *, char *, char *, uint32_t, uint8_t);
 
 /*
@@ -29,7 +29,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
  * Method:    detachBPFProgramFromNic0
  * Signature: (Ljava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_detachBPFProgramFromNic
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_detachBPFProgramFromNic
   (JEnv *, char *);
 
 /*
@@ -37,7 +37,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_detachBPFProgramFromNic
  * Method:    findMapByNameInBPF0
  * Signature: (JLjava/lang/String;)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_findMapByNameInBPF
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_findMapByNameInBPF
   (JEnv *, uint64_t, char *);
 
 /*
@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_findMapByNameInBPF
  * Method:    createUMem0
  * Signature: (IIIII)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_createUMem
   (JEnv *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
 /*
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createUMem
  * Method:    shareUMem0
  * Signature: (J)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_shareUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_shareUMem
   (JEnv *, uint64_t);
 
 typedef struct {
@@ -66,7 +66,7 @@ typedef struct {
  * Method:    getBufferFromUMem0
  * Signature: (J)Ljava/nio/ByteBuffer;
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem
   (JEnv *, uint64_t, buf_st *);
 
 /*
@@ -74,7 +74,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem
  * Method:    getBufferAddressFromUMem0
  * Signature: (J)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferAddressFromUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferAddressFromUMem
   (JEnv *, uint64_t);
 
 /*
@@ -82,7 +82,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getBufferAddressFromUMem
  * Method:    createXSK0
  * Signature: (Ljava/lang/String;IJIIIZIZ)J
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createXSK
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_createXSK
   (JEnv *, char *, uint32_t, uint64_t, uint32_t, uint32_t, uint32_t, uint8_t, uint32_t, uint8_t);
 
 /*
@@ -90,7 +90,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_createXSK
  * Method:    addXSKIntoMap0
  * Signature: (JIJ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap
   (JEnv *, uint64_t, uint32_t, uint64_t);
 
 /*
@@ -98,7 +98,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap
  * Method:    addMacIntoMap0
  * Signature: (J[BJ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap
   (JEnv *, uint64_t, char *, uint64_t);
 
 /*
@@ -106,7 +106,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap
  * Method:    removeMacFromMap0
  * Signature: (J[B)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap
   (JEnv *, uint64_t, char *);
 
 /*
@@ -114,7 +114,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap
  * Method:    getFDFromXSK0
  * Signature: (J)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getFDFromXSK
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_getFDFromXSK
   (JEnv *, uint64_t);
 
 /*
@@ -122,7 +122,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_getFDFromXSK
  * Method:    fillUpFillRing0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fillUpFillRing
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_fillUpFillRing
   (JEnv *, uint64_t);
 
 /*
@@ -130,7 +130,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fillUpFillRing
  * Method:    fetchPackets0
  * Signature: (J[J[J[I[I[I[I[I)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
   (JEnv *, uint64_t, uint32_t, uint64_t *, uint64_t *, uint32_t *, uint32_t *, uint32_t *, uint32_t *, uint32_t *);
 
 /*
@@ -138,7 +138,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchPackets0
  * Method:    rxRelease0
  * Signature: (JI)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_rxRelease
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_rxRelease
   (JEnv *, uint64_t, uint32_t);
 
 /*
@@ -146,7 +146,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_rxRelease
  * Method:    writePacket0
  * Signature: (JJ)Z
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_writePacket
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_writePacket
   (JEnv *, uint64_t, uint64_t);
 
 /*
@@ -154,7 +154,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_writePacket
  * Method:    writePackets0
  * Signature: (JI[J)I
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_writePackets
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_writePackets
   (JEnv *, uint64_t, uint32_t, uint64_t *);
 
 /*
@@ -162,7 +162,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_writePackets
  * Method:    completeTx0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_completeTx
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_completeTx
   (JEnv *, uint64_t);
 
 /*
@@ -170,7 +170,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_completeTx
  * Method:    fetchChunk0
  * Signature: (J[J[J[I[I[I[I[I)Z
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
   (JEnv *, uint64_t, uint64_t *, uint64_t *, uint32_t *, uint32_t *, uint32_t *, uint32_t *, uint32_t *);
 
 /*
@@ -178,7 +178,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_fetchChunk0
  * Method:    setChunk0
  * Signature: (JIII)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_setChunk
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_setChunk
   (JEnv *, uint64_t, uint32_t, uint32_t, uint32_t);
 
 /*
@@ -186,7 +186,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_setChunk
  * Method:    releaseChunk0
  * Signature: (JJ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseChunk
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseChunk
   (JEnv *, uint64_t, uint64_t);
 
 /*
@@ -194,7 +194,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseChunk
  * Method:    addChunkRefCnt0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addChunkRefCnt
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_addChunkRefCnt
   (JEnv *, uint64_t);
 
 /*
@@ -202,7 +202,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addChunkRefCnt
  * Method:    releaseXSK0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseXSK
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseXSK
   (JEnv *, uint64_t);
 
 /*
@@ -210,7 +210,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseXSK
  * Method:    releaseUMem0
  * Signature: (JZ)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseUMem
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseUMem
   (JEnv *, uint64_t, uint8_t);
 
 /*
@@ -218,7 +218,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseUMem
  * Method:    releaseBPFObject0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_releaseBPFObject
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_NativeXDP_releaseBPFObject
   (JEnv *, uint64_t);
 
 #ifdef __cplusplus
