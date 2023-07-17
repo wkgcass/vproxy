@@ -59,6 +59,7 @@ public class WinTap {
                 arr.set(2, (byte) 0xcc);
                 sndBuf.limit(sndBuf.capacity()).position(0);
                 sndBuf.put(arr.toJavaArray());
+                sndBuf.flip();
                 int n = -1;
                 try {
                     n = fd.write(sndBuf);
