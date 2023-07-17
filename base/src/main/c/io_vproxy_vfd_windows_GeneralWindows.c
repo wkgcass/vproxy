@@ -22,7 +22,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlap
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
-  (JEnv* env, jlong ovJ) {
+  (JEnv* env, uint64_t ovJ) {
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
     HANDLE event = ov->hEvent;
     BOOL status = CloseHandle(event);
@@ -151,7 +151,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
-  (JEnv* env, jlong handleJ) {
+  (JEnv* env, uint64_t handleJ) {
     HANDLE handle = (HANDLE) handleJ;
     BOOL status = CloseHandle(handle);
     if (!status) {
@@ -160,7 +160,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
-  (JEnv* env, jlong handleJ, void* directBuffer, jint off, jint len, jlong ovJ) {
+  (JEnv* env, uint64_t handleJ, void* directBuffer, uint32_t off, uint32_t len, uint64_t ovJ) {
     if (len == 0) {
         env->return_i = 0;
         return;
@@ -202,7 +202,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
 }
 
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
-  (JEnv* env, jlong handleJ, void * directBuffer, jint off, jint len, jlong ovJ) {
+  (JEnv* env, uint64_t handleJ, void * directBuffer, uint32_t off, uint32_t len, uint64_t ovJ) {
     if (len == 0) {
         env->return_i = 0;
         return;

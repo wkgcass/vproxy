@@ -33,7 +33,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlap
  * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
-  (JEnv *, jlong);
+  (JEnv *, uint64_t);
 
 /*
  * Class:     io_vproxy_vfd_windows_GeneralWindows
@@ -49,7 +49,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
  * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
-  (JEnv *, jlong);
+  (JEnv *, uint64_t);
 
 /*
  * Class:     io_vproxy_vfd_windows_GeneralWindows
@@ -57,7 +57,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
  * Signature: (JLjava/nio/ByteBuffer;IIJ)I
  */
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
-  (JEnv *, jlong, void *, jint, jint, jlong);
+  (JEnv *, uint64_t, void *, uint32_t, uint32_t, uint64_t);
 
 /*
  * Class:     io_vproxy_vfd_windows_GeneralWindows
@@ -65,7 +65,7 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
  * Signature: (JLjava/nio/ByteBuffer;IIJ)I
  */
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
-  (JEnv *, jlong, void *, jint, jint, jlong);
+  (JEnv *, uint64_t, void *, uint32_t, uint32_t, uint64_t);
 
 #ifdef __cplusplus
 }
