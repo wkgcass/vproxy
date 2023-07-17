@@ -7,8 +7,8 @@ import java.lang.invoke.VarHandle;
 
 public class ExceptionStruct {
     public static final MemoryLayout layout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_INT_UNALIGNED.withName("type"),
-        MemoryLayout.sequenceLayout(128, ValueLayout.JAVA_BYTE).withName("message")
+        ValueLayout.ADDRESS_UNALIGNED.withName("type"),
+        MemoryLayout.sequenceLayout(4096, ValueLayout.JAVA_BYTE).withName("message")
     );
     private final MemorySegment seg;
 
@@ -20,13 +20,16 @@ public class ExceptionStruct {
         MemoryLayout.PathElement.groupElement("type")
     );
 
-    public int type() {
-        return (int) typeVH.get(seg);
+    public String type() {
+        var type = (MemorySegment) typeVH.get(seg);
+        if (type.address() == 0) {
+            return null;
+        }
+        return type.reinterpret(Integer.MAX_VALUE).getUtf8String(0);
     }
 
-    public ExceptionStruct type(int v) {
-        typeVH.set(seg, (byte) v);
-        return this;
+    public void resetType() {
+        typeVH.set(seg, MemorySegment.NULL);
     }
 
     public String message() {

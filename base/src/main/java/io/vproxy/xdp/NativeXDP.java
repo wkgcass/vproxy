@@ -62,9 +62,9 @@ public class NativeXDP {
                                              int mode, // defined in BPFMode
                                              boolean forceAttach) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            return loadAndAttachBPFProgramToNic.invokeReturnLongEx(IOException.class, (h, e) -> {
+            return loadAndAttachBPFProgramToNic.invoke((h, e) -> {
                 h.invokeExact(e, format(filepath, arena), format(programName, arena), format(nicName, arena), mode, forceAttach);
-            });
+            }).returnLong(IOException.class);
         }
     }
 
@@ -74,9 +74,9 @@ public class NativeXDP {
 
     public void detachBPFProgramFromNic(String nicName) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            detachBPFProgramFromNic.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            detachBPFProgramFromNic.invoke((h, e) -> {
                 h.invokeExact(e, format(nicName, arena));
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -86,9 +86,9 @@ public class NativeXDP {
 
     public long findMapByNameInBPF(long bpfobj, String mapName) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            return findMapByNameInBPF.invokeReturnLongEx(IOException.class, (h, e) -> {
+            return findMapByNameInBPF.invoke((h, e) -> {
                 h.invokeExact(e, bpfobj, format(mapName, arena));
-            });
+            }).returnLong(IOException.class);
         }
     }
 
@@ -98,9 +98,9 @@ public class NativeXDP {
 
     public long createUMem(int chunksSize, int fillRingSize, int compRingSize,
                            int frameSize, int headroom) throws IOException {
-        return createUMem.invokeReturnLongEx(IOException.class, (h, e) -> {
+        return createUMem.invoke((h, e) -> {
             h.invokeExact(e, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
-        });
+        }).returnLong(IOException.class);
     }
 
     private static final WrappedFunction shareUMem =
@@ -108,9 +108,9 @@ public class NativeXDP {
             long.class);
 
     public long shareUMem(long umem) {
-        return shareUMem.invokeReturnLong((h, e) -> {
+        return shareUMem.invoke((h, e) -> {
             h.invokeExact(e, umem);
-        });
+        }).returnLong();
     }
 
     private static final MemoryLayout buf_st = MemoryLayout.structLayout(
@@ -125,9 +125,9 @@ public class NativeXDP {
     public MemorySegment getBufferFromUMem(long umem) {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(buf_st.byteSize());
-            var seg = getBufferFromUMem.invokeReturnPointer((h, e) -> {
+            var seg = getBufferFromUMem.invoke((h, e) -> {
                 h.invokeExact(e, umem, seg0);
-            });
+            }).returnPointer();
             if (seg == null) {
                 return null;
             }
@@ -143,9 +143,9 @@ public class NativeXDP {
             long.class);
 
     public long getBufferAddressFromUMem(long umem) {
-        return getBufferAddressFromUMem.invokeReturnLong((h, e) -> {
+        return getBufferAddressFromUMem.invoke((h, e) -> {
             h.invokeExact(e, umem);
-        });
+        }).returnLong();
     }
 
     private static final WrappedFunction createXSK =
@@ -159,11 +159,11 @@ public class NativeXDP {
                           int busyPollBudget,
                           boolean rxGenChecksum) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            return createXSK.invokeReturnLongEx(IOException.class, (h, e) -> {
+            return createXSK.invoke((h, e) -> {
                 h.invokeExact(e,
                     format(nicName, arena), queueId, umem, rxRingSize, txRingSize,
                     mode, zeroCopy, busyPollBudget, rxGenChecksum);
-            });
+            }).returnLong(IOException.class);
         }
     }
 
@@ -172,9 +172,9 @@ public class NativeXDP {
             long.class, int.class, long.class);
 
     public void addXSKIntoMap(long map, int key, long xsk) throws IOException {
-        addXSKIntoMap.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        addXSKIntoMap.invoke((h, e) -> {
             h.invokeExact(e, map, key, xsk);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction addMacIntoMap =
@@ -185,9 +185,9 @@ public class NativeXDP {
         try (var arena = Arena.ofConfined()) {
             var macSeg = arena.allocate(mac.length);
             for (int i = 0; i < mac.length; ++i) macSeg.set(ValueLayout.JAVA_BYTE, i, mac[i]);
-            addMacIntoMap.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            addMacIntoMap.invoke((h, e) -> {
                 h.invokeExact(e, map, macSeg, xsk);
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -199,9 +199,9 @@ public class NativeXDP {
         try (var arena = Arena.ofConfined()) {
             var macSeg = arena.allocate(mac.length);
             for (int i = 0; i < mac.length; ++i) macSeg.set(ValueLayout.JAVA_BYTE, i, mac[i]);
-            removeMacFromMap.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            removeMacFromMap.invoke((h, e) -> {
                 h.invokeExact(e, map, macSeg);
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -210,9 +210,9 @@ public class NativeXDP {
             long.class);
 
     public int getFDFromXSK(long xsk) {
-        return getFDFromXSK.invokeReturnInt((h, e) -> {
+        return getFDFromXSK.invoke((h, e) -> {
             h.invokeExact(e, xsk);
-        });
+        }).returnInt();
     }
 
     private static final WrappedFunction fillUpFillRing =
@@ -220,9 +220,9 @@ public class NativeXDP {
             long.class);
 
     public void fillUpFillRing(long umem) {
-        fillUpFillRing.invokeReturnNothing((h, e) -> {
+        fillUpFillRing.invoke((h, e) -> {
             h.invokeExact(e, umem);
-        });
+        }).returnNothing();
     }
 
     public void fetchPackets(long xsk, ChunkPrototypeObjectList list) {
@@ -257,9 +257,9 @@ public class NativeXDP {
         MemorySegment /*int[]*/ addr, MemorySegment /*int[]*/ endaddr,
         MemorySegment /*int[]*/ pktaddr, MemorySegment /*int[]*/ pktlen) {
 
-        return fetchPackets0.invokeReturnInt((h, e) -> {
+        return fetchPackets0.invoke((h, e) -> {
             h.invokeExact(e, xsk, capacity, umem, chunk, ref, addr, endaddr, pktaddr, pktlen);
-        });
+        }).returnInt();
     }
 
     private static final WrappedFunction rxRelease =
@@ -267,9 +267,9 @@ public class NativeXDP {
             long.class, int.class);
 
     public void rxRelease(long xsk, int cnt) {
-        rxRelease.invokeReturnNothing((h, e) -> {
+        rxRelease.invoke((h, e) -> {
             h.invokeExact(e, xsk, cnt);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction writePacket =
@@ -277,9 +277,9 @@ public class NativeXDP {
             long.class, long.class);
 
     public boolean writePacket(long xsk, long chunk) {
-        return writePacket.invokeReturnBool((h, e) -> {
+        return writePacket.invoke((h, e) -> {
             h.invokeExact(e, xsk, chunk);
-        });
+        }).returnBool();
     }
 
     private static final WrappedFunction writePackets =
@@ -287,9 +287,9 @@ public class NativeXDP {
             long.class, int.class, MemorySegment.class);
 
     public int writePackets(long xsk, int size, MemorySegment chunkPtrs) {
-        return writePackets.invokeReturnInt((h, e) -> {
+        return writePackets.invoke((h, e) -> {
             h.invokeExact(e, xsk, size, chunkPtrs);
-        });
+        }).returnInt();
     }
 
     private static final WrappedFunction completeTx =
@@ -297,9 +297,9 @@ public class NativeXDP {
             long.class);
 
     public void completeTx(long xsk) {
-        completeTx.invokeReturnNothing((h, e) -> {
+        completeTx.invoke((h, e) -> {
             h.invokeExact(e, xsk);
-        });
+        }).returnNothing();
     }
 
     public boolean fetchChunk(long umem, Chunk chunk) {
@@ -333,9 +333,9 @@ public class NativeXDP {
         MemorySegment /*int[]*/ addr, MemorySegment /*int[]*/ endaddr,
         MemorySegment /*int[]*/ pktaddr, MemorySegment /*int[]*/ pktlen) {
 
-        return fetchChunk0.invokeReturnBool((h, e) -> {
+        return fetchChunk0.invoke((h, e) -> {
             h.invokeExact(e, umemPtr, umem, chunk, ref, addr, endaddr, pktaddr, pktlen);
-        });
+        }).returnBool();
     }
 
     private static final WrappedFunction setChunk =
@@ -343,9 +343,9 @@ public class NativeXDP {
             long.class, int.class, int.class, int.class);
 
     public void setChunk(long chunk, int pktaddr, int pktlen, int csumFlags) {
-        setChunk.invokeReturnNothing((h, e) -> {
+        setChunk.invoke((h, e) -> {
             h.invokeExact(e, chunk, pktaddr, pktlen, csumFlags);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction releaseChunk =
@@ -353,9 +353,9 @@ public class NativeXDP {
             long.class, long.class);
 
     public void releaseChunk(long umem, long chunk) {
-        releaseChunk.invokeReturnNothing((h, e) -> {
+        releaseChunk.invoke((h, e) -> {
             h.invokeExact(e, umem, chunk);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction addChunkRefCnt =
@@ -363,9 +363,9 @@ public class NativeXDP {
             long.class);
 
     public void addChunkRefCnt(long chunk) {
-        addChunkRefCnt.invokeReturnNothing((h, e) -> {
+        addChunkRefCnt.invoke((h, e) -> {
             h.invokeExact(e, chunk);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction releaseXSK =
@@ -373,9 +373,9 @@ public class NativeXDP {
             long.class);
 
     public void releaseXSK(long xsk) {
-        releaseXSK.invokeReturnNothing((h, e) -> {
+        releaseXSK.invoke((h, e) -> {
             h.invokeExact(e, xsk);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction releaseUMem =
@@ -383,9 +383,9 @@ public class NativeXDP {
             long.class, boolean.class);
 
     public void releaseUMem(long umem, boolean releaseBuffer) {
-        releaseUMem.invokeReturnNothing((h, e) -> {
+        releaseUMem.invoke((h, e) -> {
             h.invokeExact(e, umem, releaseBuffer);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction releaseBPFObject =
@@ -393,8 +393,8 @@ public class NativeXDP {
             long.class);
 
     public void releaseBPFObject(long bpfobj) {
-        releaseBPFObject.invokeReturnNothing((h, e) -> {
+        releaseBPFObject.invoke((h, e) -> {
             h.invokeExact(e, bpfobj);
-        });
+        }).returnNothing();
     }
 }

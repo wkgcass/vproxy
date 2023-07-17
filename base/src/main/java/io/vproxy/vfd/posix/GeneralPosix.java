@@ -24,9 +24,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public boolean pipeFDSupported() {
-        return pipeFDSupported.invokeReturnBool((h, e) -> {
+        return pipeFDSupported.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnBool();
     }
 
     private static final WrappedFunction onlySelectNow =
@@ -34,9 +34,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public boolean onlySelectNow() {
-        return onlySelectNow.invokeReturnBool((h, e) -> {
+        return onlySelectNow.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnBool();
     }
 
     private static final WrappedFunction aeReadable =
@@ -44,9 +44,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int aeReadable() {
-        return aeReadable.invokeReturnInt((h, e) -> {
+        return aeReadable.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt();
     }
 
     private static final WrappedFunction aeWritable =
@@ -54,9 +54,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int aeWritable() {
-        return aeWritable.invokeReturnInt((h, e) -> {
+        return aeWritable.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt();
     }
 
     private static final WrappedFunction openPipe =
@@ -67,9 +67,9 @@ public class GeneralPosix implements Posix {
     public int[] openPipe() throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg = arena.allocate(ValueLayout.JAVA_INT.byteSize() * 2);
-            openPipe.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            openPipe.invoke((h, e) -> {
                 h.invokeExact(e, seg);
-            });
+            }).returnNothing(IOException.class);
             int _1 = seg.get(ValueLayout.JAVA_INT, 0);
             int _2 = seg.get(ValueLayout.JAVA_INT, 4);
             return new int[]{_1, _2};
@@ -82,9 +82,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException {
-        return aeCreateEventLoop.invokeReturnLongEx(IOException.class, (h, e) -> {
+        return aeCreateEventLoop.invoke((h, e) -> {
             h.invokeExact(e, setsize, preferPoll);
-        });
+        }).returnLong(IOException.class);
     }
 
     private static final WrappedFunction aeApiPoll =
@@ -94,9 +94,9 @@ public class GeneralPosix implements Posix {
     @Override
     public int aeApiPoll(long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws IOException {
         var aex = MemorySegment.ofAddress(ae);
-        return aeApiPoll.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return aeApiPoll.invoke((h, e) -> {
             h.invokeExact(e, aex, wait, fdArray, eventsArray);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction aeCreateFileEvent =
@@ -106,9 +106,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void aeCreateFileEvent(long ae, int fd, int mask) {
         var aex = MemorySegment.ofAddress(ae);
-        aeCreateFileEvent.invokeReturnNothing((h, e) -> {
+        aeCreateFileEvent.invoke((h, e) -> {
             h.invokeExact(e, aex, fd, mask);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction aeUpdateFileEvent =
@@ -118,9 +118,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void aeUpdateFileEvent(long ae, int fd, int mask) {
         var aex = MemorySegment.ofAddress(ae);
-        aeUpdateFileEvent.invokeReturnNothing((h, e) -> {
+        aeUpdateFileEvent.invoke((h, e) -> {
             h.invokeExact(e, aex, fd, mask);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction aeDeleteFileEvent =
@@ -130,9 +130,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void aeDeleteFileEvent(long ae, int fd) {
         var aex = MemorySegment.ofAddress(ae);
-        aeDeleteFileEvent.invokeReturnNothing((h, e) -> {
+        aeDeleteFileEvent.invoke((h, e) -> {
             h.invokeExact(e, aex, fd);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction aeDeleteEventLoop =
@@ -142,9 +142,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void aeDeleteEventLoop(long ae) {
         var aex = MemorySegment.ofAddress(ae);
-        aeDeleteEventLoop.invokeReturnNothing((h, e) -> {
+        aeDeleteEventLoop.invoke((h, e) -> {
             h.invokeExact(e, aex);
-        });
+        }).returnNothing();
     }
 
     private static final WrappedFunction setBlocking =
@@ -153,9 +153,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setBlocking(int fd, boolean v) throws IOException {
-        setBlocking.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setBlocking.invoke((h, e) -> {
             h.invokeExact(e, fd, v);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction setSoLinger =
@@ -164,9 +164,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setSoLinger(int fd, int v) throws IOException {
-        setSoLinger.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setSoLinger.invoke((h, e) -> {
             h.invokeExact(e, fd, v);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction setReusePort =
@@ -175,9 +175,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setReusePort(int fd, boolean v) throws IOException {
-        setReusePort.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setReusePort.invoke((h, e) -> {
             h.invokeExact(e, fd, v);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction setRcvBuf =
@@ -186,9 +186,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setRcvBuf(int fd, int buflen) throws IOException {
-        setRcvBuf.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setRcvBuf.invoke((h, e) -> {
             h.invokeExact(e, fd, buflen);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction setTcpNoDelay =
@@ -197,9 +197,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setTcpNoDelay(int fd, boolean v) throws IOException {
-        setTcpNoDelay.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setTcpNoDelay.invoke((h, e) -> {
             h.invokeExact(e, fd, v);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction setBroadcast =
@@ -208,9 +208,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setBroadcast(int fd, boolean v) throws IOException {
-        setBroadcast.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setBroadcast.invoke((h, e) -> {
             h.invokeExact(e, fd, v);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction setIpTransparent =
@@ -219,9 +219,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setIpTransparent(int fd, boolean v) throws IOException {
-        setIpTransparent.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setIpTransparent.invoke((h, e) -> {
             h.invokeExact(e, fd, v);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction close =
@@ -230,9 +230,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void close(int fd) throws IOException {
-        close.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        close.invoke((h, e) -> {
             h.invokeExact(e, fd);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction createIPv4TcpFD =
@@ -240,9 +240,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int createIPv4TcpFD() throws IOException {
-        return createIPv4TcpFD.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return createIPv4TcpFD.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction createIPv6TcpFD =
@@ -250,9 +250,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int createIPv6TcpFD() throws IOException {
-        return createIPv6TcpFD.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return createIPv6TcpFD.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction createIPv4UdpFD =
@@ -260,9 +260,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int createIPv4UdpFD() throws IOException {
-        return createIPv4UdpFD.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return createIPv4UdpFD.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction createIPv6UdpFD =
@@ -270,9 +270,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int createIPv6UdpFD() throws IOException {
-        return createIPv6UdpFD.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return createIPv6UdpFD.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction createUnixDomainSocketFD =
@@ -280,9 +280,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int createUnixDomainSocketFD() throws IOException {
-        return createUnixDomainSocketFD.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return createUnixDomainSocketFD.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction bindIPv4 =
@@ -291,9 +291,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void bindIPv4(int fd, int addrHostOrder, int port) throws IOException {
-        bindIPv4.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        bindIPv4.invoke((h, e) -> {
             h.invokeExact(e, fd, addrHostOrder, port);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction bindIPv6 =
@@ -303,9 +303,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void bindIPv6(int fd, String fullAddr, int port) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            bindIPv6.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            bindIPv6.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(fullAddr, arena), port);
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -316,9 +316,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void bindUnixDomainSocket(int fd, String path) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            bindUnixDomainSocket.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            bindUnixDomainSocket.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(path, arena));
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -328,9 +328,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int accept(int fd) throws IOException {
-        return accept.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return accept.invoke((h, e) -> {
             h.invokeExact(e, fd);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction connectIPv4 =
@@ -339,9 +339,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void connectIPv4(int fd, int addrHostOrder, int port) throws IOException {
-        connectIPv4.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        connectIPv4.invoke((h, e) -> {
             h.invokeExact(e, fd, addrHostOrder, port);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction connectIPv6 =
@@ -351,9 +351,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void connectIPv6(int fd, String fullAddr, int port) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            connectIPv6.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            connectIPv6.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(fullAddr, arena), port);
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -364,9 +364,9 @@ public class GeneralPosix implements Posix {
     @Override
     public void connectUDS(int fd, String sock) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            connectUDS.invokeReturnNothingEx(IOException.class, (h, e) -> {
+            connectUDS.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(sock, arena));
-            });
+            }).returnNothing(IOException.class);
         }
     }
 
@@ -376,9 +376,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void finishConnect(int fd) throws IOException {
-        finishConnect.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        finishConnect.invoke((h, e) -> {
             h.invokeExact(e, fd);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction shutdownOutput =
@@ -387,9 +387,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void shutdownOutput(int fd) throws IOException {
-        shutdownOutput.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        shutdownOutput.invoke((h, e) -> {
             h.invokeExact(e, fd);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final MemoryLayout SocketAddressIPv4 = MemoryLayout.structLayout(
@@ -411,9 +411,9 @@ public class GeneralPosix implements Posix {
     public VSocketAddress getIPv4Local(int fd) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(SocketAddressIPv4.byteSize());
-            var seg = getIPv4Local.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = getIPv4Local.invoke((h, e) -> {
                 h.invokeExact(e, fd, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(SocketAddressIPv4.byteSize());
             }
@@ -446,9 +446,9 @@ public class GeneralPosix implements Posix {
     public VSocketAddress getIPv6Local(int fd) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(SocketAddressIPv6.byteSize());
-            var seg = getIPv6Local.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = getIPv6Local.invoke((h, e) -> {
                 h.invokeExact(e, fd, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(SocketAddressIPv6.byteSize());
             }
@@ -473,9 +473,9 @@ public class GeneralPosix implements Posix {
     public VSocketAddress getIPv4Remote(int fd) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(SocketAddressIPv4.byteSize());
-            var seg = getIPv4Remote.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = getIPv4Remote.invoke((h, e) -> {
                 h.invokeExact(e, fd, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(SocketAddressIPv4.byteSize());
             }
@@ -491,9 +491,9 @@ public class GeneralPosix implements Posix {
     public VSocketAddress getIPv6Remote(int fd) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(SocketAddressIPv6.byteSize());
-            var seg = getIPv6Remote.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = getIPv6Remote.invoke((h, e) -> {
                 h.invokeExact(e, fd, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(SocketAddressIPv6.byteSize());
             }
@@ -513,9 +513,9 @@ public class GeneralPosix implements Posix {
     public VSocketAddress getUDSLocal(int fd) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(SocketAddressUDS.byteSize());
-            var seg = getUDSLocal.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = getUDSLocal.invoke((h, e) -> {
                 h.invokeExact(e, fd, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(SocketAddressUDS.byteSize());
             }
@@ -539,9 +539,9 @@ public class GeneralPosix implements Posix {
     public VSocketAddress getUDSRemote(int fd) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(SocketAddressUDS.byteSize());
-            var seg = getUDSRemote.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = getUDSRemote.invoke((h, e) -> {
                 h.invokeExact(e, fd, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(SocketAddressUDS.byteSize());
             }
@@ -555,9 +555,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int read(int fd, ByteBuffer directBuffer, int off, int len) throws IOException {
-        return read.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return read.invoke((h, e) -> {
             h.invokeExact(e, fd, format(directBuffer), off, len);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction write =
@@ -566,9 +566,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int write(int fd, ByteBuffer directBuffer, int off, int len) throws IOException {
-        return write.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return write.invoke((h, e) -> {
             h.invokeExact(e, fd, format(directBuffer), off, len);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction sendtoIPv4 =
@@ -577,9 +577,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public int sendtoIPv4(int fd, ByteBuffer directBuffer, int off, int len, int addrHostOrder, int port) throws IOException {
-        return sendtoIPv4.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return sendtoIPv4.invoke((h, e) -> {
             h.invokeExact(e, fd, format(directBuffer), off, len, addrHostOrder, port);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction sendtoIPv6 =
@@ -589,9 +589,9 @@ public class GeneralPosix implements Posix {
     @Override
     public int sendtoIPv6(int fd, ByteBuffer directBuffer, int off, int len, String fullAddr, int port) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            return sendtoIPv6.invokeReturnIntEx(IOException.class, (h, e) -> {
+            return sendtoIPv6.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(directBuffer), off, len, format(fullAddr, arena), port);
-            });
+            }).returnInt(IOException.class);
         }
     }
 
@@ -611,9 +611,9 @@ public class GeneralPosix implements Posix {
     public UDPRecvResult recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(UDPRecvResultIPv4.byteSize());
-            var seg = recvfromIPv4.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = recvfromIPv4.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(directBuffer), off, len, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(UDPRecvResultIPv4.byteSize());
             }
@@ -647,9 +647,9 @@ public class GeneralPosix implements Posix {
     public UDPRecvResult recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(UDPRecvResultIPv6.byteSize());
-            var seg = recvfromIPv6.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = recvfromIPv6.invoke((h, e) -> {
                 h.invokeExact(e, fd, format(directBuffer), off, len, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(UDPRecvResultIPv6.byteSize());
             }
@@ -672,9 +672,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public long currentTimeMillis() {
-        return currentTimeMillis.invokeReturnLong((h, e) -> {
+        return currentTimeMillis.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnLong();
     }
 
     private static final WrappedFunction tapNonBlockingSupported =
@@ -682,9 +682,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public boolean tapNonBlockingSupported() throws IOException {
-        return tapNonBlockingSupported.invokeReturnBoolEx(IOException.class, (h, e) -> {
+        return tapNonBlockingSupported.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnBool(IOException.class);
     }
 
     private static final WrappedFunction tunNonBlockingSupported =
@@ -692,9 +692,9 @@ public class GeneralPosix implements Posix {
 
     @Override
     public boolean tunNonBlockingSupported() throws IOException {
-        return tunNonBlockingSupported.invokeReturnBoolEx(IOException.class, (h, e) -> {
+        return tunNonBlockingSupported.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnBool(IOException.class);
     }
 
     private static final MemoryLayout TapInfo = MemoryLayout.structLayout(
@@ -713,9 +713,9 @@ public class GeneralPosix implements Posix {
     public TapInfo createTapFD(String dev, boolean isTun) throws IOException {
         try (var arena = Arena.ofConfined()) {
             var seg0 = arena.allocate(TapInfo.byteSize());
-            var seg = createTapFD.invokeReturnPointerEx(IOException.class, (h, e) -> {
+            var seg = createTapFD.invoke((h, e) -> {
                 h.invokeExact(e, format(dev, arena), isTun, seg0);
-            });
+            }).returnPointer(IOException.class);
             if (seg != null) {
                 seg = seg.reinterpret(TapInfo.byteSize());
             }
@@ -739,8 +739,8 @@ public class GeneralPosix implements Posix {
 
     @Override
     public void setCoreAffinityForCurrentThread(long mask) throws IOException {
-        setCoreAffinityForCurrentThread.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        setCoreAffinityForCurrentThread.invoke((h, e) -> {
             h.invokeExact(e, mask);
-        });
+        }).returnNothing(IOException.class);
     }
 }

@@ -5,6 +5,7 @@ import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.VarHandle;
+import java.lang.reflect.InvocationTargetException;
 
 public class JEnv {
     public static final MemoryLayout layout = MemoryLayout.structLayout(
@@ -40,13 +41,13 @@ public class JEnv {
         MemoryLayout.PathElement.groupElement("return_i")
     );
 
-    public int returnI() {
-        return (int) return_iVH.get(seg);
+    public int returnInt() {
+        return returnInt(null);
     }
 
-    public JEnv returnI(int i) {
-        return_iVH.set(seg, i);
-        return this;
+    public <EX extends Exception> int returnInt(Class<EX> exClass) throws EX {
+        checkException(exClass);
+        return (int) return_iVH.get(seg);
     }
 
     private static final VarHandle return_jVH = layout.varHandle(
@@ -54,13 +55,13 @@ public class JEnv {
         MemoryLayout.PathElement.groupElement("return_j")
     );
 
-    public long returnJ() {
-        return (long) return_jVH.get(seg);
+    public long returnLong() {
+        return returnLong(null);
     }
 
-    public JEnv returnJ(long j) {
-        return_jVH.set(seg, j);
-        return this;
+    public <EX extends Exception> long returnLong(Class<EX> exClass) throws EX {
+        checkException(exClass);
+        return (long) return_jVH.get(seg);
     }
 
     private static final VarHandle return_zVH = layout.varHandle(
@@ -68,13 +69,13 @@ public class JEnv {
         MemoryLayout.PathElement.groupElement("return_z")
     );
 
-    public boolean returnZ() {
-        return (boolean) return_zVH.get(seg);
+    public boolean returnBool() {
+        return returnBool(null);
     }
 
-    public JEnv returnZ(boolean z) {
-        return_zVH.set(seg, z);
-        return this;
+    public <EX extends Exception> boolean returnBool(Class<EX> exClass) throws EX {
+        checkException(exClass);
+        return (boolean) return_zVH.get(seg);
     }
 
     private static final VarHandle return_pVH = layout.varHandle(
@@ -82,7 +83,12 @@ public class JEnv {
         MemoryLayout.PathElement.groupElement("return_p")
     );
 
-    public MemorySegment returnP() {
+    public MemorySegment returnPointer() {
+        return returnPointer(null);
+    }
+
+    public <EX extends Exception> MemorySegment returnPointer(Class<EX> exClass) throws EX {
+        checkException(exClass);
         var seg = (MemorySegment) return_pVH.get(this.seg);
         if (seg.address() == 0) {
             return null;
@@ -90,12 +96,49 @@ public class JEnv {
         return seg;
     }
 
-    public JEnv returnP(MemorySegment p) {
-        if (p == null) {
-            return_pVH.set(seg, MemorySegment.NULL);
-        } else {
-            return_pVH.set(seg, p);
+    public void returnNothing() {
+        returnNothing(null);
+    }
+
+    public <EX extends Exception> void returnNothing(Class<EX> exClass) throws EX {
+        checkException(exClass);
+    }
+
+    private <EX extends Exception> void checkException(Class<EX> exClass) throws EX {
+        var exType = ex().type();
+        if (exType == null) {
+            return;
         }
-        return this;
+        var msg = ex().message();
+        if (exClass == null) {
+            throw new RuntimeException("unexpected exception " + exType + ", original error message: " + msg);
+        }
+        Class<?> cls;
+        try {
+            cls = Class.forName(exType);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("exception type " + exType + " not found, original error message: " + msg, e);
+        }
+        if (!exClass.isAssignableFrom(cls)) {
+            throw new RuntimeException("expected exception class " + exClass.getName() +
+                " is not assignable from actual exception class " + cls.getName() + ", original error message: " + msg);
+        }
+        try {
+            //noinspection unchecked
+            throw (EX) cls.getConstructor(String.class).newInstance(msg);
+        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException e) {
+            throw new RuntimeException("constructing exception object failed, original error message: " + msg, e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException("constructing exception object failed, original error message: " + msg, e.getCause());
+        }
+    }
+
+    public void resetP() {
+        return_pVH.set(seg, MemorySegment.NULL);
+    }
+
+    public void resetAll() {
+        resetP();
+        ex().resetType();
     }
 }

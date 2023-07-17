@@ -16,9 +16,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public boolean tapNonBlockingSupported() throws IOException {
-        return tapNonBlockingSupported.invokeReturnBoolEx(IOException.class, (h, e) -> {
+        return tapNonBlockingSupported.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnBool(IOException.class);
     }
 
     private static final WrappedFunction allocateOverlapped =
@@ -26,9 +26,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public long allocateOverlapped() throws IOException {
-        return allocateOverlapped.invokeReturnLongEx(IOException.class, (h, e) -> {
+        return allocateOverlapped.invoke((h, e) -> {
             h.invokeExact(e);
-        });
+        }).returnLong(IOException.class);
     }
 
     private static final WrappedFunction releaseOverlapped =
@@ -37,9 +37,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void releaseOverlapped(long overlapped) throws IOException {
-        releaseOverlapped.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        releaseOverlapped.invoke((h, e) -> {
             h.invokeExact(e, overlapped);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction createTapHandle =
@@ -49,9 +49,9 @@ public class GeneralWindows implements Windows {
     @Override
     public long createTapHandle(String dev) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            return createTapHandle.invokeReturnLongEx(IOException.class, (h, e) -> {
+            return createTapHandle.invoke((h, e) -> {
                 h.invokeExact(e, format(dev, arena));
-            });
+            }).returnLong(IOException.class);
         }
     }
 
@@ -61,9 +61,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void closeHandle(long handle) throws IOException {
-        closeHandle.invokeReturnNothingEx(IOException.class, (h, e) -> {
+        closeHandle.invoke((h, e) -> {
             h.invokeExact(e, handle);
-        });
+        }).returnNothing(IOException.class);
     }
 
     private static final WrappedFunction read =
@@ -72,9 +72,9 @@ public class GeneralWindows implements Windows {
 
     @Override
     public int read(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return read.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return read.invoke((h, e) -> {
             h.invokeExact(e, handle, format(directBuffer), off, len, overlapped);
-        });
+        }).returnInt(IOException.class);
     }
 
     private static final WrappedFunction write =
@@ -83,8 +83,8 @@ public class GeneralWindows implements Windows {
 
     @Override
     public int write(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return write.invokeReturnIntEx(IOException.class, (h, e) -> {
+        return write.invoke((h, e) -> {
             h.invokeExact(e, handle, format(directBuffer), off, len, overlapped);
-        });
+        }).returnInt(IOException.class);
     }
 }
