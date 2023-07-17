@@ -18,7 +18,7 @@ docker run -d --privileged --net=host -v `pwd`:/vproxy-2 --name "$name" "$image"
 
 docker exec "$name" /bin/bash -c 'cp -r /vproxy-2/* /vproxy/'
 
-docker exec "$name" make clean
+docker exec "$name" make clean vfdposix
 
 for cls in $testclasses
 do
@@ -53,7 +53,6 @@ set -e
 docker kill "$name"
 docker start "$name"
 set +e
-docker exec "$name" make vfdposix
 docker exec "$name" ./gradlew runPanamaTest --no-daemon
 exit_code="$?"
 if [ "$exit_code" != "0" ]
