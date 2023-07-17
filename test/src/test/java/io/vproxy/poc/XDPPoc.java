@@ -26,7 +26,8 @@ public class XDPPoc {
             "xdp_sock", ifname, BPFMode.SKB, true);
         var map = bpfobj.getMap("xsks_map");
         var umem = UMem.create("poc-umem", 64, 32, 32, 4096, 0);
-        var buf = umem.getBuffer();
+        var umemSeg = umem.getMemorySegment();
+        var buf = umemSeg.asByteBuffer();
         Logger.alert("buffer from umem: " + buf);
         var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false, 0, true);
         map.put(0, xsk);
@@ -42,9 +43,9 @@ public class XDPPoc {
                 List<Chunk> chunks = xsk.fetchPackets();
                 for (Chunk chunk : chunks) {
                     Logger.alert("received packet: cnt=" + (++cnt[0]) + ", chunk=" + chunk);
-                    chunk.setPositionAndLimit(buf);
+                    var seg = chunk.makeSlice(umemSeg);
 
-                    ByteArray arr = ByteArray.from(buf);
+                    ByteArray arr = ByteArray.from(seg.asByteBuffer());
                     Logger.alert("received packet:");
                     Logger.printBytes(arr.toJavaArray());
 

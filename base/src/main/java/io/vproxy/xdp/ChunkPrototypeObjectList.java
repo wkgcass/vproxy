@@ -3,6 +3,8 @@ package io.vproxy.xdp;
 import io.vproxy.base.util.objectpool.PrototypeObjectList;
 import io.vproxy.base.util.thread.VProxyThread;
 
+import java.lang.foreign.ValueLayout;
+
 public class ChunkPrototypeObjectList extends PrototypeObjectList<Chunk> {
     public ChunkPrototypeObjectList(int capacity) {
         super(capacity, Chunk::fetch);
@@ -26,13 +28,13 @@ public class ChunkPrototypeObjectList extends PrototypeObjectList<Chunk> {
         var variables = VProxyThread.current();
         for (int i = 0; i < count; ++i) {
             add(
-                variables.XDPChunk_umemArray[i],
-                variables.XDPChunk_chunkArray[i],
-                variables.XDPChunk_refArray[i],
-                variables.XDPChunk_addrArray[i],
-                variables.XDPChunk_endaddrArray[i],
-                variables.XDPChunk_pktaddrArray[i],
-                variables.XDPChunk_pktlenArray[i]
+                variables.XDPChunk_umemArray.get(ValueLayout.JAVA_LONG, 8L * i),
+                variables.XDPChunk_chunkArray.get(ValueLayout.JAVA_LONG, 8L * i),
+                variables.XDPChunk_refArray.get(ValueLayout.JAVA_INT, 4L * i),
+                variables.XDPChunk_addrArray.get(ValueLayout.JAVA_INT, 4L * i),
+                variables.XDPChunk_endaddrArray.get(ValueLayout.JAVA_INT, 4L * i),
+                variables.XDPChunk_pktaddrArray.get(ValueLayout.JAVA_INT, 4L * i),
+                variables.XDPChunk_pktlenArray.get(ValueLayout.JAVA_INT, 4L * i)
             );
         }
     }

@@ -17,7 +17,9 @@ import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.xdp.*;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.List;
 
 public class XDPIface extends Iface {
@@ -59,7 +61,8 @@ public class XDPIface extends Iface {
         this.keySelector = keySelector;
         this.offload = offload;
 
-        this.sendingChunkPointers = new long[txRingSize];
+        this.arena = Arena.ofShared();
+        this.sendingChunkPointers = arena.allocate(ValueLayout.JAVA_LONG.byteSize() * txRingSize);
 
         // check offload
         if (offload) {
@@ -96,7 +99,8 @@ public class XDPIface extends Iface {
     }
 
     private int sendingChunkSize = 0;
-    private final long[] sendingChunkPointers;
+    private final Arena arena;
+    private final MemorySegment /*long[]*/ sendingChunkPointers;
 
     @Override
     public void sendPacket(PacketBuffer pkb) {
@@ -136,7 +140,7 @@ public class XDPIface extends Iface {
                 chunk.referenceInNative(); // no need to increase ref in java, only required in native
 
                 assert Logger.lowLevelDebug("directly write packet " + chunk + " without copying");
-                sendingChunkPointers[sendingChunkSize++] = chunk.chunk();
+                sendingChunkPointers.set(ValueLayout.JAVA_LONG, 8L * (sendingChunkSize++), chunk.chunk());
 
                 statistics.incrTxPkts();
                 statistics.incrTxBytes(pktlen);
@@ -167,12 +171,12 @@ public class XDPIface extends Iface {
         if (chunk.csumFlags != 0) {
             statistics.incrCsumSkip();
         }
-        ByteBuffer byteBuffer = umem.getBuffer();
-        chunk.setPositionAndLimit(byteBuffer);
-        pktData.byteBufferPut(byteBuffer, 0, pktData.length());
+        var umemSeg = umem.getMemorySegment();
+        var seg = chunk.makeSlice(umemSeg);
+        pktData.byteBufferPut(seg.asByteBuffer(), 0, pktData.length());
 
         chunk.updateNative();
-        sendingChunkPointers[sendingChunkSize++] = chunk.chunk();
+        sendingChunkPointers.set(ValueLayout.JAVA_LONG, 8L * (sendingChunkSize++), chunk.chunk());
 
         // the chunk is not used in java anymore
         chunk.returnToPool();
@@ -209,6 +213,7 @@ public class XDPIface extends Iface {
             } catch (Throwable ignore) {
             }
         });
+        arena.close();
     }
 
     public XDPSocket getXsk() {
@@ -231,7 +236,7 @@ public class XDPIface extends Iface {
             int n = NativeXDP.get().writePackets(xsk.xsk, sendingChunkSize, sendingChunkPointers);
             if (n != sendingChunkSize) {
                 for (int i = n; i < sendingChunkSize; ++i) {
-                    long ptr = sendingChunkPointers[i];
+                    long ptr = sendingChunkPointers.get(ValueLayout.JAVA_LONG, 8L * i);
                     assert Logger.lowLevelDebug("writing chunk " + ptr + " failed, need to release them manually");
                     NativeXDP.get().releaseChunk(umem.umem, ptr);
                 }

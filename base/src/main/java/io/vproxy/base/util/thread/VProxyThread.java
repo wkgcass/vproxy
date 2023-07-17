@@ -11,6 +11,9 @@ import io.vproxy.panama.JEnv;
 import io.vproxy.panama.Panama;
 import io.vproxy.xdp.Chunk;
 
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 
@@ -63,14 +66,15 @@ public interface VProxyThread {
         public StringParser threadLocalStringParserJavaObject;
         public StringDictionary threadLocalKeyDictionary;
 
-        private static final int XDPChunk_arrayLen = 2048;
-        public final long[] XDPChunk_umemArray = new long[XDPChunk_arrayLen];
-        public final long[] XDPChunk_chunkArray = new long[XDPChunk_arrayLen];
-        public final int[] XDPChunk_refArray = new int[XDPChunk_arrayLen];
-        public final int[] XDPChunk_addrArray = new int[XDPChunk_arrayLen];
-        public final int[] XDPChunk_endaddrArray = new int[XDPChunk_arrayLen];
-        public final int[] XDPChunk_pktaddrArray = new int[XDPChunk_arrayLen];
-        public final int[] XDPChunk_pktlenArray = new int[XDPChunk_arrayLen];
+        public static final int XDPChunk_arrayLen = 2048;
+        private final Arena XDPChunkArena = Arena.ofConfined();
+        public final MemorySegment /*long[]*/ XDPChunk_umemArray = XDPChunkArena.allocate(ValueLayout.JAVA_LONG.byteSize() * XDPChunk_arrayLen);
+        public final MemorySegment /*long[]*/ XDPChunk_chunkArray = XDPChunkArena.allocate(ValueLayout.JAVA_LONG.byteSize() * XDPChunk_arrayLen);
+        public final MemorySegment /*int[]*/ XDPChunk_refArray = XDPChunkArena.allocate(ValueLayout.JAVA_INT.byteSize() * XDPChunk_arrayLen);
+        public final MemorySegment /*int[]*/ XDPChunk_addrArray = XDPChunkArena.allocate(ValueLayout.JAVA_INT.byteSize() * XDPChunk_arrayLen);
+        public final MemorySegment /*int[]*/ XDPChunk_endaddrArray = XDPChunkArena.allocate(ValueLayout.JAVA_INT.byteSize() * XDPChunk_arrayLen);
+        public final MemorySegment /*int[]*/ XDPChunk_pktaddrArray = XDPChunkArena.allocate(ValueLayout.JAVA_INT.byteSize() * XDPChunk_arrayLen);
+        public final MemorySegment /*int[]*/ XDPChunk_pktlenArray = XDPChunkArena.allocate(ValueLayout.JAVA_INT.byteSize() * XDPChunk_arrayLen);
         public final PrototypeObjectList<Chunk> XDPChunk_chunkPool = new PrototypeObjectList<>(XDPChunk_arrayLen, Chunk::new);
 
         private JEnv jenv;

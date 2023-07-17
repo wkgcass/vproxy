@@ -24,6 +24,10 @@ public class SunUnsafe {
         U.invokeCleaner(byteBuffer);
     }
 
+    public static void freeMemory(long address) {
+        U.freeMemory(address);
+    }
+
     public static byte getByte(long address) {
         return U.getByte(address);
     }

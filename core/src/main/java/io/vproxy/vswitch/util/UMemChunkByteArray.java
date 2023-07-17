@@ -7,9 +7,11 @@ import io.vproxy.base.util.unsafe.SunUnsafe;
 import io.vproxy.xdp.Chunk;
 import io.vproxy.xdp.XDPSocket;
 
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 public class UMemChunkByteArray extends AbstractByteArray implements ByteArray {
+    public final MemorySegment umemSeg;
     public final ByteBuffer buffer;
     public final int off;
     public final int len;
@@ -18,10 +20,12 @@ public class UMemChunkByteArray extends AbstractByteArray implements ByteArray {
     public final Chunk chunk;
 
     public UMemChunkByteArray(XDPSocket xsk, Chunk chunk) {
-        ByteBuffer buffer = xsk.umem.getBuffer();
+        var umemSeg = xsk.umem.getMemorySegment();
+        var buffer = umemSeg.asByteBuffer();
         int off = chunk.addr();
         int len = chunk.endaddr() - chunk.addr();
 
+        this.umemSeg = umemSeg;
         this.buffer = buffer;
         this.off = off + Consts.XDP_HEADROOM_DRIVER_RESERVED;
         this.len = len - Consts.XDP_HEADROOM_DRIVER_RESERVED;

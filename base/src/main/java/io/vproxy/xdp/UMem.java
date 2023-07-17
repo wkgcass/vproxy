@@ -4,7 +4,7 @@ import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.unsafe.SunUnsafe;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.lang.foreign.MemorySegment;
 import java.util.Set;
 
 public class UMem {
@@ -17,7 +17,7 @@ public class UMem {
     public final int frameSize;
     public final int headroom;
 
-    private ByteBuffer buffer;
+    private MemorySegment seg;
     private long bufferAddress;
 
     private boolean released = false;
@@ -40,12 +40,12 @@ public class UMem {
         return new UMem(alias, umem, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
     }
 
-    public ByteBuffer getBuffer() {
-        if (buffer != null) {
-            return buffer;
+    public MemorySegment getMemorySegment() {
+        if (seg != null) {
+            return seg;
         }
-        buffer = NativeXDP.get().getBufferFromUMem(umem);
-        return buffer;
+        seg = NativeXDP.get().getBufferFromUMem(umem).reinterpret((long) chunksSize * (long) frameSize);
+        return seg;
     }
 
     public long getBufferAddress() {
@@ -77,14 +77,15 @@ public class UMem {
             throw new IllegalStateException("the umem is referenced by " + referencedSockets.size() + " xsks");
         }
         released = true;
-        NativeXDP.get().releaseUMem(umem, buffer == null);
+        NativeXDP.get().releaseUMem(umem, seg == null);
         releaseBuffer();
-        buffer = null;
+        seg = null;
     }
 
     protected void releaseBuffer() {
-        if (buffer != null) {
-            SunUnsafe.invokeCleaner(buffer);
+        if (seg != null) {
+            SunUnsafe.freeMemory(seg.address());
+            seg = null;
         }
     }
 

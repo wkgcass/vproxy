@@ -2,7 +2,8 @@ package io.vproxy.xdp;
 
 import io.vproxy.base.util.thread.VProxyThread;
 
-import java.nio.ByteBuffer;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 
 public class Chunk {
     private long umem; // ptr
@@ -29,21 +30,21 @@ public class Chunk {
     public void set() {
         var variables = VProxyThread.current();
         set(
-            variables.XDPChunk_umemArray[0],
-            variables.XDPChunk_chunkArray[0],
-            variables.XDPChunk_refArray[0],
-            variables.XDPChunk_addrArray[0],
-            variables.XDPChunk_endaddrArray[0],
-            variables.XDPChunk_pktaddrArray[0],
-            variables.XDPChunk_pktlenArray[0]
+            variables.XDPChunk_umemArray.get(ValueLayout.JAVA_LONG, 0),
+            variables.XDPChunk_chunkArray.get(ValueLayout.JAVA_LONG, 0),
+            variables.XDPChunk_refArray.get(ValueLayout.JAVA_INT, 0),
+            variables.XDPChunk_addrArray.get(ValueLayout.JAVA_INT, 0),
+            variables.XDPChunk_endaddrArray.get(ValueLayout.JAVA_INT, 0),
+            variables.XDPChunk_pktaddrArray.get(ValueLayout.JAVA_INT, 0),
+            variables.XDPChunk_pktlenArray.get(ValueLayout.JAVA_INT, 0)
         );
     }
 
     public void set(long umem, long chunk, int ref, int addr, int endaddr, int pktaddr, int pktlen) {
         this.umem = umem;
         this.chunk = chunk;
-        this.addr = addr;
         this.ref = ref;
+        this.addr = addr;
         this.endaddr = endaddr;
         this.pktaddr = pktaddr;
         this.pktlen = pktlen;
@@ -76,8 +77,8 @@ public class Chunk {
         variables.XDPChunk_chunkPool.add(this);
     }
 
-    public void setPositionAndLimit(ByteBuffer buf) {
-        buf.limit(pktaddr + pktlen).position(pktaddr);
+    public MemorySegment makeSlice(MemorySegment seg) {
+        return seg.asSlice(pktaddr, pktlen);
     }
 
     public long umem() {

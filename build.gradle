@@ -65,6 +65,7 @@ subprojects {
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
         options.incremental = false
+        options.compilerArgs += '--enable-preview'
     }
     tasks.withType(JavaExec) {
         jvmArgs += '--enable-preview'
@@ -194,7 +195,6 @@ project(':dep') {
 project(':base') {
     compileJava {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=io.vproxy.base'
-        options.compilerArgs += '--enable-preview'
     }
     compileKotlin {
         destinationDir = compileJava.destinationDir
@@ -235,10 +235,6 @@ project(':adaptor-vertx') {
 }
 
 project(':core') {
-    compileJava {
-        options.compilerArgs += ["-h", project.rootProject.projectDir.absolutePath + "/base/src/main/c"]
-    }
-
     compileKotlin {
         destinationDir = compileJava.destinationDir
     }
@@ -321,9 +317,6 @@ project(':ui') {
 }
 
 project(':test') {
-    compileTestJava {
-        options.compilerArgs += '--enable-preview'
-    }
     compileTestKotlin {
         destinationDir = compileTestJava.destinationDir
     }
