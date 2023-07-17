@@ -7,10 +7,6 @@ import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 public interface Posix {
-    boolean pipeFDSupported();
-
-    boolean onlySelectNow();
-
     int aeReadable();
 
     int aeWritable();

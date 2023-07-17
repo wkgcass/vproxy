@@ -59,10 +59,7 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithPoll, FDsWithCoreAffini
 
     @Override
     public FDSelector openSelector(boolean preferPoll) throws IOException {
-        int[] pipeFd = null;
-        if (posix.pipeFDSupported()) {
-            pipeFd = posix.openPipe();
-        }
+        int[] pipeFd = posix.openPipe();
         long ae;
         try {
             ae = posix.aeCreateEventLoop(VFDConfig.aesetsize, preferPoll);

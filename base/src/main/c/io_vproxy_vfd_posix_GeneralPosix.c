@@ -20,16 +20,6 @@
 #undef USE_CRITICAL
 #endif
 
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_pipeFDSupported
-  (JEnv* env) {
-    env->return_z = JNI_TRUE;
-}
-
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_onlySelectNow
-  (JEnv* env) {
-    env->return_z = JNI_FALSE;
-}
-
 JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeReadable
   (JEnv* env) {
     env->return_i = AE_READABLE;

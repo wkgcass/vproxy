@@ -69,16 +69,6 @@ public class TestPanamaGeneralPosix {
     }
 
     @Test
-    public void pipeFDSupport() {
-        assertTrue(posix.pipeFDSupported());
-    }
-
-    @Test
-    public void onlySelectNow() {
-        assertFalse(posix.onlySelectNow());
-    }
-
-    @Test
     public void aeReadable() {
         assertEquals(1, posix.aeReadable());
     }

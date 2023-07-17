@@ -28,7 +28,6 @@ public class AESelector implements FDSelector {
 
     private final int aeReadable;
     private final int aeWritable;
-    private final boolean onlySelectNow;
 
     private final Arena memArena;
     private final MemorySegment pollFDsArray;
@@ -53,7 +52,6 @@ public class AESelector implements FDSelector {
         memArena = Arena.ofShared();
         pollFDsArray = memArena.allocate(setsize * ValueLayout.JAVA_INT.byteSize());
         pollEventsArray = memArena.allocate(setsize * ValueLayout.JAVA_INT.byteSize());
-        onlySelectNow = posix.onlySelectNow();
     }
 
     @Override
@@ -124,9 +122,6 @@ public class AESelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        if (onlySelectNow) {
-            throw new UnsupportedOperationException("only selectNow supported");
-        }
         checkOpen();
         fdInfoList.clear();
         int n = posix.aeApiPoll(ae, 24 * 60 * 60 * 1000, pollFDsArray, pollEventsArray);
@@ -147,9 +142,6 @@ public class AESelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
-        if (onlySelectNow) {
-            throw new UnsupportedOperationException("only selectNow supported");
-        }
         checkOpen();
         fdInfoList.clear();
         int n;

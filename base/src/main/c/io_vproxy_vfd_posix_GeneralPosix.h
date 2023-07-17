@@ -11,22 +11,6 @@ extern "C" {
 #endif
 /*
  * Class:     io_vproxy_vfd_posix_GeneralPosix
- * Method:    pipeFDSupported
- * Signature: ()Z
- */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_pipeFDSupported
-  (JEnv *);
-
-/*
- * Class:     io_vproxy_vfd_posix_GeneralPosix
- * Method:    onlySelectNow
- * Signature: ()Z
- */
-JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_onlySelectNow
-  (JEnv *);
-
-/*
- * Class:     io_vproxy_vfd_posix_GeneralPosix
  * Method:    aeReadable
  * Signature: ()I
  */

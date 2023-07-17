@@ -19,26 +19,6 @@ public class GeneralPosix implements Posix {
     public GeneralPosix() {
     }
 
-    private static final WrappedFunction pipeFDSupported =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_posix_GeneralPosix_pipeFDSupported");
-
-    @Override
-    public boolean pipeFDSupported() {
-        return pipeFDSupported.invoke((h, e) -> {
-            h.invokeExact(e);
-        }).returnBool();
-    }
-
-    private static final WrappedFunction onlySelectNow =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_posix_GeneralPosix_onlySelectNow");
-
-    @Override
-    public boolean onlySelectNow() {
-        return onlySelectNow.invoke((h, e) -> {
-            h.invokeExact(e);
-        }).returnBool();
-    }
-
     private static final WrappedFunction aeReadable =
         Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_posix_GeneralPosix_aeReadable");
 
