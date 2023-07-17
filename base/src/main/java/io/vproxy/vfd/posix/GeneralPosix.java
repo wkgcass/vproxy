@@ -88,7 +88,7 @@ public class GeneralPosix implements Posix {
     }
 
     private static final WrappedFunction aeApiPoll =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll",
+        Panama.get().lookupWrappedFunction(false, "Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll",
             Object.class, long.class, MemorySegment.class, MemorySegment.class);
 
     @Override
