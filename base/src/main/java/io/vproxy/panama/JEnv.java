@@ -1,5 +1,6 @@
 package io.vproxy.panama;
 
+import java.lang.foreign.Arena;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
@@ -16,16 +17,18 @@ public class JEnv {
         ).withName("union0")
     );
 
-    private final Memory mem;
+    private final Arena arena;
+    private final MemorySegment seg;
     private final ExceptionStruct ex;
 
-    public JEnv(Memory mem) {
-        this.mem = mem;
-        this.ex = new ExceptionStruct(mem.getSegment().asSlice(0, ExceptionStruct.layout.byteSize()));
+    public JEnv() {
+        this.arena = Arena.ofConfined();
+        this.seg = arena.allocate(layout.byteSize());
+        this.ex = new ExceptionStruct(seg.asSlice(0, ExceptionStruct.layout.byteSize()));
     }
 
-    public Memory getMemory() {
-        return mem;
+    public MemorySegment getSegment() {
+        return seg;
     }
 
     public ExceptionStruct ex() {
@@ -38,11 +41,11 @@ public class JEnv {
     );
 
     public int returnI() {
-        return (int) return_iVH.get(mem.getSegment());
+        return (int) return_iVH.get(seg);
     }
 
     public JEnv returnI(int i) {
-        return_iVH.set(mem.getSegment(), i);
+        return_iVH.set(seg, i);
         return this;
     }
 
@@ -52,11 +55,11 @@ public class JEnv {
     );
 
     public long returnJ() {
-        return (long) return_jVH.get(mem.getSegment());
+        return (long) return_jVH.get(seg);
     }
 
     public JEnv returnJ(long j) {
-        return_jVH.set(mem.getSegment(), j);
+        return_jVH.set(seg, j);
         return this;
     }
 
@@ -66,11 +69,11 @@ public class JEnv {
     );
 
     public boolean returnZ() {
-        return (boolean) return_zVH.get(mem.getSegment());
+        return (boolean) return_zVH.get(seg);
     }
 
     public JEnv returnZ(boolean z) {
-        return_zVH.set(mem.getSegment(), z);
+        return_zVH.set(seg, z);
         return this;
     }
 
@@ -80,7 +83,7 @@ public class JEnv {
     );
 
     public MemorySegment returnP() {
-        var seg = (MemorySegment) return_pVH.get(mem.getSegment());
+        var seg = (MemorySegment) return_pVH.get(this.seg);
         if (seg.address() == 0) {
             return null;
         }
@@ -89,9 +92,9 @@ public class JEnv {
 
     public JEnv returnP(MemorySegment p) {
         if (p == null) {
-            return_pVH.set(mem.getSegment(), MemorySegment.NULL);
+            return_pVH.set(seg, MemorySegment.NULL);
         } else {
-            return_pVH.set(mem.getSegment(), p);
+            return_pVH.set(seg, p);
         }
         return this;
     }

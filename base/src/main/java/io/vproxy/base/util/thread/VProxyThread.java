@@ -8,7 +8,6 @@ import io.vproxy.dep.vjson.parser.ObjectParser;
 import io.vproxy.dep.vjson.parser.StringParser;
 import io.vproxy.dep.vjson.util.StringDictionary;
 import io.vproxy.panama.JEnv;
-import io.vproxy.panama.Panama;
 import io.vproxy.xdp.Chunk;
 
 import java.lang.foreign.Arena;
@@ -83,7 +82,7 @@ public interface VProxyThread {
 
         public JEnv getEnv() {
             if (jenv == null) {
-                jenv = new JEnv(Panama.get().allocateNative(JEnv.layout.byteSize()));
+                jenv = new JEnv();
             }
             return jenv;
         }

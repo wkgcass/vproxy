@@ -17,19 +17,23 @@ public class Panama {
         return INSTANCE;
     }
 
-    public Memory allocateNative(long size) {
-        var arena = Arena.ofShared();
-        var seg = arena.allocate(size, 1);
-        return new Memory(arena, seg);
+    public WrappedFunction lookupWrappedFunction(String functionName, Class... parameterTypes) {
+        return lookupWrappedFunction(true, functionName, parameterTypes);
     }
 
-    public WrappedFunction lookupWrappedFunction(String functionName, Class... parameterTypes) {
+    public WrappedFunction lookupWrappedFunction(boolean isTrivial, String functionName, Class... parameterTypes) {
         var nativeLinker = Linker.nativeLinker();
         var loaderLookup = SymbolLookup.loaderLookup();
         var stdlibLookup = nativeLinker.defaultLookup();
         var h = loaderLookup.find(functionName)
             .or(() -> stdlibLookup.find(functionName))
-            .map(m -> nativeLinker.downcallHandle(m, buildFunctionDescriptor(parameterTypes)))
+            .map(m -> {
+                if (isTrivial) {
+                    return nativeLinker.downcallHandle(m, buildFunctionDescriptor(parameterTypes), Linker.Option.isTrivial());
+                } else {
+                    return nativeLinker.downcallHandle(m, buildFunctionDescriptor(parameterTypes));
+                }
+            })
             .orElse(null);
         if (h == null) {
             throw new UnsatisfiedLinkError(functionName + Arrays.stream(parameterTypes).map(Class::getSimpleName).collect(Collectors.joining(", ", "(", ")")));

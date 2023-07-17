@@ -93,7 +93,7 @@ public class WrappedFunction {
         env.returnP(null);
 
         try {
-            invoke.invoke(handle, env.getMemory().getSegment());
+            invoke.invoke(handle, env.getSegment());
         } catch (Throwable e) {
             Logger.shouldNotHappen("call native method throws exception", e);
             throw new RuntimeException(e);
