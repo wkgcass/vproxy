@@ -99,6 +99,18 @@ public class GeneralPosix implements Posix {
         }).returnInt(IOException.class);
     }
 
+    private static final WrappedFunction aeApiPollNow =
+        Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPollNow",
+            Object.class, MemorySegment.class, MemorySegment.class);
+
+    @Override
+    public int aeApiPollNow(long ae, MemorySegment fdArray, MemorySegment eventsArray) throws IOException {
+        var aex = MemorySegment.ofAddress(ae);
+        return aeApiPollNow.invoke((h, e) -> {
+            h.invokeExact(e, aex, fdArray, eventsArray);
+        }).returnInt(IOException.class);
+    }
+
     private static final WrappedFunction aeCreateFileEvent =
         Panama.get().lookupWrappedFunction("Java_io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent",
             Object.class, int.class, int.class);

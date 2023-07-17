@@ -103,6 +103,11 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll
     env->return_i = numevents;
 }
 
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPollNow
+  (JEnv* env, void* aex, uint32_t* fdsArray, uint32_t* eventsArray) {
+    return Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll(env, aex, 0, fdsArray, eventsArray);
+}
+
 inline static void io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
   (void* aex, jint fd, jint mask) {
     aeEventLoop* ae = (aeEventLoop*) aex;

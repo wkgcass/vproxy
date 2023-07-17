@@ -21,6 +21,8 @@ public interface Posix {
 
     int aeApiPoll(long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
 
+    int aeApiPollNow(long ae, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
+
     void aeCreateFileEvent(long ae, int fd, int mask);
 
     void aeUpdateFileEvent(long ae, int fd, int mask);

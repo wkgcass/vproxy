@@ -67,6 +67,14 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPoll
 
 /*
  * Class:     io_vproxy_vfd_posix_GeneralPosix
+ * Method:    aeApiPollNow0
+ * Signature: (J[I[I)I
+ */
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_aeApiPollNow
+  (JEnv *, void *, uint32_t *, uint32_t *);
+
+/*
+ * Class:     io_vproxy_vfd_posix_GeneralPosix
  * Method:    aeCreateFileEvent0
  * Signature: (JII)V
  */

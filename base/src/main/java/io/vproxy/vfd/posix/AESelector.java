@@ -139,7 +139,7 @@ public class AESelector implements FDSelector {
     public Collection<SelectedEntry> selectNow() throws IOException {
         checkOpen();
         fdInfoList.clear();
-        int n = posix.aeApiPoll(ae, 0, pollFDsArray, pollEventsArray);
+        int n = posix.aeApiPollNow(ae, pollFDsArray, pollEventsArray);
         fillFDsList(n);
         return handleSelectResult();
     }
@@ -152,7 +152,12 @@ public class AESelector implements FDSelector {
         }
         checkOpen();
         fdInfoList.clear();
-        int n = posix.aeApiPoll(ae, millis, pollFDsArray, pollEventsArray);
+        int n;
+        if (millis <= 0) {
+            n = posix.aeApiPollNow(ae, pollFDsArray, pollEventsArray);
+        } else {
+            n = posix.aeApiPoll(ae, millis, pollFDsArray, pollEventsArray);
+        }
         fillFDsList(n);
         return handleSelectResult();
     }
