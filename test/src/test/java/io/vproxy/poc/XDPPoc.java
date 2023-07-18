@@ -26,9 +26,9 @@ public class XDPPoc {
             "xdp_sock", ifname, BPFMode.SKB, true);
         var map = bpfobj.getMap("xsks_map");
         var umem = UMem.create("poc-umem", 64, 32, 32, 4096, 0);
-        var umemSeg = umem.getMemorySegment();
-        var buf = umemSeg.asByteBuffer();
-        Logger.alert("buffer from umem: " + buf);
+        var umemSeg = umem.getMemory();
+        var arr = ByteArray.from(umemSeg);
+        Logger.alert("buffer from umem: " + umemSeg);
         var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false, 0, true);
         map.put(0, xsk);
 
@@ -45,12 +45,12 @@ public class XDPPoc {
                     Logger.alert("received packet: cnt=" + (++cnt[0]) + ", chunk=" + chunk);
                     var seg = chunk.makeSlice(umemSeg);
 
-                    ByteArray arr = ByteArray.from(seg.asByteBuffer());
                     Logger.alert("received packet:");
-                    Logger.printBytes(arr.toJavaArray());
+                    var pktBuf = ByteArray.from(seg);
+                    Logger.printBytes(pktBuf.toJavaArray());
 
                     EthernetPacket pkt = new EthernetPacket();
-                    String err = pkt.from(new PacketDataBuffer(arr));
+                    String err = pkt.from(new PacketDataBuffer(pktBuf));
                     if (err != null) {
                         Logger.alert("received invalid packet: " + err);
                         chunk.releaseRef(umem);
@@ -58,24 +58,20 @@ public class XDPPoc {
                     }
                     Logger.alert("received pkt: " + pkt.description());
 
-                    buf.limit(buf.capacity()); // will modify any place in the buffer
-
                     for (int i = 0; i < 6; ++i) {
-                        byte b = buf.get(chunk.pktaddr + i);
-                        buf.put(chunk.pktaddr + i, buf.get(chunk.pktaddr + 6 + i));
-                        buf.put(chunk.pktaddr + 6 + i, b);
+                        byte b = arr.get(chunk.pktaddr + i);
+                        arr.set(chunk.pktaddr + i, arr.get(chunk.pktaddr + 6 + i));
+                        arr.set(chunk.pktaddr + 6 + i, b);
                     }
-                    if (pkt.getPacket() instanceof Ipv6Packet) {
-                        Ipv6Packet ipv6 = (Ipv6Packet) pkt.getPacket();
+                    if (pkt.getPacket() instanceof Ipv6Packet ipv6) {
                         for (int j = 0; j < 16; ++j) {
-                            byte b2 = buf.get(chunk.pktaddr + 14 + 8 + j);
-                            buf.put(chunk.pktaddr + 14 + 8 + j, buf.get(chunk.pktaddr + 14 + 8 + 16 + j));
-                            buf.put(chunk.pktaddr + 14 + 8 + 16 + j, b2);
+                            byte b2 = arr.get(chunk.pktaddr + 14 + 8 + j);
+                            arr.set(chunk.pktaddr + 14 + 8 + j, arr.get(chunk.pktaddr + 14 + 8 + 16 + j));
+                            arr.set(chunk.pktaddr + 14 + 8 + 16 + j, b2);
                         }
-                        if (ipv6.getPacket() instanceof IcmpPacket) {
-                            IcmpPacket icmpPacket = (IcmpPacket) ipv6.getPacket();
+                        if (ipv6.getPacket() instanceof IcmpPacket icmpPacket) {
                             if (icmpPacket.getType() == Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ) {
-                                buf.put(chunk.pktaddr + 14 + 40, (byte) Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP);
+                                arr.set(chunk.pktaddr + 14 + 40, (byte) Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP);
                                 ByteArray icmpRaw = icmpPacket.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
                                 {
                                     var foo = ipv6.getSrc();
@@ -151,7 +147,6 @@ public class XDPPoc {
         xsk.close();
 
         umem.release();
-        SunUnsafe.invokeCleaner(buf);
 
         Logger.alert("received " + cnt[0] + " packets, exit");
     }

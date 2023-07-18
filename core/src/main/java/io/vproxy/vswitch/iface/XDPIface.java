@@ -171,9 +171,10 @@ public class XDPIface extends Iface {
         if (chunk.csumFlags != 0) {
             statistics.incrCsumSkip();
         }
-        var umemSeg = umem.getMemorySegment();
+        var umemSeg = umem.getMemory();
         var seg = chunk.makeSlice(umemSeg);
-        pktData.byteBufferPut(seg.asByteBuffer(), 0, pktData.length());
+        var segBuf = ByteArray.from(seg);
+        pktData.copyInto(segBuf, 0, 0, pktData.length());
 
         chunk.updateNative();
         sendingChunkPointers.set(ValueLayout.JAVA_LONG, 8L * (sendingChunkSize++), chunk.chunk());

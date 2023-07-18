@@ -17,7 +17,7 @@ public class UMem {
     public final int frameSize;
     public final int headroom;
 
-    private MemorySegment seg;
+    private MemorySegment memory;
     private long bufferAddress;
 
     private boolean released = false;
@@ -40,12 +40,12 @@ public class UMem {
         return new UMem(alias, umem, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
     }
 
-    public MemorySegment getMemorySegment() {
-        if (seg != null) {
-            return seg;
+    public MemorySegment getMemory() {
+        if (memory != null) {
+            return memory;
         }
-        seg = NativeXDP.get().getBufferFromUMem(umem).reinterpret((long) chunksSize * (long) frameSize);
-        return seg;
+        memory = NativeXDP.get().getBufferFromUMem(umem).reinterpret((long) chunksSize * (long) frameSize);
+        return memory;
     }
 
     public long getBufferAddress() {
@@ -77,15 +77,16 @@ public class UMem {
             throw new IllegalStateException("the umem is referenced by " + referencedSockets.size() + " xsks");
         }
         released = true;
-        NativeXDP.get().releaseUMem(umem, seg == null);
+        NativeXDP.get().releaseUMem(umem, memory == null);
         releaseBuffer();
-        seg = null;
+        memory = null;
     }
 
+    // note that this method is overridden by subclass to skip releasing
     protected void releaseBuffer() {
-        if (seg != null) {
-            SunUnsafe.freeMemory(seg.address());
-            seg = null;
+        if (memory != null) {
+            SunUnsafe.freeMemory(memory.address());
+            memory = null;
         }
     }
 

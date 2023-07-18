@@ -4,6 +4,7 @@ import io.vproxy.base.util.bytearray.*;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.io.ByteArrayOutputStream;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 @SuppressWarnings("UnusedReturnValue")
@@ -55,6 +56,10 @@ public interface ByteArray extends ToByteArray {
 
     static ByteArray from(String str) {
         return from(str.getBytes());
+    }
+
+    static ByteArray from(MemorySegment seg) {
+        return new MemorySegmentByteArray(seg);
     }
 
     static ByteArray fromHexString(String str) throws IllegalArgumentException {
@@ -226,6 +231,12 @@ public interface ByteArray extends ToByteArray {
      * </pre>
      */
     void byteBufferGet(ByteBuffer src, int off, int len);
+
+    default void copyInto(ByteArray dst, int dstOff, int srcOff, int srcLen) {
+        for (int i = 0; i < srcLen; ++i) {
+            dst.set(dstOff + i, get(srcOff + i));
+        }
+    }
 
     default String toHexString() {
         return Utils.bytesToHex(toJavaArray());
