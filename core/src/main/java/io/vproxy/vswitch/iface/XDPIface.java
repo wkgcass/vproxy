@@ -8,6 +8,8 @@ import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.panama.Panama;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vpacket.AbstractPacket;
 import io.vproxy.vswitch.PacketBuffer;
@@ -17,7 +19,6 @@ import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.xdp.*;
 
 import java.io.IOException;
-import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.List;
@@ -61,8 +62,7 @@ public class XDPIface extends Iface {
         this.keySelector = keySelector;
         this.offload = offload;
 
-        this.arena = Arena.ofShared();
-        this.sendingChunkPointers = arena.allocate(ValueLayout.JAVA_LONG.byteSize() * txRingSize);
+        this.sendingChunkPointers = Panama.get().allocateNative(ValueLayout.JAVA_LONG.byteSize() * txRingSize);
 
         // check offload
         if (offload) {
@@ -99,7 +99,6 @@ public class XDPIface extends Iface {
     }
 
     private int sendingChunkSize = 0;
-    private final Arena arena;
     private final MemorySegment /*long[]*/ sendingChunkPointers;
 
     @Override
@@ -214,7 +213,7 @@ public class XDPIface extends Iface {
             } catch (Throwable ignore) {
             }
         });
-        arena.close();
+        SunUnsafe.freeMemory(sendingChunkPointers.address());
     }
 
     public XDPSocket getXsk() {

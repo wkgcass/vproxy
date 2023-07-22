@@ -1,5 +1,7 @@
 package io.vproxy.panama;
 
+import io.vproxy.base.util.unsafe.SunUnsafe;
+
 import java.lang.foreign.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -15,6 +17,10 @@ public class Panama {
 
     public static Panama get() {
         return INSTANCE;
+    }
+
+    public MemorySegment allocateNative(long size) {
+        return MemorySegment.ofAddress(SunUnsafe.allocateMemory(size)).reinterpret(size);
     }
 
     public WrappedFunction lookupWrappedFunction(String functionName, Class... parameterTypes) {

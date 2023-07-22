@@ -5,10 +5,11 @@ import io.vproxy.base.util.direct.DirectByteBuffer;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
 import io.vproxy.base.util.objectpool.GarbageFree;
 import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.panama.Panama;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
-import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.channels.ClosedChannelException;
@@ -29,7 +30,6 @@ public class AESelector implements FDSelector {
     private final int aeReadable;
     private final int aeWritable;
 
-    private final Arena memArena;
     private final MemorySegment pollFDsArray;
     private final MemorySegment pollEventsArray;
 
@@ -49,9 +49,8 @@ public class AESelector implements FDSelector {
         for (int i = 0; i < setsize; ++i) {
             attachments[i] = new Att();
         }
-        memArena = Arena.ofShared();
-        pollFDsArray = memArena.allocate(setsize * ValueLayout.JAVA_INT.byteSize());
-        pollEventsArray = memArena.allocate(setsize * ValueLayout.JAVA_INT.byteSize());
+        pollFDsArray = Panama.get().allocateNative(setsize * ValueLayout.JAVA_INT.byteSize());
+        pollEventsArray = Panama.get().allocateNative(setsize * ValueLayout.JAVA_INT.byteSize());
     }
 
     @Override
@@ -303,7 +302,8 @@ public class AESelector implements FDSelector {
                 }
             }
         }
-        memArena.close();
+        SunUnsafe.freeMemory(pollFDsArray.address());
+        SunUnsafe.freeMemory(pollEventsArray.address());
     }
 
     @SuppressWarnings({"removal"})
