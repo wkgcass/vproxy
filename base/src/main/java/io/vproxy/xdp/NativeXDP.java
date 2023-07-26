@@ -5,16 +5,12 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.OS;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.panama.Panama;
-import io.vproxy.panama.WrappedFunction;
+import io.vproxy.pni.Allocator;
+import io.vproxy.pni.PNIString;
 
 import java.io.IOException;
 import java.lang.foreign.Arena;
-import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
-
-import static io.vproxy.panama.Panama.format;
 
 public class NativeXDP {
     public static final int VP_CSUM_NO = 0;
@@ -53,103 +49,47 @@ public class NativeXDP {
         return instance;
     }
 
-    private static final WrappedFunction loadAndAttachBPFProgramToNic =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic",
-            String.class, String.class, String.class, int.class, boolean.class);
-
     public long loadAndAttachBPFProgramToNic(String filepath, String programName, String nicName,
                                              int mode, // defined in BPFMode
                                              boolean forceAttach) throws IOException {
-        try (var arena = Arena.ofConfined()) {
-            return loadAndAttachBPFProgramToNic.invoke(IOException.class, (h, e) ->
-                (int) h.invokeExact(e, format(filepath, arena), format(programName, arena), format(nicName, arena), mode, forceAttach)
-            ).returnLong();
+        try (var allocator = Allocator.ofPooled()) {
+            return XDPNative.get().loadAndAttachBPFProgramToNic(VProxyThread.current().getEnv(),
+                new PNIString(allocator, filepath),
+                new PNIString(allocator, programName),
+                new PNIString(allocator, nicName), mode, forceAttach);
         }
     }
-
-    private static final WrappedFunction detachBPFProgramFromNic =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_detachBPFProgramFromNic",
-            String.class);
 
     public void detachBPFProgramFromNic(String nicName) throws IOException {
-        try (var arena = Arena.ofConfined()) {
-            detachBPFProgramFromNic.invoke(IOException.class, (h, e) ->
-                (int) h.invokeExact(e, format(nicName, arena))
-            );
+        try (var allocator = Allocator.ofPooled()) {
+            XDPNative.get().detachBPFProgramFromNic(VProxyThread.current().getEnv(), new PNIString(allocator, nicName));
         }
     }
-
-    private static final WrappedFunction findMapByNameInBPF =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_findMapByNameInBPF",
-            long.class, String.class);
 
     public long findMapByNameInBPF(long bpfobj, String mapName) throws IOException {
-        try (var arena = Arena.ofConfined()) {
-            return findMapByNameInBPF.invoke(IOException.class, (h, e) ->
-                (int) h.invokeExact(e, bpfobj, format(mapName, arena))
-            ).returnLong();
+        try (var allocator = Allocator.ofPooled()) {
+            return XDPNative.get().findMapByNameInBPF(VProxyThread.current().getEnv(),
+                bpfobj, new PNIString(allocator, mapName));
         }
     }
-
-    private static final WrappedFunction createUMem =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_createUMem",
-            int.class, int.class, int.class, int.class, int.class);
 
     public long createUMem(int chunksSize, int fillRingSize, int compRingSize,
                            int frameSize, int headroom) throws IOException {
-        return createUMem.invoke(IOException.class, (h, e) ->
-            (int) h.invokeExact(e, chunksSize, fillRingSize, compRingSize, frameSize, headroom)
-        ).returnLong();
+        return XDPNative.get().createUMem(VProxyThread.current().getEnv(),
+            chunksSize, fillRingSize, compRingSize, frameSize, headroom);
     }
-
-    private static final WrappedFunction shareUMem =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_shareUMem",
-            long.class);
 
     public long shareUMem(long umem) {
-        return shareUMem.invoke((h, e) ->
-            (int) h.invokeExact(e, umem)
-        ).returnLong();
+        return XDPNative.get().shareUMem(VProxyThread.current().getEnv(), umem);
     }
-
-    private static final MemoryLayout buf_st = MemoryLayout.structLayout(
-        ValueLayout.ADDRESS.withName("buffer"),
-        ValueLayout.JAVA_INT.withName("len")
-    );
-
-    private static final WrappedFunction getBufferFromUMem =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_getBufferFromUMem",
-            long.class, buf_st.getClass());
 
     public MemorySegment getBufferFromUMem(long umem) {
-        try (var arena = Arena.ofConfined()) {
-            var seg0 = arena.allocate(buf_st.byteSize());
-            var seg = getBufferFromUMem.invoke((h, e) ->
-                (int) h.invokeExact(e, umem, seg0)
-            ).returnPointer();
-            if (seg == null) {
-                return null;
-            }
-            seg = seg.reinterpret(buf_st.byteSize());
-            var ret = seg.get(ValueLayout.ADDRESS, 0);
-            var len = seg.get(ValueLayout.JAVA_INT, ValueLayout.ADDRESS.byteSize());
-            return ret.reinterpret(len);
-        }
+        return XDPNative.get().getBufferFromUMem(VProxyThread.current().getEnv(), umem);
     }
-
-    private static final WrappedFunction getBufferAddressFromUMem =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_getBufferAddressFromUMem",
-            long.class);
 
     public long getBufferAddressFromUMem(long umem) {
-        return getBufferAddressFromUMem.invoke((h, e) ->
-            (int) h.invokeExact(e, umem)
-        ).returnLong();
+        return XDPNative.get().getBufferAddressFromUMem(VProxyThread.current().getEnv(), umem);
     }
-
-    private static final WrappedFunction createXSK =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_createXSK",
-            String.class, int.class, long.class, int.class, int.class, int.class, boolean.class, int.class, boolean.class);
 
     public long createXSK(String nicName, int queueId, long umem,
                           int rxRingSize, int txRingSize,
@@ -157,71 +97,37 @@ public class NativeXDP {
                           boolean zeroCopy,
                           int busyPollBudget,
                           boolean rxGenChecksum) throws IOException {
-        try (var arena = Arena.ofConfined()) {
-            return createXSK.invoke(IOException.class, (h, e) ->
-                (int) h.invokeExact(e,
-                    format(nicName, arena), queueId, umem, rxRingSize, txRingSize,
-                    mode, zeroCopy, busyPollBudget, rxGenChecksum)
-            ).returnLong();
+        try (var allocator = Allocator.ofPooled()) {
+            return XDPNative.get().createXSK(VProxyThread.current().getEnv(),
+                new PNIString(allocator, nicName), queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum);
         }
     }
 
-    private static final WrappedFunction addXSKIntoMap =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap",
-            long.class, int.class, long.class);
-
     public void addXSKIntoMap(long map, int key, long xsk) throws IOException {
-        addXSKIntoMap.invoke(IOException.class, (h, e) ->
-            (int) h.invokeExact(e, map, key, xsk)
-        );
+        XDPNative.get().addXSKIntoMap(VProxyThread.current().getEnv(),
+            map, key, xsk);
     }
-
-    private static final WrappedFunction addMacIntoMap =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_addMacIntoMap",
-            long.class, MemorySegment.class, long.class);
 
     public void addMacIntoMap(long map, byte[] mac, long xsk) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            var macSeg = arena.allocate(mac.length);
-            for (int i = 0; i < mac.length; ++i) macSeg.set(ValueLayout.JAVA_BYTE, i, mac[i]);
-            addMacIntoMap.invoke(IOException.class, (h, e) ->
-                (int) h.invokeExact(e, map, macSeg, xsk)
-            );
+            XDPNative.get().addMacIntoMap(VProxyThread.current().getEnv(),
+                map, arena.allocate(mac.length).copyFrom(MemorySegment.ofArray(mac)), xsk);
         }
     }
-
-    private static final WrappedFunction removeMacFromMap =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_removeMacFromMap",
-            long.class, MemorySegment.class);
 
     public void removeMacFromMap(long map, byte[] mac) throws IOException {
         try (var arena = Arena.ofConfined()) {
-            var macSeg = arena.allocate(mac.length);
-            for (int i = 0; i < mac.length; ++i) macSeg.set(ValueLayout.JAVA_BYTE, i, mac[i]);
-            removeMacFromMap.invoke(IOException.class, (h, e) ->
-                (int) h.invokeExact(e, map, macSeg)
-            );
+            XDPNative.get().removeMacFromMap(VProxyThread.current().getEnv(),
+                map, arena.allocate(mac.length).copyFrom(MemorySegment.ofArray(mac)));
         }
     }
 
-    private static final WrappedFunction getFDFromXSK =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_getFDFromXSK",
-            long.class);
-
     public int getFDFromXSK(long xsk) {
-        return getFDFromXSK.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk)
-        ).returnInt();
+        return XDPNative.get().getFDFromXSK(VProxyThread.current().getEnv(), xsk);
     }
 
-    private static final WrappedFunction fillUpFillRing =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_fillUpFillRing",
-            long.class);
-
     public void fillUpFillRing(long umem) {
-        fillUpFillRing.invoke((h, e) ->
-            (int) h.invokeExact(e, umem)
-        );
+        XDPNative.get().fillUpFillRing(VProxyThread.current().getEnv(), umem);
     }
 
     public void fetchPackets(long xsk, ChunkPrototypeObjectList list) {
@@ -238,15 +144,6 @@ public class NativeXDP {
         list.add(count);
     }
 
-    private static final WrappedFunction fetchPackets0 =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_fetchPackets0",
-            long.class,
-            int.class /*capacity*/,
-            MemorySegment.class /*umem*/, MemorySegment.class /*chunk*/,
-            MemorySegment.class /*ref*/,
-            MemorySegment.class /*addr*/, MemorySegment.class /*endaddr*/,
-            MemorySegment.class /*pktaddr*/, MemorySegment.class /*pktlen*/);
-
     private static int fetchPackets0(
         long xsk,
         @SuppressWarnings("SameParameterValue") int capacity,
@@ -255,50 +152,27 @@ public class NativeXDP {
         MemorySegment /*int[]*/ ref,
         MemorySegment /*int[]*/ addr, MemorySegment /*int[]*/ endaddr,
         MemorySegment /*int[]*/ pktaddr, MemorySegment /*int[]*/ pktlen) {
-
-        return fetchPackets0.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk, capacity, umem, chunk, ref, addr, endaddr, pktaddr, pktlen)
-        ).returnInt();
+        return XDPNative.get().fetchPackets0(VProxyThread.current().getEnv(),
+            xsk, capacity, umem, chunk, ref, addr, endaddr, pktaddr, pktlen);
     }
-
-    private static final WrappedFunction rxRelease =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_rxRelease",
-            long.class, int.class);
 
     public void rxRelease(long xsk, int cnt) {
-        rxRelease.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk, cnt)
-        );
+        XDPNative.get().rxRelease(VProxyThread.current().getEnv(),
+            xsk, cnt);
     }
-
-    private static final WrappedFunction writePacket =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_writePacket",
-            long.class, long.class);
 
     public boolean writePacket(long xsk, long chunk) {
-        return writePacket.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk, chunk)
-        ).returnBool();
+        return XDPNative.get().writePacket(VProxyThread.current().getEnv(),
+            xsk, chunk);
     }
-
-    private static final WrappedFunction writePackets =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_writePackets",
-            long.class, int.class, MemorySegment.class);
 
     public int writePackets(long xsk, int size, MemorySegment chunkPtrs) {
-        return writePackets.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk, size, chunkPtrs)
-        ).returnInt();
+        return XDPNative.get().writePackets(VProxyThread.current().getEnv(),
+            xsk, size, chunkPtrs);
     }
 
-    private static final WrappedFunction completeTx =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_completeTx",
-            long.class);
-
     public void completeTx(long xsk) {
-        completeTx.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk)
-        );
+        XDPNative.get().completeTx(VProxyThread.current().getEnv(), xsk);
     }
 
     public boolean fetchChunk(long umem, Chunk chunk) {
@@ -317,83 +191,40 @@ public class NativeXDP {
         return ret;
     }
 
-    private static final WrappedFunction fetchChunk0 =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_fetchChunk0",
-            long.class,
-            MemorySegment.class /*umem*/, MemorySegment.class /*chunk*/,
-            MemorySegment.class /*ref*/,
-            MemorySegment.class /*addr*/, MemorySegment.class /*endaddr*/,
-            MemorySegment.class /*pktaddr*/, MemorySegment.class /*pktlen*/);
-
     private static boolean fetchChunk0(
         long umemPtr,
         MemorySegment /*long[]*/ umem, MemorySegment /*long[]*/ chunk,
         MemorySegment /*int[]*/ ref,
         MemorySegment /*int[]*/ addr, MemorySegment /*int[]*/ endaddr,
         MemorySegment /*int[]*/ pktaddr, MemorySegment /*int[]*/ pktlen) {
-
-        return fetchChunk0.invoke((h, e) ->
-            (int) h.invokeExact(e, umemPtr, umem, chunk, ref, addr, endaddr, pktaddr, pktlen)
-        ).returnBool();
+        return XDPNative.get().fetchChunk0(VProxyThread.current().getEnv(),
+            umemPtr, umem, chunk, ref, addr, endaddr, pktaddr, pktlen);
     }
-
-    private static final WrappedFunction setChunk =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_setChunk",
-            long.class, int.class, int.class, int.class);
 
     public void setChunk(long chunk, int pktaddr, int pktlen, int csumFlags) {
-        setChunk.invoke((h, e) ->
-            (int) h.invokeExact(e, chunk, pktaddr, pktlen, csumFlags)
-        );
+        XDPNative.get().setChunk(VProxyThread.current().getEnv(),
+            chunk, pktaddr, pktlen, csumFlags);
     }
-
-    private static final WrappedFunction releaseChunk =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_releaseChunk",
-            long.class, long.class);
 
     public void releaseChunk(long umem, long chunk) {
-        releaseChunk.invoke((h, e) ->
-            (int) h.invokeExact(e, umem, chunk)
-        );
+        XDPNative.get().releaseChunk(VProxyThread.current().getEnv(),
+            umem, chunk);
     }
-
-    private static final WrappedFunction addChunkRefCnt =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_addChunkRefCnt",
-            long.class);
 
     public void addChunkRefCnt(long chunk) {
-        addChunkRefCnt.invoke((h, e) ->
-            (int) h.invokeExact(e, chunk)
-        );
+        XDPNative.get().addChunkRefCnt(VProxyThread.current().getEnv(), chunk);
     }
-
-    private static final WrappedFunction releaseXSK =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_releaseXSK",
-            long.class);
 
     public void releaseXSK(long xsk) {
-        releaseXSK.invoke((h, e) ->
-            (int) h.invokeExact(e, xsk)
-        );
+        XDPNative.get().releaseXSK(VProxyThread.current().getEnv(), xsk);
     }
-
-    private static final WrappedFunction releaseUMem =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_releaseUMem",
-            long.class, boolean.class);
 
     public void releaseUMem(long umem, boolean releaseBuffer) {
-        releaseUMem.invoke((h, e) ->
-            (int) h.invokeExact(e, umem, releaseBuffer)
-        );
+        XDPNative.get().releaseUMem(VProxyThread.current().getEnv(),
+            umem, releaseBuffer);
     }
 
-    private static final WrappedFunction releaseBPFObject =
-        Panama.get().lookupWrappedFunction("Java_io_vproxy_xdp_NativeXDP_releaseBPFObject",
-            long.class);
-
     public void releaseBPFObject(long bpfobj) {
-        releaseBPFObject.invoke((h, e) ->
-            (int) h.invokeExact(e, bpfobj)
-        );
+        XDPNative.get().releaseBPFObject(VProxyThread.current().getEnv(), bpfobj);
     }
 }

@@ -15,9 +15,12 @@ echo "compiling libvpxdp.so ..."
 
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
+    -I ./ \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/linux" \
     -I "./xdp/libbpf/src" \
+    -I "../../../../dep/src/main/c" \
+    -I "../c-generated" \
     -L"./xdp/libbpf/src" -Wl,--no-as-needed,--whole-archive,-lelf,-lbpf,--no-whole-archive \
     -Wl,--as-needed,--no-whole-archive \
     -shared -Werror -lc -fPIC \
