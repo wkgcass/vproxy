@@ -6,7 +6,6 @@ import io.vproxy.base.util.direct.DirectMemoryUtils;
 import io.vproxy.base.util.objectpool.GarbageFree;
 import io.vproxy.base.util.objectpool.PrototypeObjectList;
 import io.vproxy.base.util.unsafe.SunUnsafe;
-import io.vproxy.panama.Panama;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
@@ -49,8 +48,8 @@ public class AESelector implements FDSelector {
         for (int i = 0; i < setsize; ++i) {
             attachments[i] = new Att();
         }
-        pollFDsArray = Panama.get().allocateNative(setsize * ValueLayout.JAVA_INT.byteSize());
-        pollEventsArray = Panama.get().allocateNative(setsize * ValueLayout.JAVA_INT.byteSize());
+        pollFDsArray = SunUnsafe.allocateMemory(setsize * ValueLayout.JAVA_INT.byteSize());
+        pollEventsArray = SunUnsafe.allocateMemory(setsize * ValueLayout.JAVA_INT.byteSize());
     }
 
     @Override

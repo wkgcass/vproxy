@@ -9,7 +9,6 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.unsafe.SunUnsafe;
-import io.vproxy.panama.Panama;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vpacket.AbstractPacket;
 import io.vproxy.vswitch.PacketBuffer;
@@ -62,7 +61,7 @@ public class XDPIface extends Iface {
         this.keySelector = keySelector;
         this.offload = offload;
 
-        this.sendingChunkPointers = Panama.get().allocateNative(ValueLayout.JAVA_LONG.byteSize() * txRingSize);
+        this.sendingChunkPointers = SunUnsafe.allocateMemory(ValueLayout.JAVA_LONG.byteSize() * txRingSize);
 
         // check offload
         if (offload) {

@@ -3,6 +3,7 @@ package io.vproxy.base.util.unsafe;
 import io.vproxy.base.util.Logger;
 import sun.misc.Unsafe;
 
+import java.lang.foreign.MemorySegment;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
@@ -24,8 +25,8 @@ public class SunUnsafe {
         U.invokeCleaner(byteBuffer);
     }
 
-    public static long allocateMemory(long size) {
-        return U.allocateMemory(size);
+    public static MemorySegment allocateMemory(long size) {
+        return MemorySegment.ofAddress(U.allocateMemory(size)).reinterpret(size);
     }
 
     public static void freeMemory(long address) {
