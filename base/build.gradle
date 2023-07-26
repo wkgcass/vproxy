@@ -4,6 +4,7 @@ compileJava {
     }
     options.compilerArgs << '--add-modules' << [
             'io.vproxy.dep',
+            'io.vproxy.pni',
             'kotlin.stdlib',
             'kotlinx.coroutines.core.jvm',
     ].join(',')

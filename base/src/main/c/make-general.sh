@@ -30,6 +30,8 @@ gcc -std=gnu99 -O2 \
     -I ./dep/ae \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/$include_platform_dir" \
+    -I "../../../../dep/src/main/c" \
+    -I "../c-generated" \
     -shared -Werror -lc -lpthread -fPIC \
     io_vproxy_vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c \
     -o "$target"

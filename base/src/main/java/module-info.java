@@ -4,6 +4,7 @@ module io.vproxy.base {
     requires kotlinx.coroutines.core.jvm;
 
     requires transitive io.vproxy.dep;
+    requires io.vproxy.pni;
 
     exports io.vproxy.base;
     exports io.vproxy.base.component.check;
