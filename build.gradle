@@ -193,7 +193,37 @@ project(':dep') {
     }
 }
 
+project(':pni-template') {
+    dependencies {
+        implementation project(':dep')
+    }
+    compileJava {
+        options.compilerArgs += '-parameters'
+    }
+    task pniClean(type: Exec) {
+        workingDir project.rootProject.rootDir.getAbsolutePath() + '/base/src/main/'
+        commandLine 'bash', '-c', 'rm -rf c-generated/* && rm -rf generated/*'
+    }
+    task pniGenerate(type: Exec) {
+        workingDir project.rootProject.rootDir.getAbsolutePath()
+        commandLine('java', '-jar', './submodules/panama-native-interface/build/libs/pni.jar',
+            '-cp', 'pni-template/build/classes/java/main',
+            '-d', 'base/src/main/generated',
+            '-h', 'base/src/main/c-generated')
+
+        dependsOn pniClean
+        dependsOn compileJava
+    }
+}
+
 project(':base') {
+    sourceSets {
+        main {
+            java {
+                srcDirs = ['src/main/java', 'src/main/generated']
+            }
+        }
+    }
     compileJava {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=io.vproxy.base'
     }
