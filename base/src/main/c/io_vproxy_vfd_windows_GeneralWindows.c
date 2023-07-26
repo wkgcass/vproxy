@@ -1,14 +1,15 @@
-#include "io_vproxy_vfd_windows_GeneralWindows.h"
+#include "io_vproxy_vfd_windows_WindowsNative.h"
+#include "exception.h"
 #include "vfd_windows.h"
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
-  (JEnv* env) {
-    env->return_z = JNI_FALSE;
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tapNonBlockingSupported
+  (PNIEnv_bool* env) {
+    env->return_ = JNI_FALSE;
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
-  (JEnv* env) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_allocateOverlapped
+  (PNIEnv_long* env) {
     OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
     memset(ov, 0, sizeof(OVERLAPPED));
     HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -17,12 +18,12 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapp
         return throwIOExceptionBasedOnLastError(env, "create event failed");
     }
     ov->hEvent = event;
-    env->return_j = (jlong) ov;
+    env->return_ = (jlong) ov;
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
-  (JEnv* env, uint64_t ovJ) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_releaseOverlapped
+  (PNIEnv_void* env, int64_t ovJ) {
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
     HANDLE event = ov->hEvent;
     BOOL status = CloseHandle(event);
@@ -35,7 +36,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlappe
 
 #define GUID_MAX_LEN 256
 
-BOOL findTapGuidByNameInNetworkPanel(JEnv* env, const char* dev, char* guid) {
+BOOL findTapGuidByNameInNetworkPanel(void* env, const char* dev, char* guid) {
     LONG res;
     HKEY network_connections_key;
     res = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
@@ -97,7 +98,7 @@ BOOL findTapGuidByNameInNetworkPanel(JEnv* env, const char* dev, char* guid) {
     return FALSE;
 }
 
-BOOL openTapDevice(JEnv* env, char* guid, HANDLE* outHandle) {
+BOOL openTapDevice(void* env, char* guid, HANDLE* outHandle) {
     char tuntap_device_path[1024];
     sprintf(tuntap_device_path, "%s%s%s", USERMODEDEVICEDIR, guid, TAP_WIN_SUFFIX);
     HANDLE handle = CreateFile(tuntap_device_path,
@@ -115,7 +116,7 @@ BOOL openTapDevice(JEnv* env, char* guid, HANDLE* outHandle) {
     return TRUE;
 }
 
-BOOL plugCableToTabDevice(JEnv* env, HANDLE handle) {
+BOOL plugCableToTabDevice(void* env, HANDLE handle) {
     ULONG x = TRUE;
     DWORD len;
     if (DeviceIoControl(handle, TAP_WIN_IOCTL_SET_MEDIA_STATUS, &x, sizeof(x), &x, sizeof(x), &len, NULL)) {
@@ -126,8 +127,8 @@ BOOL plugCableToTabDevice(JEnv* env, HANDLE handle) {
     }
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
-  (JEnv* env, char* devChars) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle
+  (PNIEnv_long* env, char* devChars) {
     BOOL status;
     char guid[GUID_MAX_LEN];
     HANDLE handle;
@@ -144,12 +145,12 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
         CloseHandle(handle);
         return -1;
     }
-    env->return_j = (jlong) handle;
+    env->return_ = (jlong) handle;
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
-  (JEnv* env, uint64_t handleJ) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_closeHandle
+  (PNIEnv_void* env, int64_t handleJ) {
     HANDLE handle = (HANDLE) handleJ;
     BOOL status = CloseHandle(handle);
     if (!status) {
@@ -158,10 +159,10 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
-  (JEnv* env, uint64_t handleJ, void* directBuffer, uint32_t off, uint32_t len, uint64_t ovJ) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_read
+  (PNIEnv_int* env, int64_t handleJ, void* directBuffer, int32_t off, int32_t len, int64_t ovJ) {
     if (len == 0) {
-        env->return_i = 0;
+        env->return_ = 0;
         return 0;
     }
     byte* buf = (void*) directBuffer;
@@ -194,14 +195,14 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
     if (!status) {
         return throwIOExceptionBasedOnLastError(env, "read failed");
     }
-    env->return_i = (jint) n;
+    env->return_ = (jint) n;
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
-  (JEnv* env, uint64_t handleJ, void * directBuffer, uint32_t off, uint32_t len, uint64_t ovJ) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_write
+  (PNIEnv_int* env, int64_t handleJ, void * directBuffer, int32_t off, int32_t len, int64_t ovJ) {
     if (len == 0) {
-        env->return_i = 0;
+        env->return_ = 0;
         return 0;
     }
     byte* buf = (void*) directBuffer;
@@ -234,6 +235,6 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
     if (!status) {
         return throwIOExceptionBasedOnLastError(env, "write failed");
     }
-    env->return_i = (jint) n;
+    env->return_ = (jint) n;
     return 0;
 }
