@@ -33,14 +33,6 @@ public class SunUnsafe {
         U.freeMemory(address);
     }
 
-    public static byte getByte(long address) {
-        return U.getByte(address);
-    }
-
-    public static void putByte(long address, byte b) {
-        U.putByte(address, b);
-    }
-
     public static void copyMemory(long dst, long src, int len) {
         U.copyMemory(src, dst, len);
     }
