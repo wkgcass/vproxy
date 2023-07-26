@@ -35,6 +35,11 @@ clean: clean-jar
 clean-docker-plugin-rootfs:
 	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 
+.PHONY: init
+init:
+	git submodule update --init --recursive
+	cd submodules/panama-native-interface && ./gradlew clean shadowJar
+
 .PHONY: all
 all: clean jar-with-lib jlink vfdposix image docker docker-network-plugin
 

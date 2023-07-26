@@ -1,0 +1,4 @@
+[submodule "submodules/panama-native-interface"]
+	path = submodules/panama-native-interface
+	url = https://github.com/vproxy-tools/panama-native-interface
+	branch = master
