@@ -7,7 +7,6 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.unsafe.SunUnsafe;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vpacket.*;
 import io.vproxy.xdp.*;
@@ -102,10 +101,8 @@ public class XDPPoc {
 
                         Logger.alert("new chunk: " + chunk2);
 
-                        SunUnsafe.copyMemory(
-                            umem.getBufferAddress() + chunk2.pktaddr,
-                            umem.getBufferAddress() + chunk.pktaddr,
-                            chunk.pktlen);
+                        umemSeg.asSlice(chunk2.pktaddr, chunk.pktlen)
+                            .copyFrom(umemSeg.asSlice(chunk.pktaddr, chunk.pktlen));
                         xsk.writePacket(chunk2);
                     }
 

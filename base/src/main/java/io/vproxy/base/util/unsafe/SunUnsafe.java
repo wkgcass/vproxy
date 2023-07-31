@@ -32,8 +32,4 @@ public class SunUnsafe {
     public static void freeMemory(long address) {
         U.freeMemory(address);
     }
-
-    public static void copyMemory(long dst, long src, int len) {
-        U.copyMemory(src, dst, len);
-    }
 }
