@@ -36,6 +36,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include "msquic_userdata.h"
+
 #define AE_OK 0
 #define AE_ERR -1
 
@@ -77,6 +79,7 @@ typedef struct aeFileEvent {
     aeFileProc *rfileProc;
     aeFileProc *wfileProc;
     void *clientData;
+    MsQuicUserData msquicUD;
 } aeFileEvent;
 
 /* Time event structure */
@@ -97,6 +100,11 @@ typedef struct aeFiredEvent {
     int mask;
 } aeFiredEvent;
 
+typedef struct aeFiredExtra {
+    void* ud;
+    int mask;
+} aeFiredExtra;
+
 /* State of an event based program */
 typedef struct aeEventLoop {
     int maxfd;   /* highest file descriptor currently registered */
@@ -111,11 +119,15 @@ typedef struct aeEventLoop {
     aeBeforeSleepProc *beforesleep;
     aeBeforeSleepProc *aftersleep;
     int flags;
+
+    /* Extra fired events */
+    int firedExtraNum;
+    aeFiredExtra *firedExtra;
 } aeEventLoop;
 
 /* Prototypes */
 aeEventLoop *aeCreateEventLoop(int setsize);
-aeEventLoop *aeCreateEventLoop2(int setsize, int flags);
+aeEventLoop *aeCreateEventLoop3(int setsize, int fd, int flags);
 void aeDeleteEventLoop(aeEventLoop *eventLoop);
 void aeStop(aeEventLoop *eventLoop);
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,

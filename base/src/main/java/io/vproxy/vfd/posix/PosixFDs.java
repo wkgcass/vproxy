@@ -6,7 +6,7 @@ import io.vproxy.vfd.*;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 
-public class PosixFDs implements FDs, FDsWithTap, FDsWithPoll, FDsWithCoreAffinity {
+public class PosixFDs implements FDs, FDsWithTap, FDsWithOpts, FDsWithCoreAffinity {
     public final Posix posix;
 
     public PosixFDs() {
@@ -54,15 +54,15 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithPoll, FDsWithCoreAffini
 
     @Override
     public FDSelector openSelector() throws IOException {
-        return openSelector(false);
+        return openSelector(Options.defaultValue());
     }
 
     @Override
-    public FDSelector openSelector(boolean preferPoll) throws IOException {
+    public FDSelector openSelector(Options opts) throws IOException {
         int[] pipeFd = posix.openPipe();
         long ae;
         try {
-            ae = posix.aeCreateEventLoop(VFDConfig.aesetsize, preferPoll);
+            ae = posix.aeCreateEventLoop(VFDConfig.aesetsize, opts.epfd(), opts.preferPoll());
         } catch (IOException e) {
             if (pipeFd != null) {
                 try {

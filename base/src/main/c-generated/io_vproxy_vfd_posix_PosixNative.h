@@ -26,9 +26,12 @@ extern "C" {
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeReadable(PNIEnv_int * env);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeWritable(PNIEnv_int * env);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe(PNIEnv_void * env, PNIBuf * fds);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop(PNIEnv_long * env, int32_t setsize, uint8_t preferPoll);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll(PNIEnv_int * env, int64_t ae, int64_t wait, void * fdArray, void * eventsArray);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow(PNIEnv_int * env, int64_t ae, void * fdArray, void * eventsArray);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop(PNIEnv_long * env, int32_t setsize, int32_t epfd, uint8_t preferPoll);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFired(PNIEnv_pointer * env, int64_t ae);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra(PNIEnv_pointer * env, int64_t ae);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll(PNIEnv_int * env, int64_t ae, int64_t wait);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow(PNIEnv_int * env, int64_t ae);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtraNum(PNIEnv_int * env, int64_t ae);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateFileEvent(PNIEnv_void * env, int64_t ae, int32_t fd, int32_t mask);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeUpdateFileEvent(PNIEnv_void * env, int64_t ae, int32_t fd, int32_t mask);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeDeleteFileEvent(PNIEnv_void * env, int64_t ae, int32_t fd);
@@ -78,4 +81,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_setCoreAffinityForCur
 #endif
 #endif // _Included_io_vproxy_vfd_posix_PosixNative
 // metadata.generator-version: pni 21.0.0.8
-// sha256:36c0c8c659037a25d981bb4afac324012a02c3791d129b57f0f742cc50b93e57
+// sha256:47b3d0b5ecc32901ff647cd4b013488ef64e99cc16e0ad2aa79f9997d641a80d

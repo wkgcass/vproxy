@@ -50,6 +50,11 @@ public class PrototypeDelegateEventLoopGroup implements IEventLoopGroup {
     }
 
     @Override
+    public EventLoopWrapper add(String alias, int epfd, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
+        return elg.add(alias, epfd, annotations);
+    }
+
+    @Override
     public synchronized void remove(String alias) throws NotFoundException {
         elg.remove(alias);
     }

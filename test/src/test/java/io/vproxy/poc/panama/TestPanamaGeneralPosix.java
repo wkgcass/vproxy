@@ -9,6 +9,7 @@ import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.TapInfo;
 import io.vproxy.vfd.UDSPath;
+import io.vproxy.vfd.posix.AEFiredEvent;
 import io.vproxy.vfd.posix.GeneralPosix;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -17,8 +18,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +27,7 @@ import static org.junit.Assert.*;
 public class TestPanamaGeneralPosix {
     private static GeneralPosix posix;
     private static long ae;
-    private static Arena arena;
-    private static MemorySegment fdArray;
-    private static MemorySegment eventsArray;
+    private static AEFiredEvent.Array fired;
     private static DirectByteBuffer eventFdBuf;
     private static DirectByteBuffer tmpbuf;
 
@@ -41,9 +38,7 @@ public class TestPanamaGeneralPosix {
         Utils.loadDynamicLibrary("vfdposix");
         posix = new GeneralPosix();
         ae = posix.aeCreateEventLoop(4096, false);
-        arena = Arena.ofShared();
-        fdArray = arena.allocate(ValueLayout.JAVA_INT.byteSize() * 16);
-        eventsArray = arena.allocate(ValueLayout.JAVA_INT.byteSize() * 16);
+        fired = new AEFiredEvent.Array(posix.aeGetFired(ae).reinterpret(4096 * AEFiredEvent.LAYOUT.byteSize()));
         eventFdBuf = DirectMemoryUtils.allocateDirectBuffer(8);
         tmpbuf = DirectMemoryUtils.allocateDirectBuffer(8);
     }
@@ -53,7 +48,6 @@ public class TestPanamaGeneralPosix {
         posix.aeDeleteEventLoop(ae);
         eventFdBuf.clean(false);
         tmpbuf.clean(false);
-        arena.close();
     }
 
     @After
@@ -92,7 +86,7 @@ public class TestPanamaGeneralPosix {
     @Test
     public void aeApiPoll() throws Exception {
         var begin = System.currentTimeMillis();
-        var n = posix.aeApiPoll(ae, 500, fdArray, eventsArray);
+        var n = posix.aeApiPoll(ae, 500);
         assertEquals(0, n);
         var end = System.currentTimeMillis();
         assertTrue(end - begin >= 500);
@@ -108,10 +102,10 @@ public class TestPanamaGeneralPosix {
         eventFdBuf.getMemorySegment().set(ValueLayout.JAVA_LONG, 0, 123L);
         posix.write(pipe[1], eventFdBuf.realBuffer(), 0, 8);
 
-        var n = posix.aeApiPoll(ae, 100, fdArray, eventsArray);
+        var n = posix.aeApiPoll(ae, 100);
         assertEquals(1, n);
-        assertEquals(pipe[0], fdArray.get(ValueLayout.JAVA_INT, 0));
-        assertEquals(posix.aeReadable(), eventsArray.get(ValueLayout.JAVA_INT, 0));
+        assertEquals(pipe[0], fired.get(0).getFd());
+        assertEquals(posix.aeReadable(), fired.get(0).getMask());
         eventFdBuf.limit(8).position(0);
         n = posix.read(pipe[0], eventFdBuf.realBuffer(), 0, 8);
         assertEquals(8, n);
@@ -127,15 +121,15 @@ public class TestPanamaGeneralPosix {
         posix.aeCreateFileEvent(ae, pipe[1], posix.aeWritable());
 
         for (int i = 0; i < 10; ++i) {
-            var n = posix.aeApiPoll(ae, 100, fdArray, eventsArray);
+            var n = posix.aeApiPoll(ae, 100);
             assertEquals(1, n);
-            assertEquals(pipe[1], fdArray.get(ValueLayout.JAVA_INT, 0));
-            assertEquals(posix.aeWritable(), eventsArray.get(ValueLayout.JAVA_INT, 0));
+            assertEquals(pipe[1], fired.get(0).getFd());
+            assertEquals(posix.aeWritable(), fired.get(0).getMask());
         }
 
         posix.aeUpdateFileEvent(ae, pipe[1], posix.aeReadable());
         for (int i = 0; i < 10; ++i) {
-            var n = posix.aeApiPoll(ae, 0, fdArray, eventsArray);
+            var n = posix.aeApiPoll(ae, 0);
             assertEquals(0, n);
         }
     }
@@ -149,15 +143,15 @@ public class TestPanamaGeneralPosix {
         posix.aeCreateFileEvent(ae, pipe[1], posix.aeWritable());
 
         for (int i = 0; i < 10; ++i) {
-            var n = posix.aeApiPoll(ae, 100, fdArray, eventsArray);
+            var n = posix.aeApiPoll(ae, 100);
             assertEquals(1, n);
-            assertEquals(pipe[1], fdArray.get(ValueLayout.JAVA_INT, 0));
-            assertEquals(posix.aeWritable(), eventsArray.get(ValueLayout.JAVA_INT, 0));
+            assertEquals(pipe[1], fired.get(0).getFd());
+            assertEquals(posix.aeWritable(), fired.get(0).getMask());
         }
 
         posix.aeDeleteFileEvent(ae, pipe[1]);
         for (int i = 0; i < 10; ++i) {
-            var n = posix.aeApiPoll(ae, 0, fdArray, eventsArray);
+            var n = posix.aeApiPoll(ae, 0);
             assertEquals(0, n);
         }
     }

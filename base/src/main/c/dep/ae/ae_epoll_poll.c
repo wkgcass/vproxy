@@ -49,6 +49,15 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     }
 }
 
+#define AE_HAS_API_REPLACE_EPFD 1
+static int aeApiReplaceEpfd(aeEventLoop *eventLoop, int epfd) {
+    if (eventLoop->flags & AE_FLAG_PREFER_POLL) {
+        return 0;
+    } else {
+        return aeApiReplaceEpfd_epoll(eventLoop, epfd);
+    }
+}
+
 static char *aeApiName(void) {
     return "epoll_poll";
 }

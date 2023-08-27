@@ -54,8 +54,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop
-  (PNIEnv_long* env, int32_t setsize, uint8_t preferPoll) {
-    aeEventLoop* ae = aeCreateEventLoop2(setsize, preferPoll);
+  (PNIEnv_long* env, int32_t setsize, int32_t epfd, uint8_t preferPoll) {
+    int flags = 0;
+    if (preferPoll)
+        flags |= AE_FLAG_PREFER_POLL;
+    aeEventLoop* ae = aeCreateEventLoop3(setsize, epfd, flags);
     if (ae == NULL) {
         return throwIOException(env, "create ae failed");
     }
@@ -63,11 +66,23 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll
-  (PNIEnv_int* env, int64_t aex, int64_t wait, void* _fdsArray, void* _eventsArray) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFired
+  (PNIEnv_pointer * env, int64_t aex) {
     aeEventLoop* ae = (aeEventLoop*) aex;
-    int32_t* fdsArray = _fdsArray;
-    int32_t* eventsArray = _eventsArray;
+    env->return_ = ae->fired;
+    return 0;
+}
+
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra
+  (PNIEnv_pointer * env, int64_t aex) {
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    env->return_ = ae->firedExtra;
+    return 0;
+}
+
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll
+  (PNIEnv_int* env, int64_t aex, int64_t wait) {
+    aeEventLoop* ae = (aeEventLoop*) aex;
 
     v_timeval tv;
     v_timeval* tvp = &tv;
@@ -75,20 +90,20 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll
     tvp->tv_usec = (wait % 1000)*1000;
     int numevents = aePoll(ae, tvp);
 
-    for (int j = 0; j < numevents; j++) {
-      aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
-      int fd = ae->fired[j].fd;
-
-      fdsArray[j] = fd;
-      eventsArray[j] = fe->mask;
-    }
     env->return_ = numevents;
     return 0;
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow
-  (PNIEnv_int* env, int64_t aex, void* _fdsArray, void* _eventsArray) {
-    return Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll(env, aex, 0, _fdsArray, _eventsArray);
+  (PNIEnv_int* env, int64_t aex) {
+    return Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll(env, aex, 0);
+}
+
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtraNum
+  (PNIEnv_int * env, int64_t aex) {
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    env->return_ = ae->firedExtraNum;
+    return 0;
 }
 
 inline static void io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0

@@ -36,19 +36,43 @@ public class GeneralPosix implements Posix {
     @Override
     public long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException {
         return PosixNative.get().aeCreateEventLoop(VProxyThread.current().getEnv(),
-            setsize, preferPoll);
+            setsize, 0, preferPoll);
     }
 
     @Override
-    public int aeApiPoll(long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws IOException {
+    public MemorySegment aeGetFired(long ae) {
+        return PosixNative.get().aeGetFired(VProxyThread.current().getEnv(),
+            ae);
+    }
+
+    @Override
+    public MemorySegment aeGetFiredExtra(long ae) {
+        return PosixNative.get().aeGetFiredExtra(VProxyThread.current().getEnv(),
+            ae);
+    }
+
+    @Override
+    public long aeCreateEventLoop(int setsize, int epfd, boolean preferPoll) throws IOException {
+        return PosixNative.get().aeCreateEventLoop(VProxyThread.current().getEnv(),
+            setsize, epfd, preferPoll);
+    }
+
+    @Override
+    public int aeApiPoll(long ae, long wait) throws IOException {
         return PosixNative.get().aeApiPoll(VProxyThread.current().getEnv(),
-            ae, wait, fdArray, eventsArray);
+            ae, wait);
     }
 
     @Override
-    public int aeApiPollNow(long ae, MemorySegment fdArray, MemorySegment eventsArray) throws IOException {
+    public int aeApiPollNow(long ae) throws IOException {
         return PosixNative.get().aeApiPollNow(VProxyThread.current().getEnv(),
-            ae, fdArray, eventsArray);
+            ae);
+    }
+
+    @Override
+    public int aeGetFiredExtraNum(long ae) {
+        return PosixNative.get().aeGetFiredExtraNum(VProxyThread.current().getEnv(),
+            ae);
     }
 
     @Override

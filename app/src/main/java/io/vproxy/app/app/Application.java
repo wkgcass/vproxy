@@ -89,13 +89,13 @@ public class Application {
         try {
             application.eventLoopGroupHolder.add(DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME);
             application.eventLoopGroupHolder.get(DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME).add(DEFAULT_CONTROL_EVENT_LOOP_NAME);
-        } catch (AlreadyExistException | NotFoundException | ClosedException e) {
+        } catch (Exception e) {
             throw new IOException("create default control event loop failed", e);
         }
         // create event loop group for workers
         try {
             application.eventLoopGroupHolder.add(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
-        } catch (AlreadyExistException e) {
+        } catch (Exception e) {
             throw new IOException("create default worker event loop group failed", e);
         }
         // use the current core count
@@ -122,7 +122,7 @@ public class Application {
             try {
                 application.eventLoopGroupHolder.add(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME);
                 application.eventLoopGroupHolder.get(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME).add(DEFAULT_ACCEPTOR_EVENT_LOOP_NAME);
-            } catch (AlreadyExistException | NotFoundException | ClosedException e) {
+            } catch (Exception e) {
                 throw new IOException("create default acceptor event loop failed", e);
             }
         }

@@ -12,6 +12,7 @@ import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.msquic.modified.MsQuicInitializer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -85,6 +86,12 @@ public class EventLoopGroup implements IEventLoopGroup {
     @Override
     @ThreadSafe
     public synchronized EventLoopWrapper add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
+        return add(alias, 0, annotations);
+    }
+
+    @Override
+    @ThreadSafe
+    public synchronized EventLoopWrapper add(String alias, int epfd, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
         if (closed) {
             throw new ClosedException();
         }
@@ -93,16 +100,15 @@ public class EventLoopGroup implements IEventLoopGroup {
             if (w.alias.equals(alias))
                 throw new AlreadyExistException("event-loop in event-loop-group " + this.alias, alias);
         }
-        SelectorEventLoop selectorEventLoop;
-        if (this.annotations.EventLoopGroup_PreferPoll && annotations.EventLoop_CoreAffinity != -1) {
-            selectorEventLoop = SelectorEventLoop.open(new SelectorEventLoop.InitOptions(true, annotations.EventLoop_CoreAffinity));
-        } else if (this.annotations.EventLoopGroup_PreferPoll) {
-            selectorEventLoop = SelectorEventLoop.open(new SelectorEventLoop.InitOptions(true, -1));
-        } else if (annotations.EventLoop_CoreAffinity != -1) {
-            selectorEventLoop = SelectorEventLoop.open(new SelectorEventLoop.InitOptions(false, annotations.EventLoop_CoreAffinity));
-        } else {
-            selectorEventLoop = SelectorEventLoop.open();
+        var opts = new SelectorEventLoop.InitOptions();
+        if (this.annotations.EventLoopGroup_PreferPoll) {
+            opts.preferPoll = true;
         }
+        if (annotations.EventLoop_CoreAffinity != -1) {
+            opts.coreAffinity = annotations.EventLoop_CoreAffinity;
+        }
+        opts.epfd = epfd;
+        var selectorEventLoop = SelectorEventLoop.open(opts);
         EventLoopWrapper el = new EventLoopWrapper(alias, selectorEventLoop, annotations);
         ArrayList<EventLoopWrapper> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
@@ -285,6 +291,11 @@ public class EventLoopGroup implements IEventLoopGroup {
         }
         eventLoops.clear();
         removeResources();
+
+        // need to remove event loop from msquic event loop group registry
+        if (annotations.EventLoopGroup_UseMsQuic) {
+            MsQuicInitializer.clearMsQuicEventLoopGroup(this);
+        }
     }
 
     /*

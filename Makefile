@@ -103,16 +103,30 @@ vpxdp: vfdposix
 xdp-sample-kern:
 	cd ./base/src/main/c/xdp && make kern
 
+.PHONY: msquic-java
+msquic-java:
+	cd ./submodules/msquic-java/core/src/main/c && /usr/bin/env bash ./make-quic.sh
+.PHONY: vpquic
+vpquic:
+	cd ./base/src/main/c && /usr/bin/env bash ./make-quic.sh
+
 .PHONY: vfdposix-linux
 .PHONY: vpxdp-linux
+.PHONY: msquic-java-linux
+.PHONY: vpquic-linux
 ifeq ($(OS),Linux)
 vfdposix-linux: vfdposix
 vpxdp-linux: vpxdp
+vpquic-linux: vpquic
 else
 vfdposix-linux:
 	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vfdposix
 vpxdp-linux:
 	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vpxdp
+msquic-java-linux:
+	docker run --rm -v $(shell pwd):/vproxy -v "${MSQUIC_INC}:/msquic/src/inc" -v "${MSQUIC_LD}:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make msquic-java
+vpquic-linux:
+	docker run --rm -v $(shell pwd):/vproxy -v "${MSQUIC_INC}:/msquic/src/inc" -v "${MSQUIC_LD}:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make vpquic
 endif
 
 .PHONY: vfdwindows

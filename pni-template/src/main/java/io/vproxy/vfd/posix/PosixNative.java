@@ -6,6 +6,14 @@ import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
+@Struct(skip = true)
+@Name("aeFiredEvent")
+@Include("ae.h")
+class PNIAEFiredEvent {
+    int fd;
+    int mask;
+}
+
 @SuppressWarnings("unused")
 @Function
 interface PNIPosixNative {
@@ -19,12 +27,21 @@ interface PNIPosixNative {
     void openPipe(int[] fds) throws IOException;
 
     @Trivial
-    long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException;
-
-    int aeApiPoll(long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
+    long aeCreateEventLoop(int setsize, int epfd, boolean preferPoll) throws IOException;
 
     @Trivial
-    int aeApiPollNow(long ae, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
+    MemorySegment aeGetFired(long ae);
+
+    @Trivial
+    MemorySegment aeGetFiredExtra(long ae);
+
+    int aeApiPoll(long ae, long wait) throws IOException;
+
+    @Trivial
+    int aeApiPollNow(long ae) throws IOException;
+
+    @Trivial
+    int aeGetFiredExtraNum(long ae);
 
     @Trivial
     void aeCreateFileEvent(long ae, int fd, int mask);

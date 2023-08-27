@@ -16,6 +16,8 @@ import io.vproxy.base.util.promise.Promise;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.time.TimeQueue;
 import io.vproxy.vfd.*;
+import io.vproxy.vfd.posix.AEFiredExtra;
+import io.vproxy.vfd.posix.AESelector;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -75,29 +77,38 @@ public class SelectorEventLoop implements AutoCloseable {
     private final Lock CLOSE_LOCK;
     private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
+    private BeforePollCallback beforePollCallback = null;
+    private AfterPollCallback afterPollCallback = null;
+    private FinalizerCallback finalizerCallback = null;
+
     public static final class InitOptions {
-        public static final InitOptions DEFAULT = new InitOptions(false, -1);
+        public static final InitOptions DEFAULT = new InitOptions();
 
-        public final boolean preferPoll;
-        public final long coreAffinity;
+        public boolean preferPoll = false;
+        public long coreAffinity = -1;
+        public int epfd = 0;
 
-        public InitOptions(boolean preferPoll, long coreAffinity) {
-            this.preferPoll = preferPoll;
-            this.coreAffinity = coreAffinity;
+        public InitOptions() {
+        }
+
+        public InitOptions(InitOptions opts) {
+            this.preferPoll = opts.preferPoll;
+            this.coreAffinity = opts.coreAffinity;
+            this.epfd = opts.epfd;
         }
     }
 
     private SelectorEventLoop(FDs fds, InitOptions opts) throws IOException {
         FDSelector fdSelector;
-        if (fds instanceof FDsWithPoll) {
-            fdSelector = ((FDsWithPoll) fds).openSelector(opts.preferPoll);
+        if (fds instanceof FDsWithOpts) {
+            fdSelector = ((FDsWithOpts) fds).openSelector(new FDsWithOpts.Options(opts.preferPoll, opts.epfd));
         } else {
             fdSelector = fds.openSelector();
         }
         this.selector = new WrappedSelector(fdSelector);
         this.fds = fds;
         CLOSE_LOCK = Lock.create();
-        this.initOptions = opts;
+        this.initOptions = new InitOptions(opts);
     }
 
     private NetEventLoop netEventLoop = null;
@@ -267,6 +278,7 @@ public class SelectorEventLoop implements AutoCloseable {
             RegisterData att = tuple.right;
             triggerRemovedCallback(channel, att);
         }
+        runFinalizer();
     }
 
     @Blocking // will block until the loop actually starts
@@ -310,9 +322,11 @@ public class SelectorEventLoop implements AutoCloseable {
         // here we do not lock select()
         // let close() have chance to run
 
+        int maxSleepMillis = runBeforePoll();
+
         final Collection<SelectedEntry> selected;
         try {
-            if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
+            if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty() && maxSleepMillis < 0) {
                 selected = selector.select(); // let it sleep
             } else if (!runOnLoopEvents.isEmpty()) {
                 selected = selector.selectNow(); // immediately return when tasks registered into the loop
@@ -320,6 +334,9 @@ public class SelectorEventLoop implements AutoCloseable {
                 selected = selector.selectNow(); // immediately return when channels are going to be registered
             } else {
                 int time = timeQueue.nextTime(Config.currentTimestamp);
+                if (time > maxSleepMillis && maxSleepMillis >= 0) {
+                    time = maxSleepMillis;
+                }
                 if (time == 0) {
                     selected = selector.selectNow(); // immediately return
                 } else {
@@ -330,6 +347,11 @@ public class SelectorEventLoop implements AutoCloseable {
             // let's ignore this exception and continue
             // if it's closed, the next loop will not run
             return 0;
+        }
+
+        if (runAfterPoll()) {
+            Logger.warn(LogType.ALERT, "event loop terminates because afterPoll callback returns true");
+            return -1;
         }
 
         // here we lock again
@@ -640,7 +662,7 @@ public class SelectorEventLoop implements AutoCloseable {
             selector.close();
         }
         // wakeup();
-        // we don not need to wakeup manually, the selector.close does this for us
+        // we do not need to wakeup manually, the selector.close does this for us
 
         if (runningThread != null && runningThread != Thread.currentThread()) {
             try {
@@ -656,5 +678,64 @@ public class SelectorEventLoop implements AutoCloseable {
             selector.copyFDEvents(coll);
             cb.run();
         });
+    }
+
+
+    public interface BeforePollCallback {
+        /**
+         * @return max sleep millis, -1 for no limit
+         */
+        int run();
+    }
+
+    private int runBeforePoll() {
+        var beforePollCallback = this.beforePollCallback;
+        if (beforePollCallback == null)
+            return -1;
+        return beforePollCallback.run();
+    }
+
+    public void setBeforePoll(BeforePollCallback cb) {
+        beforePollCallback = cb;
+    }
+
+    public interface AfterPollCallback {
+        /**
+         * @return true to break, false to continue
+         */
+        boolean run(int num, AEFiredExtra.Array array);
+    }
+
+    private boolean runAfterPoll() {
+        var afterPollCallback = this.afterPollCallback;
+        if (afterPollCallback == null)
+            return false;
+        var selector = this.selector.getSelector();
+        if (selector instanceof AESelector ae) {
+            var num = ae.getFiredExtraNum();
+            var arr = ae.getFiredExtra();
+            return afterPollCallback.run(num, arr);
+        } else {
+            return afterPollCallback.run(0, null);
+        }
+    }
+
+    public void setAfterPoll(AfterPollCallback cb) {
+        afterPollCallback = cb;
+    }
+
+    public interface FinalizerCallback {
+        void run();
+    }
+
+    private void runFinalizer() {
+        var finalizerCallback = this.finalizerCallback;
+        if (finalizerCallback == null)
+            return;
+        finalizerCallback.run();
+    }
+
+    public void setFinalizer(FinalizerCallback cb) {
+        finalizerCallback = cb;
     }
 }

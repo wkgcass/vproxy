@@ -66,13 +66,13 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle aeCreateEventLoopMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop", int.class /* setsize */, boolean.class /* preferPoll */);
+    private static final MethodHandle aeCreateEventLoopMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop", int.class /* setsize */, int.class /* epfd */, boolean.class /* preferPoll */);
 
-    public long aeCreateEventLoop(PNIEnv ENV, int setsize, boolean preferPoll) throws java.io.IOException {
+    public long aeCreateEventLoop(PNIEnv ENV, int setsize, int epfd, boolean preferPoll) throws java.io.IOException {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) aeCreateEventLoopMH.invokeExact(ENV.MEMORY, setsize, preferPoll);
+            ERR = (int) aeCreateEventLoopMH.invokeExact(ENV.MEMORY, setsize, epfd, preferPoll);
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -83,13 +83,45 @@ public class PosixNative {
         return ENV.returnLong();
     }
 
-    private static final MethodHandle aeApiPollMH = PanamaUtils.lookupPNIFunction(false, "Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll", long.class /* ae */, long.class /* wait */, MemorySegment.class /* fdArray */, MemorySegment.class /* eventsArray */);
+    private static final MethodHandle aeGetFiredMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeGetFired", long.class /* ae */);
 
-    public int aeApiPoll(PNIEnv ENV, long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws java.io.IOException {
+    public MemorySegment aeGetFired(PNIEnv ENV, long ae) {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) aeApiPollMH.invokeExact(ENV.MEMORY, ae, wait, (MemorySegment) (fdArray == null ? MemorySegment.NULL : fdArray), (MemorySegment) (eventsArray == null ? MemorySegment.NULL : eventsArray));
+            ERR = (int) aeGetFiredMH.invokeExact(ENV.MEMORY, ae);
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
+            ENV.throwLast();
+        }
+        return ENV.returnPointer();
+    }
+
+    private static final MethodHandle aeGetFiredExtraMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra", long.class /* ae */);
+
+    public MemorySegment aeGetFiredExtra(PNIEnv ENV, long ae) {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) aeGetFiredExtraMH.invokeExact(ENV.MEMORY, ae);
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
+            ENV.throwLast();
+        }
+        return ENV.returnPointer();
+    }
+
+    private static final MethodHandle aeApiPollMH = PanamaUtils.lookupPNIFunction(false, "Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll", long.class /* ae */, long.class /* wait */);
+
+    public int aeApiPoll(PNIEnv ENV, long ae, long wait) throws java.io.IOException {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) aeApiPollMH.invokeExact(ENV.MEMORY, ae, wait);
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -100,18 +132,34 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle aeApiPollNowMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow", long.class /* ae */, MemorySegment.class /* fdArray */, MemorySegment.class /* eventsArray */);
+    private static final MethodHandle aeApiPollNowMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow", long.class /* ae */);
 
-    public int aeApiPollNow(PNIEnv ENV, long ae, MemorySegment fdArray, MemorySegment eventsArray) throws java.io.IOException {
+    public int aeApiPollNow(PNIEnv ENV, long ae) throws java.io.IOException {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) aeApiPollNowMH.invokeExact(ENV.MEMORY, ae, (MemorySegment) (fdArray == null ? MemorySegment.NULL : fdArray), (MemorySegment) (eventsArray == null ? MemorySegment.NULL : eventsArray));
+            ERR = (int) aeApiPollNowMH.invokeExact(ENV.MEMORY, ae);
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
         if (ERR != 0) {
             ENV.throwIf(java.io.IOException.class);
+            ENV.throwLast();
+        }
+        return ENV.returnInt();
+    }
+
+    private static final MethodHandle aeGetFiredExtraNumMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtraNum", long.class /* ae */);
+
+    public int aeGetFiredExtraNum(PNIEnv ENV, long ae) {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) aeGetFiredExtraNumMH.invokeExact(ENV.MEMORY, ae);
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
             ENV.throwLast();
         }
         return ENV.returnInt();
@@ -832,4 +880,4 @@ public class PosixNative {
     }
 }
 // metadata.generator-version: pni 21.0.0.8
-// sha256:a2c3186511b9e2d06b922bba1a2f72cbf87317bb049ee4e388899b705a3d691a
+// sha256:9dc3b32d51f447c914ae364dcb42173e7c791612615bd68f0286800aa4c61ae8

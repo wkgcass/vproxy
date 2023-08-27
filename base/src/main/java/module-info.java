@@ -76,6 +76,7 @@ module io.vproxy.base {
     exports io.vproxy.base.util.web;
     exports io.vproxy.commons.graph;
     exports io.vproxy.commons.util;
+    exports io.vproxy.msquic.modified;
     exports io.vproxy.vfd;
     exports io.vproxy.vfd.abs;
     exports io.vproxy.vfd.jdk;

@@ -82,7 +82,12 @@ static int aeApiAddEvent_epoll(aeEventLoop *eventLoop, int fd, int mask) {
     mask |= eventLoop->events[fd].mask; /* Merge old events */
     if (mask & AE_READABLE) ee.events |= EPOLLIN;
     if (mask & AE_WRITABLE) ee.events |= EPOLLOUT;
-    ee.data.fd = fd;
+
+    MsQuicUserData* ud = &(eventLoop->events[fd].msquicUD);
+    ud->type = CXPLAT_CQE_TYPE_USER_EVENT;
+    ud->fd = fd;
+    ee.data.ptr = ud;
+
     if (mask == 0) {
         ee.events |= EPOLLET; // if we got EPOLLHUP, we would only get it once
     }
@@ -101,7 +106,12 @@ static void aeApiDelEvent_epoll(aeEventLoop *eventLoop, int fd, int delmask) {
     ee.events = 0;
     if (mask & AE_READABLE) ee.events |= EPOLLIN;
     if (mask & AE_WRITABLE) ee.events |= EPOLLOUT;
-    ee.data.fd = fd;
+
+    MsQuicUserData* ud = &(eventLoop->events[fd].msquicUD);
+    ud->type = CXPLAT_CQE_TYPE_USER_EVENT;
+    ud->fd = fd;
+    ee.data.ptr = ud;
+
     if (mask != AE_NONE) {
         epoll_ctl(state->epfd,EPOLL_CTL_MOD,fd,&ee);
     } else {
@@ -113,15 +123,15 @@ static void aeApiDelEvent_epoll(aeEventLoop *eventLoop, int fd, int delmask) {
 
 static int aeApiPoll_epoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState_epoll *state = eventLoop->apidata;
-    int retval, numevents = 0;
+    int retval = 0;
 
     retval = epoll_wait(state->epfd,state->events,eventLoop->setsize,
             tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1);
     if (retval > 0) {
-        int j;
+        int fi = 0;
+        int ei = 0;
 
-        numevents = retval;
-        for (j = 0; j < numevents; j++) {
+        for (int j = 0; j < retval; j++) {
             int mask = 0;
             struct epoll_event *e = state->events+j;
 
@@ -129,11 +139,33 @@ static int aeApiPoll_epoll(aeEventLoop *eventLoop, struct timeval *tvp) {
             if (e->events & EPOLLOUT) mask |= AE_WRITABLE;
             if (e->events & EPOLLERR) mask |= AE_WRITABLE;
             if (e->events & EPOLLHUP) mask |= AE_WRITABLE;
-            eventLoop->fired[j].fd = e->data.fd;
-            eventLoop->fired[j].mask = mask;
+
+            MsQuicUserData* ud = e->data.ptr;
+            if (ud != NULL && ud->type == CXPLAT_CQE_TYPE_USER_EVENT) {
+                eventLoop->fired[fi].fd = ud->fd;
+                eventLoop->fired[fi].mask = mask;
+                ++fi;
+            } else {
+                eventLoop->firedExtra[ei].ud = ud;
+                eventLoop->firedExtra[ei].mask = e->events;
+                ++ei;
+            }
         }
+        eventLoop->firedExtraNum = ei;
+        return fi;
     }
-    return numevents;
+    eventLoop->firedExtraNum = 0;
+    return 0;
+}
+
+static int aeApiReplaceEpfd_epoll(aeEventLoop *eventLoop, int epfd) {
+    aeApiState_epoll *state = eventLoop->apidata;
+
+    if (epfd) {
+        close(state->epfd);
+        state->epfd = epfd;
+    }
+    return state->epfd;
 }
 
 static char *aeApiName_epoll(void) {

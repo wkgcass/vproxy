@@ -5,11 +5,9 @@ import io.vproxy.base.util.direct.DirectByteBuffer;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
 import io.vproxy.base.util.objectpool.GarbageFree;
 import io.vproxy.base.util.objectpool.PrototypeObjectList;
-import io.vproxy.base.util.unsafe.SunUnsafe;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
-import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
@@ -29,8 +27,8 @@ public class AESelector implements FDSelector {
     private final int aeReadable;
     private final int aeWritable;
 
-    private final MemorySegment pollFDsArray;
-    private final MemorySegment pollEventsArray;
+    private final AEFiredEvent.Array fired;
+    private final AEFiredExtra.Array firedExtra;
 
     public AESelector(Posix posix, long ae, int[] pipefd, int setsize) {
         this.posix = posix;
@@ -48,8 +46,8 @@ public class AESelector implements FDSelector {
         for (int i = 0; i < setsize; ++i) {
             attachments[i] = new Att();
         }
-        pollFDsArray = SunUnsafe.allocateMemory(setsize * ValueLayout.JAVA_INT.byteSize());
-        pollEventsArray = SunUnsafe.allocateMemory(setsize * ValueLayout.JAVA_INT.byteSize());
+        fired = new AEFiredEvent.Array(posix.aeGetFired(ae).reinterpret(setsize * AEFiredEvent.LAYOUT.byteSize()));
+        firedExtra = new AEFiredExtra.Array(posix.aeGetFiredExtra(ae).reinterpret(setsize * AEFiredExtra.LAYOUT.byteSize()));
     }
 
     @Override
@@ -111,8 +109,8 @@ public class AESelector implements FDSelector {
 
     private void fillFDsList(int n) {
         for (int i = 0; i < n; ++i) {
-            int fd = pollFDsArray.get(ValueLayout.JAVA_INT, i * 4L);
-            int evt = pollEventsArray.get(ValueLayout.JAVA_INT, i * 4L);
+            int fd = fired.get(i).getFd();
+            int evt = fired.get(i).getMask();
             fdInfoList.add(fd, evt, attachments[fd]);
         }
     }
@@ -122,7 +120,7 @@ public class AESelector implements FDSelector {
     public Collection<SelectedEntry> select() throws IOException {
         checkOpen();
         fdInfoList.clear();
-        int n = posix.aeApiPoll(ae, 24 * 60 * 60 * 1000, pollFDsArray, pollEventsArray);
+        int n = posix.aeApiPoll(ae, 24 * 60 * 60 * 1000);
         fillFDsList(n);
         return handleSelectResult();
     }
@@ -132,7 +130,7 @@ public class AESelector implements FDSelector {
     public Collection<SelectedEntry> selectNow() throws IOException {
         checkOpen();
         fdInfoList.clear();
-        int n = posix.aeApiPollNow(ae, pollFDsArray, pollEventsArray);
+        int n = posix.aeApiPollNow(ae);
         fillFDsList(n);
         return handleSelectResult();
     }
@@ -144,9 +142,9 @@ public class AESelector implements FDSelector {
         fdInfoList.clear();
         int n;
         if (millis <= 0) {
-            n = posix.aeApiPollNow(ae, pollFDsArray, pollEventsArray);
+            n = posix.aeApiPollNow(ae);
         } else {
-            n = posix.aeApiPoll(ae, millis, pollFDsArray, pollEventsArray);
+            n = posix.aeApiPoll(ae, millis);
         }
         fillFDsList(n);
         return handleSelectResult();
@@ -301,8 +299,10 @@ public class AESelector implements FDSelector {
                 }
             }
         }
-        SunUnsafe.freeMemory(pollFDsArray.address());
-        SunUnsafe.freeMemory(pollEventsArray.address());
+    }
+
+    public long getAE() {
+        return ae;
     }
 
     @SuppressWarnings({"removal"})
@@ -318,5 +318,13 @@ public class AESelector implements FDSelector {
             ", pipefd=" + Arrays.toString(pipefd) +
             ", closed=" + closed +
             '}';
+    }
+
+    public int getFiredExtraNum() {
+        return posix.aeGetFiredExtraNum(ae);
+    }
+
+    public AEFiredExtra.Array getFiredExtra() {
+        return firedExtra;
     }
 }

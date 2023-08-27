@@ -19,6 +19,7 @@ public enum AnnotationKeys {
     SWIface_DockerNetworkDriverEndpointMac("docker-network-driver/endpoint-mac"),
 
     EventLoopGroup_PreferPoll("vproxy/event-loop-group-prefer-poll"),
+    EventLoopGroup_UseMsQuic("vproxy/event-loop-group-use-msquic"),
     EventLoop_CoreAffinity("vproxy/event-loop-core-affinity"),
     ;
     public final String name;

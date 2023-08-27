@@ -76,12 +76,16 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     aeApiState *state = eventLoop->apidata;
     struct kevent ke;
 
+    MsQuicUserData* ud = &(eventLoop->events[fd].msquicUD);
+    ud->type = CXPLAT_CQE_TYPE_USER_EVENT;
+    ud->fd = fd;
+
     if (mask & AE_READABLE) {
-        EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, ud);
         if (kevent(state->kqfd, &ke, 1, NULL, 0, NULL) == -1) return -1;
     }
     if (mask & AE_WRITABLE) {
-        EV_SET(&ke, fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+        EV_SET(&ke, fd, EVFILT_WRITE, EV_ADD, 0, 0, ud);
         if (kevent(state->kqfd, &ke, 1, NULL, 0, NULL) == -1) return -1;
     }
     return 0;
@@ -91,19 +95,21 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
     aeApiState *state = eventLoop->apidata;
     struct kevent ke;
 
+    MsQuicUserData* ud = &(eventLoop->events[fd].msquicUD);
+
     if (mask & AE_READABLE) {
-        EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, ud);
         kevent(state->kqfd, &ke, 1, NULL, 0, NULL);
     }
     if (mask & AE_WRITABLE) {
-        EV_SET(&ke, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+        EV_SET(&ke, fd, EVFILT_WRITE, EV_DELETE, 0, 0, ud);
         kevent(state->kqfd, &ke, 1, NULL, 0, NULL);
     }
 }
 
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState *state = eventLoop->apidata;
-    int retval, numevents = 0;
+    int retval = 0;
 
     if (tvp != NULL) {
         struct timespec timeout;
@@ -117,20 +123,43 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     }
 
     if (retval > 0) {
-        int j;
+        int fi = 0;
+        int ei = 0;
 
-        numevents = retval;
-        for(j = 0; j < numevents; j++) {
+        for(int j = 0; j < retval; j++) {
             int mask = 0;
             struct kevent *e = state->events+j;
 
             if (e->filter == EVFILT_READ) mask |= AE_READABLE;
             if (e->filter == EVFILT_WRITE) mask |= AE_WRITABLE;
-            eventLoop->fired[j].fd = e->ident;
-            eventLoop->fired[j].mask = mask;
+
+            MsQuicUserData* ud = e->udata;
+            if (ud != NULL && ud->type == CXPLAT_CQE_TYPE_USER_EVENT) {
+                eventLoop->fired[fi].fd = e->ident;
+                eventLoop->fired[fi].mask = mask;
+                ++fi;
+            } else {
+                eventLoop->firedExtra[ei].ud = ud;
+                eventLoop->firedExtra[ei].mask = e->filter;
+                ++ei;
+            }
         }
+        eventLoop->firedExtraNum = ei;
+        return fi;
     }
-    return numevents;
+    eventLoop->firedExtraNum = 0;
+    return 0;
+}
+
+#define AE_HAS_API_REPLACE_EPFD 1
+static int aeApiReplaceEpfd(aeEventLoop *eventLoop, int kqfd) {
+    aeApiState *state = eventLoop->apidata;
+
+    if (kqfd) {
+        close(state->kqfd);
+        state->kqfd = kqfd;
+    }
+    return state->kqfd;
 }
 
 static char *aeApiName(void) {

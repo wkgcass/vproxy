@@ -220,7 +220,9 @@ project(':base') {
     sourceSets {
         main {
             java {
-                srcDirs = ['src/main/java', 'src/main/generated']
+                srcDirs = ['src/main/java', 'src/main/generated',
+                           project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/java',
+                           project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/generated']
             }
         }
     }
@@ -426,6 +428,22 @@ project(':test') {
         if (System.getProperty("ifname") != null) {
             args = [System.getProperty("ifname")]
         }
+    }
+
+    task QuicPoc(type: JavaExec) {
+        if ("true" == System.getProperty("enableAssertions")) {
+            enableAssertions = true
+        }
+        classpath = sourceSets.test.runtimeClasspath
+        workingDir = project.rootProject.rootDir.getAbsolutePath()
+        systemProperty("java.library.path",
+            System.getenv("MSQUIC_LD") +
+            File.pathSeparator +
+            "./submodules/msquic-java/core/src/main/c" +
+            File.pathSeparator +
+            "./base/src/main/c")
+        systemProperty("vfd", "posix")
+        main = "io.vproxy.poc.QuicPoc"
     }
 
     task WinTap(type: JavaExec) {

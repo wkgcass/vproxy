@@ -17,6 +17,7 @@ public class Annotations {
     public final boolean[] ServerGroup_HCHttpStatus;
     public final String ServerGroup_HCDnsDomain;
     public final boolean EventLoopGroup_PreferPoll;
+    public final boolean EventLoopGroup_UseMsQuic;
     public final long EventLoop_CoreAffinity;
 
     public final Map<String, String> other;
@@ -122,6 +123,9 @@ public class Annotations {
         }
         {
             EventLoopGroup_PreferPoll = "true".equals(annotations.get(AnnotationKeys.EventLoopGroup_PreferPoll.name));
+        }
+        {
+            EventLoopGroup_UseMsQuic = "true".equals(annotations.get(AnnotationKeys.EventLoopGroup_UseMsQuic.name));
         }
         {
             long coreAffinity = -1;

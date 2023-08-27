@@ -25,6 +25,8 @@ public interface IEventLoopGroup {
 
     EventLoopWrapper add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException;
 
+    EventLoopWrapper add(String alias, int epfd, Annotations annotations) throws AlreadyExistException, IOException, ClosedException;
+
     void remove(String alias) throws NotFoundException;
 
     void attachResource(EventLoopGroupAttach resource) throws AlreadyExistException, ClosedException;

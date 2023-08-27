@@ -61,17 +61,19 @@
     #endif
 
 aeEventLoop *aeCreateEventLoop(int setsize) {
-    return aeCreateEventLoop2(setsize, 0);
+    return aeCreateEventLoop3(setsize, 0, 0);
 }
 
-aeEventLoop *aeCreateEventLoop2(int setsize, int flags) {
+aeEventLoop *aeCreateEventLoop3(int setsize, int epfd, int flags) {
     aeEventLoop *eventLoop;
+    int aeApiCreateSucceed = 0;
     int i;
 
     if ((eventLoop = zmalloc(sizeof(*eventLoop))) == NULL) goto err;
     eventLoop->events = zmalloc(sizeof(aeFileEvent)*setsize);
     eventLoop->fired = zmalloc(sizeof(aeFiredEvent)*setsize);
-    if (eventLoop->events == NULL || eventLoop->fired == NULL) goto err;
+    eventLoop->firedExtra = zmalloc(sizeof(aeFiredExtra)*setsize);
+    if (eventLoop->events == NULL || eventLoop->fired == NULL || eventLoop->firedExtra == NULL) goto err;
     eventLoop->setsize = setsize;
     eventLoop->lastTime = time(NULL);
     eventLoop->timeEventHead = NULL;
@@ -81,7 +83,17 @@ aeEventLoop *aeCreateEventLoop2(int setsize, int flags) {
     eventLoop->beforesleep = NULL;
     eventLoop->aftersleep = NULL;
     eventLoop->flags = flags;
+    eventLoop->firedExtraNum = 0;
     if (aeApiCreate(eventLoop) == -1) goto err;
+    aeApiCreateSucceed = 1;
+    if (epfd) {
+#if AE_HAS_API_REPLACE_EPFD
+        if (epfd && epfd != aeApiReplaceEpfd(eventLoop, epfd)) goto err;
+#else
+        goto err;
+#endif
+    }
+
     /* Events with mask == AE_NONE are not set. So let's initialize the
      * vector with it. */
     for (i = 0; i < setsize; i++)
@@ -90,8 +102,12 @@ aeEventLoop *aeCreateEventLoop2(int setsize, int flags) {
 
 err:
     if (eventLoop) {
+        if (aeApiCreateSucceed) {
+            aeApiFree(eventLoop);
+        }
         zfree(eventLoop->events);
         zfree(eventLoop->fired);
+        zfree(eventLoop->firedExtra);
         zfree(eventLoop);
     }
     return NULL;

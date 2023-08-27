@@ -15,9 +15,17 @@ public interface Posix {
 
     long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException;
 
-    int aeApiPoll(long ae, long wait, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
+    MemorySegment aeGetFired(long ae);
 
-    int aeApiPollNow(long ae, MemorySegment fdArray, MemorySegment eventsArray) throws IOException;
+    MemorySegment aeGetFiredExtra(long ae);
+
+    long aeCreateEventLoop(int setsize, int epfd, boolean preferPoll) throws IOException;
+
+    int aeApiPoll(long ae, long wait) throws IOException;
+
+    int aeApiPollNow(long ae) throws IOException;
+
+    int aeGetFiredExtraNum(long ae);
 
     void aeCreateFileEvent(long ae, int fd, int mask);
 

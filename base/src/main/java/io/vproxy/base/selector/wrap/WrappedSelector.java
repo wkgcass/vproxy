@@ -464,4 +464,8 @@ public class WrappedSelector implements FDSelector {
             coll.add(new FDInspection(fd, watch, null));
         }
     }
+
+    public FDSelector getSelector() {
+        return selector;
+    }
 }
