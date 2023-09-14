@@ -5,6 +5,8 @@ set +e
 
 set -e
 
+make init
+
 testclasses=`cat test/src/test/java/io/vproxy/test/VSuite.java | grep '\bTest' | cut -d '.' -f 1 | xargs`
 image="vproxyio/test:latest"
 
