@@ -21,6 +21,8 @@ clean: clean-jar
 	rm -f ./base/src/main/c/libvfdposix.so
 	rm -f ./base/src/main/c/libvpxdp.so
 	rm -f ./base/src/main/c/vfdwindows.dll
+	rm -f ./base/src/main/c/libvpquic.dylib
+	rm -f ./base/src/main/c/libvpquic.so
 	cd ./base/src/main/c/xdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
@@ -30,6 +32,10 @@ clean: clean-jar
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
 	rm -rf ./io
+	rm -f ./submodules/msquic-java/core/src/main/c/libmsquic-java.dylib
+	rm -f ./submodules/msquic-java/core/src/main/c/libmsquic-java.so
+	rm -f ./submodules/msquic-java/core/src/main/c/msquic-java.dll
+	rm -rf ./submodules/msquic/build
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
@@ -39,6 +45,8 @@ clean-docker-plugin-rootfs:
 init:
 	git submodule update --init --recursive
 	cd submodules/panama-native-interface && ./gradlew clean shadowJar
+	cd submodules/ && git clone https://github.com/wkgcass/msquic --branch=modified --depth=1 || exit 0
+	cd submodules/msquic && git submodule update --init --recursive --recommend-shallow
 
 .PHONY: all
 all: clean jar-with-lib jlink vfdposix image docker docker-network-plugin
@@ -105,29 +113,47 @@ xdp-sample-kern:
 
 .PHONY: msquic-java
 msquic-java:
-	cd ./submodules/msquic-java/core/src/main/c && /usr/bin/env bash ./make-quic.sh
+	cd ./submodules/msquic-java/core/src/main/c && \
+	MSQUIC_LD=../../../../../msquic/build/bin/Release \
+	MSQUIC_INC=../../../../../msquic/src/inc \
+	/usr/bin/env bash ./make-quic.sh
 .PHONY: vpquic
 vpquic:
-	cd ./base/src/main/c && /usr/bin/env bash ./make-quic.sh
+	cd ./base/src/main/c && \
+	MSQUIC_LD=../../../../submodules/msquic/build/bin/Release \
+	MSQUIC_INC=../../../../submodules/msquic/src/inc \
+	/usr/bin/env bash ./make-quic.sh
+.PHONY: msquic
+msquic:
+	cd ./submodules/msquic/ && make
 
 .PHONY: vfdposix-linux
 .PHONY: vpxdp-linux
 .PHONY: msquic-java-linux
 .PHONY: vpquic-linux
+.PHONY: msquic-linux
 ifeq ($(OS),Linux)
 vfdposix-linux: vfdposix
 vpxdp-linux: vpxdp
 vpquic-linux: vpquic
+msquic-linux: msquic
 else
 vfdposix-linux:
 	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vfdposix
 vpxdp-linux:
 	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vpxdp
 msquic-java-linux:
-	docker run --rm -v $(shell pwd):/vproxy -v "${MSQUIC_INC}:/msquic/src/inc" -v "${MSQUIC_LD}:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make msquic-java
+	docker run --rm -v $(shell pwd):/vproxy -v "$(shell pwd)/submodules/msquic/src/inc:/msquic/src/inc" -v "$(shell pwd)/submodules/msquic/build/bin/Release:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make msquic-java
 vpquic-linux:
-	docker run --rm -v $(shell pwd):/vproxy -v "${MSQUIC_INC}:/msquic/src/inc" -v "${MSQUIC_LD}:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make vpquic
+	docker run --rm -v $(shell pwd):/vproxy -v "$(shell pwd)/submodules/msquic/src/inc:/msquic/src/inc" -v "$(shell pwd)/submodules/msquic/build/bin/Release:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make vpquic
+msquic-linux:
+	docker run --rm -v $(shell pwd)/submodules/msquic:/msquic vproxyio/msquic-compile:latest make
 endif
+
+.PHONY: quic
+quic: vfdposix msquic msquic-java vpquic
+.PHONY: quic-linux
+quic-linux: vfdposix-linux msquic-linux msquic-java-linux vpquic-linux
 
 .PHONY: vfdwindows
 vfdwindows:

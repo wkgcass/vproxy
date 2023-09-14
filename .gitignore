@@ -73,3 +73,6 @@ test/src/test/java/io/vproxy/test/gen/packetfilters/*.java
 
 # javaagent
 !misc/modify-gradle-compiler-args-agent.jar
+
+# some submodules but not tracked with gitsubmodule
+submodules/msquic/
