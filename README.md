@@ -52,8 +52,14 @@ Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/do
 
 <details><summary>build prerequisites</summary>
 
+Run:  
+```shell
+make init
+```  
+to initiate submodules and some other init work.
+
 A java agent is required as a patch for gradle.  
-Copy `misc/modify-gradle-compiler-args-agent.jar` to `~/.gradle/` before compiling this project.
+Copy `misc/modify-gradle-compiler-args-agent.jar` to `~/.gradle/` before compiling this project.  
 
 </details>
 
