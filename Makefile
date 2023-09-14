@@ -36,6 +36,8 @@ clean: clean-jar
 	rm -f ./submodules/msquic-java/core/src/main/c/libmsquic-java.so
 	rm -f ./submodules/msquic-java/core/src/main/c/msquic-java.dll
 	rm -rf ./submodules/msquic/build
+	rm -rf ./libmsquic.so
+	rm -rf ./libmsquic.dylib
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
@@ -49,7 +51,7 @@ init:
 	cd submodules/msquic && git submodule update --init --recursive --recommend-shallow
 
 .PHONY: all
-all: clean jar-with-lib jlink vfdposix image docker docker-network-plugin
+all: clean jar-with-lib jlink image docker docker-network-plugin
 
 .PHONY: generate-module-info
 generate-module-info:
@@ -66,17 +68,33 @@ _add_linux_so_to_zip:
 	cp ./base/src/main/c/libvfdposix.so ./io/vproxy/libvfdposix-$(LINUX_ARCH).so
 	cp ./base/src/main/c/libvpxdp.so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so
 	cp ./base/src/main/c/xdp/libbpf/src/libbpf.so.0.6.0 ./io/vproxy/libbpf-$(LINUX_ARCH).so
-	zip build/libs/vproxy.jar ./io/vproxy/libvfdposix-$(LINUX_ARCH).so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so ./io/vproxy/libbpf-$(LINUX_ARCH).so
+	cp ./libmsquic.so ./io/vproxy/libmsquic-$(LINUX_ARCH).so
+	cp ./submodules/msquic-java/core/src/main/c/libmsquic-java.so ./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
+	cp ./base/src/main/c/libvpquic.so ./io/vproxy/libvpquic-$(LINUX_ARCH).so
+	zip build/libs/vproxy.jar \
+		./io/vproxy/libvfdposix-$(LINUX_ARCH).so \
+		./io/vproxy/libvpxdp-$(LINUX_ARCH).so \
+		./io/vproxy/libbpf-$(LINUX_ARCH).so \
+		./io/vproxy/libmsquic-$(LINUX_ARCH).so \
+		./io/vproxy/libmsquic-java-$(LINUX_ARCH).so \
+		./io/vproxy/libvpquic-$(LINUX_ARCH).so
 	rm -r ./io
 
 .PHONY: jar-with-lib
 ifeq ($(OS),Linux)
-jar-with-lib: jar vfdposix vpxdp _add_linux_so_to_zip
+jar-with-lib: clean jar vfdposix vpxdp quic _add_linux_so_to_zip
 else
-jar-with-lib: jar vfdposix-linux vpxdp-linux vfdposix _add_linux_so_to_zip
+jar-with-lib: clean jar vfdposix-linux vpxdp-linux quic-all vfdposix _add_linux_so_to_zip
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
-	zip build/libs/vproxy.jar ./io/vproxy/libvfdposix-$(ARCH).dylib
+	cp ./libmsquic.dylib ./io/vproxy/libmsquic-$(ARCH).dylib
+	cp ./submodules/msquic-java/core/src/main/c/libmsquic-java.dylib ./io/vproxy/libmsquic-java-$(ARCH).dylib
+	cp ./base/src/main/c/libvpquic.dylib ./io/vproxy/libvpquic-$(ARCH).dylib
+	zip build/libs/vproxy.jar \
+		./io/vproxy/libvfdposix-$(ARCH).dylib \
+		./io/vproxy/libmsquic-$(ARCH).dylib \
+		./io/vproxy/libmsquic-java-$(ARCH).dylib \
+		./io/vproxy/libvpquic-$(ARCH).dylib
 	rm -r ./io
 endif
 
@@ -154,6 +172,14 @@ endif
 quic: vfdposix msquic msquic-java vpquic
 .PHONY: quic-linux
 quic-linux: vfdposix-linux msquic-linux msquic-java-linux vpquic-linux
+.PHONY: quic-all
+quic-all:
+	rm -rf ./submodules/msquic/build
+	make quic
+	cp ./submodules/msquic/build/bin/Release/libmsquic.2.3.0.dylib ./libmsquic.dylib
+	rm -rf ./submodules/msquic/build
+	make quic-linux
+	cp ./submodules/msquic/build/bin/Release/libmsquic.so.2.3.0 ./libmsquic.so
 
 .PHONY: vfdwindows
 vfdwindows:
