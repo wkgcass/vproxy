@@ -12,6 +12,7 @@ import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.anno.ThreadSafe;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.*;
+import io.vproxy.vfd.posix.PosixFDs;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -390,7 +391,7 @@ class HandlerForConnection implements Handler<SocketFD> {
                 if (events.have(Event.WRITABLE)) {
                     Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection + " but events still have WRITABLE");
                 } else {
-                    if (VFDConfig.vfdImpl.equals("posix") && OS.isLinux()) {
+                    if (ctx.getEventLoop().fds instanceof PosixFDs && OS.isLinux()) {
                         Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection +
                             ", firing without WRITABLE event watched" +
                             ", vproxy detects that you are using vfdposix impl on Linux, which uses epoll" +
