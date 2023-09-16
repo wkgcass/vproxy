@@ -13,7 +13,7 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.component.svrgroup.Upstream;
-import io.vproxy.dep.vjson.JSON;
+import vjson.JSON;
 import io.vproxy.dns.DNSServer;
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import io.vproxy.vfd.IP;

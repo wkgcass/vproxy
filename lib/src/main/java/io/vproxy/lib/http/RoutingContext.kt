@@ -1,6 +1,6 @@
 package io.vproxy.lib.http
 
-import io.vproxy.dep.vjson.JSON
+import vjson.JSON
 import io.vproxy.lib.http.route.SubPath
 import io.vproxy.lib.http.route.WildcardSubPath
 

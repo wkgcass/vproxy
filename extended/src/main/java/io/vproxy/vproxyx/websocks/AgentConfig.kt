@@ -1,6 +1,6 @@
 package io.vproxy.vproxyx.websocks
 
-import io.vproxy.dep.vjson.deserializer.rule.*
+import vjson.deserializer.rule.*
 
 data class VPWSAgentConfig(
   // agent

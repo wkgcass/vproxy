@@ -1,6 +1,6 @@
 package io.vproxy.base.prometheus;
 
-import io.vproxy.dep.vjson.simple.SimpleString;
+import vjson.simple.SimpleString;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;

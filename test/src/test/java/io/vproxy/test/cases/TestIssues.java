@@ -1,8 +1,8 @@
 package io.vproxy.test.cases;
 
-import io.vproxy.dep.vjson.CharStream;
-import io.vproxy.dep.vjson.JSON;
-import io.vproxy.dep.vjson.cs.LineColCharStream;
+import vjson.CharStream;
+import vjson.JSON;
+import vjson.cs.LineColCharStream;
 import io.vproxy.lib.docker.entity.Network;
 import org.junit.Test;
 

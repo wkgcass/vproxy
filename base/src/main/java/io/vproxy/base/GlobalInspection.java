@@ -18,7 +18,7 @@ import io.vproxy.base.util.display.TableBuilder;
 import io.vproxy.base.util.display.TreeBuilder;
 import io.vproxy.base.util.exception.NoException;
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.dep.vjson.simple.SimpleString;
+import vjson.simple.SimpleString;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.NetworkFD;
 import io.vproxy.vfd.ServerSocketFD;

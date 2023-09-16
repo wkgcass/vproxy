@@ -14,7 +14,7 @@ import io.vproxy.base.util.callback.Callback
 import io.vproxy.base.util.promise.Promise
 import io.vproxy.base.util.ringbuffer.SSLUtils
 import io.vproxy.base.util.thread.VProxyThread
-import io.vproxy.dep.vjson.JSON
+import vjson.JSON
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.execute
 import io.vproxy.lib.common.unsafeIO

@@ -190,6 +190,7 @@ project(':dep') {
         api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.5.31'
         api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.5.2'
         api group: 'io.vproxy', name: 'pni-api-jdk21', version: '21.0.0.10'
+        api group: 'io.vproxy', name: 'vjson', version: '1.5.2'
     }
 }
 

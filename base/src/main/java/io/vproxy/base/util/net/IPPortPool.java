@@ -1,7 +1,7 @@
 package io.vproxy.base.util.net;
 
 import io.vproxy.base.util.coll.Tuple;
-import io.vproxy.dep.vjson.parser.ParserUtils;
+import vjson.parser.ParserUtils;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 

@@ -16,7 +16,7 @@ import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.JoinCallback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.thread.VProxyThreadJsonParserCacheHolder;
-import io.vproxy.dep.vjson.parser.ParserUtils;
+import vjson.parser.ParserUtils;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vmirror.Mirror;
 import io.vproxy.vproxyx.*;

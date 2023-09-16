@@ -1,10 +1,10 @@
 package io.vproxy.test.cases
 
-import io.vproxy.dep.vjson.CharStream.Companion.from
-import io.vproxy.dep.vjson.deserializer.DeserializeParserListener
-import io.vproxy.dep.vjson.parser.ParserMode
-import io.vproxy.dep.vjson.parser.ParserOptions.Companion.allFeatures
-import io.vproxy.dep.vjson.parser.ParserUtils.buildFrom
+import vjson.CharStream.Companion.from
+import vjson.deserializer.DeserializeParserListener
+import vjson.parser.ParserMode
+import vjson.parser.ParserOptions.Companion.allFeatures
+import vjson.parser.ParserUtils.buildFrom
 import io.vproxy.vproxyx.websocks.*
 import io.vproxy.vproxyx.websocks.VPWSAgentConfig.Companion.rule
 import org.junit.Assert.assertEquals

@@ -1,10 +1,10 @@
 package io.vproxy.app.controller
 
 import io.vproxy.base.util.exception.NotFoundException
-import io.vproxy.dep.vjson.JSON
-import io.vproxy.dep.vjson.simple.SimpleArray
-import io.vproxy.dep.vjson.util.ArrayBuilder
-import io.vproxy.dep.vjson.util.ObjectBuilder
+import vjson.JSON
+import vjson.simple.SimpleArray
+import vjson.util.ArrayBuilder
+import vjson.util.ObjectBuilder
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.launch
 import io.vproxy.lib.http.RoutingContext

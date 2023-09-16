@@ -1,9 +1,9 @@
 package io.vproxy.lib.docker.entity
 
-import io.vproxy.dep.vjson.deserializer.rule.ArrayRule
-import io.vproxy.dep.vjson.deserializer.rule.ObjectRule
-import io.vproxy.dep.vjson.deserializer.rule.Rule
-import io.vproxy.dep.vjson.deserializer.rule.StringRule
+import vjson.deserializer.rule.ArrayRule
+import vjson.deserializer.rule.ObjectRule
+import vjson.deserializer.rule.Rule
+import vjson.deserializer.rule.StringRule
 
 data class Network(
   var id: String? = null,

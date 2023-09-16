@@ -1,8 +1,8 @@
 package io.vproxy.poc
 
-import io.vproxy.dep.vjson.JSON
-import io.vproxy.dep.vjson.util.ArrayBuilder
-import io.vproxy.dep.vjson.util.ObjectBuilder
+import vjson.JSON
+import vjson.util.ArrayBuilder
+import vjson.util.ObjectBuilder
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.sleep
 import io.vproxy.lib.common.with

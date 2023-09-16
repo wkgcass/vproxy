@@ -8,7 +8,7 @@ import io.vproxy.base.util.net.PortPool;
 import io.vproxy.base.util.net.SNatIPPortPool;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
-import io.vproxy.dep.vjson.simple.SimpleString;
+import vjson.simple.SimpleString;
 import io.vproxy.vfd.*;
 import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vswitch.PacketBuffer;

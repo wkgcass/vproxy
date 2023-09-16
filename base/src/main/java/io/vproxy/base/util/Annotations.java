@@ -1,6 +1,6 @@
 package io.vproxy.base.util;
 
-import io.vproxy.dep.vjson.util.ObjectBuilder;
+import vjson.util.ObjectBuilder;
 
 import java.util.Collections;
 import java.util.HashMap;

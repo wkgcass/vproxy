@@ -1,6 +1,6 @@
 package io.vproxy.lib.docker
 
-import io.vproxy.dep.vjson.JSON
+import vjson.JSON
 import io.vproxy.lib.common.ByteArrayCharStream
 import io.vproxy.lib.common.vplib
 import io.vproxy.lib.docker.entity.Network

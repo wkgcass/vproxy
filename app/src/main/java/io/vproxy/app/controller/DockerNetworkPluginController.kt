@@ -1,8 +1,8 @@
 package io.vproxy.app.controller
 
 import io.vproxy.base.util.Network
-import io.vproxy.dep.vjson.JSON
-import io.vproxy.dep.vjson.util.ObjectBuilder
+import vjson.JSON
+import vjson.util.ObjectBuilder
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.launch
 import io.vproxy.lib.common.sleep
