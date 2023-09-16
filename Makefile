@@ -98,16 +98,17 @@ jar-with-lib: clean jar vfdposix-linux vpxdp-linux quic-all vfdposix _add_linux_
 	rm -r ./io
 endif
 
-.PHONY: jar-no-kt-runtime
-jar-no-kt-runtime: jar-with-lib
-	cp build/libs/vproxy.jar build/libs/vproxy-no-kt-runtime.jar
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/*'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'kotlin*'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'DebugProbesKt.bin'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/kotlin*'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/maven/*'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/proguard/*'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/versions/*'
+.PHONY: jar-no-dep
+jar-no-dep: jar-with-lib
+	cp build/libs/vproxy.jar build/libs/vproxy-no-dep.jar
+	zip -d -q build/libs/vproxy-no-dep.jar 'org/*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'kotlin*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'DebugProbesKt.bin'
+	zip -d -q build/libs/vproxy-no-dep.jar 'META-INF/kotlin*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'META-INF/maven/*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'META-INF/proguard/*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'META-INF/versions/*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'io/vproxy/pni/*'
 
 .PHONY: jlink
 jlink: jar
