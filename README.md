@@ -111,7 +111,7 @@ make image
 
 <br>
 
-Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable before compiling.
+Only macos(bsd)/linux supported.
 
 ```
 make vfdposix

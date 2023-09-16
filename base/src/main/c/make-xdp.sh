@@ -1,11 +1,5 @@
 #!/bin/bash
 
-if [[ -z "$JAVA_HOME" ]]
-then
-	echo "You need to set JAVA_HOME in env"
-	exit 1
-fi
-
 cd xdp && make libbpf
 cd ../
 
@@ -16,8 +10,6 @@ echo "compiling libvpxdp.so ..."
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
     -I ./ \
-    -I "$JAVA_HOME/include" \
-    -I "$JAVA_HOME/include/linux" \
     -I "./xdp/libbpf/src" \
     -I "../../../../dep/src/main/c" \
     -I "../c-generated" \

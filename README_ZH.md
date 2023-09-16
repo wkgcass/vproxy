@@ -103,7 +103,7 @@ make image
 
 <br>
 
-仅支持macos(bsd)/linux。另外在编译前，你还需要配置`JAVA_HOME`环境变量。
+仅支持macos(bsd)/linux。
 
 ```
 make vfdposix
