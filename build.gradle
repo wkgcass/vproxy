@@ -111,7 +111,7 @@ subprojects {
         enabled = false
     }
 
-    def releaseProjects = ['dep', 'base', 'adaptor-netty', 'adaptor-vertx']
+    def releaseProjects = ['dep', 'base', 'adaptor-netty', 'adaptor-vertx', 'msquic-dummy']
     if (System.getProperty("MavenLocalInstall", "false") == "true") {
         releaseProjects.addAll(['lib', 'core', 'extended', 'app', 'all'])
     }
@@ -465,6 +465,12 @@ project(':test') {
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
         main = "io.vproxy.buildtools.ModuleInfoGenerator"
+    }
+}
+
+project(':msquic-dummy') {
+    dependencies {
+        api project(':base')
     }
 }
 

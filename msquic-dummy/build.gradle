@@ -1,0 +1,9 @@
+compileJava {
+    doFirst {
+        options.compilerArgs << '--module-path' << classpath.asPath
+    }
+}
+
+jar {
+    archiveName "vproxy-msquic-dummy.jar"
+}
