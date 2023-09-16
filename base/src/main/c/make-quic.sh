@@ -57,6 +57,6 @@ gcc -std=gnu11 -O2 \
     -DQUIC_ENABLE_CUSTOM_EVENT_LOOP=1 \
     $cflags \
     -shared -Werror -lc -lpthread $NO_AS_NEEDED "-lmsquic" $AS_NEEDED -fPIC \
-    io_vproxy_msquic_modified_MsQuic.c \
-    ../c-generated/io_vproxy_msquic_modified_MsQuicUpcall.c \
+    io_vproxy_msquic_MsQuic.c \
+    ../c-generated/io_vproxy_msquic_MsQuicModUpcall.c \
     -o "$target"

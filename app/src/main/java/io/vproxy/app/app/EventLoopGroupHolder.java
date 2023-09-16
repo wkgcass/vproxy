@@ -4,7 +4,7 @@ import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
-import io.vproxy.msquic.modified.MsQuicInitializer;
+import io.vproxy.msquic.MsQuicInitializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;

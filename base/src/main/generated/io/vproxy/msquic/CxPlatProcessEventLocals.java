@@ -1,4 +1,4 @@
-package io.vproxy.msquic.modified;
+package io.vproxy.msquic;
 
 import io.vproxy.pni.*;
 import io.vproxy.pni.array.*;
@@ -125,4 +125,4 @@ public class CxPlatProcessEventLocals {
     }
 }
 // metadata.generator-version: pni 21.0.0.8
-// sha256:ea0b93309747a6096ea6579126e9122e42eb08353b84758607da5a2b6af6d15e
+// sha256:33efe73f607d97de91a24e199aa6fa5212c6fa24a31e3f9e55d02b1d82fbfcd5

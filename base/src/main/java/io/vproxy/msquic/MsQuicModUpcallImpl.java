@@ -1,4 +1,4 @@
-package io.vproxy.msquic.modified;
+package io.vproxy.msquic;
 
 import io.vproxy.base.component.elgroup.EventLoopWrapper;
 import io.vproxy.base.util.AnnotationKeys;
@@ -10,13 +10,13 @@ import io.vproxy.base.util.unsafe.SunUnsafe;
 
 import java.lang.foreign.MemorySegment;
 
-public class MsQuicUpcallImpl implements MsQuicUpcall.Interface {
-    private MsQuicUpcallImpl() {
+public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
+    private MsQuicModUpcallImpl() {
     }
 
-    private static final MsQuicUpcallImpl IMPL = new MsQuicUpcallImpl();
+    private static final MsQuicModUpcallImpl IMPL = new MsQuicModUpcallImpl();
 
-    public static MsQuicUpcallImpl get() {
+    public static MsQuicModUpcallImpl get() {
         return IMPL;
     }
 
@@ -48,17 +48,17 @@ public class MsQuicUpcallImpl implements MsQuicUpcall.Interface {
         var loop = el.getSelectorEventLoop();
 
         var locals = new CxPlatProcessEventLocals(
-            SunUnsafe.allocateMemory(MsQuicConsts.SizeOfCxPlatProcessEventLocals));
-        var state = SunUnsafe.allocateMemory(MsQuicConsts.SizeOfCXPLAT_EXECUTION_STATE);
+            SunUnsafe.allocateMemory(MsQuicModConsts.SizeOfCxPlatProcessEventLocals));
+        var state = SunUnsafe.allocateMemory(MsQuicModConsts.SizeOfCXPLAT_EXECUTION_STATE);
         locals.setWorker(worker);
         locals.setState(state);
 
         var block = new BlockCallback<Void, Throwable>();
         loop.runOnLoop(() -> {
             try {
-                MsQuic.get().CxPlatGetCurThread(thread);
-                MsQuic.get().MsQuicCxPlatWorkerThreadInit(locals);
-                MsQuic.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
+                MsQuicMod.get().CxPlatGetCurThread(thread);
+                MsQuicMod.get().MsQuicCxPlatWorkerThreadInit(locals);
+                MsQuicMod.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
             } catch (Throwable t) {
                 block.failed(t);
                 return;
@@ -72,12 +72,12 @@ public class MsQuicUpcallImpl implements MsQuicUpcall.Interface {
             return false;
         }
         loop.setBeforePoll(() -> {
-            MsQuic.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
+            MsQuicMod.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
             return locals.getWaitTime();
         });
-        loop.setAfterPoll((n, events) -> MsQuic.get().MsQuicCxPlatWorkerThreadAfterPoll(locals, n, events));
+        loop.setAfterPoll((n, events) -> MsQuicMod.get().MsQuicCxPlatWorkerThreadAfterPoll(locals, n, events));
         loop.setFinalizer(() -> {
-            MsQuic.get().MsQuicCxPlatWorkerThreadFinalize(locals);
+            MsQuicMod.get().MsQuicCxPlatWorkerThreadFinalize(locals);
             SunUnsafe.freeMemory(locals.MEMORY.address());
             SunUnsafe.freeMemory(state.address());
         });

@@ -1,4 +1,4 @@
-package io.vproxy.msquic.modified;
+package io.vproxy.msquic;
 
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.LogType;
@@ -25,9 +25,9 @@ public class MsQuicInitializer {
             return false;
         }
 
-        io.vproxy.msquic.MsQuicUpcall.setImpl(io.vproxy.msquic.MsQuicUpcallImpl.get());
         MsQuicUpcall.setImpl(MsQuicUpcallImpl.get());
-        MsQuic.get().MsQuicSetEventLoopThreadDispatcher();
+        MsQuicModUpcall.setImpl(MsQuicModUpcallImpl.get());
+        MsQuicMod.get().MsQuicSetEventLoopThreadDispatcher();
 
         supported = true;
         initialized = true;

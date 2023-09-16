@@ -1,4 +1,4 @@
-package io.vproxy.msquic.modified;
+package io.vproxy.msquic;
 
 import io.vproxy.pni.*;
 import io.vproxy.pni.array.*;
@@ -6,14 +6,14 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class MsQuicUpcall {
+public class MsQuicModUpcall {
     private static final Arena ARENA = Arena.ofShared();
 
     public static final MemorySegment dispatch;
 
     private static int dispatch(MemorySegment worker, int eventQ, MemorySegment thread) {
         if (IMPL == null) {
-            System.out.println("io.vproxy.msquic.modified.MsQuicUpcall#dispatch");
+            System.out.println("io.vproxy.msquic.MsQuicModUpcall#dispatch");
             System.exit(1);
         }
         var RESULT = IMPL.dispatch(
@@ -27,13 +27,13 @@ public class MsQuicUpcall {
     static {
         MethodHandle dispatchMH;
         try {
-            dispatchMH = MethodHandles.lookup().findStatic(io.vproxy.msquic.modified.MsQuicUpcall.class, "dispatch", MethodType.methodType(int.class, MemorySegment.class, int.class, MemorySegment.class));
+            dispatchMH = MethodHandles.lookup().findStatic(io.vproxy.msquic.MsQuicModUpcall.class, "dispatch", MethodType.methodType(int.class, MemorySegment.class, int.class, MemorySegment.class));
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
         dispatch = PanamaUtils.defineCFunction(ARENA, dispatchMH, int.class, MemorySegment.class, int.class, MemorySegment.class);
 
-        var initMH = PanamaUtils.lookupPNICriticalFunction(true, void.class, "JavaCritical_io_vproxy_msquic_modified_MsQuicUpcall_INIT", MemorySegment.class);
+        var initMH = PanamaUtils.lookupPNICriticalFunction(true, void.class, "JavaCritical_io_vproxy_msquic_MsQuicModUpcall_INIT", MemorySegment.class);
         try {
             initMH.invoke(dispatch);
         } catch (Throwable t) {
@@ -53,4 +53,4 @@ public class MsQuicUpcall {
     }
 }
 // metadata.generator-version: pni 21.0.0.8
-// sha256:1e1f5d22cc18f2dd0917d50eb97bcc2a3e62caabc011150c16c5dd3fd90c8407
+// sha256:c0ab7a4b9671d10ce767d683982d929a40856e84e13f0d94aa198a2fcd60a33a

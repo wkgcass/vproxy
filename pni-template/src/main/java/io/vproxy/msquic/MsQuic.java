@@ -1,4 +1,4 @@
-package io.vproxy.msquic.modified;
+package io.vproxy.msquic;
 
 import io.vproxy.pni.annotation.*;
 import io.vproxy.vfd.posix.PNIAEFiredExtra;
@@ -7,7 +7,7 @@ import java.lang.foreign.MemorySegment;
 
 @Function
 @Include("msquic.h")
-interface PNIMsQuic {
+interface PNIMsQuicMod {
     @Impl(
         // language="c"
         c = """
@@ -111,6 +111,6 @@ class PNICxPlatProcessEventLocals {
 
 @Upcall
 @Include("msquic.h")
-interface PNIMsQuicUpcall {
+interface PNIMsQuicModUpcall {
     int dispatch(MemorySegment worker, int eventQ, MemorySegment thread);
 }

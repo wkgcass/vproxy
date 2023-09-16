@@ -12,7 +12,7 @@ import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
-import io.vproxy.msquic.modified.MsQuicInitializer;
+import io.vproxy.msquic.MsQuicInitializer;
 
 import java.io.IOException;
 import java.util.ArrayList;
