@@ -37,6 +37,12 @@ public class EventLoopGroup implements IEventLoopGroup {
     public EventLoopGroup(String alias, Annotations annotations) {
         this.alias = alias;
         this.annotations = annotations;
+
+        if (annotations.EventLoopGroup_UseMsQuic) {
+            if (!MsQuicInitializer.isSupported()) {
+                throw new IllegalStateException("msquic is not supported");
+            }
+        }
     }
 
     /*
@@ -291,11 +297,6 @@ public class EventLoopGroup implements IEventLoopGroup {
         }
         eventLoops.clear();
         removeResources();
-
-        // need to remove event loop from msquic event loop group registry
-        if (annotations.EventLoopGroup_UseMsQuic) {
-            MsQuicInitializer.clearMsQuicEventLoopGroup(this);
-        }
     }
 
     /*

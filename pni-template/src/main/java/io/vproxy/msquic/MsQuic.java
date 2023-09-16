@@ -112,5 +112,5 @@ class PNICxPlatProcessEventLocals {
 @Upcall
 @Include("msquic.h")
 interface PNIMsQuicModUpcall {
-    int dispatch(MemorySegment worker, int eventQ, MemorySegment thread);
+    int dispatch(MemorySegment worker, int epfd, MemorySegment thread, MemorySegment context);
 }

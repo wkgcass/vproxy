@@ -1,12 +1,13 @@
 package io.vproxy.msquic;
 
+import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.elgroup.EventLoopWrapper;
-import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.pni.PNIRef;
 
 import java.lang.foreign.MemorySegment;
 
@@ -21,18 +22,17 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
     }
 
     @Override
-    public int dispatch(MemorySegment worker, int eventQ, MemorySegment thread) {
+    public int dispatch(MemorySegment worker, int epfd, MemorySegment thread, MemorySegment context) {
         try {
-            var elg = MsQuicInitializer.getMsQuicEventLoopGroup();
+            var elg = getMsQuicEventLoopGroup(context);
             if (elg == null) {
-                Logger.error(LogType.NO_EVENT_LOOP, "no event loop group for msquic, " +
-                    "you should create an eventloop with annotation " + AnnotationKeys.EventLoopGroup_UseMsQuic);
+                Logger.error(LogType.NO_EVENT_LOOP, "no event loop group provided for msquic");
                 return 1;
             }
-            var name = String.valueOf(eventQ);
-            var el = elg.add(name, eventQ, new Annotations());
+            var name = String.valueOf(epfd);
+            var el = elg.add(name, epfd, new Annotations());
             if (initMsQuic(el, worker, thread)) {
-                Logger.alert("msquic event loop is added, eventQ=" + eventQ + ", el=" + el);
+                Logger.alert("msquic event loop is added, epfd=" + epfd + ", el=" + el);
                 return 0;
             } else {
                 elg.remove(name);
@@ -42,6 +42,13 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
             Logger.error(LogType.SYS_ERROR, "failed to dispatch the msquic thread", t);
             return 1;
         }
+    }
+
+    private EventLoopGroup getMsQuicEventLoopGroup(MemorySegment params) {
+        if (params == null) {
+            return null;
+        }
+        return PNIRef.getRef(params);
     }
 
     private boolean initMsQuic(EventLoopWrapper el, MemorySegment worker, MemorySegment thread) {

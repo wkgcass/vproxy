@@ -18,11 +18,11 @@ extern "C" {
 extern "C" {
 #endif
 
-JNIEXPORT int32_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicModUpcall_dispatch(void * worker, int32_t eventQ, void * thread);
+JNIEXPORT int32_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicModUpcall_dispatch(void * worker, int32_t epfd, void * thread, void * context);
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_msquic_MsQuicModUpcall
 // metadata.generator-version: pni 21.0.0.8
-// sha256:dfd337ac24fdac61da41cd593488470aa7cc6463380e08f9456cfe1e6a018b00
+// sha256:47a7533483653b8bb0ea4b7346925aff27e14bf6b571804f2755e313c13cd46d

@@ -11,15 +11,16 @@ public class MsQuicModUpcall {
 
     public static final MemorySegment dispatch;
 
-    private static int dispatch(MemorySegment worker, int eventQ, MemorySegment thread) {
+    private static int dispatch(MemorySegment worker, int epfd, MemorySegment thread, MemorySegment context) {
         if (IMPL == null) {
             System.out.println("io.vproxy.msquic.MsQuicModUpcall#dispatch");
             System.exit(1);
         }
         var RESULT = IMPL.dispatch(
             (worker.address() == 0 ? null : worker),
-            eventQ,
-            (thread.address() == 0 ? null : thread)
+            epfd,
+            (thread.address() == 0 ? null : thread),
+            (context.address() == 0 ? null : context)
         );
         return RESULT;
     }
@@ -27,11 +28,11 @@ public class MsQuicModUpcall {
     static {
         MethodHandle dispatchMH;
         try {
-            dispatchMH = MethodHandles.lookup().findStatic(io.vproxy.msquic.MsQuicModUpcall.class, "dispatch", MethodType.methodType(int.class, MemorySegment.class, int.class, MemorySegment.class));
+            dispatchMH = MethodHandles.lookup().findStatic(io.vproxy.msquic.MsQuicModUpcall.class, "dispatch", MethodType.methodType(int.class, MemorySegment.class, int.class, MemorySegment.class, MemorySegment.class));
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
-        dispatch = PanamaUtils.defineCFunction(ARENA, dispatchMH, int.class, MemorySegment.class, int.class, MemorySegment.class);
+        dispatch = PanamaUtils.defineCFunction(ARENA, dispatchMH, int.class, MemorySegment.class, int.class, MemorySegment.class, MemorySegment.class);
 
         var initMH = PanamaUtils.lookupPNICriticalFunction(true, void.class, "JavaCritical_io_vproxy_msquic_MsQuicModUpcall_INIT", MemorySegment.class);
         try {
@@ -49,8 +50,8 @@ public class MsQuicModUpcall {
     }
 
     public interface Interface {
-        int dispatch(MemorySegment worker, int eventQ, MemorySegment thread);
+        int dispatch(MemorySegment worker, int epfd, MemorySegment thread, MemorySegment context);
     }
 }
 // metadata.generator-version: pni 21.0.0.8
-// sha256:c0ab7a4b9671d10ce767d683982d929a40856e84e13f0d94aa198a2fcd60a33a
+// sha256:c9e1130d90e3e3d972150ed50e759720f84306bd0e01178d04ce8d964448f7d7

@@ -1,6 +1,6 @@
 package io.vproxy.poc;
 
-import io.vproxy.app.app.Application;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.Utils;
@@ -17,9 +17,7 @@ import static io.vproxy.msquic.MsQuicConsts.*;
 
 public class QuicPoc {
     public static void main(String[] args) throws Exception {
-        Application.createMinimum();
-        var app = Application.get();
-        app.eventLoopGroupHolder.add("quic", new Annotations(Map.of(
+        var eventLoopGroup = new EventLoopGroup("quic", new Annotations(Map.of(
             AnnotationKeys.EventLoopGroup_UseMsQuic.name, "true"
         )));
 
@@ -39,11 +37,14 @@ public class QuicPoc {
         Registration reg;
         {
             var allocator = Allocator.ofUnsafe();
-            var conf = new QuicRegistrationConfig(allocator);
+            var conf = new QuicRegistrationConfigEx(allocator);
+            var ref = PNIRef.of(eventLoopGroup);
+            conf.setContext(ref.MEMORY);
             var r = api.apiTable.openRegistration(conf, null, allocator);
             if (r == null) {
                 throw new Exception("failed to create registration");
             }
+            ref.close(); // it will not be used anymore
             reg = new Registration(api.apiTable, r, allocator);
         }
         System.out.println("init conf");

@@ -31,14 +31,6 @@ public class EventLoopGroupHolder {
             }
         }
         EventLoopGroup group = new EventLoopGroup(alias, annotations);
-        if (annotations.EventLoopGroup_UseMsQuic) {
-            try {
-                MsQuicInitializer.setMsQuicEventLoopGroup(group);
-            } catch (AlreadyExistException e) {
-                group.close();
-                throw e;
-            }
-        }
         map.put(alias, group);
     }
 

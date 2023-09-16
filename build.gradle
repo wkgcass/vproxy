@@ -438,7 +438,7 @@ project(':test') {
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
         systemProperty("java.library.path",
-            System.getenv("MSQUIC_LD") +
+            "./submodules/msquic/build/bin/Release" +
             File.pathSeparator +
             "./submodules/msquic-java/core/src/main/c" +
             File.pathSeparator +
