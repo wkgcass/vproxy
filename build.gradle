@@ -444,7 +444,11 @@ project(':test') {
             File.pathSeparator +
             "./base/src/main/c")
         systemProperty("vfd", "posix")
-        main = "io.vproxy.poc.QuicPoc"
+        if ("true" == System.getProperty("Gateway")) {
+            main = "io.vproxy.poc.QuicGatewayPoc"
+        } else {
+            main = "io.vproxy.poc.QuicPoc"
+        }
     }
 
     task WinTap(type: JavaExec) {

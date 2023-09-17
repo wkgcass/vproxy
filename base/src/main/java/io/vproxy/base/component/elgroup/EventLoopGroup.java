@@ -12,12 +12,20 @@ import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.util.exception.XException;
 import io.vproxy.msquic.MsQuicInitializer;
+import io.vproxy.msquic.QuicRegistrationConfigEx;
+import io.vproxy.msquic.wrap.ApiTables;
+import io.vproxy.msquic.wrap.Registration;
+import io.vproxy.pni.Allocator;
+import io.vproxy.pni.PNIRef;
+import io.vproxy.pni.array.IntArray;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -30,6 +38,8 @@ public class EventLoopGroup implements IEventLoopGroup {
     private final AtomicInteger cursor = new AtomicInteger(0); // current cursor of the eventLoops
     private final ConcurrentHashSet<EventLoopGroupAttach> attaches = new ConcurrentHashSet<>();
 
+    private final Registration msquicRegistration;
+
     public EventLoopGroup(String alias) {
         this(alias, new Annotations());
     }
@@ -38,10 +48,50 @@ public class EventLoopGroup implements IEventLoopGroup {
         this.alias = alias;
         this.annotations = annotations;
 
+        Registration msquicRegistration = null;
         if (annotations.EventLoopGroup_UseMsQuic) {
-            if (!MsQuicInitializer.isSupported()) {
-                throw new IllegalStateException("msquic is not supported");
+            try {
+                msquicRegistration = initQuic();
+            } catch (XException e) {
+                throw new RuntimeException(e);
             }
+        }
+        this.msquicRegistration = msquicRegistration;
+    }
+
+    public EventLoopGroup(String alias,
+                          @SuppressWarnings("unused") MsQuicInitializer.IsSupported isQuicSupported,
+                          Annotations annotations) throws XException {
+        Objects.requireNonNull(isQuicSupported);
+
+        this.alias = alias;
+        this.annotations = annotations;
+        msquicRegistration = initQuic();
+    }
+
+    private Registration initQuic() throws XException {
+        if (!MsQuicInitializer.isSupported()) {
+            throw new XException("msquic is not supported");
+        }
+
+        var api = ApiTables.V2;
+        var allocator = Allocator.ofUnsafe();
+        var ref = PNIRef.of(this);
+
+        try (var tmpAlloc = Allocator.ofConfined()) {
+            var conf = new QuicRegistrationConfigEx(tmpAlloc);
+            conf.setContext(ref.MEMORY);
+            var ret = new IntArray(tmpAlloc, 1);
+            var r = api.apiTable.openRegistration(conf, ret, allocator);
+            if (r == null) {
+                throw new XException("failed to create registration: " + ret.get(0));
+            }
+            return new Registration(api.apiTable, r, allocator);
+        } catch (XException e) {
+            allocator.close();
+            throw e;
+        } finally {
+            ref.close(); // it will not be used anymore
         }
     }
 
@@ -304,6 +354,10 @@ public class EventLoopGroup implements IEventLoopGroup {
      * END group function
      * ========================
      */
+
+    public Registration getMsquicRegistration() {
+        return msquicRegistration;
+    }
 
     @Override
     public String toString() {

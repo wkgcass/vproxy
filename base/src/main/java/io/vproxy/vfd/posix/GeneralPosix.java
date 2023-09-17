@@ -234,7 +234,7 @@ public class GeneralPosix implements Posix {
         try (var allocator = Allocator.ofPooled()) {
             var o = PosixNative.get().getIPv4Local(VProxyThread.current().getEnv(), fd, allocator);
             if (o == null) return null;
-            return new SocketAddressIPv4(o.getIp(), o.getPort());
+            return new SocketAddressIPv4(o.getIp(), o.getPort() & 0xffff);
         }
     }
 
@@ -243,7 +243,7 @@ public class GeneralPosix implements Posix {
         try (var allocator = Allocator.ofPooled()) {
             var o = PosixNative.get().getIPv6Local(VProxyThread.current().getEnv(), fd, allocator);
             if (o == null) return null;
-            return new SocketAddressIPv6(o.getIp(), o.getPort());
+            return new SocketAddressIPv6(o.getIp(), o.getPort() & 0xffff);
         }
     }
 
@@ -252,7 +252,7 @@ public class GeneralPosix implements Posix {
         try (var allocator = Allocator.ofPooled()) {
             var o = PosixNative.get().getIPv4Remote(VProxyThread.current().getEnv(), fd, allocator);
             if (o == null) return null;
-            return new SocketAddressIPv4(o.getIp(), o.getPort());
+            return new SocketAddressIPv4(o.getIp(), o.getPort() & 0xffff);
         }
     }
 
@@ -261,7 +261,7 @@ public class GeneralPosix implements Posix {
         try (var allocator = Allocator.ofPooled()) {
             var o = PosixNative.get().getIPv6Remote(VProxyThread.current().getEnv(), fd, allocator);
             if (o == null) return null;
-            return new SocketAddressIPv6(o.getIp(), o.getPort());
+            return new SocketAddressIPv6(o.getIp(), o.getPort() & 0xffff);
         }
     }
 
@@ -315,7 +315,7 @@ public class GeneralPosix implements Posix {
             var o = PosixNative.get().recvfromIPv4(VProxyThread.current().getEnv(),
                 fd, directBuffer, off, len, allocator);
             if (o == null) return null;
-            return new UDPRecvResult(new SocketAddressIPv4(o.getAddr().getIp(), o.getAddr().getPort()), o.getLen());
+            return new UDPRecvResult(new SocketAddressIPv4(o.getAddr().getIp(), o.getAddr().getPort() & 0xffff), o.getLen());
         }
     }
 
@@ -325,7 +325,7 @@ public class GeneralPosix implements Posix {
             var o = PosixNative.get().recvfromIPv6(VProxyThread.current().getEnv(),
                 fd, directBuffer, off, len, allocator);
             if (o == null) return null;
-            return new UDPRecvResult(new SocketAddressIPv6(o.getAddr().getIp(), o.getAddr().getPort()), o.getLen());
+            return new UDPRecvResult(new SocketAddressIPv6(o.getAddr().getIp(), o.getAddr().getPort() & 0xffff), o.getLen());
         }
     }
 

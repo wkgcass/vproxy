@@ -1,11 +1,16 @@
 package io.vproxy.component.ssl;
 
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -103,6 +108,64 @@ public class CertKey {
         // init ctx
         ctx.init(km, null, null);
         return ctx;
+    }
+
+    public Tuple<String, String> ensureCertKeyFile() throws IOException {
+        String cert = null;
+        String key = null;
+
+        if (certPaths != null && certPaths.length == 1) {
+            cert = certPaths[0];
+            if (!Files.exists(Path.of(cert))) {
+                assert Logger.lowLevelDebug("cert file " + cert + " is present but not found");
+                cert = null;
+            }
+        }
+        if (cert == null) {
+            cert = writeCertTempFile();
+        }
+        if (keyPath != null) {
+            key = keyPath;
+            if (!Files.exists(Path.of(key))) {
+                assert Logger.lowLevelDebug("key file " + key + " is present but not found");
+                key = null;
+            }
+        }
+        if (key == null) {
+            key = writeKeyTempFile();
+        }
+
+        return new Tuple<>(cert, key);
+    }
+
+    private String writeCertTempFile() throws IOException {
+        Path f = Files.createTempFile(alias + "-cert-", ".pem");
+        assert Logger.lowLevelDebug("will write cert " + alias + " to " + f);
+        try {
+            var sb = new StringBuilder();
+            for (var c : certs) {
+                sb.append(c).append("\n");
+            }
+            Files.writeString(f, sb.toString());
+            return f.toAbsolutePath().toString();
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            f.toFile().delete();
+            throw e;
+        }
+    }
+
+    private String writeKeyTempFile() throws IOException {
+        Path f = Files.createTempFile(alias + "-key-", ".pem");
+        assert Logger.lowLevelDebug("will write key " + alias + " to " + f);
+        try {
+            Files.writeString(f, key);
+            return f.toAbsolutePath().toString();
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            f.toFile().delete();
+            throw e;
+        }
     }
 
     @Override

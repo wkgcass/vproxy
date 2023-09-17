@@ -4,6 +4,7 @@ import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.util.exception.XException;
 import io.vproxy.msquic.MsQuicInitializer;
 
 import java.util.ArrayList;
@@ -25,12 +26,15 @@ public class EventLoopGroupHolder {
     public void add(String alias, Annotations annotations) throws Exception {
         if (map.containsKey(alias))
             throw new AlreadyExistException("event-loop-group", alias);
+        EventLoopGroup group;
         if (annotations.EventLoopGroup_UseMsQuic) {
             if (!MsQuicInitializer.isSupported()) {
-                throw new Exception("msquic is not supported");
+                throw new XException("msquic is not supported");
             }
+            group = new EventLoopGroup(alias, MsQuicInitializer.getIsSupported(), annotations);
+        } else {
+            group = new EventLoopGroup(alias, annotations);
         }
-        EventLoopGroup group = new EventLoopGroup(alias, annotations);
         map.put(alias, group);
     }
 

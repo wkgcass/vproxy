@@ -21,33 +21,7 @@ public class QuicPoc {
             AnnotationKeys.EventLoopGroup_UseMsQuic.name, "true"
         )));
 
-        // at this point, quic should be ready
-
-        System.out.println("init api");
-        ApiTable api;
-        {
-            var allocator = Allocator.ofUnsafe();
-            var table = MsQuic.get().open(QUIC_API_VERSION_2, null, allocator);
-            if (table == null) {
-                throw new Exception("failed to create api table");
-            }
-            api = new ApiTable(table, allocator);
-        }
-        System.out.println("init reg");
-        Registration reg;
-        {
-            var allocator = Allocator.ofUnsafe();
-            var conf = new QuicRegistrationConfigEx(allocator);
-            var ref = PNIRef.of(eventLoopGroup);
-            conf.setContext(ref.MEMORY);
-            var r = api.apiTable.openRegistration(conf, null, allocator);
-            if (r == null) {
-                throw new Exception("failed to create registration");
-            }
-            ref.close(); // it will not be used anymore
-            reg = new Registration(api.apiTable, r, allocator);
-        }
-        System.out.println("init conf");
+        var reg = eventLoopGroup.getMsquicRegistration();
         Configuration conf;
         {
             var allocator = Allocator.ofUnsafe();
@@ -67,7 +41,7 @@ public class QuicPoc {
             if (c == null) {
                 throw new Exception("failed to create configuration");
             }
-            conf = new Configuration(api.apiTable, reg.registration, c, allocator);
+            conf = new Configuration(ApiTables.V2.apiTable, reg.registration, c, allocator);
             var cred = new QuicCredentialConfig(allocator);
             cred.setType(QUIC_CREDENTIAL_TYPE_NONE);
             int flags = QUIC_CREDENTIAL_FLAG_CLIENT;
@@ -86,7 +60,7 @@ public class QuicPoc {
         Connection conn;
         {
             var allocator = Allocator.ofUnsafe();
-            conn = new SampleConnection(api.apiTable, reg.registration, allocator, ref ->
+            conn = new SampleConnection(ApiTables.V2.apiTable, reg.registration, allocator, ref ->
                 reg.registration.openConnection(MsQuicUpcall.connectionCallback, ref.MEMORY, null, allocator));
             if (conn.connection == null) {
                 conn.close();

@@ -4,6 +4,8 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 
+import java.util.NoSuchElementException;
+
 public class MsQuicInitializer {
     private static boolean initialized = false;
     private static boolean supported = false;
@@ -30,5 +32,20 @@ public class MsQuicInitializer {
         supported = true;
         initialized = true;
         return true;
+    }
+
+    public static IsSupported getIsSupported() {
+        if (isSupported()) {
+            return IsSupported.IMPL;
+        } else {
+            throw new NoSuchElementException("msquic is not supported");
+        }
+    }
+
+    public static class IsSupported {
+        private IsSupported() {
+        }
+
+        private static final IsSupported IMPL = new IsSupported();
     }
 }

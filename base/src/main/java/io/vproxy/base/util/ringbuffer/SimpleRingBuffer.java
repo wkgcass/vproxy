@@ -288,12 +288,15 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
                 sPos = 0;
                 ePosIsAfterSPos = true;
             }
-            if (write == lim && write < maxBytesToWrite) {
+            if (write == lim && write <= maxBytesToWrite) {
                 // maybe have more bytes to write
                 lim = retrieveLimit();
                 if (lim == 0) {
                     // buffer is empty now
                     resetCursors();
+                    return write;
+                }
+                if (write == maxBytesToWrite) {
                     return write;
                 }
                 realWrite = Math.min(lim, maxBytesToWrite - write/* the bytes left to write */);
@@ -468,5 +471,25 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             ePosIsAfterSPos = false;
         }
         buffer = newBuffer;
+    }
+
+    ByteBufferEx getBuffer() {
+        return buffer;
+    }
+
+    int getSPos() {
+        return sPos;
+    }
+
+    int getEPos() {
+        return ePos;
+    }
+
+    boolean getEPosIsAfterSPos() {
+        return ePosIsAfterSPos;
+    }
+
+    int getCap() {
+        return cap;
     }
 }

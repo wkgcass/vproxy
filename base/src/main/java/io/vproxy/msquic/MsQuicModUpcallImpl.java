@@ -29,7 +29,7 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
                 Logger.error(LogType.NO_EVENT_LOOP, "no event loop group provided for msquic");
                 return 1;
             }
-            var name = String.valueOf(epfd);
+            var name = elg.alias + "-" + epfd;
             var el = elg.add(name, epfd, new Annotations());
             if (initMsQuic(el, worker, thread)) {
                 Logger.alert("msquic event loop is added, epfd=" + epfd + ", el=" + el);
