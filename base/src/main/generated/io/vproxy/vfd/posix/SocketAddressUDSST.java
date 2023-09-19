@@ -63,12 +63,20 @@ public class SocketAddressUDSST {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<SocketAddressUDSST> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<SocketAddressUDSST> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<SocketAddressUDSST> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -81,5 +89,5 @@ public class SocketAddressUDSST {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:10b93c4fc00439c6912268d3e3f6da2e15b5c6b28eb68b4f07cb57af4ff8bcf8
+// metadata.generator-version: pni 21.0.0.11
+// sha256:e9da449803ca2080b63e5789043141cc9d90e749521849dfc99c7a83ae67bfb2

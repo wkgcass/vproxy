@@ -77,12 +77,20 @@ public class TapInfoST {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<TapInfoST> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<TapInfoST> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<TapInfoST> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -95,5 +103,5 @@ public class TapInfoST {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:58213027b2a9841a75a154c41219b048a489c376656c5812e890eaf65b41f698
+// metadata.generator-version: pni 21.0.0.11
+// sha256:d6abf6c252f028d0730dd73132ce970bfe6160d3c1ef5f1d34a0a66617fda5f4

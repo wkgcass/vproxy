@@ -86,12 +86,20 @@ public class AEFiredExtra {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<AEFiredExtra> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<AEFiredExtra> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<AEFiredExtra> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -104,5 +112,5 @@ public class AEFiredExtra {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:9396bfe3c3efb3d552edf1742610d06e3d3acc905671a7a7068b52fbea860829
+// metadata.generator-version: pni 21.0.0.11
+// sha256:15c6247915f3f7b14c22cad104c8405d5d848e24424aa9473da94f2d351ddd5b

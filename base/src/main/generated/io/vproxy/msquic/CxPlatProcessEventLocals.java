@@ -106,12 +106,20 @@ public class CxPlatProcessEventLocals {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<CxPlatProcessEventLocals> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<CxPlatProcessEventLocals> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<CxPlatProcessEventLocals> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -124,5 +132,5 @@ public class CxPlatProcessEventLocals {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:33efe73f607d97de91a24e199aa6fa5212c6fa24a31e3f9e55d02b1d82fbfcd5
+// metadata.generator-version: pni 21.0.0.11
+// sha256:f76a2dc2dd22e04c8ae700c6469027247d095e2e93ed6fd40719433ee3b9454c

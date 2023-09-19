@@ -80,12 +80,20 @@ public class SocketAddressIPv4ST {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<SocketAddressIPv4ST> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<SocketAddressIPv4ST> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<SocketAddressIPv4ST> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -98,5 +106,5 @@ public class SocketAddressIPv4ST {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:e1b8f1a34dac93da0bc39175c7cfc3f14f5a9c9193cacd8860bc52b83b0baf5f
+// metadata.generator-version: pni 21.0.0.11
+// sha256:610d3894bc5309780a025e67a50b3d1dc0977f55c1765e318d1c35497c8d2867

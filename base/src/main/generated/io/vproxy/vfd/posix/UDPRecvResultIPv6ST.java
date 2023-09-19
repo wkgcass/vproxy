@@ -75,12 +75,20 @@ public class UDPRecvResultIPv6ST {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<UDPRecvResultIPv6ST> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<UDPRecvResultIPv6ST> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<UDPRecvResultIPv6ST> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -93,5 +101,5 @@ public class UDPRecvResultIPv6ST {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:c447c4176e9ead43c6e3405499b0ed3a4a31afe391f8d1e2297561521a431d67
+// metadata.generator-version: pni 21.0.0.11
+// sha256:7da7dc052315d35c41a81499e00832088397db8378f37fc93e8c6fdfab52a1a2

@@ -77,12 +77,20 @@ public class SocketAddressIPv6ST {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<SocketAddressIPv6ST> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<SocketAddressIPv6ST> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<SocketAddressIPv6ST> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -95,5 +103,5 @@ public class SocketAddressIPv6ST {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:155c4f2b0dbe936771ce92f99adda2b2355a8004445861896cb6798fec7fe238
+// metadata.generator-version: pni 21.0.0.11
+// sha256:1ebc3fece005f7a913835d29f4a08f737d64fcfd0d23a46f77f4a5a28f9dac84

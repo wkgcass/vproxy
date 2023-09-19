@@ -73,12 +73,20 @@ public class UDPRecvResultIPv4ST {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<UDPRecvResultIPv4ST> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<UDPRecvResultIPv4ST> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<UDPRecvResultIPv4ST> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -91,5 +99,5 @@ public class UDPRecvResultIPv4ST {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:c517072ad33da9ace81c63c2d95ca7f46af6db963c3093d72bc75ab3719fd812
+// metadata.generator-version: pni 21.0.0.11
+// sha256:ff4e0d0a3639a13d6866f904d4c2cc6d6a555843bf64dfce9622df0167a6bb47

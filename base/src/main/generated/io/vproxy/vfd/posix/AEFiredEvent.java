@@ -78,12 +78,20 @@ public class AEFiredEvent {
             super(func);
         }
 
+        private Func(io.vproxy.pni.CallSite<AEFiredEvent> func, Options opts) {
+            super(func, opts);
+        }
+
         private Func(MemorySegment MEMORY) {
             super(MEMORY);
         }
 
         public static Func of(io.vproxy.pni.CallSite<AEFiredEvent> func) {
             return new Func(func);
+        }
+
+        public static Func of(io.vproxy.pni.CallSite<AEFiredEvent> func, Options opts) {
+            return new Func(func, opts);
         }
 
         public static Func of(MemorySegment MEMORY) {
@@ -96,5 +104,5 @@ public class AEFiredEvent {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:932af2f98624b234d617fe4f815bb92a8263d769fd267c27b9a462e5ab7061bf
+// metadata.generator-version: pni 21.0.0.11
+// sha256:24e88079e6c297d7ce861bb7a2c11de0837b1e9839f222c406aecb37fb0a7f28
