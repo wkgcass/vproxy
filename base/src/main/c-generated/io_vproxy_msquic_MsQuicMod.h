@@ -20,8 +20,6 @@ extern "C" {
 extern "C" {
 #endif
 
-JNIEXPORT int64_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod_getCxPlatProcessEventLocalsMemorySize(void);
-JNIEXPORT int64_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod_getCXPLAT_EXECUTION_STATEMemorySize(void);
 JNIEXPORT void JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod_MsQuicCxPlatWorkerThreadInit(struct CxPlatProcessEventLocals * CxPlatWorkerThreadLocals);
 JNIEXPORT void JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod_MsQuicCxPlatWorkerThreadBeforePoll(struct CxPlatProcessEventLocals * CxPlatProcessEventLocals);
 JNIEXPORT uint8_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod_MsQuicCxPlatWorkerThreadAfterPoll(struct CxPlatProcessEventLocals * locals, int32_t num, aeFiredExtra * events);
@@ -33,5 +31,5 @@ JNIEXPORT int32_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod_CxPlatGetCurTh
 }
 #endif
 #endif // _Included_io_vproxy_msquic_MsQuicMod
-// metadata.generator-version: pni 21.0.0.8
-// sha256:06466880ed3ce4269d205e757f7780903c833695f63492f4c0fcfda61d9c0bb7
+// metadata.generator-version: pni 21.0.0.11
+// sha256:2a5c4761f586197139f8dc5586a39ca8927f0656414d10ad83288d41ea760ac3

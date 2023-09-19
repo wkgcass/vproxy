@@ -13,6 +13,7 @@ extern "C" {
 #include <jni.h>
 #include <pni.h>
 #include "msquic.h"
+#include "io_vproxy_msquic_CxPlatExecutionState.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +21,11 @@ extern "C" {
 
 PNIEnvExpand(CxPlatProcessEventLocals, struct CxPlatProcessEventLocals *)
 
+JNIEXPORT size_t JNICALL JavaCritical_io_vproxy_msquic_CxPlatProcessEventLocals___getLayoutByteSize();
+
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_msquic_CxPlatProcessEventLocals
-// metadata.generator-version: pni 21.0.0.8
-// sha256:03c6ff4c14ede7c9df9455eee7467706601d0411d86ed433fb068c8cce425db2
+// metadata.generator-version: pni 21.0.0.11
+// sha256:6e323284b6a3cac19f48b2105f58d3cf7c36acddb2fc76996073338cc262c60c

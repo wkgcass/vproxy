@@ -16,30 +16,6 @@ public class MsQuicMod {
         return INSTANCE;
     }
 
-    private static final MethodHandle getCxPlatProcessEventLocalsMemorySizeMH = PanamaUtils.lookupPNICriticalFunction(false, long.class, "JavaCritical_io_vproxy_msquic_MsQuicMod_getCxPlatProcessEventLocalsMemorySize");
-
-    public long getCxPlatProcessEventLocalsMemorySize() {
-        long RESULT;
-        try {
-            RESULT = (long) getCxPlatProcessEventLocalsMemorySizeMH.invokeExact();
-        } catch (Throwable THROWABLE) {
-            throw PanamaUtils.convertInvokeExactException(THROWABLE);
-        }
-        return RESULT;
-    }
-
-    private static final MethodHandle getCXPLAT_EXECUTION_STATEMemorySizeMH = PanamaUtils.lookupPNICriticalFunction(false, long.class, "JavaCritical_io_vproxy_msquic_MsQuicMod_getCXPLAT_EXECUTION_STATEMemorySize");
-
-    public long getCXPLAT_EXECUTION_STATEMemorySize() {
-        long RESULT;
-        try {
-            RESULT = (long) getCXPLAT_EXECUTION_STATEMemorySizeMH.invokeExact();
-        } catch (Throwable THROWABLE) {
-            throw PanamaUtils.convertInvokeExactException(THROWABLE);
-        }
-        return RESULT;
-    }
-
     private static final MethodHandle MsQuicCxPlatWorkerThreadInitMH = PanamaUtils.lookupPNICriticalFunction(false, void.class, "JavaCritical_io_vproxy_msquic_MsQuicMod_MsQuicCxPlatWorkerThreadInit", io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() /* CxPlatWorkerThreadLocals */);
 
     public void MsQuicCxPlatWorkerThreadInit(io.vproxy.msquic.CxPlatProcessEventLocals CxPlatWorkerThreadLocals) {
@@ -108,5 +84,5 @@ public class MsQuicMod {
         return RESULT;
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:27f9e3ca55b13058dbe10182699b75fe380b1aa65374808913fde25ddcd364a8
+// metadata.generator-version: pni 21.0.0.11
+// sha256:083f4561179a89e426535f3908b737358a55a93f956a0b5bd6e4a9dfc60aec7e

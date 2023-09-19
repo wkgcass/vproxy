@@ -11,24 +11,6 @@ interface PNIMsQuicMod {
     @Impl(
         // language="c"
         c = """
-            return sizeof(struct CxPlatProcessEventLocals);
-            """
-    )
-    @Critical
-    long getCxPlatProcessEventLocalsMemorySize();
-
-    @Impl(
-        // language="c"
-        c = """
-            return sizeof(CXPLAT_EXECUTION_STATE);
-            """
-    )
-    @Critical
-    long getCXPLAT_EXECUTION_STATEMemorySize();
-
-    @Impl(
-        // language="c"
-        c = """
             MsQuicCxPlatWorkerThreadInit(CxPlatWorkerThreadLocals);
             """
     )
@@ -99,14 +81,28 @@ interface PNIMsQuicMod {
     int CxPlatGetCurThread(MemorySegment Thread);
 }
 
+@Struct(skip = true)
+abstract class PNIQuicRegistrationConfigEx extends PNIQuicRegistrationConfig {
+    MemorySegment Context;
+}
+
 @Struct(skip = true, typedef = false)
 @Include("msquic.h")
+@Sizeof("struct CxPlatProcessEventLocals")
 class PNICxPlatProcessEventLocals {
     MemorySegment worker;
-    MemorySegment state;
+    @Pointer PNICxPlatExecutionState state;
     @Unsigned int waitTime;
 
     // other fields are not used in java
+}
+
+@Struct(skip = true)
+@Include("msquic.h")
+@Name("CXPLAT_EXECUTION_STATE")
+@Sizeof("CXPLAT_EXECUTION_STATE")
+@PointerOnly
+class PNICxPlatExecutionState {
 }
 
 @Upcall

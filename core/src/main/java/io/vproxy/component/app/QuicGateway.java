@@ -296,7 +296,7 @@ public class QuicGateway {
     }
 
     private class QuicGatewayStream extends Stream {
-        private final Allocator quicBufferAllocator = Allocator.ofPooled();
+        private final Allocator quicBufferAllocator = Allocator.ofConcurrentPooled();
         private final List<QuicBuffer.Array> quicBuffers = new ArrayList<>();
 
         private io.vproxy.base.connection.Connection backendConn;

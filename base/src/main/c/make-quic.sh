@@ -59,4 +59,6 @@ gcc -std=gnu11 -O2 \
     -shared -Werror -lc -lpthread $NO_AS_NEEDED "-lmsquic" $AS_NEEDED -fPIC \
     io_vproxy_msquic_MsQuic.c \
     ../c-generated/io_vproxy_msquic_MsQuicModUpcall.c \
+    ../c-generated/io_vproxy_msquic_CxPlatExecutionState.extra.c \
+    ../c-generated/io_vproxy_msquic_CxPlatProcessEventLocals.extra.c \
     -o "$target"

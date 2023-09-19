@@ -7,7 +7,19 @@ import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
 public class CxPlatProcessEventLocals {
-    public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
+    private static final MethodHandle __getLayoutByteSizeMH = PanamaUtils.lookupPNICriticalFunction(true, long.class, "JavaCritical_io_vproxy_msquic_CxPlatProcessEventLocals___getLayoutByteSize");
+
+    private static long __getLayoutByteSize() {
+        long RESULT;
+        try {
+            RESULT = (long) __getLayoutByteSizeMH.invokeExact();
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        return RESULT;
+    }
+
+    public static final MemoryLayout LAYOUT = PanamaUtils.padLayout(__getLayoutByteSize(), MemoryLayout::structLayout,
         ValueLayout.ADDRESS_UNALIGNED.withName("worker"),
         ValueLayout.ADDRESS_UNALIGNED.withName("state"),
         ValueLayout.JAVA_INT_UNALIGNED.withName("waitTime"),
@@ -37,17 +49,17 @@ public class CxPlatProcessEventLocals {
         MemoryLayout.PathElement.groupElement("state")
     );
 
-    public MemorySegment getState() {
+    public io.vproxy.msquic.CxPlatExecutionState getState() {
         var SEG = (MemorySegment) stateVH.get(MEMORY);
         if (SEG.address() == 0) return null;
-        return SEG;
+        return new io.vproxy.msquic.CxPlatExecutionState(SEG);
     }
 
-    public void setState(MemorySegment state) {
+    public void setState(io.vproxy.msquic.CxPlatExecutionState state) {
         if (state == null) {
             stateVH.set(MEMORY, MemorySegment.NULL);
         } else {
-            stateVH.set(MEMORY, state);
+            stateVH.set(MEMORY, state.MEMORY);
         }
     }
 
@@ -68,7 +80,7 @@ public class CxPlatProcessEventLocals {
         this.MEMORY = MEMORY;
         long OFFSET = 0;
         OFFSET += ValueLayout.ADDRESS_UNALIGNED.byteSize();
-        OFFSET += ValueLayout.ADDRESS_UNALIGNED.byteSize();
+        OFFSET += 8;
         OFFSET += ValueLayout.JAVA_INT_UNALIGNED.byteSize();
         OFFSET += 4; /* padding */
     }
@@ -133,4 +145,4 @@ public class CxPlatProcessEventLocals {
     }
 }
 // metadata.generator-version: pni 21.0.0.11
-// sha256:f76a2dc2dd22e04c8ae700c6469027247d095e2e93ed6fd40719433ee3b9454c
+// sha256:514ae33ae7c29c6df8e9b6acb811a6d7d8d05aa1e739eef05e454bb0eee17b69

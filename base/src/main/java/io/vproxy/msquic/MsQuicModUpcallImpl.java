@@ -6,7 +6,7 @@ import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.BlockCallback;
-import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
 
 import java.lang.foreign.MemorySegment;
@@ -54,9 +54,9 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
     private boolean initMsQuic(EventLoopWrapper el, MemorySegment worker, MemorySegment thread) {
         var loop = el.getSelectorEventLoop();
 
-        var locals = new CxPlatProcessEventLocals(
-            SunUnsafe.allocateMemory(MsQuicModConsts.SizeOfCxPlatProcessEventLocals));
-        var state = SunUnsafe.allocateMemory(MsQuicModConsts.SizeOfCXPLAT_EXECUTION_STATE);
+        var unsafeAllocator = Allocator.ofUnsafe();
+        var locals = new CxPlatProcessEventLocals(unsafeAllocator);
+        var state = new CxPlatExecutionState(unsafeAllocator);
         locals.setWorker(worker);
         locals.setState(state);
 
@@ -85,8 +85,7 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
         loop.setAfterPoll((n, events) -> MsQuicMod.get().MsQuicCxPlatWorkerThreadAfterPoll(locals, n, events));
         loop.setFinalizer(() -> {
             MsQuicMod.get().MsQuicCxPlatWorkerThreadFinalize(locals);
-            SunUnsafe.freeMemory(locals.MEMORY.address());
-            SunUnsafe.freeMemory(state.address());
+            unsafeAllocator.close();
         });
         return true;
     }

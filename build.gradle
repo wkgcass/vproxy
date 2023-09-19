@@ -195,6 +195,14 @@ project(':dep') {
 }
 
 project(':pni-template') {
+    sourceSets {
+        main {
+            java {
+                srcDirs = ['src/main/java',
+                           project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/template/src/main/java']
+            }
+        }
+    }
     dependencies {
         implementation project(':dep')
     }
@@ -210,7 +218,13 @@ project(':pni-template') {
         commandLine('java', '-jar', './submodules/panama-native-interface/build/libs/pni.jar',
             '-cp', 'pni-template/build/classes/java/main',
             '-d', 'base/src/main/generated',
-            '-h', 'base/src/main/c-generated')
+            '-h', 'base/src/main/c-generated',
+            '-f', 'io\\.vproxy\\.vfd.*',
+            '-f', 'io\\.vproxy\\.xdp.*',
+            '-f', 'io\\.vproxy\\.msquic\\.CxPlat.*',
+            '-f', 'io\\.vproxy\\.msquic\\.MsQuicMod.*',
+            '-f', 'io\\.vproxy\\.msquic\\..*Ex$',
+        )
 
         dependsOn compileJava
     }
