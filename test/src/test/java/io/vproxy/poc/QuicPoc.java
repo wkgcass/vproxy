@@ -5,13 +5,13 @@ import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.Utils;
 import io.vproxy.msquic.*;
-import io.vproxy.msquic.wrap.*;
+import io.vproxy.msquic.wrap.Configuration;
+import io.vproxy.msquic.wrap.Connection;
+import io.vproxy.msquic.wrap.Stream;
 import io.vproxy.pni.Allocator;
-import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PNIString;
 
 import java.util.Map;
-import java.util.function.Function;
 
 import static io.vproxy.msquic.MsQuicConsts.*;
 
@@ -37,11 +37,11 @@ public class QuicPoc {
                 settings.getIsSet().setPeerBidiStreamCount(1);
                 settings.setPeerBidiStreamCount((short) 128);
             }
-            var c = reg.registration.openConfiguration(alpnBuffers, 1, settings, null, null, allocator);
+            var c = reg.opts.registrationQ.openConfiguration(alpnBuffers, 1, settings, null, null, allocator);
             if (c == null) {
                 throw new Exception("failed to create configuration");
             }
-            conf = new Configuration(ApiTables.V2.apiTable, reg.registration, c, allocator);
+            conf = new Configuration(new Configuration.Options(reg, c, allocator));
             var cred = new QuicCredentialConfig(allocator);
             cred.setType(QUIC_CREDENTIAL_TYPE_NONE);
             int flags = QUIC_CREDENTIAL_FLAG_CLIENT;
@@ -51,7 +51,7 @@ public class QuicPoc {
                 QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256 |
                     QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 |
                     QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256);
-            var err = conf.configuration.loadCredential(cred);
+            var err = conf.opts.configurationQ.loadCredential(cred);
             if (err != 0) {
                 throw new RuntimeException("failed to load credential");
             }
@@ -60,13 +60,13 @@ public class QuicPoc {
         Connection conn;
         {
             var allocator = Allocator.ofUnsafe();
-            conn = new SampleConnection(ApiTables.V2.apiTable, reg.registration, allocator, ref ->
-                reg.registration.openConnection(MsQuicUpcall.connectionCallback, ref.MEMORY, null, allocator));
-            if (conn.connection == null) {
+            conn = new SampleConnection(new Connection.Options(reg, allocator, ref ->
+                reg.opts.registrationQ.openConnection(MsQuicUpcall.connectionCallback, ref.MEMORY, null, allocator)));
+            if (conn.connectionQ == null) {
                 conn.close();
                 throw new RuntimeException("failed to create connection");
             }
-            int err = conn.connection.start(conf.configuration, QUIC_ADDRESS_FAMILY_INET, new PNIString(allocator, "127.0.0.1"), 443);
+            int err = conn.connectionQ.start(conf.opts.configurationQ, QUIC_ADDRESS_FAMILY_INET, new PNIString(allocator, "127.0.0.1"), 443);
             if (err != 0) {
                 conn.close();
                 throw new RuntimeException("failed to start connection");
@@ -76,9 +76,8 @@ public class QuicPoc {
     }
 
     private static class SampleConnection extends Connection {
-        public SampleConnection(
-            QuicApiTable apiTable, QuicRegistration registration, Allocator allocator, Function<PNIRef<Connection>, QuicConnection> connectionSupplier) {
-            super(apiTable, registration, allocator, connectionSupplier);
+        public SampleConnection(Options opts) {
+            super(opts);
         }
 
         @Override
@@ -88,14 +87,14 @@ public class QuicPoc {
             switch (event.getType()) {
                 case QUIC_CONNECTION_EVENT_CONNECTED -> {
                     var allocator = Allocator.ofUnsafe();
-                    var stream = new SampleStream(this, apiTable, registration, connection, allocator, ref ->
-                        connection.openStream(0, MsQuicUpcall.streamCallback, ref.MEMORY, null, allocator));
-                    if (stream.stream == null) {
+                    var stream = new SampleStream(new Stream.Options(this, allocator, ref ->
+                        connectionQ.openStream(0, MsQuicUpcall.streamCallback, ref.MEMORY, null, allocator)));
+                    if (stream.streamQ == null) {
                         System.out.println("failed to open stream");
                         stream.close();
                         return 1;
                     }
-                    int err = stream.stream.start(0);
+                    int err = stream.streamQ.start(0);
                     if (err != 0) {
                         System.out.println("failed to start stream");
                         stream.close();
@@ -112,12 +111,8 @@ public class QuicPoc {
     }
 
     private static class SampleStream extends Stream {
-        private final Connection conn;
-
-        public SampleStream(Connection conn,
-                            QuicApiTable apiTable, QuicRegistration registration, QuicConnection connection, Allocator allocator, Function<PNIRef<Stream>, QuicStream> streamSupplier) {
-            super(apiTable, registration, connection, allocator, streamSupplier);
-            this.conn = conn;
+        public SampleStream(Options opts) {
+            super(opts);
         }
 
         @Override
@@ -145,7 +140,7 @@ public class QuicPoc {
                     closeStream();
                 }
                 case QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE ->
-                    conn.connection.shutdown(QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 0);
+                    opts.connection.connectionQ.shutdown(QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 0);
             }
             return 0;
         }

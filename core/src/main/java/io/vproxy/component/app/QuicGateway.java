@@ -20,7 +20,6 @@ import io.vproxy.msquic.wrap.Connection;
 import io.vproxy.msquic.wrap.Listener;
 import io.vproxy.msquic.wrap.Stream;
 import io.vproxy.pni.Allocator;
-import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PNIString;
 import io.vproxy.pni.array.IntArray;
 import io.vproxy.vfd.IPPort;
@@ -31,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 import static io.vproxy.msquic.MsQuicConsts.*;
 
@@ -125,13 +123,13 @@ public class QuicGateway {
                     alpnBuffers.get(i).setLength((int) (str.MEMORY.byteSize() - 1));
                 }
                 var confAllocator = Allocator.ofUnsafe();
-                var conf_ = reg.registration
+                var conf_ = reg.opts.registrationQ
                     .openConfiguration(alpnBuffers, alpn.size(), settings, null, retInt, confAllocator);
                 if (conf_ == null) {
                     confAllocator.close();
                     throw new XException("ConfigurationOpen failed: " + retInt.get(0));
                 }
-                conf = new Configuration(reg.apiTable, reg.registration, conf_, confAllocator);
+                conf = new Configuration(new Configuration.Options(reg, conf_, confAllocator));
                 var cred = new QuicCredentialConfig(tmpAlloc);
                 var tup = certKey.ensureCertKeyFile();
                 var certFile = tup.left;
@@ -149,7 +147,7 @@ public class QuicGateway {
                             QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256
                     );
                 }
-                int err = conf.configuration.loadCredential(cred);
+                int err = conf.opts.configurationQ.loadCredential(cred);
                 if (err != 0) {
                     throw new XException("ConfigurationLoadCredential failed");
                 }
@@ -157,9 +155,9 @@ public class QuicGateway {
             assert Logger.lowLevelDebug("before init msquic listener");
             {
                 var listenerAllocator = Allocator.ofUnsafe();
-                var lsn = new QuicGatewayListener(reg.apiTable, reg.registration, listenerAllocator, ref ->
-                    reg.registration.openListener(MsQuicUpcall.listenerCallback, ref.MEMORY, null, listenerAllocator));
-                if (lsn.listener == null) {
+                var lsn = new QuicGatewayListener(new Listener.Options(reg, listenerAllocator, ref ->
+                    reg.opts.registrationQ.openListener(MsQuicUpcall.listenerCallback, ref.MEMORY, null, listenerAllocator)));
+                if (lsn.listenerQ == null) {
                     listenerAllocator.close();
                     throw new RuntimeException("failed creating listener");
                 }
@@ -168,12 +166,12 @@ public class QuicGateway {
                 alpnBuffers.get(0).setLength(7);
                 alpnBuffers.get(1).setBuffer(new PNIString(listenerAllocator, "proto-y").MEMORY);
                 alpnBuffers.get(1).setLength(7);
-                var quicAddr = new QuicAddr(listenerAllocator.allocate(sizeofQuicAddr));
+                var quicAddr = new QuicAddr(listenerAllocator);
                 MsQuic.get().buildQuicAddr(
                     new PNIString(listenerAllocator, bindAddress.getAddress().formatToIPString()),
                     bindAddress.getPort(),
                     quicAddr);
-                var err = lsn.listener.start(alpnBuffers, 2, quicAddr);
+                var err = lsn.listenerQ.start(alpnBuffers, 2, quicAddr);
                 if (err != 0) {
                     lsn.close();
                     throw new RuntimeException("ListenerStart failed");
@@ -232,8 +230,8 @@ public class QuicGateway {
     }
 
     private class QuicGatewayListener extends Listener {
-        public QuicGatewayListener(QuicApiTable apiTable, QuicRegistration registration, Allocator allocator, Function<PNIRef<Listener>, QuicListener> listenerSupplier) {
-            super(apiTable, registration, allocator, listenerSupplier);
+        public QuicGatewayListener(Options opts) {
+            super(opts);
         }
 
         @Override
@@ -246,12 +244,12 @@ public class QuicGateway {
                     var connectionAllocator = Allocator.ofUnsafe();
                     var conn_ = new QuicConnection(connectionAllocator);
                     {
-                        conn_.setApi(apiTable.getApi());
+                        conn_.setApi(opts.apiTableQ.getApi());
                         conn_.setConn(connHQUIC);
                     }
-                    var conn = new QuicGatewayConnection(apiTable, registration, connectionAllocator, conn_);
-                    apiTable.setCallbackHandler(connHQUIC, MsQuicUpcall.connectionCallback, conn.ref.MEMORY);
-                    var err = conn_.setConfiguration(conf.configuration);
+                    var conn = new QuicGatewayConnection(new Connection.Options(this, connectionAllocator, conn_));
+                    opts.apiTableQ.setCallbackHandler(connHQUIC, MsQuicUpcall.connectionCallback, conn.ref.MEMORY);
+                    var err = conn_.setConfiguration(conf.opts.configurationQ);
                     if (err != 0) {
                         Logger.error(LogType.CONN_ERROR, "set configuration to connection failed: " + err);
                         conn.close();
@@ -271,8 +269,8 @@ public class QuicGateway {
     }
 
     private class QuicGatewayConnection extends Connection {
-        public QuicGatewayConnection(QuicApiTable apiTable, QuicRegistration registration, Allocator allocator, QuicConnection connection) {
-            super(apiTable, registration, allocator, connection);
+        public QuicGatewayConnection(Options opts) {
+            super(opts);
         }
 
         @Override
@@ -285,10 +283,10 @@ public class QuicGateway {
                     var streamHQUIC = data.getStream();
                     var allocator = Allocator.ofUnsafe();
                     var stream_ = new QuicStream(allocator);
-                    stream_.setApi(apiTable.getApi());
+                    stream_.setApi(opts.apiTableQ.getApi());
                     stream_.setStream(streamHQUIC);
-                    var stream = new QuicGatewayStream(apiTable, registration, connection, allocator, stream_, getRemoteAddress());
-                    apiTable.setCallbackHandler(streamHQUIC, MsQuicUpcall.streamCallback, stream.ref.MEMORY);
+                    var stream = new QuicGatewayStream(new Stream.Options(this, allocator, stream_));
+                    opts.apiTableQ.setCallbackHandler(streamHQUIC, MsQuicUpcall.streamCallback, stream.ref.MEMORY);
                     assert Logger.lowLevelDebug("accepted new quic stream " + stream);
                     yield 0;
                 }
@@ -298,7 +296,6 @@ public class QuicGateway {
     }
 
     private class QuicGatewayStream extends Stream {
-        private final IPPort clientSrc;
         private final Allocator quicBufferAllocator = Allocator.ofPooled();
         private final List<QuicBuffer.Array> quicBuffers = new ArrayList<>();
 
@@ -313,10 +310,8 @@ public class QuicGateway {
         // from connection to stream
         private SimpleRingBufferReaderCommitter committer;
 
-        public QuicGatewayStream(QuicApiTable apiTable, QuicRegistration registration, QuicConnection connection, Allocator allocator, QuicStream stream,
-                                 IPPort clientSrc) {
-            super(apiTable, registration, connection, allocator, stream);
-            this.clientSrc = clientSrc;
+        public QuicGatewayStream(Options opts) {
+            super(opts);
         }
 
         @Override
@@ -421,9 +416,9 @@ public class QuicGateway {
             if (!committer.isIdle()) {
                 return;
             }
-            assert Logger.lowLevelDebug("send fin via stream " + stream);
+            assert Logger.lowLevelDebug("send fin via stream " + this);
             eofToFrontendIsSent = true;
-            stream.send(null, 0, QUIC_SEND_FLAG_FIN, null);
+            streamQ.send(null, 0, QUIC_SEND_FLAG_FIN, null);
         }
 
         private void sendEOFToBackend() {
@@ -440,7 +435,7 @@ public class QuicGateway {
         }
 
         private void newConnection() {
-            var connector = backend.next(clientSrc);
+            var connector = backend.next(opts.connection.getRemoteAddress());
             if (connector == null) {
                 Logger.info(LogType.NO_CLIENT_CONN, "the backend " + backend.alias + " refused to provide a remote endpoint");
                 return;
@@ -488,7 +483,7 @@ public class QuicGateway {
                 }
                 var pendingDataFromStream = QuicGatewayStream.this.pendingDataFromStream;
                 QuicGatewayStream.this.pendingDataFromStream = null;
-                stream.receiveComplete(pendingDataFromStream.getReadOff() - pendingDataFromStreamBeginOffset);
+                streamQ.receiveComplete(pendingDataFromStream.getReadOff() - pendingDataFromStreamBeginOffset);
                 if (backendNeedsEof) {
                     sendEOFToBackend();
                 }
@@ -523,7 +518,7 @@ public class QuicGateway {
                     qbs.get(i).setLength(0);
                     qbs.get(i).setBuffer(MemorySegment.NULL);
                 }
-                int err = stream.send(qbs.get(0), segs.length, QUIC_SEND_FLAG_NONE, qbs.MEMORY);
+                int err = streamQ.send(qbs.get(0), segs.length, QUIC_SEND_FLAG_NONE, qbs.MEMORY);
                 if (err != 0) {
                     Logger.error(LogType.SYS_ERROR, "failed sending data through stream " + QuicGatewayStream.this + ": " + err);
                     closeStream();

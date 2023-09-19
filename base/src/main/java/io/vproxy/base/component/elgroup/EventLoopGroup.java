@@ -82,11 +82,11 @@ public class EventLoopGroup implements IEventLoopGroup {
             var conf = new QuicRegistrationConfigEx(tmpAlloc);
             conf.setContext(ref.MEMORY);
             var ret = new IntArray(tmpAlloc, 1);
-            var r = api.apiTable.openRegistration(conf, ret, allocator);
+            var r = api.opts.apiTableQ.openRegistration(conf, ret, allocator);
             if (r == null) {
                 throw new XException("failed to create registration: " + ret.get(0));
             }
-            return new Registration(api.apiTable, r, allocator);
+            return new Registration(new Registration.Options(api, r, allocator));
         } catch (XException e) {
             allocator.close();
             throw e;
