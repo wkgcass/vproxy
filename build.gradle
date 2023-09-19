@@ -212,7 +212,6 @@ project(':pni-template') {
             '-d', 'base/src/main/generated',
             '-h', 'base/src/main/c-generated')
 
-        dependsOn pniClean
         dependsOn compileJava
     }
 }
