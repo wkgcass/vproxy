@@ -130,55 +130,33 @@ static inline void PNIRefRelease(PNIRef* ref) {
 }
 
 #define PNIBufExpand(BufType, ValueType, Size) \
-typedef struct { \
-    uint64_t  (*len)(PNIBuf*); \
-    ValueType (*get)(PNIBuf*,uint64_t); \
-    void      (*set)(PNIBuf*,uint64_t, ValueType ); \
-\
-    size_t    (*byteSize)(uint64_t); \
-    void      (*setIntoBuf)(PNIBuf*,ValueType*,uint64_t); \
-} PNI##BufType##BufHandle; \
-static PNI##BufType##BufHandle __pni##BufType##BufHandle; \
-static uint64_t PNI##BufType##BufLen(PNIBuf* buf) { \
-    return buf->len / sizeof(ValueType); \
+typedef PNI_PACK(struct, PNIBuf_##BufType, { \
+    union { \
+        ValueType* array; \
+        void*      buf; \
+    }; \
+    uint64_t bufLen; \
+}) PNIBuf_##BufType; \
+static inline uint64_t BufType##PNIArrayLen(PNIBuf_##BufType* buf) { \
+    return buf->bufLen / (Size == 0 ? 1 : Size); \
 } \
-static ValueType PNI##BufType##BufGet(PNIBuf* buf, uint64_t index) { \
-    ValueType * b = buf->buf; \
-    return b[index]; \
+static inline uint64_t BufType##PNIBufLen(uint64_t arrayLen) { \
+    return arrayLen * Size; \
 } \
-static void PNI##BufType##BufSet(PNIBuf* buf, uint64_t index, ValueType value) { \
-    ValueType * b = buf->buf; \
-    b[index] = value; \
-} \
-static size_t PNI##BufType##ByteSize(uint64_t len) { \
-    return Size * len; \
-} \
-static void PNI##BufType##SetIntoBuf(PNIBuf* buf, ValueType* arr, uint64_t len) { \
-    buf->buf = (void*) arr; \
-    buf->len = Size * len; \
-} \
-static inline PNI##BufType##BufHandle* GetPNI##BufType##BufHandle() { \
-    __pni##BufType##BufHandle.len = PNI##BufType##BufLen; \
-    __pni##BufType##BufHandle.get = PNI##BufType##BufGet; \
-    __pni##BufType##BufHandle.set = PNI##BufType##BufSet; \
-    __pni##BufType##BufHandle.byteSize = PNI##BufType##ByteSize; \
-    __pni##BufType##BufHandle.setIntoBuf = PNI##BufType##SetIntoBuf; \
-    return &__pni##BufType##BufHandle; \
-}
+PNIEnvExpand(buf_##BufType, PNIBuf_##BufType)
 // end #define PNIBufExpand
 
-PNIBufExpand(Byte, int8_t, 1)
-PNIBufExpand(Char, uint16_t, 2)
-PNIBufExpand(Int, int32_t, 4)
-PNIBufExpand(Long, int64_t, 8)
-PNIBufExpand(Float, float, 4)
-PNIBufExpand(Double, double, 8)
-PNIBufExpand(Short, int16_t, 2)
-PNIBufExpand(Bool, uint8_t, 1)
-
-static inline void PNIBufSetToNull(PNIBuf* buf) {
-    buf->len = 0;
-    buf->buf = NULL;
-}
+PNIBufExpand(byte, int8_t, 1)
+PNIBufExpand(ubyte, uint8_t, 1)
+PNIBufExpand(char, uint16_t, 2)
+PNIBufExpand(int, int32_t, 4)
+PNIBufExpand(uint, uint32_t, 4)
+PNIBufExpand(long, int64_t, 8)
+PNIBufExpand(ulong, uint64_t, 8)
+PNIBufExpand(float, float, 4)
+PNIBufExpand(double, double, 8)
+PNIBufExpand(short, int16_t, 2)
+PNIBufExpand(ushort, uint16_t, 2)
+PNIBufExpand(bool, uint8_t, 1)
 
 #endif // PNIENV_H

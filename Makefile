@@ -46,7 +46,6 @@ clean-docker-plugin-rootfs:
 .PHONY: init
 init:
 	git submodule update --init --recursive
-	cd submodules/panama-native-interface && ./gradlew clean shadowJar
 	cd submodules/ && git clone https://github.com/wkgcass/msquic --branch=modified --depth=1 || exit 0
 	cd submodules/msquic && git submodule update --init --recursive --recommend-shallow
 

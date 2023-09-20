@@ -1,5 +1,19 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
+import java.util.regex.Pattern
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    def PNI_VERSION = '21.0.0.14'
+    ext.set("PNI_VERSION", PNI_VERSION)
+    dependencies {
+        classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION
+    }
+}
+
 plugins {
     id 'application'
     id 'idea'
@@ -10,6 +24,8 @@ plugins {
 
     id 'org.openjfx.javafxplugin' version '0.0.10' apply false
 }
+
+def PNI_VERSION = project.PNI_VERSION
 
 ext {
     versionTs = System.currentTimeMillis()
@@ -189,7 +205,7 @@ project(':dep') {
     dependencies {
         api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.5.31'
         api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.5.2'
-        api group: 'io.vproxy', name: 'pni-api-jdk21', version: '21.0.0.11'
+        api group: 'io.vproxy', name: 'pni-api-jdk21', version: PNI_VERSION
         api group: 'io.vproxy', name: 'vjson', version: '1.5.2'
     }
 }
@@ -213,20 +229,27 @@ project(':pni-template') {
         workingDir project.rootProject.rootDir.getAbsolutePath() + '/base/src/main/'
         commandLine 'bash', '-c', 'rm -rf c-generated/* && rm -rf generated/*'
     }
-    task pniGenerate(type: Exec) {
-        workingDir project.rootProject.rootDir.getAbsolutePath()
-        commandLine('java', '-jar', './submodules/panama-native-interface/build/libs/pni.jar',
-            '-cp', 'pni-template/build/classes/java/main',
-            '-d', 'base/src/main/generated',
-            '-h', 'base/src/main/c-generated',
-            '-f', 'io\\.vproxy\\.vfd.*',
-            '-f', 'io\\.vproxy\\.xdp.*',
-            '-f', 'io\\.vproxy\\.msquic\\.CxPlat.*',
-            '-f', 'io\\.vproxy\\.msquic\\.MsQuicMod.*',
-            '-f', 'io\\.vproxy\\.msquic\\..*Ex$',
+    task pniGenerate() {
+        dependsOn compileJava
+
+        def workingDir = project.rootProject.rootDir.getAbsolutePath()
+        def gen = new io.vproxy.pni.exec.Generator(
+            new io.vproxy.pni.exec.CompilerOptions()
+                .setClasspath(List.of(workingDir + '/pni-template/build/classes/java/main'))
+                .setFilters(List.of(
+                    Pattern.compile('io\\.vproxy\\.vfd.*'),
+                    Pattern.compile('io\\.vproxy\\.xdp.*'),
+                    Pattern.compile('io\\.vproxy\\.msquic\\.CxPlat.*'),
+                    Pattern.compile('io\\.vproxy\\.msquic\\.MsQuicMod.*'),
+                    Pattern.compile('io\\.vproxy\\.msquic\\..*Ex$'),
+                ))
+                .setJavaOutputBaseDirectory(workingDir + '/base/src/main/generated')
+                .setCOutputDirectory(workingDir + '/base/src/main/c-generated')
         )
 
-        dependsOn compileJava
+        doLast {
+            gen.generate()
+        }
     }
 }
 

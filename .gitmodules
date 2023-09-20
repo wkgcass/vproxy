@@ -1,7 +1,3 @@
-[submodule "submodules/panama-native-interface"]
-	path = submodules/panama-native-interface
-	url = https://github.com/vproxy-tools/panama-native-interface
-	branch = master
 [submodule "submodules/msquic-java"]
 	path = submodules/msquic-java
 	url = https://github.com/wkgcass/msquic-java
