@@ -21,15 +21,16 @@ extern "C" {
 #endif
 
 PNIEnvExpand(SocketAddressIPv4_st, SocketAddressIPv4_st *)
+PNIBufExpand(SocketAddressIPv4_st, SocketAddressIPv4_st, 8)
 
-PNI_PACK(struct, SocketAddressIPv4_st, {
+struct SocketAddressIPv4_st {
     uint32_t ip;
-    uint16_t port; /* padding */ uint64_t :16;
-});
+    uint16_t port;
+};
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_SocketAddressIPv4ST
-// metadata.generator-version: pni 21.0.0.8
-// sha256:1dcbf16b3e4179763cfe91f15fb7323fc8754394025075b4aff22759cbe9b9b4
+// metadata.generator-version: pni 21.0.0.13
+// sha256:1deb685569468c49e814695f28c184c41a41007d8781d79a93026a6cc603b434

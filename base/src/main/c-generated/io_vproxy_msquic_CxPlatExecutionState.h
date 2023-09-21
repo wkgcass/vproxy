@@ -18,13 +18,14 @@ extern "C" {
 extern "C" {
 #endif
 
-PNIEnvExpand(CXPLAT_EXECUTION_STATE, CXPLAT_EXECUTION_STATE *)
-
 JNIEXPORT size_t JNICALL JavaCritical_io_vproxy_msquic_CxPlatExecutionState___getLayoutByteSize();
+
+PNIEnvExpand(CXPLAT_EXECUTION_STATE, CXPLAT_EXECUTION_STATE *)
+PNIBufExpand(CXPLAT_EXECUTION_STATE, CXPLAT_EXECUTION_STATE, JavaCritical_io_vproxy_msquic_CxPlatExecutionState___getLayoutByteSize())
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_msquic_CxPlatExecutionState
-// metadata.generator-version: pni 21.0.0.11
-// sha256:2a8f3afd2f23be2714ab9a6f0de37181324ac4ed21fbe060b6ceb0f90bd421cf
+// metadata.generator-version: pni 21.0.0.12
+// sha256:e24a21e9f9672c96c7f8642e7dc7ccd5fd9d1d1f3a5390dc7a5917f89875ca77

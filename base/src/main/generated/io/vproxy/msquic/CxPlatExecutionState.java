@@ -6,7 +6,7 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class CxPlatExecutionState {
+public class CxPlatExecutionState extends AbstractNativeObject implements NativeObject {
     private static final MethodHandle __getLayoutByteSizeMH = PanamaUtils.lookupPNICriticalFunction(true, long.class, "JavaCritical_io_vproxy_msquic_CxPlatExecutionState___getLayoutByteSize");
 
     private static long __getLayoutByteSize() {
@@ -24,6 +24,11 @@ public class CxPlatExecutionState {
     );
     public final MemorySegment MEMORY;
 
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
+
     public CxPlatExecutionState(MemorySegment MEMORY) {
         MEMORY = MEMORY.reinterpret(LAYOUT.byteSize());
         this.MEMORY = MEMORY;
@@ -32,6 +37,16 @@ public class CxPlatExecutionState {
 
     public CxPlatExecutionState(Allocator ALLOCATOR) {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+    }
+
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("CxPlatExecutionState{\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
     }
 
     public static class Array extends RefArray<CxPlatExecutionState> {
@@ -45,6 +60,16 @@ public class CxPlatExecutionState {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.msquic.CxPlatExecutionState ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "CxPlatExecutionState.Array";
         }
 
         @Override
@@ -84,10 +109,15 @@ public class CxPlatExecutionState {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "CxPlatExecutionState.Func";
+        }
+
+        @Override
         protected CxPlatExecutionState construct(MemorySegment seg) {
             return new CxPlatExecutionState(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:21f160fae7589c2b4fdf3822bf692759108049b35f228b42ec471a60911ff7fe
+// metadata.generator-version: pni 21.0.0.14
+// sha256:a2bd215926179b64f0b929af3d8c9d6a4541f84270756dc5a168cc032eaf30e5

@@ -6,12 +6,17 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class SocketAddressIPv6ST {
+public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         MemoryLayout.sequenceLayout(40L, ValueLayout.JAVA_BYTE).withName("ip"),
-        ValueLayout.JAVA_SHORT_UNALIGNED.withName("port")
+        ValueLayout.JAVA_SHORT.withName("port")
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private final MemorySegment ip;
 
@@ -48,6 +53,27 @@ public class SocketAddressIPv6ST {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("SocketAddressIPv6ST{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("ip => ");
+            if (CORRUPTED_MEMORY) SB.append("<?>");
+            else SB.append(getIp());
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("port => ");
+            SB.append(getPort());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<SocketAddressIPv6ST> {
         public Array(MemorySegment buf) {
             super(buf, SocketAddressIPv6ST.LAYOUT);
@@ -59,6 +85,16 @@ public class SocketAddressIPv6ST {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.SocketAddressIPv6ST ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "SocketAddressIPv6ST.Array";
         }
 
         @Override
@@ -98,10 +134,15 @@ public class SocketAddressIPv6ST {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "SocketAddressIPv6ST.Func";
+        }
+
+        @Override
         protected SocketAddressIPv6ST construct(MemorySegment seg) {
             return new SocketAddressIPv6ST(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:1ebc3fece005f7a913835d29f4a08f737d64fcfd0d23a46f77f4a5a28f9dac84
+// metadata.generator-version: pni 21.0.0.14
+// sha256:0352ea06f9cc32275459259de10b090804f9b8c1f9a291c3bcc1663e7ffb91dd

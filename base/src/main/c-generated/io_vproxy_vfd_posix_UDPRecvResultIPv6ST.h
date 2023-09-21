@@ -22,15 +22,16 @@ extern "C" {
 #endif
 
 PNIEnvExpand(UDPRecvResultIPv6_st, UDPRecvResultIPv6_st *)
+PNIBufExpand(UDPRecvResultIPv6_st, UDPRecvResultIPv6_st, 48)
 
-PNI_PACK(struct, UDPRecvResultIPv6_st, {
-    SocketAddressIPv6_st addr; /* padding */ uint64_t :16;
+struct UDPRecvResultIPv6_st {
+    SocketAddressIPv6_st addr;
     uint32_t len;
-});
+};
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_UDPRecvResultIPv6ST
-// metadata.generator-version: pni 21.0.0.8
-// sha256:d333c533a53179d0fdc4becc3bf49a1c80987b2519918c59f5d247effca8b7a6
+// metadata.generator-version: pni 21.0.0.13
+// sha256:eca93935d7223a7dae878f4a500c5fc13ac1a45f26e341aa52fbea0e435e7a2c

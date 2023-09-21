@@ -19,10 +19,11 @@ extern "C" {
 #endif
 
 PNIEnvExpand(aeFiredExtra, aeFiredExtra *)
+PNIBufExpand(aeFiredExtra, aeFiredExtra, 16)
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_AEFiredExtra
-// metadata.generator-version: pni 21.0.0.8
-// sha256:ba08fb78ee0976a942e5aa7251776fb26dfbb99b8c429b4e1ae722418cd6e2de
+// metadata.generator-version: pni 21.0.0.12
+// sha256:595ce71b28bd3e30b28e60c987f50e4b3a34fa4e4dc97be03e87bcd9c086814b

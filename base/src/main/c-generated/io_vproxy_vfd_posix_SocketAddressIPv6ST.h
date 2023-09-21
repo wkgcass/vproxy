@@ -21,15 +21,16 @@ extern "C" {
 #endif
 
 PNIEnvExpand(SocketAddressIPv6_st, SocketAddressIPv6_st *)
+PNIBufExpand(SocketAddressIPv6_st, SocketAddressIPv6_st, 42)
 
-PNI_PACK(struct, SocketAddressIPv6_st, {
+struct SocketAddressIPv6_st {
     char ip[40];
     uint16_t port;
-});
+};
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_SocketAddressIPv6ST
-// metadata.generator-version: pni 21.0.0.8
-// sha256:d0f2fdc5ee8291bd8f9e6a08e17b470073f33255e6e4cb46d3b525fcd035487e
+// metadata.generator-version: pni 21.0.0.13
+// sha256:aaa1f5409b6212999b7ad6313c96eef7152bc87458c1e2a2c49d9420ea0da9de

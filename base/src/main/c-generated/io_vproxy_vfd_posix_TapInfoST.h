@@ -21,15 +21,16 @@ extern "C" {
 #endif
 
 PNIEnvExpand(TapInfo_st, TapInfo_st *)
+PNIBufExpand(TapInfo_st, TapInfo_st, 20)
 
-PNI_PACK(struct, TapInfo_st, {
+struct TapInfo_st {
     char devName[16];
     int32_t fd;
-});
+};
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_TapInfoST
-// metadata.generator-version: pni 21.0.0.8
-// sha256:ed4b9509bc83f2d4094e68166f1faf6dda40beed483a109a0f498f5c35c4cae3
+// metadata.generator-version: pni 21.0.0.13
+// sha256:27ef2ca07c5b11a5308408db76c9d88ddc07dd81ef4c623eb040cd0883d0aa4f

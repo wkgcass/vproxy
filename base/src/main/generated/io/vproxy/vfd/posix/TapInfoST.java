@@ -6,12 +6,17 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class TapInfoST {
+public class TapInfoST extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         MemoryLayout.sequenceLayout(16L, ValueLayout.JAVA_BYTE).withName("devName"),
-        ValueLayout.JAVA_INT_UNALIGNED.withName("fd")
+        ValueLayout.JAVA_INT.withName("fd")
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private final MemorySegment devName;
 
@@ -48,6 +53,27 @@ public class TapInfoST {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("TapInfoST{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("devName => ");
+            if (CORRUPTED_MEMORY) SB.append("<?>");
+            else SB.append(getDevName());
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("fd => ");
+            SB.append(getFd());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<TapInfoST> {
         public Array(MemorySegment buf) {
             super(buf, TapInfoST.LAYOUT);
@@ -59,6 +85,16 @@ public class TapInfoST {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.TapInfoST ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "TapInfoST.Array";
         }
 
         @Override
@@ -98,10 +134,15 @@ public class TapInfoST {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "TapInfoST.Func";
+        }
+
+        @Override
         protected TapInfoST construct(MemorySegment seg) {
             return new TapInfoST(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:d6abf6c252f028d0730dd73132ce970bfe6160d3c1ef5f1d34a0a66617fda5f4
+// metadata.generator-version: pni 21.0.0.14
+// sha256:18e66d34f722423262f061233d3fdc5a30f7d30f3acaf782c578aae7f7780093

@@ -6,13 +6,18 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class SocketAddressIPv4ST {
+public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
-        ValueLayout.JAVA_INT_UNALIGNED.withName("ip"),
-        ValueLayout.JAVA_SHORT_UNALIGNED.withName("port"),
+        ValueLayout.JAVA_INT.withName("ip"),
+        ValueLayout.JAVA_SHORT.withName("port"),
         MemoryLayout.sequenceLayout(2L, ValueLayout.JAVA_BYTE) /* padding */
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private static final VarHandle ipVH = LAYOUT.varHandle(
         MemoryLayout.PathElement.groupElement("ip")
@@ -51,6 +56,26 @@ public class SocketAddressIPv4ST {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("SocketAddressIPv4ST{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("ip => ");
+            SB.append(getIp());
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("port => ");
+            SB.append(getPort());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<SocketAddressIPv4ST> {
         public Array(MemorySegment buf) {
             super(buf, SocketAddressIPv4ST.LAYOUT);
@@ -62,6 +87,16 @@ public class SocketAddressIPv4ST {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.SocketAddressIPv4ST ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "SocketAddressIPv4ST.Array";
         }
 
         @Override
@@ -101,10 +136,15 @@ public class SocketAddressIPv4ST {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "SocketAddressIPv4ST.Func";
+        }
+
+        @Override
         protected SocketAddressIPv4ST construct(MemorySegment seg) {
             return new SocketAddressIPv4ST(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:610d3894bc5309780a025e67a50b3d1dc0977f55c1765e318d1c35497c8d2867
+// metadata.generator-version: pni 21.0.0.14
+// sha256:c076ce1cbdc92c8dfcb254458dd29b30ec23cfb81c6fd1ffa604acce9be3f2ce

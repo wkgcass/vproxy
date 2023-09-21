@@ -22,7 +22,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_detachBPFProgramFromNic(PNIEn
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_findMapByNameInBPF(PNIEnv_long * env, int64_t bpfobj, char * mapName);
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_createUMem(PNIEnv_long * env, int32_t chunksSize, int32_t fillRingSize, int32_t compRingSize, int32_t frameSize, int32_t headroom);
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_shareUMem(PNIEnv_long * env, int64_t umem);
-JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_getBufferFromUMem(PNIEnv_buf * env, int64_t umem);
+JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_getBufferFromUMem(PNIEnv_buf_byte * env, int64_t umem);
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_getBufferAddressFromUMem(PNIEnv_long * env, int64_t umem);
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_createXSK(PNIEnv_long * env, char * nicName, int32_t queueId, int64_t umem, int32_t rxRingSize, int32_t txRingSize, int32_t mode, uint8_t zeroCopy, int32_t busyPollBudget, uint8_t rxGenChecksum);
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_addXSKIntoMap(PNIEnv_void * env, int64_t map, int32_t key, int64_t xsk);
@@ -47,5 +47,5 @@ JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_releaseBPFObject(PNIEnv_void 
 }
 #endif
 #endif // _Included_io_vproxy_xdp_XDPNative
-// metadata.generator-version: pni 21.0.0.8
-// sha256:1eeb000cc045d19bc850046e0c2f7d3aa8ccf88ddee0f3a0ca159cbbd0ec0a5a
+// metadata.generator-version: pni 21.0.0.12
+// sha256:a1badc09448cc840cc5d7f93e6c2f7cf923dae3090b845789b91ccdeb8b3cd5d

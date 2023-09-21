@@ -25,7 +25,7 @@ extern "C" {
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeReadable(PNIEnv_int * env);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeWritable(PNIEnv_int * env);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe(PNIEnv_void * env, PNIBuf * fds);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe(PNIEnv_void * env, PNIBuf_int * fds);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop(PNIEnv_long * env, int32_t setsize, int32_t epfd, uint8_t preferPoll);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFired(PNIEnv_pointer * env, int64_t ae);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra(PNIEnv_pointer * env, int64_t ae);
@@ -80,5 +80,5 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_setCoreAffinityForCur
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_PosixNative
-// metadata.generator-version: pni 21.0.0.8
-// sha256:47b3d0b5ecc32901ff647cd4b013488ef64e99cc16e0ad2aa79f9997d641a80d
+// metadata.generator-version: pni 21.0.0.12
+// sha256:fb5216887c255149d2b81e719096596542b69cf6d882a55bd40296387c1623c9

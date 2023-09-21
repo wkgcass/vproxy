@@ -6,7 +6,7 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class CxPlatProcessEventLocals {
+public class CxPlatProcessEventLocals extends AbstractNativeObject implements NativeObject {
     private static final MethodHandle __getLayoutByteSizeMH = PanamaUtils.lookupPNICriticalFunction(true, long.class, "JavaCritical_io_vproxy_msquic_CxPlatProcessEventLocals___getLayoutByteSize");
 
     private static long __getLayoutByteSize() {
@@ -20,12 +20,17 @@ public class CxPlatProcessEventLocals {
     }
 
     public static final MemoryLayout LAYOUT = PanamaUtils.padLayout(__getLayoutByteSize(), MemoryLayout::structLayout,
-        ValueLayout.ADDRESS_UNALIGNED.withName("worker"),
-        ValueLayout.ADDRESS_UNALIGNED.withName("state"),
-        ValueLayout.JAVA_INT_UNALIGNED.withName("waitTime"),
+        ValueLayout.ADDRESS.withName("worker"),
+        ValueLayout.ADDRESS.withName("state"),
+        ValueLayout.JAVA_INT.withName("waitTime"),
         MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private static final VarHandle workerVH = LAYOUT.varHandle(
         MemoryLayout.PathElement.groupElement("worker")
@@ -89,6 +94,32 @@ public class CxPlatProcessEventLocals {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("CxPlatProcessEventLocals{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("worker => ");
+            SB.append(PanamaUtils.memorySegmentToString(getWorker()));
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("state => ");
+            if (CORRUPTED_MEMORY) SB.append("<?>");
+            else PanamaUtils.nativeObjectToString(getState(), SB, INDENT + 4, VISITED, CORRUPTED_MEMORY);
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("waitTime => ");
+            SB.append(getWaitTime());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<CxPlatProcessEventLocals> {
         public Array(MemorySegment buf) {
             super(buf, CxPlatProcessEventLocals.LAYOUT);
@@ -100,6 +131,16 @@ public class CxPlatProcessEventLocals {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.msquic.CxPlatProcessEventLocals ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "CxPlatProcessEventLocals.Array";
         }
 
         @Override
@@ -139,10 +180,15 @@ public class CxPlatProcessEventLocals {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "CxPlatProcessEventLocals.Func";
+        }
+
+        @Override
         protected CxPlatProcessEventLocals construct(MemorySegment seg) {
             return new CxPlatProcessEventLocals(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:514ae33ae7c29c6df8e9b6acb811a6d7d8d05aa1e739eef05e454bb0eee17b69
+// metadata.generator-version: pni 21.0.0.14
+// sha256:3f286a9faa7b3b2ea28f915667f78687d48456aaa62038069499e21dddd53ee7

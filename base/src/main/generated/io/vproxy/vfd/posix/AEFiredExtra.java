@@ -6,13 +6,18 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class AEFiredExtra {
+public class AEFiredExtra extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
-        ValueLayout.ADDRESS_UNALIGNED.withName("ud"),
-        ValueLayout.JAVA_INT_UNALIGNED.withName("mask"),
+        ValueLayout.ADDRESS.withName("ud"),
+        ValueLayout.JAVA_INT.withName("mask"),
         MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private static final VarHandle udVH = LAYOUT.varHandle(
         MemoryLayout.PathElement.groupElement("ud")
@@ -57,6 +62,26 @@ public class AEFiredExtra {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("AEFiredExtra{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("ud => ");
+            SB.append(PanamaUtils.memorySegmentToString(getUd()));
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("mask => ");
+            SB.append(getMask());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<AEFiredExtra> {
         public Array(MemorySegment buf) {
             super(buf, AEFiredExtra.LAYOUT);
@@ -68,6 +93,16 @@ public class AEFiredExtra {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.AEFiredExtra ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "AEFiredExtra.Array";
         }
 
         @Override
@@ -107,10 +142,15 @@ public class AEFiredExtra {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "AEFiredExtra.Func";
+        }
+
+        @Override
         protected AEFiredExtra construct(MemorySegment seg) {
             return new AEFiredExtra(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:15c6247915f3f7b14c22cad104c8405d5d848e24424aa9473da94f2d351ddd5b
+// metadata.generator-version: pni 21.0.0.14
+// sha256:70787f3fa83702b36ff3f7d909eb7f18d2a7571204433b2b8227327e64adaf8b

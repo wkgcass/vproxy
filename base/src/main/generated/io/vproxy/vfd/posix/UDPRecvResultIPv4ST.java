@@ -6,12 +6,17 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class UDPRecvResultIPv4ST {
+public class UDPRecvResultIPv4ST extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         io.vproxy.vfd.posix.SocketAddressIPv4ST.LAYOUT.withName("addr"),
-        ValueLayout.JAVA_INT_UNALIGNED.withName("len")
+        ValueLayout.JAVA_INT.withName("len")
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private final io.vproxy.vfd.posix.SocketAddressIPv4ST addr;
 
@@ -44,6 +49,26 @@ public class UDPRecvResultIPv4ST {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("UDPRecvResultIPv4ST{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("addr => ");
+            PanamaUtils.nativeObjectToString(getAddr(), SB, INDENT + 4, VISITED, CORRUPTED_MEMORY);
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("len => ");
+            SB.append(getLen());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<UDPRecvResultIPv4ST> {
         public Array(MemorySegment buf) {
             super(buf, UDPRecvResultIPv4ST.LAYOUT);
@@ -55,6 +80,16 @@ public class UDPRecvResultIPv4ST {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.UDPRecvResultIPv4ST ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "UDPRecvResultIPv4ST.Array";
         }
 
         @Override
@@ -94,10 +129,15 @@ public class UDPRecvResultIPv4ST {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "UDPRecvResultIPv4ST.Func";
+        }
+
+        @Override
         protected UDPRecvResultIPv4ST construct(MemorySegment seg) {
             return new UDPRecvResultIPv4ST(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:ff4e0d0a3639a13d6866f904d4c2cc6d6a555843bf64dfce9622df0167a6bb47
+// metadata.generator-version: pni 21.0.0.14
+// sha256:fcb70652270959cd2cccdcb3f09392b9005b6eb9067aa78cee706ad68b2c0696

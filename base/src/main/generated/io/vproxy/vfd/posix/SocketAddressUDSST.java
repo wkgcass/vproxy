@@ -6,11 +6,16 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class SocketAddressUDSST {
+public class SocketAddressUDSST extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         MemoryLayout.sequenceLayout(4096L, ValueLayout.JAVA_BYTE).withName("path")
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private final MemorySegment path;
 
@@ -34,6 +39,22 @@ public class SocketAddressUDSST {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("SocketAddressUDSST{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("path => ");
+            if (CORRUPTED_MEMORY) SB.append("<?>");
+            else SB.append(getPath());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<SocketAddressUDSST> {
         public Array(MemorySegment buf) {
             super(buf, SocketAddressUDSST.LAYOUT);
@@ -45,6 +66,16 @@ public class SocketAddressUDSST {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.SocketAddressUDSST ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "SocketAddressUDSST.Array";
         }
 
         @Override
@@ -84,10 +115,15 @@ public class SocketAddressUDSST {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "SocketAddressUDSST.Func";
+        }
+
+        @Override
         protected SocketAddressUDSST construct(MemorySegment seg) {
             return new SocketAddressUDSST(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:e9da449803ca2080b63e5789043141cc9d90e749521849dfc99c7a83ae67bfb2
+// metadata.generator-version: pni 21.0.0.14
+// sha256:d74ea06b3165d5b05c24756ea3695ca4ed8f9222e4217600f5ce17194e201a50

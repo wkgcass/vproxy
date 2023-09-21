@@ -6,12 +6,17 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
-public class AEFiredEvent {
+public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
-        ValueLayout.JAVA_INT_UNALIGNED.withName("fd"),
-        ValueLayout.JAVA_INT_UNALIGNED.withName("mask")
+        ValueLayout.JAVA_INT.withName("fd"),
+        ValueLayout.JAVA_INT.withName("mask")
     );
     public final MemorySegment MEMORY;
+
+    @Override
+    public MemorySegment MEMORY() {
+        return MEMORY;
+    }
 
     private static final VarHandle fdVH = LAYOUT.varHandle(
         MemoryLayout.PathElement.groupElement("fd")
@@ -49,6 +54,26 @@ public class AEFiredEvent {
         this(ALLOCATOR.allocate(LAYOUT.byteSize()));
     }
 
+    @Override
+    public void toString(StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+        if (!VISITED.add(new NativeObjectTuple(this))) {
+            SB.append("<...>@").append(Long.toString(MEMORY.address(), 16));
+            return;
+        }
+        SB.append("AEFiredEvent{\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("fd => ");
+            SB.append(getFd());
+        }
+        SB.append(",\n");
+        {
+            SB.append(" ".repeat(INDENT + 4)).append("mask => ");
+            SB.append(getMask());
+        }
+        SB.append("\n");
+        SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
+    }
+
     public static class Array extends RefArray<AEFiredEvent> {
         public Array(MemorySegment buf) {
             super(buf, AEFiredEvent.LAYOUT);
@@ -60,6 +85,16 @@ public class AEFiredEvent {
 
         public Array(PNIBuf buf) {
             this(buf.get());
+        }
+
+        @Override
+        protected void elementToString(io.vproxy.vfd.posix.AEFiredEvent ELEM, StringBuilder SB, int INDENT, java.util.Set<NativeObjectTuple> VISITED, boolean CORRUPTED_MEMORY) {
+            ELEM.toString(SB, INDENT, VISITED, CORRUPTED_MEMORY);
+        }
+
+        @Override
+        protected String toStringTypeName() {
+            return "AEFiredEvent.Array";
         }
 
         @Override
@@ -99,10 +134,15 @@ public class AEFiredEvent {
         }
 
         @Override
+        protected String toStringTypeName() {
+            return "AEFiredEvent.Func";
+        }
+
+        @Override
         protected AEFiredEvent construct(MemorySegment seg) {
             return new AEFiredEvent(seg);
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.11
-// sha256:24e88079e6c297d7ce861bb7a2c11de0837b1e9839f222c406aecb37fb0a7f28
+// metadata.generator-version: pni 21.0.0.14
+// sha256:ff0562fb779f2b34e026d1cd90e0bdae95fa298a4210223ec75e773c16f72a7b

@@ -21,14 +21,15 @@ extern "C" {
 #endif
 
 PNIEnvExpand(SocketAddressUDS_st, SocketAddressUDS_st *)
+PNIBufExpand(SocketAddressUDS_st, SocketAddressUDS_st, 4096)
 
-PNI_PACK(struct, SocketAddressUDS_st, {
+struct SocketAddressUDS_st {
     char path[4096];
-});
+};
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_SocketAddressUDSST
-// metadata.generator-version: pni 21.0.0.8
-// sha256:987679a1fe50aa0766942e1bd50c86ceeee1494675c2b439c9418cf03934b204
+// metadata.generator-version: pni 21.0.0.13
+// sha256:bd767cf26c06968dc5a755a3b904fa79a9b32519c3ea1c514dc8be583258c019
