@@ -7,6 +7,7 @@ import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 @Struct(skip = true)
+@AlwaysAligned
 @Name("aeFiredEvent")
 @Include("ae.h")
 class PNIAEFiredEvent {
@@ -175,6 +176,7 @@ interface PNIPosixNative {
 
 @SuppressWarnings("unused")
 @Struct
+@AlwaysAligned
 @Name("SocketAddressIPv4_st")
 class PNISocketAddressIPv4ST {
     @Unsigned int ip;
@@ -183,6 +185,7 @@ class PNISocketAddressIPv4ST {
 
 @SuppressWarnings("unused")
 @Struct
+@AlwaysAligned
 @Name("SocketAddressIPv6_st")
 class PNISocketAddressIPv6ST {
     @Len(40) String ip;
@@ -191,6 +194,7 @@ class PNISocketAddressIPv6ST {
 
 @SuppressWarnings("unused")
 @Struct
+@AlwaysAligned
 @Name("SocketAddressUDS_st")
 class PNISocketAddressUDSST {
     @Len(4096) String path;
@@ -198,6 +202,7 @@ class PNISocketAddressUDSST {
 
 @SuppressWarnings("unused")
 @Struct
+@AlwaysAligned
 @Name("UDPRecvResultIPv4_st")
 class PNIUDPRecvResultIPv4ST {
     PNISocketAddressIPv4ST addr;
@@ -206,6 +211,7 @@ class PNIUDPRecvResultIPv4ST {
 
 @SuppressWarnings("unused")
 @Struct
+@AlwaysAligned
 @Name("UDPRecvResultIPv6_st")
 class PNIUDPRecvResultIPv6ST {
     PNISocketAddressIPv6ST addr;
@@ -214,6 +220,7 @@ class PNIUDPRecvResultIPv6ST {
 
 @SuppressWarnings("unused")
 @Struct
+@AlwaysAligned
 @Name("TapInfo_st")
 class PNITapInfoST {
     @Len(16) String devName;

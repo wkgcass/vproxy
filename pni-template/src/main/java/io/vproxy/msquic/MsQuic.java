@@ -82,11 +82,13 @@ interface PNIMsQuicMod {
 }
 
 @Struct(skip = true)
+@AlwaysAligned
 abstract class PNIQuicRegistrationConfigEx extends PNIQuicRegistrationConfig {
     MemorySegment Context;
 }
 
 @Struct(skip = true, typedef = false)
+@AlwaysAligned
 @Include("msquic.h")
 @Sizeof("struct CxPlatProcessEventLocals")
 class PNICxPlatProcessEventLocals {
