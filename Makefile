@@ -109,6 +109,8 @@ jar-no-dep: jar-with-lib
 	zip -d -q build/libs/vproxy-no-dep.jar 'META-INF/proguard/*'
 	zip -d -q build/libs/vproxy-no-dep.jar 'META-INF/versions/*'
 	zip -d -q build/libs/vproxy-no-dep.jar 'io/vproxy/pni/*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'vjson/*'
+	zip -d -q build/libs/vproxy-no-dep.jar 'vpreprocessor/*'
 
 .PHONY: jlink
 jlink: jar
