@@ -6,8 +6,8 @@ import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.BlockCallback;
-import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
+import io.vproxy.pni.PooledAllocator;
 
 import java.lang.foreign.MemorySegment;
 
@@ -54,7 +54,7 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
     private boolean initMsQuic(EventLoopWrapper el, MemorySegment worker, MemorySegment thread) {
         var loop = el.getSelectorEventLoop();
 
-        var unsafeAllocator = Allocator.ofUnsafe();
+        var unsafeAllocator = PooledAllocator.ofUnsafePooled();
         var locals = new CxPlatProcessEventLocals(unsafeAllocator);
         var state = new CxPlatExecutionState(unsafeAllocator);
         locals.setWorker(worker);

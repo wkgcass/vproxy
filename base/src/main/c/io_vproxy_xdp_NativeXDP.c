@@ -73,14 +73,14 @@ JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_shareUMem
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_xdp_XDPNative_getBufferFromUMem
-  (PNIEnv_buf* env, int64_t umem_o) {
+  (PNIEnv_buf_byte* env, int64_t umem_o) {
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
 
     char* buffer = umem->buffer;
     int len = umem->buffer_size;
 
     env->return_.buf = buffer;
-    env->return_.len = len;
+    env->return_.bufLen = len;
 
     return 0;
 }

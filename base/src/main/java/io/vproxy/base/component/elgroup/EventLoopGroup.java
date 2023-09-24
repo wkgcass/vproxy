@@ -19,6 +19,7 @@ import io.vproxy.msquic.wrap.ApiTables;
 import io.vproxy.msquic.wrap.Registration;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
+import io.vproxy.pni.PooledAllocator;
 import io.vproxy.pni.array.IntArray;
 
 import java.io.IOException;
@@ -75,7 +76,7 @@ public class EventLoopGroup implements IEventLoopGroup {
         }
 
         var api = ApiTables.V2;
-        var allocator = Allocator.ofUnsafe();
+        var allocator = PooledAllocator.ofUnsafePooled();
         var ref = PNIRef.of(this);
 
         try (var tmpAlloc = Allocator.ofConfined()) {

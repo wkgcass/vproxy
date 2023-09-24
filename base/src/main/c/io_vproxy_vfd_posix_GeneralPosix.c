@@ -21,7 +21,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeWritable
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe
-  (PNIEnv_void* env, PNIBuf* _fds) {
+  (PNIEnv_void* env, PNIBuf_int* _fds) {
     int32_t* fds = _fds->buf;
         #ifdef __linux__
             int fd = eventfd(0, EFD_NONBLOCK);

@@ -21,6 +21,7 @@ import io.vproxy.msquic.wrap.Listener;
 import io.vproxy.msquic.wrap.Stream;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIString;
+import io.vproxy.pni.PooledAllocator;
 import io.vproxy.pni.array.IntArray;
 import io.vproxy.vfd.IPPort;
 
@@ -122,7 +123,7 @@ public class QuicGateway {
                     alpnBuffers.get(i).setBuffer(str.MEMORY);
                     alpnBuffers.get(i).setLength((int) (str.MEMORY.byteSize() - 1));
                 }
-                var confAllocator = Allocator.ofUnsafe();
+                var confAllocator = PooledAllocator.ofUnsafePooled();
                 var conf_ = reg.opts.registrationQ
                     .openConfiguration(alpnBuffers, alpn.size(), settings, null, retInt, confAllocator);
                 if (conf_ == null) {
@@ -154,7 +155,7 @@ public class QuicGateway {
             }
             assert Logger.lowLevelDebug("before init msquic listener");
             {
-                var listenerAllocator = Allocator.ofUnsafe();
+                var listenerAllocator = PooledAllocator.ofUnsafePooled();
                 var lsn = new QuicGatewayListener(new Listener.Options(reg, listenerAllocator, ref ->
                     reg.opts.registrationQ.openListener(MsQuicUpcall.listenerCallback, ref.MEMORY, null, listenerAllocator)));
                 if (lsn.listenerQ == null) {
@@ -241,7 +242,7 @@ public class QuicGateway {
                 case QUIC_LISTENER_EVENT_NEW_CONNECTION -> {
                     var data = event.getUnion().getNEW_CONNECTION();
                     var connHQUIC = data.getConnection();
-                    var connectionAllocator = Allocator.ofUnsafe();
+                    var connectionAllocator = PooledAllocator.ofUnsafePooled();
                     var conn_ = new QuicConnection(connectionAllocator);
                     {
                         conn_.setApi(opts.apiTableQ.getApi());
@@ -281,7 +282,7 @@ public class QuicGateway {
                 case QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED -> {
                     var data = event.getUnion().getPEER_STREAM_STARTED();
                     var streamHQUIC = data.getStream();
-                    var allocator = Allocator.ofUnsafe();
+                    var allocator = PooledAllocator.ofUnsafePooled();
                     var stream_ = new QuicStream(allocator);
                     stream_.setApi(opts.apiTableQ.getApi());
                     stream_.setStream(streamHQUIC);
@@ -296,7 +297,7 @@ public class QuicGateway {
     }
 
     private class QuicGatewayStream extends Stream {
-        private final Allocator quicBufferAllocator = Allocator.ofConcurrentPooled();
+        private final Allocator quicBufferAllocator = PooledAllocator.ofConcurrentPooled();
         private final List<QuicBuffer.Array> quicBuffers = new ArrayList<>();
 
         private io.vproxy.base.connection.Connection backendConn;
