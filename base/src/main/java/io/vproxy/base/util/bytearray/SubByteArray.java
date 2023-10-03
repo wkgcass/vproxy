@@ -18,7 +18,10 @@ public class SubByteArray extends AbstractByteArray implements ByteArray {
             throw new ArrayIndexOutOfBoundsException("from=" + from + ", len=" + len + ", length=" + source.length());
     }
 
-    public static SubByteArray sub(ByteArray source, int from, int len) {
+    public static ByteArray sub(ByteArray source, int from, int len) {
+        if (from == 0 && len == source.length()) {
+            return source;
+        }
         if (!(source instanceof SubByteArray)) {
             return new SubByteArray(source, from, len);
         }

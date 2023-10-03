@@ -22,10 +22,25 @@ public class ArrayOutputStream extends OutputStream {
     }
 
     public ByteArray get() {
+        return get(false, false);
+    }
+
+    public ByteArray get(boolean copy, boolean clear) {
         if (curosr == 0)
             return ByteArray.allocate(0);
-        ByteArray ret = array.sub(0, curosr).copy();
-        curosr = 0;
-        return ret;
+        ByteArray ret = array.sub(0, curosr);
+        if (clear) {
+            curosr = 0;
+        }
+        if (copy) {
+            return ret.copy();
+        } else {
+            return ret;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return get(false, false).toString();
     }
 }

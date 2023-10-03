@@ -40,19 +40,19 @@ public class TestRESPParser {
         {
             RESPBulkString empty = (RESPBulkString) parse("$0\r\n\r\n");
             System.out.println(empty);
-            if (!empty.string.toString().equals(""))
+            if (!empty.data.toString().isEmpty())
                 throw new Exception("wrong empty bulk string");
         }
         {
             RESPBulkString nil = (RESPBulkString) parse("$-1\r\n");
             System.out.println(nil);
-            if (nil.string != null)
+            if (nil.data != null)
                 throw new Exception("wrong null bulk string");
         }
         {
             RESPBulkString blk = (RESPBulkString) parse("$6\r\nfoobar\r\n");
             System.out.println(blk);
-            if (!blk.string.toString().equals("foobar"))
+            if (!blk.data.toString().equals("foobar"))
                 throw new Exception("wrong bulk string");
         }
         {
@@ -66,9 +66,9 @@ public class TestRESPParser {
             System.out.println(array);
             if (array.array.size() != 2)
                 throw new Exception("wrong array.len");
-            if (!((RESPBulkString) array.array.get(0)).string.toString().equals("foo"))
+            if (!((RESPBulkString) array.array.get(0)).data.toString().equals("foo"))
                 throw new Exception("wrong array[0]");
-            if (!((RESPBulkString) array.array.get(1)).string.toString().equals("bar"))
+            if (!((RESPBulkString) array.array.get(1)).data.toString().equals("bar"))
                 throw new Exception("wrong array[1]");
         }
         {
@@ -103,7 +103,7 @@ public class TestRESPParser {
                 throw new Exception("wrong mixArr[2]");
             if (((RESPInteger) mixArr.array.get(3)).integer != 4)
                 throw new Exception("wrong mixArr[3]");
-            if (!((RESPBulkString) mixArr.array.get(4)).string.toString().equals("foobar"))
+            if (!((RESPBulkString) mixArr.array.get(4)).data.toString().equals("foobar"))
                 throw new Exception("wrong mixArr[4]");
         }
     }

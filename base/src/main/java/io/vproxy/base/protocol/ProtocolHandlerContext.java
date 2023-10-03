@@ -2,6 +2,7 @@ package io.vproxy.base.protocol;
 
 import io.vproxy.base.connection.Connection;
 import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
@@ -10,7 +11,7 @@ import io.vproxy.base.util.nio.ByteArrayChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ProtocolHandlerContext<T> {
-    private final ConcurrentLinkedQueue<byte[]> bytesSeq = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<ByteArray> bytesSeq = new ConcurrentLinkedQueue<>();
     private ByteArrayChannel chnl = null; // the helper channel to write into out buffer
     public final String connectionId;
     public final Connection connection;
@@ -44,7 +45,7 @@ public class ProtocolHandlerContext<T> {
         if (chnl == null && bytesSeq.isEmpty())
             return; // nothing to write
         if (chnl == null) {
-            byte[] bytes = bytesSeq.poll();
+            ByteArray bytes = bytesSeq.poll();
             assert bytes != null; // it only removes in one thread, so, no concurrency
             chnl = ByteArrayChannel.fromFull(bytes);
         }
@@ -68,7 +69,7 @@ public class ProtocolHandlerContext<T> {
             // otherwise,
             // this bytes array is already written
             // get another array
-            byte[] bytes = bytesSeq.poll();
+            ByteArray bytes = bytesSeq.poll();
             if (bytes == null) {
                 assert Logger.lowLevelDebug("nothing to write both in chnl and bytesSeq");
                 chnl = null;
@@ -79,19 +80,22 @@ public class ProtocolHandlerContext<T> {
         }
     }
 
-    public void write(byte[] bytes) {
+    public void write(byte[] data) {
+        write(ByteArray.from(data));
+    }
+
+    public void write(ByteArray bytes) {
         if (connection.isClosed()) {
             Logger.error(LogType.IMPROPER_USE, "connection " + connection + " is already closed but still trying to write data");
             return;
         }
-        if (bytes.length == 0)
+        if (bytes.length() == 0)
             return; // do not write if the input array is empty
-        assert Logger.lowLevelDebug("trying to write " + bytes.length + " in #" + hashCode());
+        assert Logger.lowLevelDebug("trying to write " + bytes.length() + " in #" + hashCode());
         bytesSeq.add(bytes); // only record in this thread
         loop.getSelectorEventLoop().runOnLoop(this::doWrite); // run write in loop thread
     }
 
-    @SuppressWarnings("unchecked")
     public void readable() {
         loop.getSelectorEventLoop().runOnLoop(() -> {
             if (inBuffer.used() == 0)
@@ -103,11 +107,11 @@ public class ProtocolHandlerContext<T> {
     @Override
     public String toString() {
         return "ProtocolHandlerContext{" +
-            "connectionId='" + connectionId + '\'' +
-            ", connection=" + connection +
-            ", loop=" + loop +
-            ", handler=" + handler +
-            ", data=" + data +
-            '}';
+               "connectionId='" + connectionId + '\'' +
+               ", connection=" + connection +
+               ", loop=" + loop +
+               ", handler=" + handler +
+               ", data=" + data +
+               '}';
     }
 }

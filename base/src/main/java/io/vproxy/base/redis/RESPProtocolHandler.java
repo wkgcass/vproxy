@@ -2,6 +2,7 @@ package io.vproxy.base.redis;
 
 import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
@@ -47,7 +48,7 @@ public class RESPProtocolHandler implements ProtocolHandler<RESPContext> {
             handler.handle(o, ctx.data.attachment, new Callback<Object, Throwable>() {
                 @Override
                 protected void onSucceeded(Object value) {
-                    byte[] bytes;
+                    ByteArray bytes;
                     try {
                         bytes = Serializer.from(value);
                     } catch (IllegalArgumentException e) {

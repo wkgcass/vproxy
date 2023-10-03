@@ -1,9 +1,11 @@
 package io.vproxy.base.redis;
 
 import io.vproxy.base.redis.entity.*;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.io.ArrayOutputStream;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 
 @SuppressWarnings("Duplicates")
@@ -307,7 +309,7 @@ public class RESPParser {
                 // invalid
                 return error("bulk string length cannot be " + bs.len);
             } else {
-                bs.string = new StringBuilder();
+                bs.data = ArrayOutputStream.to(ByteArray.allocate(bs.len));
                 return 7;
             }
         }
@@ -336,7 +338,7 @@ public class RESPParser {
             return error("expecting \\r");
         } else {
             --bs.len;
-            bs.string.append((char) b);
+            bs.data.write(b);
             return 8;
         }
     }

@@ -1,17 +1,19 @@
 package io.vproxy.base.redis.entity;
 
+import io.vproxy.base.util.io.ArrayOutputStream;
+
 public class RESPBulkString extends RESP {
     public int negative = 1;
     public int len;
-    public StringBuilder string; // may be null
+    public ArrayOutputStream data; // may be null
 
     @Override
     public String toString() {
-        return "RESP.BulkString(" + string + ")";
+        return "RESP.BulkString(" + data + ")";
     }
 
     @Override
     public Object getJavaObject() {
-        return string == null ? null : string.toString();
+        return data == null ? null : data.toString();
     }
 }
