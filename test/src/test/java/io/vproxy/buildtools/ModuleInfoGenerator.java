@@ -17,7 +17,7 @@ public class ModuleInfoGenerator {
         var requires = new LinkedHashSet<String>();
         requires.add("java.base");
         requires.add("kotlin.stdlib");
-        requires.add("kotlinx.coroutines.core.jvm");
+        requires.add("kotlinx.coroutines.core");
         var exports = new LinkedHashSet<String>();
         var uses = new LinkedHashSet<String>();
         for (var module : modules) {

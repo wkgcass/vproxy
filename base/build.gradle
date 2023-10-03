@@ -6,10 +6,10 @@ compileJava {
             'io.vproxy.dep',
             'io.vproxy.pni',
             'kotlin.stdlib',
-            'kotlinx.coroutines.core.jvm',
+            'kotlinx.coroutines.core',
     ].join(',')
 }
 
 jar {
-    archiveName "vproxy-base.jar"
+    archiveFileName = "vproxy-base.jar"
 }

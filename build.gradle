@@ -17,12 +17,12 @@ buildscript {
 plugins {
     id 'application'
     id 'idea'
-    id 'org.jetbrains.kotlin.jvm' version '1.5.31'
-    id 'org.jetbrains.dokka' version "1.5.30"
+    id 'org.jetbrains.kotlin.jvm' version '1.9.20-Beta2'
+    id 'org.jetbrains.dokka' version "1.9.0"
     id 'maven-publish'
     id 'signing'
 
-    id 'org.openjfx.javafxplugin' version '0.0.10' apply false
+    id 'org.openjfx.javafxplugin' version '0.1.0' apply false
 }
 
 def PNI_VERSION = project.PNI_VERSION
@@ -37,7 +37,7 @@ version loadVersion()
 mainClassName = 'io.vproxy.app.app.Main'
 
 jar {
-    archiveName 'vproxy.jar'
+    archiveFileName = 'vproxy.jar'
     manifest {
         attributes 'Main-Class': mainClassName
     }
@@ -59,24 +59,26 @@ subprojects {
     java {
         withSourcesJar()
 
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
-        }
+        sourceCompatibility = '21'
+        targetCompatibility = '21'
     }
 
     compileKotlin {
         kotlinOptions {
             jvmTarget = '11'
-            freeCompilerArgs += '-Xjvm-default=enable'
+            freeCompilerArgs += '-Xjvm-default=all'
             freeCompilerArgs += '-Xassertions=jvm'
         }
     }
     compileTestKotlin {
         kotlinOptions {
             jvmTarget = '11'
-            freeCompilerArgs += '-Xjvm-default=enable'
+            freeCompilerArgs += '-Xjvm-default=all'
             freeCompilerArgs += '-Xassertions=jvm'
         }
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile.class).configureEach {
+        jvmTargetValidationMode = org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode.WARNING
     }
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
@@ -119,7 +121,7 @@ subprojects {
         }
     }
     task javadocJar(type: Jar, dependsOn: buildJavaDoc) {
-        classifier = 'javadoc'
+        archiveClassifier = 'javadoc'
         from "$buildDir/docs/javadoc"
     }
 
@@ -200,13 +202,15 @@ repositories {
 
 project(':dep') {
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
     dependencies {
-        api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.5.31'
-        api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.5.2'
+        api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.9.10'
+        api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.7.3'
         api group: 'io.vproxy', name: 'pni-api-jdk21', version: PNI_VERSION
-        api group: 'io.vproxy', name: 'vjson', version: '1.5.2'
+        api (group: 'io.vproxy', name: 'vjson', version: '1.5.2') {
+            exclude group: 'io.vproxy', module: 'kotlin-stdlib-lite'
+        }
     }
 }
 
@@ -267,7 +271,7 @@ project(':base') {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=io.vproxy.base'
     }
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
 
     dependencies {
@@ -277,7 +281,7 @@ project(':base') {
 
 project(':lib') {
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
 
     dependencies {
@@ -306,7 +310,7 @@ project(':adaptor-vertx') {
 
 project(':core') {
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
 
     dependencies {
@@ -317,7 +321,7 @@ project(':core') {
 
 project(':extended') {
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
 
     dependencies {
@@ -329,7 +333,7 @@ project(':extended') {
 
 project(':app') {
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
 
     dependencies {
@@ -360,21 +364,17 @@ project(':ui') {
     }
 
     compileKotlin {
-        destinationDir = compileJava.destinationDir
+        destinationDirectory = compileJava.destinationDir
     }
 
     dependencies {
         api project(':all')
-        api(group: 'io.vproxy', name: 'vjson', version: '1.5.1') {
-            exclude group: 'io.vproxy', module: 'kotlin-stdlib-lite'
-        }
         api(group: 'io.vproxy', name: 'vfx', version: '1.3.0') {
             exclude group: 'io.vproxy', module: 'commons'
         }
     }
 
     jar {
-        archiveName 'vproxy-ui.jar'
         exclude 'module-info.class'
         from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
         duplicatesStrategy 'exclude'
@@ -388,7 +388,7 @@ project(':ui') {
 
 project(':test') {
     compileTestKotlin {
-        destinationDir = compileTestJava.destinationDir
+        destinationDirectory = compileTestJava.destinationDir
     }
 
     dependencies {

@@ -5,5 +5,5 @@ compileJava {
 }
 
 jar {
-    archiveName "vproxy-msquic-dummy.jar"
+    archiveFileName = "vproxy-msquic-dummy.jar"
 }

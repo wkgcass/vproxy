@@ -1,7 +1,8 @@
 module io.vproxy.base {
     requires jdk.unsupported;
     requires kotlin.stdlib;
-    requires kotlinx.coroutines.core.jvm;
+    requires kotlinx.coroutines.core;
+    requires vjson;
 
     requires transitive io.vproxy.dep;
     requires io.vproxy.pni;

@@ -4,10 +4,10 @@ compileJava {
     }
     options.compilerArgs << '--add-modules' << [
         'kotlin.stdlib',
-        'kotlinx.coroutines.core.jvm',
+        'kotlinx.coroutines.core',
     ].join(',')
 }
 
 jar {
-    archiveName "vproxy-dep.jar"
+    archiveFileName = "vproxy-dep.jar"
 }

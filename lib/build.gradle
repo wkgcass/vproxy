@@ -5,10 +5,10 @@ compileJava {
     options.compilerArgs << '--add-modules' << [
             'io.vproxy.base',
             'kotlin.stdlib',
-            'kotlinx.coroutines.core.jvm',
+            'kotlinx.coroutines.core',
     ].join(',')
 }
 
 jar {
-    archiveName "vproxy-lib.jar"
+    archiveFileName = "vproxy-lib.jar"
 }

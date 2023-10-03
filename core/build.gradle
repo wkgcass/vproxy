@@ -9,5 +9,5 @@ compileJava {
 }
 
 jar {
-    archiveName "vproxy-core.jar"
+    archiveFileName = "vproxy-core.jar"
 }

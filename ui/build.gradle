@@ -11,5 +11,5 @@ compileJava {
 }
 
 jar {
-    archiveName "vproxy-ui.jar"
+    archiveFileName = "vproxy-ui.jar"
 }

@@ -8,5 +8,5 @@ compileJava {
 }
 
 jar {
-    archiveName "vproxy-netty.jar"
+    archiveFileName = "vproxy-netty.jar"
 }
