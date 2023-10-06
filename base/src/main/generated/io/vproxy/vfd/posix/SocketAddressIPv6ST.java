@@ -10,7 +10,7 @@ public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeO
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         MemoryLayout.sequenceLayout(40L, ValueLayout.JAVA_BYTE).withName("ip"),
         ValueLayout.JAVA_SHORT.withName("port")
-    );
+    ).withByteAlignment(2);
     public final MemorySegment MEMORY;
 
     @Override
@@ -50,7 +50,7 @@ public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeO
     }
 
     public SocketAddressIPv6ST(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -80,11 +80,11 @@ public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeO
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(SocketAddressIPv6ST.LAYOUT.byteSize() * len));
+            super(allocator, SocketAddressIPv6ST.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, SocketAddressIPv6ST.LAYOUT);
         }
 
         @Override
@@ -144,5 +144,5 @@ public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeO
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:0352ea06f9cc32275459259de10b090804f9b8c1f9a291c3bcc1663e7ffb91dd
+// metadata.generator-version: pni 21.0.0.15
+// sha256:ea78b999ccf763ecc05286776c2af78ea39692284015dc008a2d78356c2c135a

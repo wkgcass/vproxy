@@ -36,7 +36,7 @@ public class CxPlatExecutionState extends AbstractNativeObject implements Native
     }
 
     public CxPlatExecutionState(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -55,11 +55,11 @@ public class CxPlatExecutionState extends AbstractNativeObject implements Native
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(CxPlatExecutionState.LAYOUT.byteSize() * len));
+            super(allocator, CxPlatExecutionState.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, CxPlatExecutionState.LAYOUT);
         }
 
         @Override
@@ -119,5 +119,5 @@ public class CxPlatExecutionState extends AbstractNativeObject implements Native
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:a2bd215926179b64f0b929af3d8c9d6a4541f84270756dc5a168cc032eaf30e5
+// metadata.generator-version: pni 21.0.0.15
+// sha256:9668c07874776c53dd0d7319db281ed15751b3b35c74dd299ed94d67b0a86c0c

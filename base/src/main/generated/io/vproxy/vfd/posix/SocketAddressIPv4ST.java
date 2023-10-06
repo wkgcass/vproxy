@@ -11,7 +11,7 @@ public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeO
         ValueLayout.JAVA_INT.withName("ip"),
         ValueLayout.JAVA_SHORT.withName("port"),
         MemoryLayout.sequenceLayout(2L, ValueLayout.JAVA_BYTE) /* padding */
-    );
+    ).withByteAlignment(4);
     public final MemorySegment MEMORY;
 
     @Override
@@ -53,7 +53,7 @@ public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeO
     }
 
     public SocketAddressIPv4ST(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -82,11 +82,11 @@ public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeO
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(SocketAddressIPv4ST.LAYOUT.byteSize() * len));
+            super(allocator, SocketAddressIPv4ST.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, SocketAddressIPv4ST.LAYOUT);
         }
 
         @Override
@@ -146,5 +146,5 @@ public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeO
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:c076ce1cbdc92c8dfcb254458dd29b30ec23cfb81c6fd1ffa604acce9be3f2ce
+// metadata.generator-version: pni 21.0.0.15
+// sha256:29de574ba2f6c3cb349a07b51b8f8037eb04db322b1bedfe286b2fdb767ce823

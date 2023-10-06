@@ -24,7 +24,7 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         ValueLayout.ADDRESS.withName("state"),
         ValueLayout.JAVA_INT.withName("waitTime"),
         MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */
-    );
+    ).withByteAlignment(8);
     public final MemorySegment MEMORY;
 
     @Override
@@ -91,7 +91,7 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
     }
 
     public CxPlatProcessEventLocals(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -126,11 +126,11 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(CxPlatProcessEventLocals.LAYOUT.byteSize() * len));
+            super(allocator, CxPlatProcessEventLocals.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, CxPlatProcessEventLocals.LAYOUT);
         }
 
         @Override
@@ -190,5 +190,5 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:3f286a9faa7b3b2ea28f915667f78687d48456aaa62038069499e21dddd53ee7
+// metadata.generator-version: pni 21.0.0.15
+// sha256:4f5a8426ddd601a6e3a0e6edd393309fbbfba078b199f1ad8ea696a96e6d6a8e

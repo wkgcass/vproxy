@@ -10,7 +10,7 @@ public class TapInfoST extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         MemoryLayout.sequenceLayout(16L, ValueLayout.JAVA_BYTE).withName("devName"),
         ValueLayout.JAVA_INT.withName("fd")
-    );
+    ).withByteAlignment(4);
     public final MemorySegment MEMORY;
 
     @Override
@@ -50,7 +50,7 @@ public class TapInfoST extends AbstractNativeObject implements NativeObject {
     }
 
     public TapInfoST(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -80,11 +80,11 @@ public class TapInfoST extends AbstractNativeObject implements NativeObject {
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(TapInfoST.LAYOUT.byteSize() * len));
+            super(allocator, TapInfoST.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, TapInfoST.LAYOUT);
         }
 
         @Override
@@ -144,5 +144,5 @@ public class TapInfoST extends AbstractNativeObject implements NativeObject {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:18e66d34f722423262f061233d3fdc5a30f7d30f3acaf782c578aae7f7780093
+// metadata.generator-version: pni 21.0.0.15
+// sha256:8cb17c910194ee711a3497be07a84871cb98b08534094cc39fd2fbb079e0fc0b

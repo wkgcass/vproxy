@@ -36,7 +36,7 @@ public class SocketAddressUDSST extends AbstractNativeObject implements NativeOb
     }
 
     public SocketAddressUDSST(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -61,11 +61,11 @@ public class SocketAddressUDSST extends AbstractNativeObject implements NativeOb
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(SocketAddressUDSST.LAYOUT.byteSize() * len));
+            super(allocator, SocketAddressUDSST.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, SocketAddressUDSST.LAYOUT);
         }
 
         @Override
@@ -125,5 +125,5 @@ public class SocketAddressUDSST extends AbstractNativeObject implements NativeOb
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:d74ea06b3165d5b05c24756ea3695ca4ed8f9222e4217600f5ce17194e201a50
+// metadata.generator-version: pni 21.0.0.15
+// sha256:45f06cce894899cedb1823d61944030599686f97043f81fef99defcd219d68ca

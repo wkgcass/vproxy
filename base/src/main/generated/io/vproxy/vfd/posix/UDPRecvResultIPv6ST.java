@@ -11,7 +11,7 @@ public class UDPRecvResultIPv6ST extends AbstractNativeObject implements NativeO
         io.vproxy.vfd.posix.SocketAddressIPv6ST.LAYOUT.withName("addr"),
         MemoryLayout.sequenceLayout(2L, ValueLayout.JAVA_BYTE) /* padding */,
         ValueLayout.JAVA_INT.withName("len")
-    );
+    ).withByteAlignment(4);
     public final MemorySegment MEMORY;
 
     @Override
@@ -48,7 +48,7 @@ public class UDPRecvResultIPv6ST extends AbstractNativeObject implements NativeO
     }
 
     public UDPRecvResultIPv6ST(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -77,11 +77,11 @@ public class UDPRecvResultIPv6ST extends AbstractNativeObject implements NativeO
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(UDPRecvResultIPv6ST.LAYOUT.byteSize() * len));
+            super(allocator, UDPRecvResultIPv6ST.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, UDPRecvResultIPv6ST.LAYOUT);
         }
 
         @Override
@@ -141,5 +141,5 @@ public class UDPRecvResultIPv6ST extends AbstractNativeObject implements NativeO
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:f747809d58002487184fd6e96555a356e5f06ec037be0d6fed98f91a724ad9c7
+// metadata.generator-version: pni 21.0.0.15
+// sha256:68089cd5891c215dc3cb4e91d1a5327a91ca37f999d3e94e93c6fa26b21b384e

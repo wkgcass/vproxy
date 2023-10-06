@@ -10,7 +10,7 @@ public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         ValueLayout.JAVA_INT.withName("fd"),
         ValueLayout.JAVA_INT.withName("mask")
-    );
+    ).withByteAlignment(4);
     public final MemorySegment MEMORY;
 
     @Override
@@ -51,7 +51,7 @@ public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
     }
 
     public AEFiredEvent(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -80,11 +80,11 @@ public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(AEFiredEvent.LAYOUT.byteSize() * len));
+            super(allocator, AEFiredEvent.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, AEFiredEvent.LAYOUT);
         }
 
         @Override
@@ -144,5 +144,5 @@ public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:ff0562fb779f2b34e026d1cd90e0bdae95fa298a4210223ec75e773c16f72a7b
+// metadata.generator-version: pni 21.0.0.15
+// sha256:340dde07b3ab4624f2e00b897ef763b72b901093d7332e55a54f3864fb53c919

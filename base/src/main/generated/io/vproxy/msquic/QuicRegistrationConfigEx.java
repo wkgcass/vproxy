@@ -10,7 +10,7 @@ public class QuicRegistrationConfigEx extends io.vproxy.msquic.QuicRegistrationC
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         io.vproxy.msquic.QuicRegistrationConfig.LAYOUT,
         ValueLayout.ADDRESS.withName("Context")
-    );
+    ).withByteAlignment(8);
     public final MemorySegment MEMORY;
 
     @Override
@@ -46,7 +46,7 @@ public class QuicRegistrationConfigEx extends io.vproxy.msquic.QuicRegistrationC
     }
 
     public QuicRegistrationConfigEx(Allocator ALLOCATOR) {
-        this(ALLOCATOR.allocate(LAYOUT.byteSize()));
+        this(ALLOCATOR.allocate(LAYOUT));
     }
 
     @Override
@@ -89,11 +89,11 @@ public class QuicRegistrationConfigEx extends io.vproxy.msquic.QuicRegistrationC
         }
 
         public Array(Allocator allocator, long len) {
-            this(allocator.allocate(QuicRegistrationConfigEx.LAYOUT.byteSize() * len));
+            super(allocator, QuicRegistrationConfigEx.LAYOUT, len);
         }
 
         public Array(PNIBuf buf) {
-            this(buf.get());
+            super(buf, QuicRegistrationConfigEx.LAYOUT);
         }
 
         @Override
@@ -153,5 +153,5 @@ public class QuicRegistrationConfigEx extends io.vproxy.msquic.QuicRegistrationC
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.14
-// sha256:3f4dffa2f33249d8856b0464283dfcaa2554c1b3f14590d09b6529ef2b5a7dc1
+// metadata.generator-version: pni 21.0.0.15
+// sha256:880056b8941076f2e64655b30f0e5c9342624c9809f202d586e8d10417315146

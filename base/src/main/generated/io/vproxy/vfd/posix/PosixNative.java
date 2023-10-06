@@ -589,7 +589,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) getIPv4LocalMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv4ST.LAYOUT.byteSize()));
+            ERR = (int) getIPv4LocalMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv4ST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -607,7 +607,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) getIPv6LocalMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv6ST.LAYOUT.byteSize()));
+            ERR = (int) getIPv6LocalMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv6ST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -625,7 +625,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) getIPv4RemoteMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv4ST.LAYOUT.byteSize()));
+            ERR = (int) getIPv4RemoteMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv4ST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -643,7 +643,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) getIPv6RemoteMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv6ST.LAYOUT.byteSize()));
+            ERR = (int) getIPv6RemoteMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressIPv6ST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -661,7 +661,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) getUDSLocalMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressUDSST.LAYOUT.byteSize()));
+            ERR = (int) getUDSLocalMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressUDSST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -679,7 +679,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) getUDSRemoteMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressUDSST.LAYOUT.byteSize()));
+            ERR = (int) getUDSRemoteMH.invokeExact(ENV.MEMORY, fd, ALLOCATOR.allocate(io.vproxy.vfd.posix.SocketAddressUDSST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -765,7 +765,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) recvfromIPv4MH.invokeExact(ENV.MEMORY, fd, PanamaUtils.format(directBuffer), off, len, ALLOCATOR.allocate(io.vproxy.vfd.posix.UDPRecvResultIPv4ST.LAYOUT.byteSize()));
+            ERR = (int) recvfromIPv4MH.invokeExact(ENV.MEMORY, fd, PanamaUtils.format(directBuffer), off, len, ALLOCATOR.allocate(io.vproxy.vfd.posix.UDPRecvResultIPv4ST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -783,7 +783,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) recvfromIPv6MH.invokeExact(ENV.MEMORY, fd, PanamaUtils.format(directBuffer), off, len, ALLOCATOR.allocate(io.vproxy.vfd.posix.UDPRecvResultIPv6ST.LAYOUT.byteSize()));
+            ERR = (int) recvfromIPv6MH.invokeExact(ENV.MEMORY, fd, PanamaUtils.format(directBuffer), off, len, ALLOCATOR.allocate(io.vproxy.vfd.posix.UDPRecvResultIPv6ST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -851,7 +851,7 @@ public class PosixNative {
         ENV.reset();
         int ERR;
         try {
-            ERR = (int) createTapFDMH.invokeExact(ENV.MEMORY, (MemorySegment) (dev == null ? MemorySegment.NULL : dev.MEMORY), isTun, ALLOCATOR.allocate(io.vproxy.vfd.posix.TapInfoST.LAYOUT.byteSize()));
+            ERR = (int) createTapFDMH.invokeExact(ENV.MEMORY, (MemorySegment) (dev == null ? MemorySegment.NULL : dev.MEMORY), isTun, ALLOCATOR.allocate(io.vproxy.vfd.posix.TapInfoST.LAYOUT));
         } catch (Throwable THROWABLE) {
             throw PanamaUtils.convertInvokeExactException(THROWABLE);
         }
@@ -879,5 +879,5 @@ public class PosixNative {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.8
-// sha256:9dc3b32d51f447c914ae364dcb42173e7c791612615bd68f0286800aa4c61ae8
+// metadata.generator-version: pni 21.0.0.15
+// sha256:b4ea72fa89cdf1b809559aa13fa32f08fdb29d6a10e63394ffb481cd06b60454
