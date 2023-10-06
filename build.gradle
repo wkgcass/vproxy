@@ -129,9 +129,9 @@ subprojects {
         enabled = false
     }
 
-    def releaseProjects = ['dep', 'base', 'adaptor-netty', 'adaptor-vertx', 'msquic-dummy']
+    def releaseProjects = ['dep', 'base', 'lib', 'adaptor-netty', 'adaptor-vertx', 'msquic-dummy']
     if (System.getProperty("MavenLocalInstall", "false") == "true") {
-        releaseProjects.addAll(['lib', 'core', 'extended', 'app', 'all'])
+        releaseProjects.addAll(['core', 'extended', 'app', 'all'])
     }
     if (releaseProjects.contains(project.name)) {
     publishing {
@@ -286,6 +286,7 @@ project(':lib') {
 
     dependencies {
         api project(':base')
+        api project(':msquic-dummy')
     }
 }
 
@@ -352,6 +353,10 @@ project(':all') {
         api project(':core')
         api project(':extended')
         api project(':app')
+
+        api project(':adaptor-netty')
+        api project(':adaptor-vertx')
+        api project(':msquic-dummy')
     }
 }
 
