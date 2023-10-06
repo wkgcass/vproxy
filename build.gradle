@@ -96,6 +96,7 @@ subprojects {
         jvmArgs += '--enable-preview'
         jvmArgs += '--enable-native-access=ALL-UNNAMED'
         jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+        jvmArgs += '--add-opens=java.base/java.lang=ALL-UNNAMED' // dubbo uses reflection on class loaders
 
         testLogging {
             events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
