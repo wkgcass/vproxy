@@ -27,7 +27,7 @@ public class MsQuicInitializer {
 
         MsQuicUpcall.setImpl(MsQuicUpcallImpl.get());
         MsQuicModUpcall.setImpl(MsQuicModUpcallImpl.get());
-        MsQuicMod.get().MsQuicSetEventLoopThreadDispatcher();
+        MsQuicMod.get().MsQuicSetEventLoopThreadDispatcher(MsQuicModUpcall.dispatch);
 
         supported = true;
         initialized = true;

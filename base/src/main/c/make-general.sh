@@ -23,7 +23,6 @@ rm -f "$target"
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
     -I ./dep/ae \
-    -I "../../../../dep/src/main/c" \
     -I "../c-generated" \
     -shared -Werror -lc -lpthread -fPIC \
     io_vproxy_vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c \

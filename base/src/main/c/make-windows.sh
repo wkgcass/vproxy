@@ -7,7 +7,6 @@ rm -f "$target"
 
 gcc -std=gnu99 -O2 \
     -I ./ \
-    -I "../../../../dep/src/main/c" \
     -I "../c-generated" \
     -shared -Werror -fPIC \
     io_vproxy_vfd_windows_GeneralWindows.c \

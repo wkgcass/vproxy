@@ -7,7 +7,7 @@ import java.lang.foreign.MemorySegment;
 
 @Function
 @Include("msquic.h")
-interface PNIMsQuicMod {
+interface PNIMsQuicMod2 {
     @Impl(
         // language="c"
         c = """
@@ -61,30 +61,6 @@ interface PNIMsQuicMod {
     )
     @Critical
     int MsQuicCxPlatWorkerThreadFinalize(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
-
-    @Impl(
-        // language="c"
-        c = """
-            return MsQuicSetEventLoopThreadDispatcher(vproxy_MsQuicUpcall_dispatch);
-            """
-    )
-    @Critical
-    int MsQuicSetEventLoopThreadDispatcher();
-
-    @Impl(
-        // language="c"
-        c = """
-            return CxPlatGetCurThread((CXPLAT_THREAD*) Thread);
-            """
-    )
-    @Critical
-    int CxPlatGetCurThread(MemorySegment Thread);
-}
-
-@Struct(skip = true)
-@AlwaysAligned
-abstract class PNIQuicRegistrationConfigEx extends PNIQuicRegistrationConfig {
-    MemorySegment Context;
 }
 
 @Struct(skip = true, typedef = false)
@@ -105,10 +81,4 @@ class PNICxPlatProcessEventLocals {
 @Sizeof("CXPLAT_EXECUTION_STATE")
 @PointerOnly
 class PNICxPlatExecutionState {
-}
-
-@Upcall
-@Include("msquic.h")
-interface PNIMsQuicModUpcall {
-    int dispatch(MemorySegment worker, int epfd, MemorySegment thread, MemorySegment context);
 }

@@ -7,7 +7,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    def PNI_VERSION = '21.0.0.15'
+    def PNI_VERSION = '21.0.0.16'
     ext.set("PNI_VERSION", PNI_VERSION)
     dependencies {
         classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION
@@ -245,11 +245,14 @@ project(':pni-template') {
                     Pattern.compile('io\\.vproxy\\.vfd.*'),
                     Pattern.compile('io\\.vproxy\\.xdp.*'),
                     Pattern.compile('io\\.vproxy\\.msquic\\.CxPlat.*'),
-                    Pattern.compile('io\\.vproxy\\.msquic\\.MsQuicMod.*'),
-                    Pattern.compile('io\\.vproxy\\.msquic\\..*Ex$'),
+                    Pattern.compile('^io\\.vproxy\\.msquic\\.MsQuicMod2$'),
                 ))
                 .setJavaOutputBaseDirectory(workingDir + '/base/src/main/generated')
                 .setCOutputDirectory(workingDir + '/base/src/main/c-generated')
+                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.TYPE_NAME_PREFIX, "PNI")
+                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_PNI_H_FILE)
+                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_PNI_C_FILE)
+                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_JNI_H_MOCK_FILE)
         )
 
         doLast {

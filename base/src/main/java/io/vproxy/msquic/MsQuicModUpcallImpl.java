@@ -10,6 +10,7 @@ import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PooledAllocator;
 
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 
 public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
     private MsQuicModUpcallImpl() {
@@ -22,17 +23,18 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
     }
 
     @Override
-    public int dispatch(MemorySegment worker, int epfd, MemorySegment thread, MemorySegment context) {
+    public int dispatch(CXPLAT_THREAD_CONFIG Config, MemorySegment EventQPtr, MemorySegment Thread, MemorySegment Context) {
         try {
-            var elg = getMsQuicEventLoopGroup(context);
+            var elg = getMsQuicEventLoopGroup(Context);
             if (elg == null) {
                 Logger.error(LogType.NO_EVENT_LOOP, "no event loop group provided for msquic");
                 return 1;
             }
-            var name = elg.alias + "-" + epfd;
-            var el = elg.add(name, epfd, new Annotations());
-            if (initMsQuic(el, worker, thread)) {
-                Logger.alert("msquic event loop is added, epfd=" + epfd + ", el=" + el);
+            int EventQ = EventQPtr.reinterpret(4).get(ValueLayout.JAVA_INT, 0);
+            var name = elg.alias + "-" + EventQ;
+            var el = elg.add(name, EventQ, new Annotations());
+            if (initMsQuic(el, Config.getContext(), Thread)) {
+                Logger.alert("msquic event loop is added, epfd=" + EventQ + ", el=" + el);
                 return 0;
             } else {
                 elg.remove(name);
@@ -64,8 +66,8 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
         loop.runOnLoop(() -> {
             try {
                 MsQuicMod.get().CxPlatGetCurThread(thread);
-                MsQuicMod.get().MsQuicCxPlatWorkerThreadInit(locals);
-                MsQuicMod.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
+                MsQuicMod2.get().MsQuicCxPlatWorkerThreadInit(locals);
+                MsQuicMod2.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
             } catch (Throwable t) {
                 block.failed(t);
                 return;
@@ -79,12 +81,12 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
             return false;
         }
         loop.setBeforePoll(() -> {
-            MsQuicMod.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
+            MsQuicMod2.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
             return locals.getWaitTime();
         });
-        loop.setAfterPoll((n, events) -> MsQuicMod.get().MsQuicCxPlatWorkerThreadAfterPoll(locals, n, events));
+        loop.setAfterPoll((n, events) -> MsQuicMod2.get().MsQuicCxPlatWorkerThreadAfterPoll(locals, n, events));
         loop.setFinalizer(() -> {
-            MsQuicMod.get().MsQuicCxPlatWorkerThreadFinalize(locals);
+            MsQuicMod2.get().MsQuicCxPlatWorkerThreadFinalize(locals);
             unsafeAllocator.close();
         });
         return true;
