@@ -53,7 +53,7 @@ public class ServerGroup {
             @Override
             public void down(SockAddr remote, String reason) {
                 healthy = false;
-                Logger.info(LogType.HEALTH_CHECK_CHANGE,
+                Logger.warn(LogType.HEALTH_CHECK_CHANGE,
                     "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN, reason: " + reason);
 
                 // alert event
