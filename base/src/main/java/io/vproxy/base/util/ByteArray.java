@@ -242,6 +242,41 @@ public interface ByteArray extends ToByteArray {
         return Utils.bytesToHex(toJavaArray());
     }
 
+    default String hexDump() {
+        return hexDump(16);
+    }
+
+    default String hexDump(int bytesPerLine) {
+        var result = new StringBuilder();
+
+        var sb = new StringBuilder();
+        for (int i = 0, size = this.length(); i < size; i += bytesPerLine) {
+            sb.delete(0, sb.length());
+            int j = 0;
+            for (; j < bytesPerLine && i + j < size; ++j) {
+                int n = this.get(i + j) & 0xff;
+                var s = Integer.toString(n, 16);
+                if (s.length() == 1) {
+                    s = "0" + s;
+                }
+                result.append(s);
+                result.append(" ");
+                if (n >= 33 && n <= 126) {
+                    sb.append((char) n);
+                } else {
+                    sb.append(".");
+                }
+            }
+            result.append(" ".repeat(7));
+            if (bytesPerLine > j) {
+                result.append(" ".repeat((bytesPerLine - j) * 3));
+            }
+            result.append(sb).append("\n");
+        }
+
+        return result.toString();
+    }
+
     default byte[] toGZipJavaByteArray() {
         byte[] dataToCompress = toJavaArray();
         ByteArrayOutputStream out = new ByteArrayOutputStream();

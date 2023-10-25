@@ -3,6 +3,7 @@ package io.vproxy.poc;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 import io.vproxy.msquic.*;
 import io.vproxy.msquic.wrap.Configuration;
@@ -135,7 +136,7 @@ public class QuicPoc {
                         var buf = bufs.get(i);
                         var seg = buf.getBuffer().reinterpret(buf.getLength());
                         System.out.println("Buffer[" + i + "]");
-                        Utils.hexDump(seg);
+                        System.out.println(ByteArray.from(seg).hexDump());
                     }
                     closeStream();
                 }
