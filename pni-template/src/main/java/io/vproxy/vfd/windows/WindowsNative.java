@@ -1,12 +1,11 @@
 package io.vproxy.vfd.windows;
 
-import io.vproxy.pni.annotation.Function;
-import io.vproxy.pni.annotation.Raw;
+import io.vproxy.pni.annotation.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-@Function
+@Downcall
 interface PNIWindowsNative {
     boolean tapNonBlockingSupported() throws IOException;
 

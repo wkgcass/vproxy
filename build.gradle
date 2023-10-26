@@ -7,7 +7,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    def PNI_VERSION = '21.0.0.16'
+    def PNI_VERSION = '21.0.0.17'
     ext.set("PNI_VERSION", PNI_VERSION)
     dependencies {
         classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION
@@ -209,7 +209,7 @@ project(':dep') {
         api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.9.10'
         api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.7.3'
         api group: 'io.vproxy', name: 'pni-api-jdk21', version: PNI_VERSION
-        api (group: 'io.vproxy', name: 'vjson', version: '1.5.2') {
+        api (group: 'io.vproxy', name: 'vjson', version: '1.5.4-jdk9') {
             exclude group: 'io.vproxy', module: 'kotlin-stdlib-lite'
         }
     }

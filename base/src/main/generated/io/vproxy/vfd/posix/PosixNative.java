@@ -16,7 +16,7 @@ public class PosixNative {
         return INSTANCE;
     }
 
-    private static final MethodHandle aeReadableMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeReadable");
+    private static final MethodHandle aeReadableMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeReadable");
 
     public int aeReadable(PNIEnv ENV) {
         ENV.reset();
@@ -32,7 +32,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle aeWritableMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeWritable");
+    private static final MethodHandle aeWritableMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeWritable");
 
     public int aeWritable(PNIEnv ENV) {
         ENV.reset();
@@ -48,7 +48,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle openPipeMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_openPipe", PNIBuf.class /* fds */);
+    private static final MethodHandle openPipeMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_openPipe", PNIBuf.class /* fds */);
 
     public void openPipe(PNIEnv ENV, IntArray fds) throws java.io.IOException {
         ENV.reset();
@@ -66,7 +66,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle aeCreateEventLoopMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop", int.class /* setsize */, int.class /* epfd */, boolean.class /* preferPoll */);
+    private static final MethodHandle aeCreateEventLoopMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop", int.class /* setsize */, int.class /* epfd */, boolean.class /* preferPoll */);
 
     public long aeCreateEventLoop(PNIEnv ENV, int setsize, int epfd, boolean preferPoll) throws java.io.IOException {
         ENV.reset();
@@ -83,7 +83,7 @@ public class PosixNative {
         return ENV.returnLong();
     }
 
-    private static final MethodHandle aeGetFiredMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeGetFired", long.class /* ae */);
+    private static final MethodHandle aeGetFiredMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeGetFired", long.class /* ae */);
 
     public MemorySegment aeGetFired(PNIEnv ENV, long ae) {
         ENV.reset();
@@ -99,7 +99,7 @@ public class PosixNative {
         return ENV.returnPointer();
     }
 
-    private static final MethodHandle aeGetFiredExtraMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra", long.class /* ae */);
+    private static final MethodHandle aeGetFiredExtraMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra", long.class /* ae */);
 
     public MemorySegment aeGetFiredExtra(PNIEnv ENV, long ae) {
         ENV.reset();
@@ -115,7 +115,7 @@ public class PosixNative {
         return ENV.returnPointer();
     }
 
-    private static final MethodHandle aeApiPollMH = PanamaUtils.lookupPNIFunction(false, "Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll", long.class /* ae */, long.class /* wait */);
+    private static final MethodHandle aeApiPollMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions(), "Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll", long.class /* ae */, long.class /* wait */);
 
     public int aeApiPoll(PNIEnv ENV, long ae, long wait) throws java.io.IOException {
         ENV.reset();
@@ -132,7 +132,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle aeApiPollNowMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow", long.class /* ae */);
+    private static final MethodHandle aeApiPollNowMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow", long.class /* ae */);
 
     public int aeApiPollNow(PNIEnv ENV, long ae) throws java.io.IOException {
         ENV.reset();
@@ -149,7 +149,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle aeGetFiredExtraNumMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtraNum", long.class /* ae */);
+    private static final MethodHandle aeGetFiredExtraNumMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtraNum", long.class /* ae */);
 
     public int aeGetFiredExtraNum(PNIEnv ENV, long ae) {
         ENV.reset();
@@ -165,7 +165,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle aeCreateFileEventMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeCreateFileEvent", long.class /* ae */, int.class /* fd */, int.class /* mask */);
+    private static final MethodHandle aeCreateFileEventMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeCreateFileEvent", long.class /* ae */, int.class /* fd */, int.class /* mask */);
 
     public void aeCreateFileEvent(PNIEnv ENV, long ae, int fd, int mask) {
         ENV.reset();
@@ -180,7 +180,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle aeUpdateFileEventMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeUpdateFileEvent", long.class /* ae */, int.class /* fd */, int.class /* mask */);
+    private static final MethodHandle aeUpdateFileEventMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeUpdateFileEvent", long.class /* ae */, int.class /* fd */, int.class /* mask */);
 
     public void aeUpdateFileEvent(PNIEnv ENV, long ae, int fd, int mask) {
         ENV.reset();
@@ -195,7 +195,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle aeDeleteFileEventMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeDeleteFileEvent", long.class /* ae */, int.class /* fd */);
+    private static final MethodHandle aeDeleteFileEventMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeDeleteFileEvent", long.class /* ae */, int.class /* fd */);
 
     public void aeDeleteFileEvent(PNIEnv ENV, long ae, int fd) {
         ENV.reset();
@@ -210,7 +210,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle aeDeleteEventLoopMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_aeDeleteEventLoop", long.class /* ae */);
+    private static final MethodHandle aeDeleteEventLoopMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_aeDeleteEventLoop", long.class /* ae */);
 
     public void aeDeleteEventLoop(PNIEnv ENV, long ae) {
         ENV.reset();
@@ -225,7 +225,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setBlockingMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setBlocking", int.class /* fd */, boolean.class /* v */);
+    private static final MethodHandle setBlockingMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setBlocking", int.class /* fd */, boolean.class /* v */);
 
     public void setBlocking(PNIEnv ENV, int fd, boolean v) throws java.io.IOException {
         ENV.reset();
@@ -241,7 +241,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setSoLingerMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setSoLinger", int.class /* fd */, int.class /* v */);
+    private static final MethodHandle setSoLingerMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setSoLinger", int.class /* fd */, int.class /* v */);
 
     public void setSoLinger(PNIEnv ENV, int fd, int v) throws java.io.IOException {
         ENV.reset();
@@ -257,7 +257,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setReusePortMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setReusePort", int.class /* fd */, boolean.class /* v */);
+    private static final MethodHandle setReusePortMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setReusePort", int.class /* fd */, boolean.class /* v */);
 
     public void setReusePort(PNIEnv ENV, int fd, boolean v) throws java.io.IOException {
         ENV.reset();
@@ -273,7 +273,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setRcvBufMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setRcvBuf", int.class /* fd */, int.class /* buflen */);
+    private static final MethodHandle setRcvBufMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setRcvBuf", int.class /* fd */, int.class /* buflen */);
 
     public void setRcvBuf(PNIEnv ENV, int fd, int buflen) throws java.io.IOException {
         ENV.reset();
@@ -289,7 +289,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setTcpNoDelayMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setTcpNoDelay", int.class /* fd */, boolean.class /* v */);
+    private static final MethodHandle setTcpNoDelayMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setTcpNoDelay", int.class /* fd */, boolean.class /* v */);
 
     public void setTcpNoDelay(PNIEnv ENV, int fd, boolean v) throws java.io.IOException {
         ENV.reset();
@@ -305,7 +305,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setBroadcastMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setBroadcast", int.class /* fd */, boolean.class /* v */);
+    private static final MethodHandle setBroadcastMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setBroadcast", int.class /* fd */, boolean.class /* v */);
 
     public void setBroadcast(PNIEnv ENV, int fd, boolean v) throws java.io.IOException {
         ENV.reset();
@@ -321,7 +321,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle setIpTransparentMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setIpTransparent", int.class /* fd */, boolean.class /* v */);
+    private static final MethodHandle setIpTransparentMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setIpTransparent", int.class /* fd */, boolean.class /* v */);
 
     public void setIpTransparent(PNIEnv ENV, int fd, boolean v) throws java.io.IOException {
         ENV.reset();
@@ -337,7 +337,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle closeMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_close", int.class /* fd */);
+    private static final MethodHandle closeMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_close", int.class /* fd */);
 
     public void close(PNIEnv ENV, int fd) throws java.io.IOException {
         ENV.reset();
@@ -353,7 +353,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle createIPv4TcpFDMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_createIPv4TcpFD");
+    private static final MethodHandle createIPv4TcpFDMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_createIPv4TcpFD");
 
     public int createIPv4TcpFD(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -370,7 +370,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle createIPv6TcpFDMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_createIPv6TcpFD");
+    private static final MethodHandle createIPv6TcpFDMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_createIPv6TcpFD");
 
     public int createIPv6TcpFD(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -387,7 +387,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle createIPv4UdpFDMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_createIPv4UdpFD");
+    private static final MethodHandle createIPv4UdpFDMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_createIPv4UdpFD");
 
     public int createIPv4UdpFD(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -404,7 +404,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle createIPv6UdpFDMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_createIPv6UdpFD");
+    private static final MethodHandle createIPv6UdpFDMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_createIPv6UdpFD");
 
     public int createIPv6UdpFD(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -421,7 +421,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle createUnixDomainSocketFDMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_createUnixDomainSocketFD");
+    private static final MethodHandle createUnixDomainSocketFDMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_createUnixDomainSocketFD");
 
     public int createUnixDomainSocketFD(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -438,7 +438,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle bindIPv4MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_bindIPv4", int.class /* fd */, int.class /* addrHostOrder */, int.class /* port */);
+    private static final MethodHandle bindIPv4MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_bindIPv4", int.class /* fd */, int.class /* addrHostOrder */, int.class /* port */);
 
     public void bindIPv4(PNIEnv ENV, int fd, int addrHostOrder, int port) throws java.io.IOException {
         ENV.reset();
@@ -454,7 +454,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle bindIPv6MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_bindIPv6", int.class /* fd */, String.class /* fullAddr */, int.class /* port */);
+    private static final MethodHandle bindIPv6MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_bindIPv6", int.class /* fd */, String.class /* fullAddr */, int.class /* port */);
 
     public void bindIPv6(PNIEnv ENV, int fd, PNIString fullAddr, int port) throws java.io.IOException {
         ENV.reset();
@@ -470,7 +470,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle bindUnixDomainSocketMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_bindUnixDomainSocket", int.class /* fd */, String.class /* path */);
+    private static final MethodHandle bindUnixDomainSocketMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_bindUnixDomainSocket", int.class /* fd */, String.class /* path */);
 
     public void bindUnixDomainSocket(PNIEnv ENV, int fd, PNIString path) throws java.io.IOException {
         ENV.reset();
@@ -486,7 +486,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle acceptMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_accept", int.class /* fd */);
+    private static final MethodHandle acceptMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_accept", int.class /* fd */);
 
     public int accept(PNIEnv ENV, int fd) throws java.io.IOException {
         ENV.reset();
@@ -503,7 +503,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle connectIPv4MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_connectIPv4", int.class /* fd */, int.class /* addrHostOrder */, int.class /* port */);
+    private static final MethodHandle connectIPv4MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_connectIPv4", int.class /* fd */, int.class /* addrHostOrder */, int.class /* port */);
 
     public void connectIPv4(PNIEnv ENV, int fd, int addrHostOrder, int port) throws java.io.IOException {
         ENV.reset();
@@ -519,7 +519,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle connectIPv6MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_connectIPv6", int.class /* fd */, String.class /* fullAddr */, int.class /* port */);
+    private static final MethodHandle connectIPv6MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_connectIPv6", int.class /* fd */, String.class /* fullAddr */, int.class /* port */);
 
     public void connectIPv6(PNIEnv ENV, int fd, PNIString fullAddr, int port) throws java.io.IOException {
         ENV.reset();
@@ -535,7 +535,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle connectUDSMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_connectUDS", int.class /* fd */, String.class /* sock */);
+    private static final MethodHandle connectUDSMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_connectUDS", int.class /* fd */, String.class /* sock */);
 
     public void connectUDS(PNIEnv ENV, int fd, PNIString sock) throws java.io.IOException {
         ENV.reset();
@@ -551,7 +551,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle finishConnectMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_finishConnect", int.class /* fd */);
+    private static final MethodHandle finishConnectMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_finishConnect", int.class /* fd */);
 
     public void finishConnect(PNIEnv ENV, int fd) throws java.io.IOException {
         ENV.reset();
@@ -567,7 +567,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle shutdownOutputMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_shutdownOutput", int.class /* fd */);
+    private static final MethodHandle shutdownOutputMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_shutdownOutput", int.class /* fd */);
 
     public void shutdownOutput(PNIEnv ENV, int fd) throws java.io.IOException {
         ENV.reset();
@@ -583,7 +583,7 @@ public class PosixNative {
         }
     }
 
-    private static final MethodHandle getIPv4LocalMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_getIPv4Local", int.class /* fd */, MemorySegment.class /* return */);
+    private static final MethodHandle getIPv4LocalMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_getIPv4Local", int.class /* fd */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.SocketAddressIPv4ST getIPv4Local(PNIEnv ENV, int fd, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -601,7 +601,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.SocketAddressIPv4ST(RESULT);
     }
 
-    private static final MethodHandle getIPv6LocalMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_getIPv6Local", int.class /* fd */, MemorySegment.class /* return */);
+    private static final MethodHandle getIPv6LocalMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_getIPv6Local", int.class /* fd */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.SocketAddressIPv6ST getIPv6Local(PNIEnv ENV, int fd, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -619,7 +619,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.SocketAddressIPv6ST(RESULT);
     }
 
-    private static final MethodHandle getIPv4RemoteMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_getIPv4Remote", int.class /* fd */, MemorySegment.class /* return */);
+    private static final MethodHandle getIPv4RemoteMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_getIPv4Remote", int.class /* fd */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.SocketAddressIPv4ST getIPv4Remote(PNIEnv ENV, int fd, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -637,7 +637,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.SocketAddressIPv4ST(RESULT);
     }
 
-    private static final MethodHandle getIPv6RemoteMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_getIPv6Remote", int.class /* fd */, MemorySegment.class /* return */);
+    private static final MethodHandle getIPv6RemoteMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_getIPv6Remote", int.class /* fd */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.SocketAddressIPv6ST getIPv6Remote(PNIEnv ENV, int fd, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -655,7 +655,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.SocketAddressIPv6ST(RESULT);
     }
 
-    private static final MethodHandle getUDSLocalMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_getUDSLocal", int.class /* fd */, MemorySegment.class /* return */);
+    private static final MethodHandle getUDSLocalMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_getUDSLocal", int.class /* fd */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.SocketAddressUDSST getUDSLocal(PNIEnv ENV, int fd, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -673,7 +673,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.SocketAddressUDSST(RESULT);
     }
 
-    private static final MethodHandle getUDSRemoteMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_getUDSRemote", int.class /* fd */, MemorySegment.class /* return */);
+    private static final MethodHandle getUDSRemoteMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_getUDSRemote", int.class /* fd */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.SocketAddressUDSST getUDSRemote(PNIEnv ENV, int fd, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -691,7 +691,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.SocketAddressUDSST(RESULT);
     }
 
-    private static final MethodHandle readMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_read", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */);
+    private static final MethodHandle readMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_read", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */);
 
     public int read(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len) throws java.io.IOException {
         ENV.reset();
@@ -708,7 +708,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle writeMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_write", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */);
+    private static final MethodHandle writeMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_write", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */);
 
     public int write(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len) throws java.io.IOException {
         ENV.reset();
@@ -725,7 +725,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle sendtoIPv4MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_sendtoIPv4", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, int.class /* addrHostOrder */, int.class /* port */);
+    private static final MethodHandle sendtoIPv4MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_sendtoIPv4", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, int.class /* addrHostOrder */, int.class /* port */);
 
     public int sendtoIPv4(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len, int addrHostOrder, int port) throws java.io.IOException {
         ENV.reset();
@@ -742,7 +742,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle sendtoIPv6MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_sendtoIPv6", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, String.class /* fullAddr */, int.class /* port */);
+    private static final MethodHandle sendtoIPv6MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_sendtoIPv6", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, String.class /* fullAddr */, int.class /* port */);
 
     public int sendtoIPv6(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len, PNIString fullAddr, int port) throws java.io.IOException {
         ENV.reset();
@@ -759,7 +759,7 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle recvfromIPv4MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_recvfromIPv4", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, MemorySegment.class /* return */);
+    private static final MethodHandle recvfromIPv4MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_recvfromIPv4", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.UDPRecvResultIPv4ST recvfromIPv4(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -777,7 +777,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.UDPRecvResultIPv4ST(RESULT);
     }
 
-    private static final MethodHandle recvfromIPv6MH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_recvfromIPv6", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, MemorySegment.class /* return */);
+    private static final MethodHandle recvfromIPv6MH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_recvfromIPv6", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.UDPRecvResultIPv6ST recvfromIPv6(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -795,7 +795,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.UDPRecvResultIPv6ST(RESULT);
     }
 
-    private static final MethodHandle currentTimeMillisMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_currentTimeMillis");
+    private static final MethodHandle currentTimeMillisMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_currentTimeMillis");
 
     public long currentTimeMillis(PNIEnv ENV) {
         ENV.reset();
@@ -811,7 +811,7 @@ public class PosixNative {
         return ENV.returnLong();
     }
 
-    private static final MethodHandle tapNonBlockingSupportedMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_tapNonBlockingSupported");
+    private static final MethodHandle tapNonBlockingSupportedMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_tapNonBlockingSupported");
 
     public boolean tapNonBlockingSupported(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -828,7 +828,7 @@ public class PosixNative {
         return ENV.returnBool();
     }
 
-    private static final MethodHandle tunNonBlockingSupportedMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_tunNonBlockingSupported");
+    private static final MethodHandle tunNonBlockingSupportedMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_tunNonBlockingSupported");
 
     public boolean tunNonBlockingSupported(PNIEnv ENV) throws java.io.IOException {
         ENV.reset();
@@ -845,7 +845,7 @@ public class PosixNative {
         return ENV.returnBool();
     }
 
-    private static final MethodHandle createTapFDMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_createTapFD", String.class /* dev */, boolean.class /* isTun */, MemorySegment.class /* return */);
+    private static final MethodHandle createTapFDMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_createTapFD", String.class /* dev */, boolean.class /* isTun */, MemorySegment.class /* return */);
 
     public io.vproxy.vfd.posix.TapInfoST createTapFD(PNIEnv ENV, PNIString dev, boolean isTun, Allocator ALLOCATOR) throws java.io.IOException {
         ENV.reset();
@@ -863,7 +863,7 @@ public class PosixNative {
         return RESULT == null ? null : new io.vproxy.vfd.posix.TapInfoST(RESULT);
     }
 
-    private static final MethodHandle setCoreAffinityForCurrentThreadMH = PanamaUtils.lookupPNIFunction(true, "Java_io_vproxy_vfd_posix_PosixNative_setCoreAffinityForCurrentThread", long.class /* mask */);
+    private static final MethodHandle setCoreAffinityForCurrentThreadMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_setCoreAffinityForCurrentThread", long.class /* mask */);
 
     public void setCoreAffinityForCurrentThread(PNIEnv ENV, long mask) throws java.io.IOException {
         ENV.reset();
@@ -879,5 +879,5 @@ public class PosixNative {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:b4ea72fa89cdf1b809559aa13fa32f08fdb29d6a10e63394ffb481cd06b60454
+// metadata.generator-version: pni 21.0.0.17
+// sha256:168e4c184415e27beb86430bef5d5d1c23c2b272c410d8f1933413fde1ee9f67

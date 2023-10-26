@@ -16,161 +16,161 @@ class PNIAEFiredEvent {
 }
 
 @SuppressWarnings("unused")
-@Function
+@Downcall
 interface PNIPosixNative {
-    @Trivial
+    @LinkerOption.Critical
     int aeReadable();
 
-    @Trivial
+    @LinkerOption.Critical
     int aeWritable();
 
-    @Trivial
+    @LinkerOption.Critical
     void openPipe(int[] fds) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     long aeCreateEventLoop(int setsize, int epfd, boolean preferPoll) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     MemorySegment aeGetFired(long ae);
 
-    @Trivial
+    @LinkerOption.Critical
     MemorySegment aeGetFiredExtra(long ae);
 
     int aeApiPoll(long ae, long wait) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int aeApiPollNow(long ae) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int aeGetFiredExtraNum(long ae);
 
-    @Trivial
+    @LinkerOption.Critical
     void aeCreateFileEvent(long ae, int fd, int mask);
 
-    @Trivial
+    @LinkerOption.Critical
     void aeUpdateFileEvent(long ae, int fd, int mask);
 
-    @Trivial
+    @LinkerOption.Critical
     void aeDeleteFileEvent(long ae, int fd);
 
-    @Trivial
+    @LinkerOption.Critical
     void aeDeleteEventLoop(long ae);
 
-    @Trivial
+    @LinkerOption.Critical
     void setBlocking(int fd, boolean v) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setSoLinger(int fd, int v) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setReusePort(int fd, boolean v) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setRcvBuf(int fd, int buflen) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setTcpNoDelay(int fd, boolean v) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setBroadcast(int fd, boolean v) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setIpTransparent(int fd, boolean v) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void close(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int createIPv4TcpFD() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int createIPv6TcpFD() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int createIPv4UdpFD() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int createIPv6UdpFD() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int createUnixDomainSocketFD() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void bindIPv4(int fd, int addrHostOrder, int port) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void bindIPv6(int fd, String fullAddr, int port) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void bindUnixDomainSocket(int fd, String path) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int accept(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void connectIPv4(int fd, int addrHostOrder, int port) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void connectIPv6(int fd, String fullAddr, int port) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void connectUDS(int fd, String sock) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void finishConnect(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void shutdownOutput(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNISocketAddressIPv4ST getIPv4Local(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNISocketAddressIPv6ST getIPv6Local(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNISocketAddressIPv4ST getIPv4Remote(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNISocketAddressIPv6ST getIPv6Remote(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNISocketAddressUDSST getUDSLocal(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNISocketAddressUDSST getUDSRemote(int fd) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int read(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int write(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int sendtoIPv4(int fd, @Raw ByteBuffer directBuffer, int off, int len, int addrHostOrder, int port) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int sendtoIPv6(int fd, @Raw ByteBuffer directBuffer, int off, int len, String fullAddr, int port) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNIUDPRecvResultIPv4ST recvfromIPv4(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNIUDPRecvResultIPv6ST recvfromIPv6(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     long currentTimeMillis();
 
-    @Trivial
+    @LinkerOption.Critical
     boolean tapNonBlockingSupported() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     boolean tunNonBlockingSupported() throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     PNITapInfoST createTapFD(String dev, boolean isTun) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void setCoreAffinityForCurrentThread(long mask) throws IOException;
 }
 

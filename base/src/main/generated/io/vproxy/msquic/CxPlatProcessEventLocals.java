@@ -7,7 +7,7 @@ import java.lang.invoke.*;
 import java.nio.ByteBuffer;
 
 public class CxPlatProcessEventLocals extends AbstractNativeObject implements NativeObject {
-    private static final MethodHandle __getLayoutByteSizeMH = PanamaUtils.lookupPNICriticalFunction(true, long.class, "JavaCritical_io_vproxy_msquic_CxPlatProcessEventLocals___getLayoutByteSize");
+    private static final MethodHandle __getLayoutByteSizeMH = PanamaUtils.lookupPNICriticalFunction(new PNILinkOptions().setCritical(true), long.class, "JavaCritical_io_vproxy_msquic_CxPlatProcessEventLocals___getLayoutByteSize");
 
     private static long __getLayoutByteSize() {
         long RESULT;
@@ -190,5 +190,5 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:4f5a8426ddd601a6e3a0e6edd393309fbbfba078b199f1ad8ea696a96e6d6a8e
+// metadata.generator-version: pni 21.0.0.17
+// sha256:2d7323f5ad7ef63007e44dc7a8fad76d2a5ac2b32c381673844f7b0cd21dd637

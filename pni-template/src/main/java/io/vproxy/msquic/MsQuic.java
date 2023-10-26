@@ -5,7 +5,7 @@ import io.vproxy.vfd.posix.PNIAEFiredExtra;
 
 import java.lang.foreign.MemorySegment;
 
-@Function
+@Downcall
 @Include("msquic.h")
 interface PNIMsQuicMod2 {
     @Impl(
@@ -14,7 +14,7 @@ interface PNIMsQuicMod2 {
             MsQuicCxPlatWorkerThreadInit(CxPlatWorkerThreadLocals);
             """
     )
-    @Critical
+    @Style(Styles.critical)
     void MsQuicCxPlatWorkerThreadInit(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
 
     @Impl(
@@ -23,7 +23,7 @@ interface PNIMsQuicMod2 {
             MsQuicCxPlatWorkerThreadBeforePoll(CxPlatProcessEventLocals);
             """
     )
-    @Critical
+    @Style(Styles.critical)
     void MsQuicCxPlatWorkerThreadBeforePoll(PNICxPlatProcessEventLocals CxPlatProcessEventLocals);
 
     @Impl(
@@ -48,7 +48,7 @@ interface PNIMsQuicMod2 {
             return ret;
             """
     )
-    @Critical
+    @Style(Styles.critical)
     boolean MsQuicCxPlatWorkerThreadAfterPoll(PNICxPlatProcessEventLocals locals,
                                               int num,
                                               @Raw PNIAEFiredExtra[] events);
@@ -59,7 +59,7 @@ interface PNIMsQuicMod2 {
             return MsQuicCxPlatWorkerThreadFinalize(CxPlatWorkerThreadLocals);
             """
     )
-    @Critical
+    @Style(Styles.critical)
     int MsQuicCxPlatWorkerThreadFinalize(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
 }
 

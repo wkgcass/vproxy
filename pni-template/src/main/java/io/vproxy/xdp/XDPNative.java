@@ -1,40 +1,38 @@
 package io.vproxy.xdp;
 
-import io.vproxy.pni.annotation.Function;
-import io.vproxy.pni.annotation.Raw;
-import io.vproxy.pni.annotation.Trivial;
+import io.vproxy.pni.annotation.*;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 
 @SuppressWarnings("unused")
-@Function
+@Downcall
 interface PNIXDPNative {
-    @Trivial
+    @LinkerOption.Critical
     long loadAndAttachBPFProgramToNic(String filepath, String programName, String nicName,
                                       int mode, // defined in BPFMode
                                       boolean forceAttach) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void detachBPFProgramFromNic(String nicName) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     long findMapByNameInBPF(long bpfobj, String mapName) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     long createUMem(int chunksSize, int fillRingSize, int compRingSize,
                     int frameSize, int headroom) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     long shareUMem(long umem);
 
-    @Trivial
+    @LinkerOption.Critical
     byte[] getBufferFromUMem(long umem);
 
-    @Trivial
+    @LinkerOption.Critical
     long getBufferAddressFromUMem(long umem);
 
-    @Trivial
+    @LinkerOption.Critical
     long createXSK(String nicName, int queueId, long umem,
                    int rxRingSize, int txRingSize,
                    int mode, // defined in BPFMode
@@ -42,22 +40,22 @@ interface PNIXDPNative {
                    int busyPollBudget,
                    boolean rxGenChecksum) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void addXSKIntoMap(long map, int key, long xsk) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void addMacIntoMap(long map, @Raw byte[] mac, long xsk) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     void removeMacFromMap(long map, @Raw byte[] mac) throws IOException;
 
-    @Trivial
+    @LinkerOption.Critical
     int getFDFromXSK(long xsk);
 
-    @Trivial
+    @LinkerOption.Critical
     void fillUpFillRing(long umem);
 
-    @Trivial
+    @LinkerOption.Critical
     int fetchPackets0(
         long xsk,
         @SuppressWarnings("SameParameterValue") int capacity,
@@ -67,19 +65,19 @@ interface PNIXDPNative {
         MemorySegment /*int[]*/ addr, MemorySegment /*int[]*/ endaddr,
         MemorySegment /*int[]*/ pktaddr, MemorySegment /*int[]*/ pktlen);
 
-    @Trivial
+    @LinkerOption.Critical
     void rxRelease(long xsk, int cnt);
 
-    @Trivial
+    @LinkerOption.Critical
     boolean writePacket(long xsk, long chunk);
 
-    @Trivial
+    @LinkerOption.Critical
     int writePackets(long xsk, int size, MemorySegment chunkPtrs);
 
-    @Trivial
+    @LinkerOption.Critical
     void completeTx(long xsk);
 
-    @Trivial
+    @LinkerOption.Critical
     boolean fetchChunk0(
         long umemPtr,
         MemorySegment /*long[]*/ umem, MemorySegment /*long[]*/ chunk,
@@ -87,21 +85,21 @@ interface PNIXDPNative {
         MemorySegment /*int[]*/ addr, MemorySegment /*int[]*/ endaddr,
         MemorySegment /*int[]*/ pktaddr, MemorySegment /*int[]*/ pktlen);
 
-    @Trivial
+    @LinkerOption.Critical
     void setChunk(long chunk, int pktaddr, int pktlen, int csumFlags);
 
-    @Trivial
+    @LinkerOption.Critical
     void releaseChunk(long umem, long chunk);
 
-    @Trivial
+    @LinkerOption.Critical
     void addChunkRefCnt(long chunk);
 
-    @Trivial
+    @LinkerOption.Critical
     void releaseXSK(long xsk);
 
-    @Trivial
+    @LinkerOption.Critical
     void releaseUMem(long umem, boolean releaseBuffer);
 
-    @Trivial
+    @LinkerOption.Critical
     void releaseBPFObject(long bpfobj);
 }
