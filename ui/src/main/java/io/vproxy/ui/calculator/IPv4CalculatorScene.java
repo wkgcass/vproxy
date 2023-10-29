@@ -303,6 +303,9 @@ public class IPv4CalculatorScene extends VScene {
                 clearForBigEndian();
                 return;
             }
+            if (n < 0 && n >= Integer.MIN_VALUE) {
+                n = n & 0xffffffffL;
+            }
             if (n > 0xffffffffL || n < 0) {
                 clearForBigEndian();
                 return;
@@ -333,6 +336,9 @@ public class IPv4CalculatorScene extends VScene {
             } catch (NumberFormatException e) {
                 clearForLittleEndian();
                 return;
+            }
+            if (n < 0 && n >= Integer.MIN_VALUE) {
+                n = n & 0xffffffffL;
             }
             if (n > 0xffffffffL || n < 0) {
                 clearForLittleEndian();
