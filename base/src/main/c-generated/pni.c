@@ -3,6 +3,7 @@
 #if PNI_GRAAL
 
 static __thread void* _graalThread;
+static void* _graalIsolate;
 
 JNIEXPORT void JNICALL SetPNIGraalThread(void* thread) {
     _graalThread = thread;
@@ -10,6 +11,14 @@ JNIEXPORT void JNICALL SetPNIGraalThread(void* thread) {
 
 JNIEXPORT void* JNICALL GetPNIGraalThread(void) {
     return _graalThread;
+}
+
+JNIEXPORT void JNICALL SetPNIGraalIsolate(void* isolate) {
+    _graalIsolate = isolate;
+}
+
+JNIEXPORT void* JNICALL GetPNIGraalIsolate(void) {
+    return _graalIsolate;
 }
 
 #endif // PNI_GRAAL

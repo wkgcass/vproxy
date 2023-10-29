@@ -7,7 +7,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    def PNI_VERSION = '21.0.0.17'
+    def PNI_VERSION = '21.0.0.18'
     ext.set("PNI_VERSION", PNI_VERSION)
     dependencies {
         classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION

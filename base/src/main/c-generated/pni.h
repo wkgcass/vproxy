@@ -92,6 +92,8 @@ static inline void PNIStoreErrno(void* _env) {
 #if PNI_GRAAL
 JNIEXPORT void  JNICALL SetPNIGraalThread(void* thread);
 JNIEXPORT void* JNICALL GetPNIGraalThread(void);
+JNIEXPORT void  JNICALL SetPNIGraalIsolate(void* isolate);
+JNIEXPORT void* JNICALL GetPNIGraalIsolate(void);
 #endif // PNI_GRAAL
 
 typedef struct PNIFunc {
