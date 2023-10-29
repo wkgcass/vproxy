@@ -4,7 +4,6 @@ import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.base.util.Utils;
 import io.vproxy.msquic.*;
 import io.vproxy.msquic.wrap.Configuration;
 import io.vproxy.msquic.wrap.Connection;
@@ -31,11 +30,11 @@ public class QuicPoc {
             alpnBuffers.get(0).setLength(7);
             var settings = new QuicSettings(allocator);
             {
-                settings.getIsSet().setIdleTimeoutMs(1);
+                settings.getIsSet().setIdleTimeoutMs(true);
                 settings.setIdleTimeoutMs(60_000);
-                settings.getIsSet().setCongestionControlAlgorithm(1);
+                settings.getIsSet().setCongestionControlAlgorithm(true);
                 settings.setCongestionControlAlgorithm((short) QUIC_CONGESTION_CONTROL_ALGORITHM_BBR);
-                settings.getIsSet().setPeerBidiStreamCount(1);
+                settings.getIsSet().setPeerBidiStreamCount(true);
                 settings.setPeerBidiStreamCount((short) 128);
             }
             var c = reg.opts.registrationQ.openConfiguration(alpnBuffers, 1, settings, null, null, allocator);

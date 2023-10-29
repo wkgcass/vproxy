@@ -107,13 +107,13 @@ public class QuicGateway {
             {
                 var settings = new QuicSettings(tmpAlloc);
                 {
-                    settings.getIsSet().setIdleTimeoutMs(1);
+                    settings.getIsSet().setIdleTimeoutMs(true);
                     settings.setIdleTimeoutMs(timeout);
-                    settings.getIsSet().setCongestionControlAlgorithm(1);
+                    settings.getIsSet().setCongestionControlAlgorithm(true);
                     settings.setCongestionControlAlgorithm((short) QUIC_CONGESTION_CONTROL_ALGORITHM_BBR);
-                    settings.getIsSet().setServerResumptionLevel(1);
+                    settings.getIsSet().setServerResumptionLevel(true);
                     settings.setServerResumptionLevel((byte) QUIC_SERVER_RESUME_AND_ZERORTT);
-                    settings.getIsSet().setPeerBidiStreamCount(1);
+                    settings.getIsSet().setPeerBidiStreamCount(true);
                     settings.setPeerBidiStreamCount((short) 4096);
                 }
                 var alpnBuffers = new QuicBuffer.Array(tmpAlloc, alpn.size());
