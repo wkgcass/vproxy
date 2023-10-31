@@ -54,8 +54,8 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
         seg.asByteBuffer().limit(srcOff + srcLen).position(srcOff).get(dst, dstOff, srcLen);
     }
 
-    private static final ValueLayout.OfLong LONG_BIG_ENDIAN = ValueLayout.JAVA_LONG.withOrder(ByteOrder.BIG_ENDIAN);
-    private static final ValueLayout.OfLong LONG_LITTLE_ENDIAN = ValueLayout.JAVA_LONG.withOrder(ByteOrder.LITTLE_ENDIAN);
+    private static final ValueLayout.OfLong LONG_BIG_ENDIAN = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
+    private static final ValueLayout.OfLong LONG_LITTLE_ENDIAN = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
 
     @Override
     public long int64(int offset) {
@@ -67,8 +67,8 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
         return seg.get(LONG_LITTLE_ENDIAN, offset);
     }
 
-    private static final ValueLayout.OfInt INT_BIG_ENDIAN = ValueLayout.JAVA_INT.withOrder(ByteOrder.BIG_ENDIAN);
-    private static final ValueLayout.OfInt INT_LITTLE_ENDIAN = ValueLayout.JAVA_INT.withOrder(ByteOrder.LITTLE_ENDIAN);
+    private static final ValueLayout.OfInt INT_BIG_ENDIAN = ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
+    private static final ValueLayout.OfInt INT_LITTLE_ENDIAN = ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
 
     @Override
     public int int32(int offset) {
@@ -90,8 +90,8 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
         return int32ReverseNetworkByteOrder(offset) & 0xffffffffL;
     }
 
-    private static final ValueLayout.OfShort SHORT_BIG_ENDIAN = ValueLayout.JAVA_SHORT.withOrder(ByteOrder.BIG_ENDIAN);
-    private static final ValueLayout.OfShort SHORT_LITTLE_ENDIAN = ValueLayout.JAVA_SHORT.withOrder(ByteOrder.LITTLE_ENDIAN);
+    private static final ValueLayout.OfShort SHORT_BIG_ENDIAN = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
+    private static final ValueLayout.OfShort SHORT_LITTLE_ENDIAN = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
 
     @Override
     public int uint16(int offset) {
