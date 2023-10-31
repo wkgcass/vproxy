@@ -83,8 +83,10 @@ public class IPPort extends SockAddr {
 
     // BEGIN UTILS:
 
+    private static final IPPort BIND_ANY_ADDRESS = new IPPort(IP.from("0.0.0.0"), 0);
+
     public static IPPort bindAnyAddress() {
-        return new IPPort(IP.from("0.0.0.0"), 0);
+        return BIND_ANY_ADDRESS;
     }
 
     public static boolean validL4AddrStr(String l4addr) {

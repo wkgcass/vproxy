@@ -16,10 +16,6 @@ public interface ServerHandler {
 
     void removed(ServerHandlerContext ctx);
 
-    default void exception(ServerHandlerContext ctx, IOException err) {
-        // do nothing
-    }
-
     default ConnectionOpts connectionOpts() {
         return DefaultConnectionOpts.defaultConnectionOpts;
     }
