@@ -1,4 +1,4 @@
-package io.vproxy.component.app;
+package io.vproxy.poc;
 
 import io.vproxy.base.Config;
 import io.vproxy.base.component.elgroup.EventLoopGroup;

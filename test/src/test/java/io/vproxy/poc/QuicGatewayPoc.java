@@ -6,7 +6,6 @@ import io.vproxy.base.component.svrgroup.Method;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
-import io.vproxy.component.app.QuicGateway;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.component.ssl.CertKey;
 import io.vproxy.component.svrgroup.Upstream;
