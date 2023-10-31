@@ -7,13 +7,28 @@ public class RingQueue<E> implements Iterable<E> {
     private boolean eAfterS = true;
     private int start = 0;
     private int end = 0;
+    private final ExpandFunction expandFunction;
 
     public RingQueue() {
         this(16);
     }
 
+    public RingQueue(ExpandFunction e) {
+        this(16, e);
+    }
+
     public RingQueue(int initialCapacity) {
+        this(initialCapacity, n -> n + 10);
+    }
+
+    public RingQueue(int initialCapacity, ExpandFunction e) {
         this.array = new Object[initialCapacity];
+        this.expandFunction = e;
+    }
+
+    @FunctionalInterface
+    public interface ExpandFunction {
+        int expand(int current);
     }
 
     private E get(int idx) {
@@ -22,7 +37,7 @@ public class RingQueue<E> implements Iterable<E> {
     }
 
     private void expand() {
-        int newLen = array.length + 10;
+        int newLen = expandFunction.expand(array.length);
         Object[] arr = new Object[newLen];
         if (eAfterS) {
             System.arraycopy(array, start, arr, 0, end - start);
@@ -107,6 +122,16 @@ public class RingQueue<E> implements Iterable<E> {
             }
             return e;
         }
+    }
+
+    public E last() {
+        if (eAfterS) {
+            if (start == end) {
+                return null;
+            }
+        }
+        if (end == 0) return get(array.length - 1);
+        return get(end - 1);
     }
 
     @Override

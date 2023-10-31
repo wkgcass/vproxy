@@ -132,81 +132,146 @@ public class TestUtilities {
         RingQueue<Integer> q = new RingQueue<>(5);
         assertEquals("[]", q.toString());
         assertEquals(5, q.currentCapacity());
+        assertNull(q.peek());
+        assertNull(q.last());
 
         q.add(1);
         assertEquals("[1]", q.toString());
         assertEquals(1, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 1, q.last());
 
         q.add(2);
         assertEquals("[1, 2]", q.toString());
         assertEquals(2, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 2, q.last());
 
         assertEquals(1, q.poll().intValue());
         assertEquals(1, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 2, q.peek());
+        assertEquals((Integer) 2, q.last());
+
         assertEquals(2, q.poll().intValue());
         assertEquals(0, q.size());
         assertEquals(5, q.currentCapacity());
+        assertNull(q.peek());
+        assertNull(q.last());
 
         assertNull(q.poll());
         assertEquals(0, q.size());
         assertEquals(5, q.currentCapacity());
 
         q.add(1);
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 1, q.last());
         q.add(2);
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 2, q.last());
         q.add(3);
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 3, q.last());
         q.add(4);
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 4, q.last());
+
         assertEquals("[1, 2, 3, 4]", q.toString());
         assertEquals(4, q.size());
         assertEquals(5, q.currentCapacity());
+
         q.poll();
         assertEquals("[2, 3, 4]", q.toString());
         assertEquals(3, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 2, q.peek());
+        assertEquals((Integer) 4, q.last());
+
         q.poll();
         assertEquals("[3, 4]", q.toString());
         assertEquals(2, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 3, q.peek());
+        assertEquals((Integer) 4, q.last());
+
         q.add(5);
         assertEquals("[3, 4, 5]", q.toString());
         assertEquals(3, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 3, q.peek());
+        assertEquals((Integer) 5, q.last());
+
         q.add(6);
         assertEquals("[3, 4, 5, 6]", q.toString());
         assertEquals(4, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 3, q.peek());
+        assertEquals((Integer) 6, q.last());
+
         q.add(7);
         assertEquals("[3, 4, 5, 6, 7]", q.toString());
         assertEquals(5, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 3, q.peek());
+        assertEquals((Integer) 7, q.last());
 
         assertEquals(3, q.poll().intValue());
         assertEquals(4, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 4, q.peek());
+        assertEquals((Integer) 7, q.last());
 
         q.add(8);
         assertEquals("[4, 5, 6, 7, 8]", q.toString());
         assertEquals(5, q.size());
         assertEquals(5, q.currentCapacity());
+        assertEquals((Integer) 4, q.peek());
+        assertEquals((Integer) 8, q.last());
 
         q.add(9);
         assertEquals("[4, 5, 6, 7, 8, 9]", q.toString());
         assertEquals(6, q.size());
         assertEquals(15, q.currentCapacity());
+        assertEquals((Integer) 4, q.peek());
+        assertEquals((Integer) 9, q.last());
+
         q.add(10);
         assertEquals("[4, 5, 6, 7, 8, 9, 10]", q.toString());
         assertEquals(7, q.size());
         assertEquals(15, q.currentCapacity());
+        assertEquals((Integer) 4, q.peek());
+        assertEquals((Integer) 10, q.last());
 
         assertEquals(4, q.poll().intValue());
+        assertEquals((Integer) 5, q.peek());
+        assertEquals((Integer) 10, q.last());
+
         assertEquals(5, q.poll().intValue());
+        assertEquals((Integer) 6, q.peek());
+        assertEquals((Integer) 10, q.last());
+
         assertEquals(6, q.poll().intValue());
+        assertEquals((Integer) 7, q.peek());
+        assertEquals((Integer) 10, q.last());
+
         assertEquals(7, q.poll().intValue());
+        assertEquals((Integer) 8, q.peek());
+        assertEquals((Integer) 10, q.last());
+
         assertEquals(8, q.poll().intValue());
+        assertEquals((Integer) 9, q.peek());
+        assertEquals((Integer) 10, q.last());
+
         assertEquals(9, q.poll().intValue());
+        assertEquals((Integer) 10, q.peek());
+        assertEquals((Integer) 10, q.last());
+
         assertEquals(10, q.poll().intValue());
+        assertNull(q.peek());
+        assertNull(q.last());
+
         assertNull(q.poll());
         assertEquals(0, q.size());
         assertEquals(15, q.currentCapacity());
@@ -214,13 +279,23 @@ public class TestUtilities {
         q = new RingQueue<>(2);
         q.add(1);
         q.add(2);
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 2, q.last());
         assertEquals("[1, 2]", q.toString());
+
         assertEquals(1, q.poll().intValue());
+        assertEquals((Integer) 2, q.peek());
+        assertEquals((Integer) 2, q.last());
+
         assertEquals(2, q.poll().intValue());
+        assertNull(q.peek());
+        assertNull(q.last());
 
         q.add(1);
         q.add(2);
         q.add(3);
+        assertEquals((Integer) 1, q.peek());
+        assertEquals((Integer) 3, q.last());
         assertEquals("[1, 2, 3]", q.toString());
         assertEquals(12, q.currentCapacity());
     }
@@ -239,28 +314,28 @@ public class TestUtilities {
         h.branch("i");
         h.leaf("j");
         assertEquals("" +
-            "o\n" +
-            "|\n" +
-            "+---> a\n" +
-            "      |\n" +
-            "      +---> b\n" +
-            "      |     |\n" +
-            "      |     +---> c\n" +
-            "      |     |     |\n" +
-            "      |     |     +---> d\n" +
-            "      |     |     |\n" +
-            "      |     |     +---> e\n" +
-            "      |     |\n" +
-            "      |     +---> f\n" +
-            "      |           |\n" +
-            "      |           +---> g\n" +
-            "      |\n" +
-            "      +---> h\n" +
-            "            |\n" +
-            "            +---> i\n" +
-            "            |\n" +
-            "            +---> j\n" +
-            "", tb.toString());
+                     "o\n" +
+                     "|\n" +
+                     "+---> a\n" +
+                     "      |\n" +
+                     "      +---> b\n" +
+                     "      |     |\n" +
+                     "      |     +---> c\n" +
+                     "      |     |     |\n" +
+                     "      |     |     +---> d\n" +
+                     "      |     |     |\n" +
+                     "      |     |     +---> e\n" +
+                     "      |     |\n" +
+                     "      |     +---> f\n" +
+                     "      |           |\n" +
+                     "      |           +---> g\n" +
+                     "      |\n" +
+                     "      +---> h\n" +
+                     "            |\n" +
+                     "            +---> i\n" +
+                     "            |\n" +
+                     "            +---> j\n" +
+                     "", tb.toString());
     }
 
     @Test
