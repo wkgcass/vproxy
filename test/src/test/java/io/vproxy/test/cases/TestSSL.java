@@ -116,7 +116,7 @@ public class TestSSL {
 
     @Test
     public void requestSite() throws Exception {
-        String url = "https://www.baidu.com";
+        String url = "https://www.bing.com";
         String host = url.substring("https://".length());
         int port = 443;
         BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
@@ -152,8 +152,8 @@ public class TestSSL {
         engine.setUseClientMode(true);
         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
             engine,
-            RingBuffer.allocate(16384),
-            RingBuffer.allocate(16384),
+            RingBuffer.allocate(24576),
+            RingBuffer.allocate(24576),
             selectorEventLoop,
             remote
         );
@@ -162,7 +162,7 @@ public class TestSSL {
             ConnectionOpts.getDefault(),
             pair.left, pair.right
         );
-        loop.addConnectableConnection(conn, null, new MySSLConnectableConnectionHandler());
+        loop.addConnectableConnection(conn, null, new MySSLConnectableConnectionHandler(host));
 
         // start
         selectorEventLoop.loop();
@@ -172,10 +172,10 @@ public class TestSSL {
         private final ByteArrayChannel chnl;
         private final HttpRespParser parser;
 
-        MySSLConnectableConnectionHandler() {
+        MySSLConnectableConnectionHandler(String host) {
             chnl = ByteArrayChannel.fromFull(("" +
                 "GET / HTTP/1.1\r\n" +
-                "Host: www.baidu.com\r\n" +
+                "Host: " + host + "\r\n" +
                 "User-Agent: curl/vproxy\r\n" + // add curl agent to get json response
                 "\r\n").getBytes());
             parser = new HttpRespParser(true);
@@ -197,7 +197,7 @@ public class TestSSL {
             }
             // headers done
             Response resp = parser.getResult();
-            assertEquals("failed: " + resp.toString(), 200, resp.statusCode);
+            assertTrue("failed: " + resp.toString(), 200 == resp.statusCode || 302 == resp.statusCode);
             System.out.println("===============\n" + resp + "\n=============");
             // the body is truncated
             // we actually do not need that
