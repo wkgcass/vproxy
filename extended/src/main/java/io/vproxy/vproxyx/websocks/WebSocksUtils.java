@@ -352,7 +352,7 @@ public class WebSocksUtils {
         }
     }
 
-    public static ConnectionOpts getConnectionOpts() {
+    public static ConnectionOpts newConnectionOpts() {
         return new ConnectionOpts().setTimeout(60_000);
     }
 

@@ -129,4 +129,12 @@ public class MacAddress implements ToByteArray {
     public ByteArray toByteArray() {
         return bytes;
     }
+
+    public static MacAddress parseOrNull(String mac) {
+        try {
+            return new MacAddress(mac);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 }

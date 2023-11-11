@@ -16,6 +16,7 @@ import io.vproxy.base.util.Network;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.component.ssl.CertKey;
 import io.vproxy.util.CoreUtils;
+import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.websocks.uot.UdpOverTcpSetup;
@@ -31,11 +32,16 @@ public class ConfigProcessor {
     public final EventLoopGroup workerLoopGroup;
     private final Map<String, ServerGroup> servers = new HashMap<>();
     private final List<CertKey> httpsSniErasureCertKeys = new ArrayList<>();
+    private FDs quicFDs;
 
     public ConfigProcessor(ConfigLoader configLoader, EventLoopGroup hcLoopGroup, EventLoopGroup workerLoopGroup) {
         this.configLoader = configLoader;
         this.hcLoopGroup = hcLoopGroup;
         this.workerLoopGroup = workerLoopGroup;
+    }
+
+    public void setQuicFDs(FDs quicFDs) {
+        this.quicFDs = quicFDs;
     }
 
     public int getSocks5ListenPort() {
@@ -190,7 +196,8 @@ public class ConfigProcessor {
                 } else {
                     kcpFDs = KCPFDs.getClientDefault();
                 }
-                addIntoServerGroup(alias, svr, kcpFDs);
+                var handle = addIntoServerGroup(alias, svr);
+                initSharedData(handle, svr, kcpFDs, quicFDs);
             }
         }
         if (hasUOT) {
@@ -242,7 +249,7 @@ public class ConfigProcessor {
         }
     }
 
-    private void addIntoServerGroup(String currentAlias, ServerList.Server svr, KCPFDs kcpFDs) throws Exception {
+    private ServerGroup.ServerHandle addIntoServerGroup(String currentAlias, ServerList.Server svr) throws Exception {
         ServerGroup.ServerHandle handle;
         if (IP.isIpLiteral(svr.host)) {
             IP inet = IP.from(svr.host);
@@ -253,7 +260,10 @@ public class ConfigProcessor {
             IP inet = cb.block();
             handle = getGroup(currentAlias).add(svr.toString(), svr.host, new IPPort(inet, svr.port), 10);
         }
+        return handle;
+    }
 
+    private void initSharedData(ServerGroup.ServerHandle handle, ServerList.Server svr, KCPFDs kcpFDs, FDs quicFDs) throws Exception {
         // init streamed fds
         Map<SelectorEventLoop, H2StreamedClientFDs> fds = new HashMap<>();
         if (svr.useKCP()) {
@@ -276,7 +286,7 @@ public class ConfigProcessor {
         // this will be used when connection establishes to remote
         // in WebSocksProxyAgentConnectorProvider.java
         // also in HttpDNSServer.java
-        handle.data = new SharedData(svr, fds);
+        handle.data = new SharedData(svr, fds, quicFDs);
     }
 
     private void loadCertKeyInAutoSignWorkingDirectory(File autoSignWorkingDirectory, String domain) throws Exception {

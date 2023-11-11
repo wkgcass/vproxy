@@ -1,9 +1,12 @@
 package io.vproxy.component.proxy;
 
 import io.vproxy.base.Config;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.connection.ServerSock;
 import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
+import io.vproxy.component.svrgroup.Upstream;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -37,8 +40,22 @@ public class ProxyNetConfig {
         return this;
     }
 
+    public ProxyNetConfig setHandleLoopProvider(EventLoopGroup elg) {
+        return setHandleLoopProvider(elg::next);
+    }
+
     public ProxyNetConfig setConnGen(ConnectorGen connGen) {
         this.connGen = connGen;
+        return this;
+    }
+
+    public ProxyNetConfig setConnGen(Upstream ups) {
+        this.connGen = (accepted, hint) -> ups.next(accepted.getRemote(), hint);
+        return this;
+    }
+
+    public ProxyNetConfig setConnGen(ServerGroup group) {
+        this.connGen = (accepted, _) -> group.next(accepted.getRemote());
         return this;
     }
 

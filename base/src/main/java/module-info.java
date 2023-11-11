@@ -43,6 +43,7 @@ module io.vproxy.base {
     exports io.vproxy.base.selector.wrap.h2streamed;
     exports io.vproxy.base.selector.wrap.kcp;
     exports io.vproxy.base.selector.wrap.kcp.mock;
+    exports io.vproxy.base.selector.wrap.quic;
     exports io.vproxy.base.selector.wrap.streamed;
     exports io.vproxy.base.selector.wrap.udp;
     exports io.vproxy.base.socks;
@@ -77,6 +78,7 @@ module io.vproxy.base {
     exports io.vproxy.base.util.web;
     exports io.vproxy.commons.graph;
     exports io.vproxy.commons.util;
+    exports io.vproxy.msquic.callback;
     exports io.vproxy.msquic.wrap;
     exports io.vproxy.msquic;
     exports io.vproxy.vfd;

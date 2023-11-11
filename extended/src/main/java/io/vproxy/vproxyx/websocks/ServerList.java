@@ -9,12 +9,13 @@ public class ServerList {
         public static final int USE_SSL = 0x1;
         public static final int USE_KCP = 0x2;
         public static final int USE_UOT = 0x4;
+        public static final int USE_QUIC = 0x8;
 
         public final int flags;
         public final String host;
         public final int port;
 
-        public Server(boolean useSSL, boolean useKCP, boolean useUOT, String host, int port) {
+        public Server(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, String host, int port) {
             int flags = 0;
             if (useSSL) {
                 flags |= Server.USE_SSL;
@@ -24,6 +25,9 @@ public class ServerList {
             }
             if (useUOT) {
                 flags |= Server.USE_UOT;
+            }
+            if (useQuic) {
+                flags |= Server.USE_QUIC;
             }
             this.flags = flags;
             this.host = host;
@@ -40,6 +44,10 @@ public class ServerList {
 
         public boolean useUOT() {
             return (flags & USE_UOT) != 0;
+        }
+
+        public boolean useQuic() {
+            return (flags & USE_QUIC) != 0;
         }
 
         @Override
@@ -60,8 +68,8 @@ public class ServerList {
 
     private final List<Server> servers = new LinkedList<>();
 
-    public boolean add(boolean useSSL, boolean useKCP, boolean useUOT, String host, int port) {
-        var svr = new Server(useSSL, useKCP, useUOT, host, port);
+    public boolean add(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, String host, int port) {
+        var svr = new Server(useSSL, useKCP, useUOT, useQuic, host, port);
         if (servers.contains(svr)) {
             return false;
         }
@@ -69,8 +77,8 @@ public class ServerList {
         return true;
     }
 
-    public boolean remove(boolean useSSL, boolean useKCP, boolean useUOT, String host, int port) {
-        var foo = new Server(useSSL, useKCP, useUOT, host, port);
+    public boolean remove(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, String host, int port) {
+        var foo = new Server(useSSL, useKCP, useUOT, useQuic, host, port);
         return servers.remove(foo);
     }
 

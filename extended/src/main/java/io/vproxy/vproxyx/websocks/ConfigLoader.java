@@ -36,6 +36,8 @@ public class ConfigLoader {
     private int pacServerPort;
     private boolean udpOverTcpEnabled;
     private String udpOverTcpNic;
+    private boolean quicEnabled;
+    private String quicCacertsPath;
     private final Map<String, ServerList> servers = new HashMap<>();
     private final Map<String, List<DomainChecker>> domains = new HashMap<>();
     private final Map<String, List<DomainChecker>> proxyResolves = new HashMap<>();
@@ -95,6 +97,14 @@ public class ConfigLoader {
 
     public String getUdpOverTcpNic() {
         return udpOverTcpNic;
+    }
+
+    public boolean isQuicEnabled() {
+        return quicEnabled;
+    }
+
+    public String getQuicCacertsPath() {
+        return quicCacertsPath;
     }
 
     public Map<String, ServerList> getServers() {
@@ -317,6 +327,10 @@ public class ConfigLoader {
                 if (udpOverTcpEnabled) {
                     udpOverTcpNic = config.getAgent().getUot().getNic();
                 }
+                quicEnabled = config.getAgent().getQuic().getEnabled();
+                if (quicEnabled) {
+                    quicCacertsPath = config.getAgent().getQuic().getCacerts();
+                }
                 if (config.getAgent().getTlsSniErasure() != null) {
                     var args = config.getAgent().getTlsSniErasure().getCertKeyAutoSign();
                     if (args.size() != 2 && args.size() != 3) {
@@ -346,13 +360,15 @@ public class ConfigLoader {
             for (var line : group.getServers()) {
                 if (!line.startsWith("websocks://") && !line.startsWith("websockss://")
                     && !line.startsWith("websocks:kcp://") && !line.startsWith("websockss:kcp://")
-                    && !line.startsWith("websocks:uot:kcp://") && !line.startsWith("websockss:uot:kcp://")) {
+                    && !line.startsWith("websocks:uot:kcp://") && !line.startsWith("websockss:uot:kcp://")
+                    && !line.startsWith("websocks:quic://")) {
                     throw new Exception("unknown protocol: " + line);
                 }
 
                 boolean useSSL = line.startsWith("websockss");
                 boolean useKCP = line.contains(":kcp://");
                 boolean useUOT = line.contains(":uot:");
+                boolean useQuic = line.contains(":quic://");
                 // format line
                 if (useSSL) {
                     if (useKCP) {
@@ -371,6 +387,8 @@ public class ConfigLoader {
                         } else {
                             line = line.substring("websocks:kcp://".length());
                         }
+                    } else if (useQuic) {
+                        line = line.substring("websocks:quic://".length());
                     } else {
                         line = line.substring("websocks://".length());
                     }
@@ -393,7 +411,7 @@ public class ConfigLoader {
                     throw new Exception("invalid port: " + line);
                 }
 
-                getGroup(currentAlias).add(useSSL, useKCP, useUOT, hostPart, port);
+                getGroup(currentAlias).add(useSSL, useKCP, useUOT, useQuic, hostPart, port);
             }
             for (var line : group.getDomains()) {
                 getDomainList(currentAlias).add(formatDomainChecker(line));
@@ -488,7 +506,7 @@ public class ConfigLoader {
             }
         } else {
             if (udpOverTcpNic != null) {
-                failReasons.add("proxy.server.uot is disabled but proxy.server.uot.nic is set: " + udpOverTcpNic);
+                failReasons.add("agent.uot is disabled but agent.uot.nic is set: " + udpOverTcpNic);
             }
         }
         // uot servers should not exist if uot not enabled
@@ -499,7 +517,25 @@ public class ConfigLoader {
                 var ls = entry.getValue().getServers();
                 for (var svr : ls) {
                     if (svr.useUOT()) {
-                        failReasons.add("proxy.server.uot is not enabled, but server group " + group + " has server using uot");
+                        failReasons.add("agent.uot is not enabled, but server group " + group + " has server using uot");
+                        continue out;
+                    }
+                }
+            }
+        }
+        // uot and quic must not be enabled at the same time
+        if (udpOverTcpEnabled && quicEnabled) {
+            failReasons.add("agent.uot and agent.quic cannot be enabled at the same time");
+        }
+        // check quic related
+        if (!quicEnabled) {
+            out:
+            for (var entry : servers.entrySet()) {
+                var group = entry.getKey();
+                var ls = entry.getValue().getServers();
+                for (var svr : ls) {
+                    if (svr.useQuic()) {
+                        failReasons.add(STR."agent.quic is not enabled, but server group \{group} has server using quic");
                         continue out;
                     }
                 }
@@ -613,6 +649,11 @@ public class ConfigLoader {
                 .put("enabled", true)
                 .put("nic", udpOverTcpNic));
         }
+        if (quicEnabled) {
+            builder.putObject("quic", o -> o
+                .put("enabled", true)
+                .put("cacerts", quicCacertsPath));
+        }
         if (user != null) {
             builder.put("serverUser", user);
         }
@@ -642,6 +683,8 @@ public class ConfigLoader {
                                     .put("enabled", server.useKCP())
                                     .putObject("uot", o2 -> o2.put("enabled", server.useUOT()))
                                 );
+                                svr.putObject("quic", o -> o
+                                    .put("enabled", server.useQuic()));
                                 svr.put("ip", server.host);
                                 svr.put("port", server.port);
                             });

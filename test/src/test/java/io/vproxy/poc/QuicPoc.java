@@ -5,11 +5,14 @@ import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.msquic.*;
+import io.vproxy.msquic.callback.ConnectionCallback;
+import io.vproxy.msquic.callback.StreamCallback;
 import io.vproxy.msquic.wrap.Configuration;
 import io.vproxy.msquic.wrap.Connection;
 import io.vproxy.msquic.wrap.Stream;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIString;
+import io.vproxy.vfd.IPPort;
 
 import java.util.Map;
 
@@ -49,8 +52,8 @@ public class QuicPoc {
             cred.setFlags(flags);
             cred.setAllowedCipherSuites(
                 QUIC_ALLOWED_CIPHER_SUITE_AES_128_GCM_SHA256 |
-                    QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 |
-                    QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256);
+                QUIC_ALLOWED_CIPHER_SUITE_AES_256_GCM_SHA384 |
+                QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256);
             var err = conf.opts.configurationQ.loadCredential(cred);
             if (err != 0) {
                 throw new RuntimeException("failed to load credential");
@@ -60,13 +63,13 @@ public class QuicPoc {
         Connection conn;
         {
             var allocator = Allocator.ofUnsafe();
-            conn = new SampleConnection(new Connection.Options(reg, allocator, ref ->
+            conn = new Connection(new Connection.Options(reg, allocator, new SampleConnectionCallback(), ref ->
                 reg.opts.registrationQ.openConnection(MsQuicUpcall.connectionCallback, ref.MEMORY, null, allocator)));
             if (conn.connectionQ == null) {
                 conn.close();
                 throw new RuntimeException("failed to create connection");
             }
-            int err = conn.connectionQ.start(conf.opts.configurationQ, QUIC_ADDRESS_FAMILY_INET, new PNIString(allocator, "127.0.0.1"), 443);
+            int err = conn.start(conf, new IPPort("127.0.0.1", 443));
             if (err != 0) {
                 conn.close();
                 throw new RuntimeException("failed to start connection");
@@ -75,73 +78,55 @@ public class QuicPoc {
         System.out.println("connection started");
     }
 
-    private static class SampleConnection extends Connection {
-        public SampleConnection(Options opts) {
-            super(opts);
-        }
-
+    private static class SampleConnectionCallback implements ConnectionCallback {
         @Override
-        public int callback(QuicConnectionEvent event) {
-            System.out.println("received connection event " + event.getType() + " on thread " + Thread.currentThread());
-            super.callback(event);
-            switch (event.getType()) {
-                case QUIC_CONNECTION_EVENT_CONNECTED -> {
-                    var allocator = Allocator.ofUnsafe();
-                    var stream = new SampleStream(new Stream.Options(this, allocator, ref ->
-                        connectionQ.openStream(0, MsQuicUpcall.streamCallback, ref.MEMORY, null, allocator)));
-                    if (stream.streamQ == null) {
-                        System.out.println("failed to open stream");
-                        stream.close();
-                        return 1;
-                    }
-                    int err = stream.streamQ.start(0);
-                    if (err != 0) {
-                        System.out.println("failed to start stream");
-                        stream.close();
-                        return err;
-                    }
-                }
-                case QUIC_CONNECTION_EVENT_SHUTDOWN_COMPLETE -> {
-                    System.out.println("connection shutdown");
-                    System.exit(0);
-                }
+        public int connected(Connection conn, QuicConnectionEventConnected data) {
+            var allocator = Allocator.ofUnsafe();
+            var stream = new Stream(new Stream.Options(conn, allocator, new SampleStreamCallback(), ref ->
+                conn.connectionQ.openStream(0, MsQuicUpcall.streamCallback, ref.MEMORY, null, allocator)));
+            if (stream.streamQ == null) {
+                System.out.println("failed to open stream");
+                stream.close();
+                return 1;
+            }
+            int err = stream.start(0);
+            if (err != 0) {
+                System.out.println("failed to start stream");
+                stream.close();
+                return err;
             }
             return 0;
         }
     }
 
-    private static class SampleStream extends Stream {
-        public SampleStream(Options opts) {
-            super(opts);
+    private static class SampleStreamCallback implements StreamCallback {
+        @Override
+        public int startComplete(Stream stream, QuicStreamEventStartComplete data) {
+            var allocator = Allocator.ofUnsafe();
+            var mem = new PNIString(allocator, "hello world");
+            stream.send(allocator, mem.MEMORY);
+            return 0;
         }
 
         @Override
-        public int callback(QuicStreamEvent event) {
-            System.out.println("received stream event " + event.getType() + " on thread " + Thread.currentThread());
-            super.callback(event);
-            switch (event.getType()) {
-                case QUIC_STREAM_EVENT_START_COMPLETE -> {
-                    var allocator = Allocator.ofUnsafe();
-                    var mem = new PNIString(allocator, "hello world");
-                    send(allocator, mem.MEMORY);
-                }
-                case QUIC_STREAM_EVENT_RECEIVE -> {
-                    var data = event.getUnion().getRECEIVE();
-                    int count = data.getBufferCount();
-                    var bufMem = data.getBuffers().MEMORY;
-                    bufMem = bufMem.reinterpret(QuicBuffer.LAYOUT.byteSize() * count);
-                    var bufs = new QuicBuffer.Array(bufMem);
-                    for (int i = 0; i < count; ++i) {
-                        var buf = bufs.get(i);
-                        var seg = buf.getBuffer().reinterpret(buf.getLength());
-                        System.out.println("Buffer[" + i + "]");
-                        System.out.println(ByteArray.from(seg).hexDump());
-                    }
-                    closeStream();
-                }
-                case QUIC_STREAM_EVENT_SHUTDOWN_COMPLETE ->
-                    opts.connection.connectionQ.shutdown(QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 0);
+        public int receive(Stream stream, QuicStreamEventReceive data) {
+            int count = data.getBufferCount();
+            var bufMem = data.getBuffers().MEMORY;
+            bufMem = bufMem.reinterpret(QuicBuffer.LAYOUT.byteSize() * count);
+            var bufs = new QuicBuffer.Array(bufMem);
+            for (int i = 0; i < count; ++i) {
+                var buf = bufs.get(i);
+                var seg = buf.getBuffer().reinterpret(buf.getLength());
+                System.out.println("Buffer[" + i + "]");
+                System.out.println(ByteArray.from(seg).hexDump());
             }
+            stream.close();
+            return 0;
+        }
+
+        @Override
+        public int shutdownComplete(Stream stream, QuicStreamEventShutdownComplete data) {
+            stream.opts.connection.close();
             return 0;
         }
     }

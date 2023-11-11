@@ -7,7 +7,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    def PNI_VERSION = '21.0.0.18'
+    def PNI_VERSION = '21.0.0.19'
     ext.set("PNI_VERSION", PNI_VERSION)
     dependencies {
         classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION
@@ -22,6 +22,7 @@ plugins {
     id 'maven-publish'
     id 'signing'
 
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'org.openjfx.javafxplugin' version '0.1.0' apply false
 }
 
@@ -37,13 +38,17 @@ version loadVersion()
 mainClassName = 'io.vproxy.app.app.Main'
 
 jar {
-    archiveFileName = 'vproxy.jar'
     manifest {
         attributes 'Main-Class': mainClassName
     }
     exclude 'module-info.class'
-    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    duplicatesStrategy 'exclude'
+}
+
+shadowJar {
+    archiveBaseName = 'vproxy'
+    archiveClassifier = ''
+    archiveVersion = ''
+    exclude "module-info.class"
 }
 
 subprojects {
@@ -253,6 +258,7 @@ project(':pni-template') {
                 .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_PNI_H_FILE)
                 .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_PNI_C_FILE)
                 .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_JNI_H_MOCK_FILE)
+                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.ALWAYS_ALIGNED)
         )
 
         doLast {
@@ -361,6 +367,23 @@ project(':all') {
         api project(':adaptor-netty')
         api project(':adaptor-vertx')
         api project(':msquic-dummy')
+    }
+
+    task runNative(type: JavaExec) {
+        standardInput = System.in
+        if ("true" == System.getProperty("enableAssertions")) {
+            enableAssertions = true
+        }
+        classpath = sourceSets.test.runtimeClasspath
+        workingDir = project.rootProject.rootDir.getAbsolutePath()
+        systemProperty("java.library.path",
+            "./submodules/msquic/build/bin/Release" +
+                File.pathSeparator +
+                "./submodules/msquic-java/core/src/main/c" +
+                File.pathSeparator +
+                "./base/src/main/c")
+        systemProperty("vfd", "posix")
+        main = "io.vproxy.app.app.Main"
     }
 }
 
@@ -489,7 +512,8 @@ project(':test') {
             File.pathSeparator +
             "./base/src/main/c")
         systemProperty("vfd", "posix")
-        if ("true" == System.getProperty("Gateway")) {
+        def gw = System.getProperty("Gateway")
+        if ("true" == gw || "1" == gw) {
             main = "io.vproxy.poc.QuicGatewayPoc"
         } else {
             main = "io.vproxy.poc.QuicPoc"

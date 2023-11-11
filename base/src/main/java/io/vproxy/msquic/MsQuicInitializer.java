@@ -17,7 +17,6 @@ public class MsQuicInitializer {
         try {
             Utils.loadDynamicLibrary("msquic");
             Utils.loadDynamicLibrary("msquic-java");
-            Utils.loadDynamicLibrary("vpquic");
         } catch (UnsatisfiedLinkError e) {
             Logger.error(LogType.SYS_ERROR, "unable to load quic support", e);
             supported = false;
@@ -25,6 +24,7 @@ public class MsQuicInitializer {
             return false;
         }
 
+        MsQuicMod.get().MsQuicSetThreadCountLimit(1); // FIXME: need to implement event loop migration
         MsQuicUpcall.setImpl(MsQuicUpcallImpl.get());
         MsQuicModUpcall.setImpl(MsQuicModUpcallImpl.get());
         MsQuicMod.get().MsQuicSetEventLoopThreadDispatcher(MsQuicModUpcall.dispatch);

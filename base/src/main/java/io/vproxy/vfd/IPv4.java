@@ -4,12 +4,13 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 
 import java.net.Inet4Address;
+import java.util.Objects;
 
 public class IPv4 extends IP {
     private final int value;
 
-    IPv4(byte[] bytes) {
-        super(ByteArray.from(bytes));
+    IPv4(String hostname, byte[] bytes) {
+        super(hostname, ByteArray.from(bytes));
         value = this.bytes.int32(0);
     }
 
@@ -33,7 +34,7 @@ public class IPv4 extends IP {
 
     @Override
     public IPv6 to6() {
-        return new IPv6(ByteArray.allocateInitZero(16)
+        return new IPv6(hostname, ByteArray.allocateInitZero(16)
             .int16(10, 0xffff).int32(12, value).toJavaArray());
     }
 
@@ -41,7 +42,8 @@ public class IPv4 extends IP {
     public boolean equals(Object that) {
         if (that == null) return false;
         if (!(that instanceof IPv4)) return false;
-        return value == ((IPv4) that).value;
+        IPv4 ipv4 = (IPv4) that;
+        return value == ipv4.value && Objects.equals(hostname, ipv4.hostname);
     }
 
     @Override

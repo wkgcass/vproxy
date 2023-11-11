@@ -46,6 +46,8 @@ data class AgentConfig(
   var pool: Int = 10,
   // uot
   var uot: UOTConfig = UOTConfig(),
+  // quic
+  var quic: QuicConfig = QuicConfig(),
 ) {
   companion object {
     val rule: Rule<AgentConfig> = ObjectRule { AgentConfig() }
@@ -64,6 +66,7 @@ data class AgentConfig(
       .put("strict", BoolRule) { strict = it }
       .put("pool", IntRule) { pool = it }
       .put("uot", UOTConfig.rule) { uot = it }
+      .put("quic", QuicConfig.rule) { quic = it }
   }
 }
 
@@ -115,6 +118,18 @@ data class UOTConfig(
     val rule: Rule<UOTConfig> = ObjectRule { UOTConfig() }
       .put("enabled", BoolRule) { enabled = it }
       .put("nic", StringRule) { nic = it }
+  }
+}
+
+data class QuicConfig(
+  // enabled
+  var enabled: Boolean = false,
+  var cacerts: String? = null,
+) {
+  companion object {
+    val rule: Rule<QuicConfig> = ObjectRule { QuicConfig() }
+      .put("enabled", BoolRule) { enabled = it }
+      .put("cacerts", NullableStringRule) { cacerts = it }
   }
 }
 

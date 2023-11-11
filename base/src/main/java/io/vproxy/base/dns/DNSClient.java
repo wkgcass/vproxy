@@ -386,9 +386,11 @@ public class DNSClient {
             List<IP> addresses = new ArrayList<>();
             for (DNSResource answer : packet.answers) {
                 if (answer.type == DNSType.A) {
-                    addresses.add(((A) answer.rdata).address);
+                    var addr = ((A) answer.rdata).address;
+                    addresses.add(IP.from(domain, addr.getAddress()));
                 } else if (answer.type == DNSType.AAAA) {
-                    addresses.add(((AAAA) answer.rdata).address);
+                    var addr = ((AAAA) answer.rdata).address;
+                    addresses.add(IP.from(domain, addr.getAddress()));
                 } else {
                     assert Logger.lowLevelDebug("ignore answer with type " + answer.type);
                 }

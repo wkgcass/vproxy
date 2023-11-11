@@ -2,8 +2,6 @@ package io.vproxy.base.selector.wrap;
 
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.anno.Comment;
-import io.vproxy.base.util.promise.Promise;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.SocketFD;
@@ -13,10 +11,9 @@ import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
-import java.util.function.Function;
+import java.util.Objects;
 
-public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD implements SocketFD, VirtualFD {
-    private final VirtualFD _self;
+public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD implements SocketFD, VirtualFD, DelegatingSourceFD {
     private SelectorEventLoop loop;
     protected final boolean isAccepted;
 
@@ -30,16 +27,11 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
     private IPPort remote;
     private IPPort local;
 
+    private boolean shutdownOutputIsCalled;
     private boolean eof;
     private IOException error;
 
     public AbstractBaseVirtualSocketFD(boolean isAccepted, IPPort local, IPPort remote) {
-        this(null, isAccepted, local, remote);
-    }
-
-    @Comment("this constructor will make an util object")
-    public AbstractBaseVirtualSocketFD(VirtualFD _self, boolean isAccepted, IPPort local, IPPort remote) {
-        this._self = _self;
         this.isAccepted = isAccepted;
         this.connected = isAccepted;
         this.local = local;
@@ -98,6 +90,11 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
     public void shutdownOutput() throws IOException {
         checkOpen();
         checkConnected();
+        shutdownOutputIsCalled = true;
+    }
+
+    public boolean isShutdownOutput() {
+        return shutdownOutputIsCalled;
     }
 
     @Override
@@ -161,7 +158,7 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
 
     protected abstract int doRead(ByteBuffer dst) throws IOException;
 
-    public void setEof() {
+    protected void setEof() {
         this.eof = true;
         setReadable();
     }
@@ -227,7 +224,7 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
 
     @Override
     public FD real() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
@@ -262,17 +259,6 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
 
     protected abstract void doClose(boolean reset);
 
-    protected void asyncClose(Function<Boolean, Promise<Void>> promiseFunc) {
-        if (closed) {
-            return;
-        }
-        closed = true;
-        promiseFunc.apply(resetWhenClosing).then(v -> {
-            closeSelf();
-            return Promise.resolve(null);
-        });
-    }
-
     @Override
     public String toString() {
         return formatToString();
@@ -284,8 +270,14 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
     // events
     // ======
 
-    private VirtualFD self() {
-        return _self == null ? this : _self;
+    private DelegatingTargetFD delegatingTargetFD;
+
+    @Override
+    public void setDelegatingTargetFD(DelegatingTargetFD fd) {
+        Objects.requireNonNull(fd);
+        if (delegatingTargetFD != null)
+            throw new IllegalStateException("delegatingTargetFD is already set");
+        delegatingTargetFD = fd;
     }
 
     private boolean readable = false;
@@ -295,7 +287,11 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
         if (loop == null) {
             return;
         }
-        loop.runOnLoop(() -> loop.selector.registerVirtualReadable(self()));
+        if (delegatingTargetFD != null) {
+            delegatingTargetFD.setReadable();
+            return;
+        }
+        loop.runOnLoop(() -> loop.selector.registerVirtualReadable(this));
     }
 
     protected void cancelReadable() {
@@ -303,7 +299,11 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
         if (loop == null) {
             return;
         }
-        loop.runOnLoop(() -> loop.selector.removeVirtualReadable(self()));
+        if (delegatingTargetFD != null) {
+            delegatingTargetFD.cancelReadable();
+            return;
+        }
+        loop.runOnLoop(() -> loop.selector.removeVirtualReadable(this));
     }
 
     private boolean writable = false;
@@ -313,7 +313,11 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
         if (loop == null) {
             return;
         }
-        loop.runOnLoop(() -> loop.selector.registerVirtualWritable(self()));
+        if (delegatingTargetFD != null) {
+            delegatingTargetFD.setWritable();
+            return;
+        }
+        loop.runOnLoop(() -> loop.selector.registerVirtualWritable(this));
     }
 
     protected void cancelWritable() {
@@ -321,7 +325,11 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
         if (loop == null) {
             return;
         }
-        loop.runOnLoop(() -> loop.selector.removeVirtualWritable(self()));
+        if (delegatingTargetFD != null) {
+            delegatingTargetFD.cancelWritable();
+            return;
+        }
+        loop.runOnLoop(() -> loop.selector.removeVirtualWritable(this));
     }
 
     @Override
@@ -337,15 +345,5 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
     @Override
     public void onRemove() {
         // do nothing
-    }
-
-    protected void tryToRunOnLoop(Runnable r) {
-        if (loop == null) {
-            assert Logger.lowLevelDebug("no loop yet, direct run");
-            r.run();
-        } else {
-            assert Logger.lowLevelDebug("run on loop");
-            loop.runOnLoop(r);
-        }
     }
 }

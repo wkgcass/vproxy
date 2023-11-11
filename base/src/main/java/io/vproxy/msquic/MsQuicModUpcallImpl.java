@@ -66,6 +66,7 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
         loop.runOnLoop(() -> {
             try {
                 MsQuicMod.get().CxPlatGetCurThread(thread);
+                MsQuicMod.get().MsQuicSetIsWorker(true);
                 MsQuicMod2.get().MsQuicCxPlatWorkerThreadInit(locals);
                 MsQuicMod2.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
             } catch (Throwable t) {

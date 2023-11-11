@@ -12,8 +12,8 @@ public class IPv6 extends IP {
     private final int value2;
     private final int value3;
 
-    IPv6(byte[] bytes) {
-        super(ByteArray.from(bytes));
+    IPv6(String hostname, byte[] bytes) {
+        super(hostname, ByteArray.from(bytes));
         value0 = this.bytes.int32(0);
         value1 = this.bytes.int32(4);
         value2 = this.bytes.int32(8);
@@ -66,7 +66,7 @@ public class IPv6 extends IP {
         if (o == null) return false;
         if (!(o instanceof IPv6)) return false;
         IPv6 that = (IPv6) o;
-        return value0 == that.value0 && value1 == that.value1 && value2 == that.value2 && value3 == that.value3;
+        return value0 == that.value0 && value1 == that.value1 && value2 == that.value2 && value3 == that.value3 && Objects.equals(hostname, that.hostname);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class IPv6 extends IP {
     @Override
     public IPv4 to4() {
         if (isV4MappedV6Address() || isV4CompatibleV6Address()) {
-            return new IPv4(ByteArray.allocate(4).int32(0, value3).toJavaArray());
+            return new IPv4(hostname, ByteArray.allocate(4).int32(0, value3).toJavaArray());
         }
         return null;
     }

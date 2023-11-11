@@ -10,18 +10,17 @@ import io.vproxy.base.processor.Hint;
 import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolServerConfig;
 import io.vproxy.base.protocol.ProtocolServerHandler;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Network;
-import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.*;
 import io.vproxy.base.util.coll.Tuple4;
 import io.vproxy.component.proxy.ConnectorGen;
 import io.vproxy.component.proxy.Proxy;
 import io.vproxy.component.proxy.ProxyNetConfig;
 import io.vproxy.dns.DNSServer;
 import io.vproxy.lib.http1.CoroutineHttp1Server;
+import io.vproxy.msquic.MsQuicInitializer;
 import io.vproxy.socks.Socks5ProxyProtocolHandler;
 import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.util.Browser;
@@ -37,10 +36,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"StringTemplateMigration"})
 public class WebSocksProxyAgent {
     private static final String defaultConfigName = "vpws-agent.conf";
 
@@ -119,13 +118,26 @@ public class WebSocksProxyAgent {
         acceptor = new EventLoopGroup("acceptor-group");
         acceptor.add("acceptor-loop");
         // initiate the worker event loop(s)
-        worker = new EventLoopGroup("worker-group");
-        for (int i = 0; i < workers; ++i) {
-            worker.add("worker-loop-" + i);
+        // for quic, let the QuicRegistration init workers
+        FDs quicFDs = null;
+        if (configLoader.isQuicEnabled()) {
+            if (!MsQuicInitializer.isSupported()) {
+                throw new Exception("quic is not supported");
+            }
+            worker = new EventLoopGroup("worker-group", new Annotations(Map.of(
+                AnnotationKeys.EventLoopGroup_UseMsQuic.name, "true"
+            )));
+            quicFDs = WebSocksQuicHelper.initClientQuic(worker, configLoader);
+        } else {
+            worker = new EventLoopGroup("worker-group");
+            for (int i = 0; i < workers; ++i) {
+                worker.add("worker-loop-" + i);
+            }
         }
 
         // parse config
         configProcessor = new ConfigProcessor(configLoader, worker, worker);
+        configProcessor.setQuicFDs(quicFDs);
         configProcessor.parse();
 
         assert Logger.lowLevelDebug("socks5 listen on " + configProcessor.getSocks5ListenPort());
@@ -137,7 +149,7 @@ public class WebSocksProxyAgent {
             configProcessor.getServers().values().stream().map(server ->
                 server.getServerHandles().stream()
                     .map(h -> "\n" + h)
-            ).collect(Collectors.toList())
+            ).toList()
         );
         assert Logger.lowLevelDebug("cacerts file " + configProcessor.getCacertsPath());
         assert Logger.lowLevelDebug("cacerts password " + configProcessor.getCacertsPswd());
@@ -251,7 +263,7 @@ public class WebSocksProxyAgent {
                     .setHandleLoopProvider(worker::next)
                     .setServer(server)
                     .setConnGen(connGen),
-                s -> {
+                _ -> {
                     // close corresponding server
                     Logger.warn(LogType.ALERT, "closing server " + server.bind);
                     server.close();

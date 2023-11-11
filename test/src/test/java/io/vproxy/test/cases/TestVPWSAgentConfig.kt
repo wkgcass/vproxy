@@ -49,6 +49,10 @@ class TestVPWSAgentConfig {
         "      enabled = true\n" +
         "      nic = enp5s0\n" +
         "    }\n" +
+        "    quic {\n" +
+        "      enabled = true\n" +
+        "      cacerts = ./quic.ca.pem\n" +
+        "    }\n" +
         "  }\n" +
         "  proxy {\n" +
         "    auth = alice:pasSw0rD\n" +
@@ -58,6 +62,7 @@ class TestVPWSAgentConfig {
         "        servers = [\n" +
         "          'websockss://127.0.0.1:18686'\n" +
         "          'websockss:kcp://example.com:443'\n" +
+        "          'websocks:quic://my.quic.com:4443'\n" +
         "        ]\n" +
         "        domains = [\n" +
         "          /.*google\\.com.*/\n" +
@@ -128,6 +133,10 @@ class TestVPWSAgentConfig {
         "        \"enabled\": true,\n" +
         "        \"nic\": \"enp5s0\"\n" +
         "    },\n" +
+        "    \"quic\": {\n" +
+        "        \"enabled\": true,\n" +
+        "        \"cacerts\": \"./quic.ca.pem\"\n" +
+        "    },\n" +
         "    \"serverUser\": \"alice\",\n" +
         "    \"serverPass\": \"pasSw0rD\",\n" +
         "    \"hc\": { \"enabled\": true },\n" +
@@ -141,6 +150,7 @@ class TestVPWSAgentConfig {
         "                    \"enabled\": false,\n" +
         "                    \"uot\": { \"enabled\": false }\n" +
         "                },\n" +
+        "                \"quic\": { \"enabled\": false },\n" +
         "                \"ip\": \"127.0.0.1\",\n" +
         "                \"port\": 18687\n" +
         "            } ],\n" +
@@ -165,6 +175,7 @@ class TestVPWSAgentConfig {
         "                        \"enabled\": false,\n" +
         "                        \"uot\": { \"enabled\": false }\n" +
         "                    },\n" +
+        "                    \"quic\": { \"enabled\": false },\n" +
         "                    \"ip\": \"127.0.0.1\",\n" +
         "                    \"port\": 18686\n" +
         "                },\n" +
@@ -174,8 +185,19 @@ class TestVPWSAgentConfig {
         "                        \"enabled\": true,\n" +
         "                        \"uot\": { \"enabled\": false }\n" +
         "                    },\n" +
+        "                    \"quic\": { \"enabled\": false },\n" +
         "                    \"ip\": \"example.com\",\n" +
         "                    \"port\": 443\n" +
+        "                },\n" +
+        "                {\n" +
+        "                    \"protocol\": \"websocks\",\n" +
+        "                    \"kcp\": {\n" +
+        "                        \"enabled\": false,\n" +
+        "                        \"uot\": { \"enabled\": false }\n" +
+        "                    },\n" +
+        "                    \"quic\": { \"enabled\": true },\n" +
+        "                    \"ip\": \"my.quic.com\",\n" +
+        "                    \"port\": 4443\n" +
         "                }\n" +
         "            ],\n" +
         "            \"proxyRuleList\": [\n" +
@@ -268,6 +290,10 @@ class TestVPWSAgentConfig {
           enabled = true,
           nic = "enp5s0"
         ),
+        quic = QuicConfig(
+          enabled = true,
+          cacerts = "./quic.ca.pem",
+        ),
       ),
       proxy = ProxyConfig(
         auth = "alice:pasSw0rD",
@@ -278,6 +304,7 @@ class TestVPWSAgentConfig {
             servers = listOf(
               "websockss://127.0.0.1:18686",
               "websockss:kcp://example.com:443",
+              "websocks:quic://my.quic.com:4443",
             ),
             domains = listOf(
               "/.*google\\.com.*/",
@@ -358,6 +385,11 @@ class TestVPWSAgentConfig {
     // pool
     assertEquals(4, loader.poolSize)
 
-    assertEquals(0, loader.validate().size)
+    val validationResult = loader.validate()
+    assertEquals(1, validationResult.size)
+    assertEquals(
+      listOf("agent.uot and agent.quic cannot be enabled at the same time"),
+      validationResult
+    )
   }
 }

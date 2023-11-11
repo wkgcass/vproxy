@@ -6,7 +6,6 @@ import io.vproxy.base.selector.wrap.udp.UDPFDs;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
-import io.vproxy.vfd.FDProvider;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.SocketFD;
 import io.vproxy.vfd.UDSPath;
@@ -45,14 +44,14 @@ public class ConnectableConnection extends Connection {
         if (remote instanceof UDSPath) {
             return createUDS(remote, opts, inBuffer, outBuffer);
         }
-        SocketFD channel = FDProvider.get().openSocketFD();
+        SocketFD channel = opts.getFds().openSocketFD();
         return create(channel, remote, opts, inBuffer, outBuffer);
     }
 
     private static ConnectableConnection createUDS(IPPort remote,
                                                    ConnectionOpts opts,
                                                    RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        var fds = FDProvider.get().getProvided();
+        var fds = opts.getFds();
         if (!(fds instanceof PosixFDs)) {
             throw new IOException("unix domain socket is not supported by " + fds + ", use -Dvfd=posix");
         }

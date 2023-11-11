@@ -2,6 +2,7 @@ module io.vproxy.extended {
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core;
     requires vjson;
+    requires io.vproxy.pni;
     requires transitive io.vproxy.dep;
     requires transitive io.vproxy.base;
     requires transitive io.vproxy.core;

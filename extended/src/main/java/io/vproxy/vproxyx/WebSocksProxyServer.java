@@ -10,7 +10,10 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.wrap.VirtualFD;
 import io.vproxy.base.selector.wrap.h2streamed.H2StreamedServerFDs;
 import io.vproxy.base.selector.wrap.kcp.KCPFDs;
+import io.vproxy.base.selector.wrap.quic.QuicListenerServerSocketFD;
 import io.vproxy.base.selector.wrap.udp.UDPFDs;
+import io.vproxy.base.util.AnnotationKeys;
+import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
@@ -19,6 +22,8 @@ import io.vproxy.component.proxy.ConnectorGen;
 import io.vproxy.component.proxy.NetEventLoopProvider;
 import io.vproxy.component.proxy.Proxy;
 import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.msquic.MsQuicInitializer;
+import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.websocks.*;
@@ -30,14 +35,30 @@ import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.function.Supplier;
 
 @SuppressWarnings("unused")
 public class WebSocksProxyServer {
+    private static final String HELP_STR = """
+        argument: listen {} auth {} \\
+                  [quic certpem {} keypem {} [quic-listen]] \\
+                  [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\
+                  [redirectport {}] [kcp [uot.port {} [uot.nic {eth0}]]] \\
+                  [webroot {}]
+        examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80
+                  listen 443 auth alice:pasSw0rD ssl \\
+                          certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\
+                          keypem /etc/letsencrypt/live/example.com/privkey.pem \\
+                          domain example.com redirectport 80
+         [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd""";
+
     public static void main0(String[] args) throws Exception {
         Map<String, String> auth = new HashMap<>();
         int port = -1;
+        boolean useQuic = false;
+        int quicPort = -1;
         boolean ssl = false;
         String pkcs12 = null;
         String pkcs12pswd = null;
@@ -76,6 +97,20 @@ public class WebSocksProxyServer {
                     if (userpass.length != 2 || userpass[0].trim().isEmpty() || userpass[1].trim().isEmpty())
                         throw new IllegalArgumentException("invalid user:password pair: " + pair);
                     auth.put(userpass[0].trim(), userpass[1].trim());
+                }
+                ++i;
+            } else if (arg.equals("quic")) {
+                useQuic = true;
+            } else if (arg.equals("quic-listen")) {
+                if (next == null)
+                    throw new IllegalArgumentException("`quic-listen` should be followed with a port argument");
+                try {
+                    quicPort = Integer.parseInt(next);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("quic-port is not a number");
+                }
+                if (quicPort < 1 || quicPort > 65535) {
+                    throw new IllegalArgumentException("quic-port is not valid");
                 }
                 ++i;
             } else if (arg.equals("ssl")) {
@@ -154,17 +189,7 @@ public class WebSocksProxyServer {
                 webroot = next;
                 ++i;
             } else
-                throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
-                    "argument: listen {} auth {} \\\n" +
-                    "          [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\\n" +
-                    "          [redirectport {}] [kcp [uot.port {} [uot.nic {eth0}]]] \\\n" +
-                    "          [webroot {}] \n" +
-                    "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
-                    "          listen 443 auth alice:pasSw0rD ssl \\\n" +
-                    "                  certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\\n" +
-                    "                  keypem /etc/letsencrypt/live/example.com/privkey.pem \\\n" +
-                    "                  domain example.com redirectport 80\n" +
-                    " [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd");
+                throw new IllegalArgumentException(STR."unknown argument: \{arg}.\n\{HELP_STR}");
         }
         if (port == -1)
             throw new IllegalArgumentException("listening port is not specified. `listen $PORT`, " +
@@ -172,6 +197,24 @@ public class WebSocksProxyServer {
         if (auth.isEmpty())
             throw new IllegalArgumentException("authentication not specified. `auth $USER:$PASS[,$USER2:$PASS2[,...]]`, " +
                 "example: auth alice:pasSw0rD,bob:PaSsw0Rd");
+        if (useQuic) {
+            if (quicPort == -1)
+                quicPort = port;
+            if (certpem == null) {
+                throw new IllegalArgumentException("quic mode is enabled, but certpem not specified. `certpem $file1,$file2,...`");
+            }
+            if (keypem == null) {
+                throw new IllegalArgumentException("quic mode is enabled, but keypem not specified. `keypem $file_path`");
+            }
+        } else {
+            if (quicPort != -1)
+                throw new IllegalArgumentException("cannot specify quic-listen when quic is not enabled");
+        }
+        if (useKcp && useQuic) {
+            if (quicPort == port) {
+                throw new IllegalArgumentException(STR."kcp and quic are both using port \{port}");
+            }
+        }
         if (ssl) {
             if (pkcs12 != null) {
                 if (pkcs12pswd == null)
@@ -185,9 +228,10 @@ public class WebSocksProxyServer {
                 throw new IllegalArgumentException("ssl mode is enabled, but neither pkcs12 and certpem not specified. " +
                     "`pkcs12 $file_path`, or, `certpem $file1,$file2,...`");
             }
-        } else {
+        }
+        if (!ssl && !useQuic) {
             if (pkcs12 != null || pkcs12pswd != null || certpem != null || keypem != null)
-                throw new IllegalArgumentException("pkcs12 or pem info specified but no `ssl` flag set.");
+                throw new IllegalArgumentException("pkcs12 or pem info specified but no `ssl` nor `quic` flag set.");
         }
         if (pkcs12 != null) {
             pkcs12 = Utils.filename(pkcs12);
@@ -212,6 +256,8 @@ public class WebSocksProxyServer {
 
         assert Logger.lowLevelDebug("listen: " + port);
         assert Logger.lowLevelDebug("auth: " + auth);
+        assert Logger.lowLevelDebug("quic: " + useQuic);
+        assert Logger.lowLevelDebug("quic-port: " + quicPort);
         assert Logger.lowLevelDebug("ssl: " + ssl);
         assert Logger.lowLevelDebug("pkcs12: " + pkcs12);
         assert Logger.lowLevelDebug("pkcs12pswd: " + pkcs12pswd);
@@ -236,16 +282,41 @@ public class WebSocksProxyServer {
         // initiate the acceptor event loop(s)
         EventLoopGroup acceptor = new EventLoopGroup("acceptor-group");
         acceptor.add("acceptor-loop");
-        NetEventLoop netLoopForKcp = acceptor.next();
-        SelectorEventLoop loopForKcp = netLoopForKcp.getSelectorEventLoop();
+        NetEventLoop acceptorEventLoop = acceptor.next();
+        SelectorEventLoop loopForKcp = acceptorEventLoop.getSelectorEventLoop();
         // initiate the worker event loop(s)
-        EventLoopGroup worker = new EventLoopGroup("worker-group");
-        for (int i = 0; i < workers; ++i) {
-            worker.add("worker-loop-" + i);
+        EventLoopGroup worker;
+        FDs quicFDs = null;
+        if (useQuic) {
+            if (!MsQuicInitializer.isSupported()) {
+                throw new IllegalStateException("msquic is not supported");
+            }
+
+            var pemFile = Files.createTempFile("vpwscert", ".pem");
+            var file = pemFile.toFile();
+            file.deleteOnExit();
+            for (var f : certpem.split(",")) {
+                var s = Files.readString(Path.of(f));
+                Files.writeString(pemFile, s, StandardOpenOption.APPEND);
+                Files.writeString(pemFile, "\n", StandardOpenOption.APPEND);
+            }
+            worker = new EventLoopGroup("worker-group", new Annotations(Map.of(
+                AnnotationKeys.EventLoopGroup_UseMsQuic.name, "true"
+            )));
+            quicFDs = WebSocksQuicHelper.initServerQuic(worker, file.getAbsolutePath(), keypem);
+        } else {
+            worker = new EventLoopGroup("worker-group");
+            for (int i = 0; i < workers; ++i) {
+                worker.add("worker-loop-" + i);
+            }
         }
 
         // init the listening server
         var listeningServerL4addr = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), port);
+        IPPort listeningServerQuicL4addr = null;
+        if (quicPort != -1) {
+            listeningServerQuicL4addr = new IPPort("0.0.0.0", quicPort);
+        }
         List<ServerSock> servers = new LinkedList<>();
         {
             ServerSock.checkBind(listeningServerL4addr);
@@ -257,6 +328,14 @@ public class WebSocksProxyServer {
             KCPFDs kcpFDs = KCPFDs.getDefault();
             H2StreamedServerFDs serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, listeningServerL4addr);
             ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, serverFds);
+            servers.add(server);
+        }
+        if (useQuic) {
+            assert listeningServerQuicL4addr != null;
+            assert quicFDs != null;
+
+            ServerSock.checkBindUDP(listeningServerQuicL4addr);
+            var server = ServerSock.create(listeningServerQuicL4addr, quicFDs);
             servers.add(server);
         }
         if (udpOverTcpPort != -1) {
@@ -335,37 +414,41 @@ public class WebSocksProxyServer {
         // init the proxy server
         RedirectBaseInfo redirectBaseInfo = new RedirectBaseInfo(ssl ? "https" : "http", domain, port);
         WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
-        ConnectorGen<WebSocksProxyContext> connGen = new ConnectorGen<>() {
-            @Override
-            public Type type() {
-                return Type.handler;
-            }
-
-            @Override
-            public ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> handler() {
-                return webSocksProtocolHandler;
-            }
-
-            @Override
-            public Connector genConnector(Connection accepted, Hint hint) {
-                return null; // will not be called because type is `handler`
-            }
-        };
+        ConnectorGen<WebSocksProxyContext> connGen = new WebSocksConnGen(webSocksProtocolHandler);
+        ConnectorGen<WebSocksProxyContext> noSSLConnGen;
+        if (ssl) {
+            var noSSLWebSocksProtocolHandler = new WebSocksProtocolHandler(auth, null, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
+            noSSLConnGen = new WebSocksConnGen(noSSLWebSocksProtocolHandler);
+        } else {
+            noSSLConnGen = connGen;
+        }
         for (ServerSock server : servers) {
             NetEventLoopProvider loopProvider;
-            if (server.channel instanceof VirtualFD) {
-                loopProvider = v -> netLoopForKcp;
+            NetEventLoop acceptorLoop;
+
+            // FIXME: ugly check
+            boolean isQuic = server.channel instanceof QuicListenerServerSocketFD;
+            boolean isKCP = !isQuic && server.channel instanceof VirtualFD;
+
+            if (isQuic) {
+                // must use the msquic event loop for vproxy fds
+                acceptorLoop = worker.next();
+                loopProvider = worker::next;
+            } else if (isKCP) {
+                acceptorLoop = acceptorEventLoop;
+                loopProvider = v -> acceptorEventLoop;
             } else {
+                acceptorLoop = acceptorEventLoop;
                 loopProvider = worker::next;
             }
             Proxy proxy = new Proxy(
                 new ProxyNetConfig()
-                    .setAcceptLoop(netLoopForKcp)
+                    .setAcceptLoop(acceptorLoop)
                     .setInBufferSize(24576)
                     .setOutBufferSize(24576)
                     .setHandleLoopProvider(loopProvider)
                     .setServer(server)
-                    .setConnGen(connGen),
+                    .setConnGen(isQuic ? noSSLConnGen : connGen),
                 s -> {
                     // do nothing, won't happen
                     // when terminating, user should simply kill this process and won't close server
@@ -385,11 +468,32 @@ public class WebSocksProxyServer {
         if (redirectPort != -1) {
             Logger.alert("redirect server started on " + redirectPort);
         }
+        if (useQuic) {
+            Logger.alert("quic server started on " + port);
+        }
         if (useKcp) {
             Logger.alert("kcp server started on " + port);
         }
         if (udpOverTcpPort != -1) {
             Logger.alert("uot kcp server started on " + udpOverTcpPort);
+        }
+    }
+
+    private record WebSocksConnGen(WebSocksProtocolHandler webSocksProtocolHandler)
+        implements ConnectorGen<WebSocksProxyContext> {
+        @Override
+        public Type type() {
+            return Type.handler;
+        }
+
+        @Override
+        public ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> handler() {
+            return webSocksProtocolHandler;
+        }
+
+        @Override
+        public Connector genConnector(Connection accepted, Hint hint) {
+            return null; // will not be called because type is `handler`
         }
     }
 }

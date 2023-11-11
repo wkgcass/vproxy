@@ -104,6 +104,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return null;
             }
             SharedData shared = (SharedData) connector.getData(); /*sharedData, see ConfigProcessor*/
+            if (shared.svr.useQuic()) {
+                return null; // no need to pool for quic connections
+            }
             ConnectableConnection conn;
             try {
                 if (shared.svr.useSSL()) {
@@ -512,9 +515,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return ConnectableConnection.createUDP(connector.remote, new ConnectionOpts(),
                     RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384),
                     loop, fds);
+            } else if (sharedData.svr.useQuic()) {
+                return connector.connect(
+                    WebSocksUtils.newConnectionOpts().setFDs(sharedData.quicFDs),
+                    RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
             } else {
                 return connector.connect(
-                    WebSocksUtils.getConnectionOpts(),
+                    WebSocksUtils.newConnectionOpts(),
                     RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
             }
         }
@@ -568,7 +575,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     new ConnectionOpts(), pair.left, pair.right,
                     loop, fds);
             } else {
-                return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);
+                return connector.connect(WebSocksUtils.newConnectionOpts(), pair.left, pair.right);
             }
         }
 

@@ -12,64 +12,98 @@ import java.util.Enumeration;
 
 public abstract class IP implements ToByteArray {
     public static IP from(InetAddress ip) {
-        return from(ip.getAddress());
+        return from(null, ip);
+    }
+
+    public static IP from(String hostname, InetAddress ip) {
+        return from(hostname, ip.getAddress());
     }
 
     public static IP from(byte[] arr) {
+        return from(null, arr);
+    }
+
+    public static IP from(String hostname, byte[] arr) {
         if (arr.length == 4) {
-            return new IPv4(arr);
+            return new IPv4(hostname, arr);
         } else if (arr.length == 16) {
-            return new IPv6(arr);
+            return new IPv6(hostname, arr);
         } else {
             throw new IllegalArgumentException("unknown ip address");
         }
     }
 
     public static IP from(String ip) {
+        return from(null, ip);
+    }
+
+    public static IP from(String hostname, String ip) {
         byte[] bytes = parseIpString(ip);
         if (bytes == null) {
             throw new IllegalArgumentException("input is not a valid ip string");
         }
-        return from(bytes);
+        return from(hostname, bytes);
     }
 
     public static IP blockResolve(String hostOrIp) {
-        return from(blockParseAddress(hostOrIp));
+        if (isIpLiteral(hostOrIp)) {
+            return from(blockParseAddress(hostOrIp));
+        } else {
+            return from(hostOrIp, blockParseAddress(hostOrIp));
+        }
     }
 
     public static IPv4 fromIPv4(byte[] bytes) {
+        return fromIPv4(null, bytes);
+    }
+
+    public static IPv4 fromIPv4(String hostname, byte[] bytes) {
         if (bytes.length != 4) {
             throw new IllegalArgumentException("input is not a valid ipv4 address");
         }
-        return new IPv4(bytes);
+        return new IPv4(hostname, bytes);
     }
 
     public static IPv4 fromIPv4(String ip) {
+        return fromIPv4(null, ip);
+    }
+
+    public static IPv4 fromIPv4(String hostname, String ip) {
         byte[] bytes = parseIpv4String(ip);
         if (bytes == null) {
             throw new IllegalArgumentException("input is not a valid ipv4 string");
         }
-        return fromIPv4(bytes);
+        return fromIPv4(hostname, bytes);
     }
 
     public static IPv6 fromIPv6(byte[] bytes) {
+        return fromIPv6(null, bytes);
+    }
+
+    public static IPv6 fromIPv6(String hostname, byte[] bytes) {
         if (bytes.length != 16) {
             throw new IllegalArgumentException("input is not a valid ipv6 address");
         }
-        return new IPv6(bytes);
+        return new IPv6(hostname, bytes);
     }
 
     public static IPv6 fromIPv6(String ip) {
+        return fromIPv6(null, ip);
+    }
+
+    public static IPv6 fromIPv6(String hostname, String ip) {
         byte[] bytes = parseIpv6String(ip);
         if (bytes == null) {
             throw new IllegalArgumentException("input is not a valid ipv6 string");
         }
-        return fromIPv6(bytes);
+        return fromIPv6(hostname, bytes);
     }
 
+    public final String hostname;
     public final ByteArray bytes;
 
-    IP(ByteArray bytes) {
+    IP(String hostname, ByteArray bytes) {
+        this.hostname = hostname;
         this.bytes = bytes.unmodifiable();
     }
 
@@ -96,6 +130,10 @@ public abstract class IP implements ToByteArray {
         }
     }
 
+    public String getHostName() {
+        return hostname;
+    }
+
     public byte[] getAddress() {
         return bytes.toJavaArray();
     }
@@ -114,7 +152,7 @@ public abstract class IP implements ToByteArray {
 
     @Override
     public String toString() {
-        return "/" + formatToIPString(); // compatible with java InetAddress
+        return (hostname == null ? "" : hostname) + "/" + formatToIPString(); // compatible with java InetAddress
     }
 
     @Override
