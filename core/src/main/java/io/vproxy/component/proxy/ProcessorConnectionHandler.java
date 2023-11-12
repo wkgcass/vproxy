@@ -831,7 +831,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         // get connector
         Connector connector = config.connGen.genConnector(frontendConnection, hint);
         if (connector == null) {
-            Logger.info(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
+            Logger.error(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
             return null;
         }
         if (connector.loop() != null) {

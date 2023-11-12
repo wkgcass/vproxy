@@ -80,7 +80,7 @@ public class Proxy {
             // maybe user think that the backend is not working, or the source ip is forbidden
             // any way, the user refuse to provide a new connection
             if (connector == null) {
-                Logger.info(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
+                Logger.error(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
                 // close the active connection
                 utilCloseConnectionAndReleaseBuffers(connection);
                 return;
