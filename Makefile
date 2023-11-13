@@ -17,12 +17,9 @@ clean-jar:
 
 .PHONY: clean
 clean: clean-jar
-	rm -f ./base/src/main/c/libvfdposix.dylib
-	rm -f ./base/src/main/c/libvfdposix.so
-	rm -f ./base/src/main/c/libvpxdp.so
-	rm -f ./base/src/main/c/vfdwindows.dll
-	rm -f ./base/src/main/c/libmsquic-java.dylib
-	rm -f ./base/src/main/c/libmsquic-java.so
+	rm -f ./base/src/main/c/*.dylib
+	rm -f ./base/src/main/c/*.so
+	rm -f ./base/src/main/c/*.dll
 	cd ./base/src/main/c/xdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
@@ -32,12 +29,10 @@ clean: clean-jar
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
 	rm -rf ./io
-	rm -f ./submodules/msquic-java/core/src/main/c/libmsquic-java.dylib
-	rm -f ./submodules/msquic-java/core/src/main/c/libmsquic-java.so
-	rm -f ./submodules/msquic-java/core/src/main/c/msquic-java.dll
 	rm -rf ./submodules/msquic/build
-	rm -rf ./libmsquic.so
-	rm -rf ./libmsquic.dylib
+	rm -f ./*.so
+	rm -f ./*.dylib
+	rm -f ./*.dll
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
@@ -45,9 +40,7 @@ clean-docker-plugin-rootfs:
 
 .PHONY: init
 init:
-	git submodule update --init --recursive
-	cd submodules/ && git clone https://github.com/wkgcass/msquic --branch=2.2.4-modified --depth=1 || exit 0
-	cd submodules/msquic && git submodule update --init --recursive --recommend-shallow
+	./misc/init.sh
 
 .PHONY: all
 all: clean jar-with-lib jlink image docker docker-network-plugin
@@ -77,11 +70,20 @@ _add_linux_so_to_zip:
 		./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
 	rm -r ./io
 
+.PHONY: native
+ifeq ($(OS),Linux)
+native: vfdposix vpxdp quic
+else ifeq ($(OS),Darwin)
+native: vfdposix-linux vpxdp-linux quic-all vfdposix
+else
+native: vfdwindows
+endif
+
 .PHONY: jar-with-lib
 ifeq ($(OS),Linux)
-jar-with-lib: clean jar vfdposix vpxdp quic _add_linux_so_to_zip
+jar-with-lib: clean jar native _add_linux_so_to_zip
 else
-jar-with-lib: clean jar vfdposix-linux vpxdp-linux quic-all vfdposix _add_linux_so_to_zip
+jar-with-lib: clean jar native _add_linux_so_to_zip
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
 	cp ./libmsquic.dylib ./io/vproxy/libmsquic-$(ARCH).dylib
