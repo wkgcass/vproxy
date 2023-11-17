@@ -21,6 +21,8 @@ public class OS {
         // fix java returned arch
         if (arch0.equals("amd64")) {
             arch0 = "x86_64";
+        } else if (arch0.equals("arm64")) {
+            arch0 = "aarch64";
         }
         arch = arch0;
 
