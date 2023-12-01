@@ -1,10 +1,10 @@
 package io.vproxy.base.util.log;
 
 import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Utils;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Date;
 
 public class LogRecord {
     public final String threadName; // nullable
@@ -62,7 +62,7 @@ public class LogRecord {
         if (withColor) {
             sb.append(level.color);
         }
-        sb.append(timeString(ts));
+        sb.append("[").append(Utils.formatTimestampForLogging(ts)).append("]");
         sb.append("[").append(level).append("] - ");
         if (threadName != null) {
             sb.append(threadName);
@@ -79,28 +79,6 @@ public class LogRecord {
         }
         sb.append(content);
         return sb.toString();
-    }
-
-    private static String fillToTen(int n) {
-        return (n < 10 ? "0" : "") + n;
-    }
-
-    private static String fillToHundred(int n) {
-        return (n < 10 ? "00" : (n < 100 ? "0" : "")) + n;
-    }
-
-    @SuppressWarnings("deprecation")
-    private static String timeString(long cur) {
-        Date d = new Date(cur);
-        return "[" +
-            (d.getYear() + 1900) + "-" +
-            fillToTen(d.getMonth() + 1) + "-" +
-            fillToTen(d.getDate()) + " " +
-            fillToTen(d.getHours()) + ":" +
-            fillToTen(d.getMinutes()) + ":" +
-            fillToTen(d.getSeconds()) + "." +
-            fillToHundred((int) (cur % 1000)) +
-            "]";
     }
 
     private String exToString(boolean stackTraceOn) {

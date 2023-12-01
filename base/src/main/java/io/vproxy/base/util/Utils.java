@@ -1128,4 +1128,25 @@ public class Utils {
     public static String getCurrentTimestampForFileName() {
         return DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss").format(LocalDateTime.now());
     }
+
+    public static String getCurrentTimestampForLogging(long ts) {
+        Date d = new Date(ts);
+        return "" +
+               (d.getYear() + 1900) + "-" +
+               fillToTen(d.getMonth() + 1) + "-" +
+               fillToTen(d.getDate()) + " " +
+               fillToTen(d.getHours()) + ":" +
+               fillToTen(d.getMinutes()) + ":" +
+               fillToTen(d.getSeconds()) + "." +
+               fillToHundred((int) (ts % 1000)) +
+               "";
+    }
+
+    private static String fillToTen(int n) {
+        return (n < 10 ? "0" : "") + n;
+    }
+
+    private static String fillToHundred(int n) {
+        return (n < 10 ? "00" : (n < 100 ? "0" : "")) + n;
+    }
 }
