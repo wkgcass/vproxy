@@ -1,20 +1,18 @@
 package io.vproxy.base.util.callback;
 
+import java.util.concurrent.CountDownLatch;
+
 public class BlockCallback<T, E extends Throwable> extends Callback<T, E> {
     private final Object lock = this; // lock for synchronizing t/ex/done/thread
     private volatile T t;
     private volatile E ex;
-    private volatile boolean done = false;
-    private volatile Thread waitThread;
+    private final CountDownLatch done = new CountDownLatch(1);
 
     @Override
     protected void onSucceeded(T value) {
         synchronized (lock) {
             t = value;
-            done = true;
-            if (waitThread != null) {
-                waitThread.interrupt();
-            }
+            done.countDown();
         }
     }
 
@@ -22,10 +20,7 @@ public class BlockCallback<T, E extends Throwable> extends Callback<T, E> {
     protected void onFailed(E err) {
         synchronized (lock) {
             ex = err;
-            done = true;
-            if (waitThread != null) {
-                waitThread.interrupt();
-            }
+            done.countDown();
         }
     }
 
@@ -36,17 +31,16 @@ public class BlockCallback<T, E extends Throwable> extends Callback<T, E> {
     }
 
     public T block() throws E {
-        if (done)
+        if (done.getCount() == 0)
             return doReturn();
         synchronized (lock) {
-            if (done)
+            if (done.getCount() == 0)
                 return doReturn();
-            waitThread = Thread.currentThread();
         }
         // wait for it to finish
-        while (!done) {
+        while (done.getCount() > 0) {
             try {
-                Thread.sleep(1048576 /*wait for a long time, we don't care how long*/);
+                done.await();
             } catch (InterruptedException ignore) {
                 // will be interrupted when done
                 // so ignore error

@@ -14,14 +14,14 @@ import io.vproxy.vpacket.Ipv4Packet;
 import io.vproxy.vpacket.Ipv6Packet;
 
 import java.io.*;
-import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
 import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
@@ -1123,5 +1123,9 @@ public class Utils {
             throw new IllegalArgumentException("mask for ipv4 should be between [0,32], but got " + maskNumber);
         }
         return maskValues[maskNumber];
+    }
+
+    public static String getCurrentTimestampForFileName() {
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss").format(LocalDateTime.now());
     }
 }
