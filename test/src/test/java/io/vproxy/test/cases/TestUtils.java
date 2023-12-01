@@ -239,10 +239,14 @@ public class TestUtils {
         }
     }
 
+    private String getCurrentTimestampForFileName() {
+        return Utils.formatTimestampForFileName(System.currentTimeMillis());
+    }
+
     @Test
     public void simpleMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-simpleMappedByteBufferLogger");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 1048576, 65536);
         logger.writeAndBlock("hello world\n");
@@ -262,7 +266,7 @@ public class TestUtils {
     @Test
     public void simpleMappedByteBufferLoggerWriteOrDrop() throws Throwable {
         tempPath = Files.createTempDirectory("test-simpleMappedByteBufferLoggerWriteOrDrop");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 1048576, 65536);
         var res = logger.writeOrDrop("hello world\n");
@@ -282,7 +286,7 @@ public class TestUtils {
     @Test
     public void splitMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-splitMappedByteBufferLogger");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 0);
         logger.writeAndBlock("hello world\n");
@@ -306,7 +310,7 @@ public class TestUtils {
     @Test
     public void splitMappedByteBufferLoggerWriteOrDrop() throws Throwable {
         tempPath = Files.createTempDirectory("test-splitMappedByteBufferLoggerWriteOrDrop");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 0);
         var res = logger.writeOrDrop("hello world\n");
@@ -334,7 +338,7 @@ public class TestUtils {
     @Test
     public void createMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-createMappedByteBufferLogger");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 1);
         logger.writeAndBlock("1234567");
@@ -363,7 +367,7 @@ public class TestUtils {
     @Test
     public void createMappedByteBufferLoggerWriteOrDrop() throws Throwable {
         tempPath = Files.createTempDirectory("test-createMappedByteBufferLoggerWriteOrDrop");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 1);
         var res = logger.writeOrDrop("1234567");
@@ -401,7 +405,7 @@ public class TestUtils {
     @Test
     public void randomTestMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-randomTestMappedByteBufferLogger");
-        prefix = "test-" + Utils.getCurrentTimestampForFileName() + "-";
+        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 16384, 4096);
 
         var expected = new StringBuilder();

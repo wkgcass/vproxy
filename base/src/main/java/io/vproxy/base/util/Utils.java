@@ -1125,11 +1125,11 @@ public class Utils {
         return maskValues[maskNumber];
     }
 
-    public static String getCurrentTimestampForFileName() {
+    public static String formatTimestampForFileName(long ts) {
         return DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss").format(LocalDateTime.now());
     }
 
-    public static String getCurrentTimestampForLogging(long ts) {
+    public static String formatTimestampForLogging(long ts) {
         Date d = new Date(ts);
         return "" +
                (d.getYear() + 1900) + "-" +
