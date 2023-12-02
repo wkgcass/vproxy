@@ -18,7 +18,7 @@ public class Logger {
     public static final boolean lowLevelNetDebugOn;
 
     public static final LogDispatcher logDispatcher = new LogDispatcher();
-    private static final STDOutLogHandler stdoutLogHandler;
+    public static final STDOutLogHandler stdoutLogHandler;
     private static DatagramFD logChannel;
 
     static {
