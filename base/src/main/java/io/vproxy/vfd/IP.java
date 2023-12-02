@@ -1,16 +1,25 @@
 package io.vproxy.vfd;
 
-import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.dns.DnsServerListGetter;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.callback.BlockCallback;
-import io.vproxy.base.util.callback.Callback;
+import io.vproxy.vpacket.dns.*;
+import io.vproxy.vpacket.dns.rdata.A;
+import io.vproxy.vpacket.dns.rdata.AAAA;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class IP implements ToByteArray {
+    public static IP from(String hostname, IP ip) {
+        return from(hostname, ip.getAddress());
+    }
+
     public static IP from(InetAddress ip) {
         return from(null, ip);
     }
@@ -43,14 +52,6 @@ public abstract class IP implements ToByteArray {
             throw new IllegalArgumentException("input is not a valid ip string");
         }
         return from(hostname, bytes);
-    }
-
-    public static IP blockResolve(String hostOrIp) {
-        if (isIpLiteral(hostOrIp)) {
-            return from(blockParseAddress(hostOrIp));
-        } else {
-            return from(hostOrIp, blockParseAddress(hostOrIp));
-        }
     }
 
     public static IPv4 fromIPv4(byte[] bytes) {
@@ -353,9 +354,9 @@ public abstract class IP implements ToByteArray {
         return isIpv4(s) || isIpv6(s);
     }
 
-    public static IPPort blockParseL4Addr(String l4addr) throws Exception {
+    public static IPPort blockParseL4Addr(String l4addr) throws IllegalArgumentException {
         if (!l4addr.contains(":")) {
-            throw new Exception("missing port");
+            throw new IllegalArgumentException("missing port");
         }
         String ip = l4addr.substring(0, l4addr.lastIndexOf(":"));
         String portStr = l4addr.substring(l4addr.lastIndexOf(":") + 1);
@@ -363,20 +364,12 @@ public abstract class IP implements ToByteArray {
         try {
             port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
-            throw new Exception("invalid port number");
+            throw new IllegalArgumentException("invalid port number");
         }
         if (port < 0 || port > 65535) {
-            throw new Exception("invalid port number: out of range");
+            throw new IllegalArgumentException("invalid port number: out of range");
         }
-
-        byte[] ipBytes = parseIpString(ip);
-        if (ipBytes != null) {
-            return new IPPort(IP.from(ipBytes), port);
-        }
-        // try hostname
-        var cb = new BlockCallback<IP, IOException>();
-        Resolver.getDefault().resolve(ip, cb);
-        return new IPPort(cb.block(), port);
+        return new IPPort(blockResolve(ip), port);
     }
 
     public static IP getInetAddressFromNic(String nicName, IPType ipType) throws SocketException {
@@ -507,24 +500,117 @@ public abstract class IP implements ToByteArray {
         return Utils.positive(ip[0]) + "." + Utils.positive(ip[1]) + "." + Utils.positive(ip[2]) + "." + Utils.positive(ip[3]);
     }
 
-    public static void parseAddress(String address, Callback<byte[], IllegalArgumentException> cb) {
-        Resolver.getDefault().resolve(address, new Callback<>() {
-            @Override
-            protected void onSucceeded(IP value) {
-                cb.succeeded(value.getAddress());
+    public static IP blockResolve(String hostOrIp) throws IllegalArgumentException {
+        var res = blockResolve(hostOrIp, DNSType.A);
+        if (res.isEmpty()) {
+            res = blockResolve(hostOrIp, DNSType.AAAA);
+            if (res.isEmpty()) {
+                throw new IllegalArgumentException("no ip available for " + hostOrIp);
             }
-
-            @Override
-            protected void onFailed(UnknownHostException err) {
-                cb.failed(new IllegalArgumentException("unknown ip " + address));
-            }
-        });
+        }
+        // otherwise return the first one
+        return res.get(0);
     }
 
-    public static byte[] blockParseAddress(String address) throws IllegalArgumentException {
-        BlockCallback<byte[], IllegalArgumentException> cb = new BlockCallback<>();
-        parseAddress(address, cb);
-        return cb.block();
+    public static List<IP> blockResolve(String address, DNSType dnsType) throws IllegalArgumentException {
+        return blockResolve(address, dnsType, null);
+    }
+
+    public static List<IP> blockResolve(String host, DNSType dnsType, List<IPPort> dnsServerList) throws IllegalArgumentException {
+        if (IP.isIpLiteral(host)) {
+            return List.of(IP.from(host));
+        }
+
+        if (dnsServerList == null || dnsServerList.isEmpty()) {
+            var getters = DnsServerListGetter.allGettersNoDefault();
+            for (var getter : getters) {
+                var cb = new BlockCallback<List<IPPort>, Throwable>();
+                getter.get(cb);
+                try {
+                    dnsServerList = cb.block();
+                } catch (Throwable ignore) {
+                }
+                if (dnsServerList != null && !dnsServerList.isEmpty()) {
+                    break;
+                }
+            }
+        }
+
+        if (dnsServerList == null || dnsServerList.isEmpty()) {
+            assert Logger.lowLevelDebug("no dns server available");
+            try {
+                var inet = InetAddress.getByName(host);
+                return List.of(IP.from(host, inet));
+            } catch (UnknownHostException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }
+
+        var rcvBuf = new byte[1600];
+        var ret = new ArrayList<IP>();
+        for (var ipport : dnsServerList) {
+            try (var sock = new DatagramSocket()) {
+                sock.setSoTimeout(2_000);
+                sock.connect(ipport.toInetSocketAddress());
+
+                var id = ThreadLocalRandom.current().nextInt(1000);
+                var dnsPacket = new DNSPacket();
+                dnsPacket.id = id;
+                dnsPacket.opcode = DNSPacket.Opcode.QUERY;
+                dnsPacket.rd = true;
+                dnsPacket.rcode = DNSPacket.RCode.NoError;
+                dnsPacket.questions = new ArrayList<>();
+
+                var q = new DNSQuestion();
+                dnsPacket.questions.add(q);
+
+                q.qname = host;
+                q.qtype = dnsType;
+                q.qclass = DNSClass.IN;
+
+                var bytes = dnsPacket.toByteArray().toJavaArray();
+                var d = new DatagramPacket(bytes, bytes.length);
+                sock.send(d);
+
+                d = new DatagramPacket(rcvBuf, rcvBuf.length);
+                sock.receive(d);
+                var packets = Formatter.parsePackets(ByteArray.from(d.getData()).sub(d.getOffset(), d.getLength()));
+                for (var p : packets) {
+                    if (!p.isResponse) {
+                        assert Logger.lowLevelDebug("is not response");
+                        continue;
+                    }
+                    if (p.id != id) {
+                        assert Logger.lowLevelDebug("id mismatch");
+                        continue;
+                    }
+                    if (p.answers == null) {
+                        assert Logger.lowLevelDebug("no answers section");
+                        continue;
+                    }
+                    for (var ans : p.answers) {
+                        if (ans.rdata == null) {
+                            assert Logger.lowLevelDebug("rdata is null");
+                            continue;
+                        }
+                        if (ans.rdata instanceof A) {
+                            var a = (A) ans.rdata;
+                            ret.add(IP.from(host, a.address));
+                        } else if (ans.rdata instanceof AAAA) {
+                            var aaaa = (AAAA) ans.rdata;
+                            ret.add(IP.from(host, aaaa.address));
+                        } else {
+                            assert Logger.lowLevelDebug("rdata not A nor AAAA");
+                        }
+                    }
+                }
+            } catch (IOException | InvalidDNSPacketException e) {
+                assert Logger.lowLevelDebug("failed to run dns resolve for " + host + ": " + e);
+                continue;
+            }
+            break;
+        }
+        return ret;
     }
 
     public static int ipv4Bytes2Int(byte[] host) {

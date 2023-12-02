@@ -10,6 +10,7 @@ import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.connection.ServerSock;
 import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.component.app.TcpLB;
@@ -649,7 +650,8 @@ public class TestTcpLB {
 
         // deny lbPort
         SecurityGroupRule secgr0 = new SecurityGroupRule(
-            "secgr0", Network.from(IP.blockParseAddress("127.0.0.1"), Network.parseMask(32)), Protocol.TCP, lbPort, lbPort, false
+            "secgr0", Network.from(IP.blockResolve("127.0.0.1"), ByteArray.from(Network.parseMask(32))),
+            Protocol.TCP, lbPort, lbPort, false
         );
         secg0.addRule(secgr0);
 

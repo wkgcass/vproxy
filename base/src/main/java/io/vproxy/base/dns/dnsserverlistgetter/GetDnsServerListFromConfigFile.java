@@ -49,7 +49,7 @@ public class GetDnsServerListFromConfigFile implements DnsServerListGetter {
     }
 
     private static File getNameServerFile() {
-        // try ~/resolv.conf for customized resolve configuration
+        // try resolv.conf for customized resolve configuration
         File f = new File(Config.workingDirectoryFile("resolv.conf"));
         if (f.exists() && f.isFile()) {
             return f;

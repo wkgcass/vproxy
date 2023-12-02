@@ -1,10 +1,6 @@
 package io.vproxy.base.dns;
 
-import io.vproxy.base.Config;
 import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListDefault;
-import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListFromConfigFile;
-import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListFromDhcp;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
@@ -48,11 +44,7 @@ public abstract class AbstractResolver implements Resolver {
     private static final boolean[] getDnsServerListLastResults; // results[index+1] <--> getters[index]
 
     static {
-        if (Config.dhcpGetDnsListEnabled) {
-            dnsServerListGetters = Arrays.asList(new GetDnsServerListFromDhcp(), new GetDnsServerListFromConfigFile(), new GetDnsServerListDefault());
-        } else {
-            dnsServerListGetters = Arrays.asList(new GetDnsServerListFromConfigFile(), new GetDnsServerListDefault());
-        }
+        dnsServerListGetters = DnsServerListGetter.allGetters();
         getDnsServerListLastResults = new boolean[dnsServerListGetters.size() + 1];
         Arrays.fill(getDnsServerListLastResults, true);
     }

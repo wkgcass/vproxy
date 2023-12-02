@@ -19,8 +19,7 @@ import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class TestResolver {
     private SelectorEventLoop loop;
@@ -177,5 +176,17 @@ public class TestResolver {
         assertEquals("127.0.0.1", address.formatToIPString());
 
         assertEquals("should still be 1 cache because already cached", 1, resolver.cacheCount());
+    }
+
+    @Test
+    public void ipBlockResolve() {
+        var ip = IP.blockResolve("www.bing.com");
+        assertEquals("www.bing.com", ip.hostname);
+        assertTrue(ip instanceof IPv4);
+
+        var ips = IP.blockResolve("ipv6.taobao.com", DNSType.ANY);
+        assertFalse(ips.isEmpty());
+        assertEquals("ipv6.taobao.com", ips.getFirst().hostname);
+        assertTrue(ips.getFirst() instanceof IPv6);
     }
 }

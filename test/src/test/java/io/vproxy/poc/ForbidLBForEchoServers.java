@@ -7,6 +7,7 @@ import io.vproxy.base.component.svrgroup.Method;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
@@ -73,7 +74,7 @@ public class ForbidLBForEchoServers {
         Thread.sleep(10000);
         System.out.println("\033[1;30m---------------------allow port 18080 now------------------\033[0m");
         SecurityGroupRule rule = new SecurityGroupRule("allow18080",
-            Network.from(IP.blockParseAddress("127.0.0.1"), Network.parseMask(32)),
+            Network.from(IP.blockResolve("127.0.0.1"), ByteArray.from(Network.parseMask(32))),
             Protocol.TCP, 18080, 18080, true);
         secg.addRule(rule);
         Thread.sleep(10000);

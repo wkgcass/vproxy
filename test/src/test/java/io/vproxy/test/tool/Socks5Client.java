@@ -36,7 +36,7 @@ public class Socks5Client {
         toWrite[3] = addressType.code;
         int nextIdx;
         if (addressType == AddressType.ipv4) {
-            byte[] ipv4 = IP.blockParseAddress(addr);
+            byte[] ipv4 = IP.blockResolve(addr).getAddress();
             toWrite[4] = ipv4[0];
             toWrite[5] = ipv4[1];
             toWrite[6] = ipv4[2];
@@ -49,7 +49,7 @@ public class Socks5Client {
             nextIdx = 5 + addrBytes.length;
         } else {
             assert addressType == AddressType.ipv6;
-            byte[] ipv6 = IP.blockParseAddress(addr);
+            byte[] ipv6 = IP.blockResolve(addr).getAddress();
             toWrite[4] = ipv6[0];
             toWrite[5] = ipv6[1];
             toWrite[6] = ipv6[2];
