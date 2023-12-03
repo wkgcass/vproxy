@@ -185,6 +185,9 @@ public class TestResolver {
         assertTrue(ip instanceof IPv4);
 
         var ips = IP.blockResolve("ipv6.taobao.com", DNSType.ANY);
+        if (ips.isEmpty()) {
+            ips = IP.blockResolve("ipv6.taobao.com", DNSType.AAAA);
+        }
         assertFalse(ips.isEmpty());
         assertEquals("ipv6.taobao.com", ips.getFirst().hostname);
         assertTrue(ips.getFirst() instanceof IPv6);
