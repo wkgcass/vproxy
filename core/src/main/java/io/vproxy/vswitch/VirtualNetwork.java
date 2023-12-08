@@ -7,8 +7,10 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.XException;
+import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.*;
 import io.vproxy.vpacket.conntrack.Conntrack;
+import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import io.vproxy.vswitch.stack.conntrack.EnhancedConntrack;
 import io.vproxy.vswitch.stack.fd.VSwitchFDContext;
@@ -18,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class VirtualNetwork {
+public class VirtualNetwork implements WithUserData {
     public final int vni;
     public final Network v4network;
     public final Network v6network;
@@ -87,6 +89,34 @@ public class VirtualNetwork {
     private static final int IP_LOCAL_PORT_MIN = 30720;
     private static final int IP_LOCAL_PORT_MAX = 32768;
 
+    public IPPort findFreeTcpIPPort(IPPort remote) {
+        for (var ip : ips.allRoutableIps()) {
+            if (remote.getAddress() instanceof IPv4) {
+                if (!(ip instanceof IPv4)) continue;
+            } else {
+                if (!(ip instanceof IPv6)) continue;
+            }
+            IPPort ipport = findFreeTcpIPPort(ip);
+            if (ipport != null) {
+                return ipport;
+            }
+        }
+        return null;
+    }
+
+    private IPPort findFreeTcpIPPort(IP ip) {
+        for (int i = 0; i < 100; ++i) { // randomly retry 100 times
+            int port = ThreadLocalRandom.current().nextInt(IP_LOCAL_PORT_MAX - IP_LOCAL_PORT_MIN) + IP_LOCAL_PORT_MIN;
+            var ipport = new IPPort(ip, port);
+            TcpListenEntry entry = conntrack.lookupTcpListen(ipport);
+            if (entry == null) {
+                return ipport;
+            }
+        }
+        assert Logger.lowLevelDebug("unable to allocate a free port for udp from " + ip);
+        return null;
+    }
+
     public IPPort findFreeUdpIPPort(IPPort remote) {
         for (var ip : ips.allRoutableIps()) {
             if (remote.getAddress() instanceof IPv4) {
@@ -145,6 +175,7 @@ public class VirtualNetwork {
 
     private Map<Object, Object> userdata;
 
+    @Override
     public Object getUserData(Object key) {
         if (userdata == null) {
             return null;
@@ -152,6 +183,7 @@ public class VirtualNetwork {
         return userdata.get(key);
     }
 
+    @Override
     public Object putUserData(Object key, Object value) {
         if (userdata == null) {
             userdata = new HashMap<>();
@@ -159,6 +191,7 @@ public class VirtualNetwork {
         return userdata.put(key, value);
     }
 
+    @Override
     public Object removeUserData(Object key) {
         if (userdata == null) {
             return null;

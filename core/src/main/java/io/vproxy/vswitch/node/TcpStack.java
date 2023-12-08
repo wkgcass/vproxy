@@ -81,9 +81,21 @@ public class TcpStack extends Node {
         }
     }
 
+    private TcpPacket buildSyn(TcpEntry tcp) {
+        TcpPacket pkt = TcpUtils.buildCommonTcpResponse(tcp);
+        pkt.setFlags(Consts.TCP_FLAGS_SYN);
+        buildSynCommon(tcp, pkt);
+        return pkt;
+    }
+
     private TcpPacket buildSynAck(PacketBuffer pkb) {
         TcpPacket respondTcp = TcpUtils.buildCommonTcpResponse(pkb.tcp);
         respondTcp.setFlags(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK);
+        buildSynCommon(pkb.tcp, respondTcp);
+        return respondTcp;
+    }
+
+    private void buildSynCommon(TcpEntry tcp, TcpPacket respondTcp) {
         respondTcp.setWindow(65535);
         {
             var optMss = new TcpPacket.TcpOption(respondTcp);
@@ -92,7 +104,7 @@ public class TcpStack extends Node {
             respondTcp.getOptions().add(optMss);
         }
         {
-            int scale = pkb.tcp.receivingQueue.getWindowScale();
+            int scale = tcp.receivingQueue.getWindowScale();
             int cnt = 0;
             while (scale != 1) {
                 scale /= 2;
@@ -105,7 +117,6 @@ public class TcpStack extends Node {
                 respondTcp.getOptions().add(optWindowScale);
             }
         }
-        return respondTcp;
     }
 
     private HandleResult handleTcpClosed(PacketBuffer pkb) {
@@ -128,6 +139,19 @@ public class TcpStack extends Node {
         }
 
         pkb.tcp.setState(TcpState.SYN_RECEIVED);
+        initTcp(pkb.tcp, pkb.tcpPkt);
+
+        // SYN-ACK
+        TcpPacket respondTcp = buildSynAck(pkb);
+        AbstractIpPacket respondIp = TcpUtils.buildIpResponse(pkb.tcp, respondTcp);
+
+        pkb.tcp.sendingQueue.incAllSeq();
+
+        pkb.replacePacket(respondIp);
+        return _returnnext(pkb, l4output);
+    }
+
+    private void initTcp(TcpEntry tcp, TcpPacket tcpPkt) {
         // get tcp options from the syn
         int mss = TcpEntry.SND_DEFAULT_MSS;
         int windowScale = 1;
@@ -142,20 +166,33 @@ public class TcpStack extends Node {
                     break;
             }
         }
-        pkb.tcp.sendingQueue.init(tcpPkt.getWindow(), mss, windowScale);
-
-        // SYN-ACK
-        TcpPacket respondTcp = buildSynAck(pkb);
-        AbstractIpPacket respondIp = TcpUtils.buildIpResponse(pkb.tcp, respondTcp);
-
-        pkb.tcp.sendingQueue.incAllSeq();
-
-        pkb.replacePacket(respondIp);
-        return _returnnext(pkb, l4output);
+        tcp.sendingQueue.init(tcpPkt.getWindow(), mss, windowScale);
     }
 
-    private HandleResult handleTcpSynSent(@SuppressWarnings("unused") PacketBuffer pkb) {
-        Logger.shouldNotHappen("unsupported yet: syn-sent state");
+    private HandleResult handleTcpSynSent(PacketBuffer pkb) {
+        var tcpPkt = pkb.tcpPkt;
+        if (tcpPkt.isSyn() && tcpPkt.isAck()) {
+            // is syn-ack packet
+            assert Logger.lowLevelDebug("syn-ack received");
+            if (tcpPkt.getAckNum() == pkb.tcp.sendingQueue.getAckSeq()) {
+                assert Logger.lowLevelDebug("seq matches");
+                if (pkb.tcp.retransmissionTimer != null) {
+                    pkb.tcp.retransmissionTimer.cancel();
+                    pkb.tcp.retransmissionTimer = null;
+                }
+                pkb.tcp.receivingQueue.setInitialSeq(tcpPkt.getSeqNum() + 1);
+                initTcp(pkb.tcp, pkb.tcpPkt);
+                connectionEstablishes(pkb);
+                var ack = TcpUtils.buildAckResponse(pkb.tcp);
+                var ipPkt = TcpUtils.buildIpResponse(pkb.tcp, ack);
+                pkb.replacePacket(ipPkt);
+                return _returnnext(pkb, l4output);
+            } else {
+                assert Logger.lowLevelDebug("received packet ack doesn't match sending seq");
+            }
+        } else {
+            assert Logger.lowLevelDebug("received packet is not syn-ack");
+        }
         return _returndrop(pkb);
     }
 
@@ -200,6 +237,9 @@ public class TcpStack extends Node {
         pkb.tcp.setState(TcpState.ESTABLISHED);
         // alert that this connection can be retrieved
         var parent = pkb.tcp.getParent();
+        if (parent == null) {
+            return;
+        }
         parent.synBacklog.remove(pkb.tcp);
         parent.backlog.add(pkb.tcp);
         parent.listenHandler.readable(parent);
@@ -250,6 +290,13 @@ public class TcpStack extends Node {
         assert Logger.lowLevelDebug("handleTcpEstablished");
         if (handleTcpGeneralReturnFalse(pkb)) {
             return _returndrop(pkb);
+        }
+        if (pkb.tcpPkt.isSyn() && pkb.tcpPkt.isAck()) {
+            assert Logger.lowLevelDebug("received syn-ack, probably a retransmission");
+            var respondTcp = TcpUtils.buildAckResponse(pkb.tcp);
+            var respondIp = TcpUtils.buildIpResponse(pkb.tcp, respondTcp);
+            pkb.replacePacket(respondIp);
+            return _returnnext(pkb, l4output);
         }
         var tcpPkt = pkb.tcpPkt;
         if (tcpPkt.isPsh()) {
@@ -405,6 +452,21 @@ public class TcpStack extends Node {
             return;
         }
 
+        assert Logger.lowLevelDebug(STR."current tcp state is \{tcp.getState()}");
+        if (tcp.getState() == TcpState.CLOSED || tcp.getState() == TcpState.SYN_SENT) {
+            transmitTcpSyn(network, tcp, retransmissionCount);
+        } else {
+            transmitTcpPsh(network, tcp, lastBeginSeq, retransmissionCount);
+        }
+    }
+
+    private void transmitTcpSyn(VirtualNetwork network, TcpEntry tcp, int retransmissionCount) {
+        tcp.setState(TcpState.SYN_SENT);
+        sendTcpSyn(network, tcp);
+        setRetransmitTimer(network, tcp, 0, retransmissionCount);
+    }
+
+    private void transmitTcpPsh(VirtualNetwork network, TcpEntry tcp, long lastBeginSeq, int retransmissionCount) {
         List<Segment> segments = tcp.sendingQueue.fetch();
         if (segments.isEmpty()) { // no data to send, check FIN
             if (tcp.sendingQueue.needToSendFin()) {
@@ -428,15 +490,7 @@ public class TcpStack extends Node {
         }
 
         // initiate timer
-        int delay = TcpEntry.RTO_MIN << retransmissionCount;
-        if (delay <= 0 || delay > TcpEntry.RTO_MAX) { // overflow or exceeds maximum
-            delay = TcpEntry.RTO_MAX;
-        }
-        assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
-        final int finalRetransmissionCount = retransmissionCount;
-        tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(delay, () ->
-            transmitTcp(network, tcp, currentBeginSeq, finalRetransmissionCount + 1)
-        );
+        setRetransmitTimer(network, tcp, currentBeginSeq, retransmissionCount);
 
         if (segments.isEmpty()) {
             assert tcp.sendingQueue.needToSendFin();
@@ -446,6 +500,18 @@ public class TcpStack extends Node {
                 sendTcpPsh(network, tcp, s);
             }
         }
+    }
+
+    private void setRetransmitTimer(VirtualNetwork network, TcpEntry tcp, long currentBeginSeq, int retransmissionCount) {
+        int delay = TcpEntry.RTO_MIN << retransmissionCount;
+        if (delay <= 0 || delay > TcpEntry.RTO_MAX) { // overflow or exceeds maximum
+            delay = TcpEntry.RTO_MAX;
+        }
+        assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
+        final int finalRetransmissionCount = retransmissionCount;
+        tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(delay, () ->
+            transmitTcp(network, tcp, currentBeginSeq, finalRetransmissionCount + 1)
+        );
     }
 
     private void afterTransmission(VirtualNetwork network, TcpEntry tcp) {
@@ -471,6 +537,17 @@ public class TcpStack extends Node {
     public void resetTcpConnection(VirtualNetwork network, TcpEntry tcp) {
         VProxyThread.current().newUuidDebugInfo();
         _resetTcpConnection(network, tcp);
+    }
+
+    private void sendTcpSyn(VirtualNetwork network, TcpEntry tcp) {
+        tcp.sendingQueue.decAllSeq();
+        var tcpPkt = buildSyn(tcp);
+        AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
+        tcp.sendingQueue.incAllSeq();
+
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
+        pkb.tcp = tcp;
+        _output(pkb);
     }
 
     private void sendTcpPsh(VirtualNetwork network, TcpEntry tcp, Segment s) {

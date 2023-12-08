@@ -303,7 +303,7 @@ public class TcpPacket extends TransportPacket {
     }
 
     public boolean isPsh() {
-        return (flags & Consts.TCP_FLAGS_PSH) == Consts.TCP_FLAGS_PSH || data.length() > 0;
+        return (flags & Consts.TCP_FLAGS_PSH) == Consts.TCP_FLAGS_PSH || (data != null && data.length() > 0);
     }
 
     public boolean isFin() {
@@ -362,10 +362,33 @@ public class TcpPacket extends TransportPacket {
     @Override
     public String description() {
         return "tcp"
-            + ",flags=" + Integer.toBinaryString(flags)
+            + ",flags=" + formatFlagsDesc(flags)
             + ",tp_src=" + (srcPort == 0 ? "not-parsed-yet" : srcPort)
             + ",tp_dst=" + (dstPort == 0 ? "not-parsed-yet" : dstPort)
             + ",data=" + (data == null ? 0 : data.length());
+    }
+
+    private String formatFlagsDesc(int flags) {
+        var flagList = new ArrayList<String>();
+        if ((flags & Consts.TCP_FLAGS_SYN) != 0) {
+            flagList.add("SYN");
+        }
+        if ((flags & Consts.TCP_FLAGS_PSH) != 0) {
+            flagList.add("PSH");
+        }
+        if ((flags & Consts.TCP_FLAGS_FIN) != 0) {
+            flagList.add("FIN");
+        }
+        if ((flags & Consts.TCP_FLAGS_RST) != 0) {
+            flagList.add("RST");
+        }
+        if ((flags & Consts.TCP_FLAGS_ACK) != 0) {
+            flagList.add("ACK");
+        }
+        if ((flags & Consts.TCP_FLAGS_URG) != 0) {
+            flagList.add("URG");
+        }
+        return String.join(",", flagList) + "(" + Integer.toBinaryString(flags) + ")";
     }
 
     private ByteArray buildCommonPart() {

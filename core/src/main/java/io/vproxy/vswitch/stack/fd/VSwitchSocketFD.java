@@ -33,10 +33,8 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         isWritable = true;
     }
 
-    @SuppressWarnings("unused") // TODO
     public VSwitchSocketFD(VSwitchFDContext ctx) {
         super(ctx);
-        // TODO maybe support the socket as client ?
     }
 
     private void setReadable() {
@@ -78,8 +76,14 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
     }
 
     @Override
-    public void connect(IPPort l4addr) {
-        throw new UnsupportedOperationException("connect() not supported");
+    public void connect(IPPort l4addr) throws IOException {
+        var local = ctx.network.findFreeTcpIPPort(l4addr);
+        if (local == null) {
+            throw new IOException("unable to find free ip-port to bind");
+        }
+        entry = ctx.conntrack.createTcp(null, l4addr, local, 0);
+        entry.setConnectionHandler(new ConnectionHandler());
+        ctx.tcpStack.tcpStartRetransmission(ctx.network, entry);
     }
 
     @Override
@@ -109,7 +113,12 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
     public boolean finishConnect() throws IOException {
         checkNotClosed();
         checkEntry();
-        return true;
+        if (entry.getState() == TcpState.ESTABLISHED) {
+            connected = true;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override

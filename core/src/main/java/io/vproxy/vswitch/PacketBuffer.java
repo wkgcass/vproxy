@@ -4,6 +4,7 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IP;
 import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
@@ -19,7 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PacketBuffer extends PacketDataBuffer {
+public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     public static final int FLAG_VXLAN = 0x00000001;
     public static final int FLAG_IP = 0x00000004;
 
@@ -395,6 +396,7 @@ public class PacketBuffer extends PacketDataBuffer {
         return pkb;
     }
 
+    @Override
     public Object getUserData(Object key) {
         if (userdata == null) {
             return null;
@@ -402,6 +404,7 @@ public class PacketBuffer extends PacketDataBuffer {
         return userdata.get(key);
     }
 
+    @Override
     public Object putUserData(Object key, Object value) {
         if (userdata == null) {
             userdata = new HashMap<>();
@@ -409,6 +412,7 @@ public class PacketBuffer extends PacketDataBuffer {
         return userdata.put(key, value);
     }
 
+    @Override
     public Object removeUserData(Object key) {
         if (userdata == null) {
             return null;

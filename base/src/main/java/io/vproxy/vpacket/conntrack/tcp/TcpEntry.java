@@ -5,15 +5,13 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IPPort;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-public class TcpEntry {
+public class TcpEntry implements WithUserData {
     public static final int WMEM_MAX = 212992;
     public static final int RMEM_MAX = 212992;
     public static final int SND_DEFAULT_MSS = 1360;
@@ -50,7 +48,7 @@ public class TcpEntry {
         this.local = local;
         this.state = TcpState.CLOSED;
         this.sendingQueue = new SendingQueue(new Random().nextInt(TCP_SEQ_RAND) + TCP_SEQ_INIT_MIN);
-        this.receivingQueue = new ReceivingQueue(seq + 1 /* the sequence is syn_packet.seq + 1 */);
+        this.receivingQueue = new ReceivingQueue(seq == 0 ? 0 : seq + 1 /* the sequence is syn_packet.seq + 1 */);
     }
 
     public TcpEntry(IPPort remote, IPPort local) {
@@ -109,10 +107,16 @@ public class TcpEntry {
 
     public void setState(TcpState state) {
         var old = this.state;
+        assert Logger.lowLevelDebug(STR."tcp state changing: \{old} -> \{state}, connectionHandler = \{connectionHandler}");
         this.state = state;
         if (!old.remoteClosed && state.remoteClosed) {
             if (connectionHandler != null) {
                 connectionHandler.readable(this);
+            }
+        }
+        if (old == TcpState.SYN_SENT && state == TcpState.ESTABLISHED) {
+            if (connectionHandler != null) {
+                connectionHandler.writable(this);
             }
         }
     }
@@ -370,6 +374,15 @@ public class TcpEntry {
             ackedSeq += 1;
         }
 
+        public void setInitialSeq(long seq) {
+            if (this.expectingSeq == 0 && this.ackedSeq == 0) {
+                this.expectingSeq = seq;
+                this.ackedSeq = seq;
+            } else {
+                Logger.error(LogType.IMPROPER_USE, STR."calling setInitialSeq while expectingSeq(\{expectingSeq}) or acked(\{ackedSeq}) is not 0");
+            }
+        }
+
         public boolean hasMoreDataToRead() {
             return !q.isEmpty();
         }
@@ -472,6 +485,31 @@ public class TcpEntry {
         }
     }
 
+    private Map<Object, Object> userdata;
+
+    @Override
+    public Object getUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.get(key);
+    }
+
+    @Override
+    public Object putUserData(Object key, Object value) {
+        if (userdata == null) {
+            userdata = new HashMap<>();
+        }
+        return userdata.put(key, value);
+    }
+
+    @Override
+    public Object removeUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.remove(key);
+    }
 
     @Override
     public String toString() {

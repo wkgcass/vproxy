@@ -11,7 +11,7 @@ public class VSwitchFDs implements FDs {
 
     @Override
     public SocketFD openSocketFD() {
-        throw new UnsupportedOperationException("not supported");
+        return new VSwitchSocketFD(ctx);
     }
 
     @Override

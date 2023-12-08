@@ -4,6 +4,7 @@ import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.coll.IntMap;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.plugin.PacketFilter;
 
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class Iface {
+public abstract class Iface implements WithUserData {
     private int index;
     private boolean destroyed = false;
     private final IfaceParams params = new IfaceParams();
@@ -177,6 +178,7 @@ public abstract class Iface {
         this.annotations = annotations;
     }
 
+    @Override
     public Object getUserData(Object key) {
         if (userdata == null) {
             return null;
@@ -184,6 +186,7 @@ public abstract class Iface {
         return userdata.get(key);
     }
 
+    @Override
     public Object putUserData(Object key, Object value) {
         if (userdata == null) {
             userdata = new HashMap<>();
@@ -191,6 +194,7 @@ public abstract class Iface {
         return userdata.put(key, value);
     }
 
+    @Override
     public Object removeUserData(Object key) {
         if (userdata == null) {
             return null;
