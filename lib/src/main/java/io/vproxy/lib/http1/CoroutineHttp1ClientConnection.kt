@@ -14,7 +14,6 @@ import io.vproxy.base.util.callback.Callback
 import io.vproxy.base.util.promise.Promise
 import io.vproxy.base.util.ringbuffer.SSLUtils
 import io.vproxy.base.util.thread.VProxyThread
-import vjson.JSON
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.execute
 import io.vproxy.lib.common.unsafeIO
@@ -22,6 +21,7 @@ import io.vproxy.lib.tcp.CoroutineConnection
 import io.vproxy.vfd.IP
 import io.vproxy.vfd.IPPort
 import kotlinx.coroutines.suspendCancellableCoroutine
+import vjson.JSON
 import java.io.IOException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLEngine
@@ -136,10 +136,20 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       return simpleGet(full, false)
     }
 
-    @Suppress("HttpUrlsUsage", "CascadeIf")
+    @JvmStatic
+    fun simpleGet(full: String, loop: SelectorEventLoop?, opts: ConnectionOpts): Promise<ByteArray> {
+      return simpleGet(full, false, loop, opts)
+    }
+
     @JvmStatic
     fun simpleGet(full: String, mustRunOnNewThread: Boolean): Promise<ByteArray> {
-      val invokerLoop = SelectorEventLoop.current()
+      return simpleGet(full, mustRunOnNewThread, null, ConnectionOpts())
+    }
+
+    @Suppress("HttpUrlsUsage")
+    @JvmStatic
+    fun simpleGet(full: String, mustRunOnNewThread: Boolean, loop: SelectorEventLoop?, opts: ConnectionOpts): Promise<ByteArray> {
+      val invokerLoop = loop ?: SelectorEventLoop.current()
 
       val protocolAndHostAndPort: String
       val uri: String
@@ -163,28 +173,26 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         uri = "/"
       }
 
-      val loop: SelectorEventLoop
-      if (invokerLoop == null || mustRunOnNewThread) {
-        loop = SelectorEventLoop.open()
-        loop.ensureNetEventLoop()
-        loop.loop { VProxyThread.create(it, "http1-simple-get") }
+      val execLoop = if (invokerLoop == null || mustRunOnNewThread) {
+        val el = SelectorEventLoop.open()
+        el.ensureNetEventLoop()
+        el.loop { VProxyThread.create(it, "http1-simple-get") }
+        el
       } else {
-        loop = invokerLoop
+        invokerLoop
       }
 
-      return loop.execute {
-        if (invokerLoop != loop) { // which means a new loop is created
-          defer { loop.close() }
+      return execLoop.execute {
+        if (invokerLoop != execLoop) { // which means a new loop is created
+          defer { execLoop.close() }
         }
-        val conn = create(protocolAndHostAndPort)
+        val conn = create(protocolAndHostAndPort, opts)
         defer { conn.close() }
 
         conn.conn.setTimeout(5_000)
         val req = conn.get(uri)
         val host = getHostFromUrl(protocolAndHostAndPort)
-        if (host != null) {
-          req.header("Host", host)
-        }
+        req.header("Host", host)
         req.send()
         val resp = conn.readResponse()
         val ret: ByteArray
@@ -197,7 +205,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       }
     }
 
-    private fun getHostFromUrl(url: String): String? {
+    private fun getHostFromUrl(url: String): String {
       var x = url
       if (x.contains("://")) {
         x = x.substring(x.indexOf("://") + "://".length)
@@ -206,19 +214,19 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         x = x.substring(0, x.indexOf("/"))
       }
       if (IP.isIpLiteral(x)) {
-        return null
+        return x
       }
       if (x.contains(":")) {
         x = x.substring(0, x.lastIndexOf(":"))
       }
       if (IP.isIpLiteral(x)) {
-        return null
+        return x
       }
       return x
     }
 
     @Suppress("HttpUrlsUsage")
-    suspend fun create(protocolAndHostAndPort: String): CoroutineHttp1ClientConnection {
+    suspend fun create(protocolAndHostAndPort: String, opts: ConnectionOpts = ConnectionOpts.getDefault()): CoroutineHttp1ClientConnection {
       val ssl: Boolean
       val hostAndPort: String
       val host: String
@@ -284,13 +292,17 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         } else {
           engine = sslContext.createSSLEngine(host, port)
         }
-        return create(IPPort(ip, port), engine)
+        return create(IPPort(ip, port), engine, opts)
       } else {
-        return create(IPPort(ip, port))
+        return create(IPPort(ip, port), opts)
       }
     }
 
-    suspend fun create(ipport: IPPort, engine: SSLEngine): CoroutineHttp1ClientConnection {
+    suspend fun create(
+      ipport: IPPort,
+      engine: SSLEngine,
+      opts: ConnectionOpts = ConnectionOpts.getDefault()
+    ): CoroutineHttp1ClientConnection {
       engine.useClientMode = true
       val pair = SSLUtils.genbuf(
         engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576),
@@ -298,7 +310,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       )
       val conn = unsafeIO {
         ConnectableConnection.create(
-          ipport, ConnectionOpts(),
+          ipport, opts,
           pair.left, pair.right
         ).coroutine()
       }
@@ -306,10 +318,10 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       return conn.asHttp1ClientConnection()
     }
 
-    suspend fun create(ipport: IPPort): CoroutineHttp1ClientConnection {
+    suspend fun create(ipport: IPPort, opts: ConnectionOpts = ConnectionOpts.getDefault()): CoroutineHttp1ClientConnection {
       val conn = unsafeIO {
         ConnectableConnection.create(
-          ipport, ConnectionOpts(),
+          ipport, opts,
           RingBuffer.allocate(16384), RingBuffer.allocate(16384)
         ).coroutine()
       }
