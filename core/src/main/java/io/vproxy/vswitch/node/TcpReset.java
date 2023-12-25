@@ -43,8 +43,8 @@ public class TcpReset extends Node {
         respondTcp.setSrcPort(inputTcpPkt.getDstPort());
         respondTcp.setDstPort(inputTcpPkt.getSrcPort());
         respondTcp.setSeqNum(inputTcpPkt.getAckNum());
-        respondTcp.setAckNum(inputTcpPkt.getSeqNum());
-        respondTcp.setFlags(Consts.TCP_FLAGS_RST);
+        respondTcp.setAckNum(inputTcpPkt.getSeqNum() + (inputTcpPkt.isSyn() ? 1 : 0));
+        respondTcp.setFlags(Consts.TCP_FLAGS_RST | Consts.TCP_FLAGS_ACK);
         respondTcp.setWindow(0);
 
         AbstractIpPacket ipPkt;
