@@ -11,7 +11,6 @@ import io.vproxy.base.util.anno.Blocking;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.base.util.coll.IntMap;
 import io.vproxy.base.util.coll.RingQueue;
-import io.vproxy.base.util.crypto.Aes256Key;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
@@ -35,7 +34,6 @@ import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 import io.vproxy.vswitch.stack.conntrack.Fastpath;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
-import io.vproxy.vswitch.util.UserInfo;
 import io.vproxy.xdp.BPFMap;
 import io.vproxy.xdp.BPFMode;
 import io.vproxy.xdp.UMem;
@@ -60,7 +58,6 @@ public class Switch {
     private boolean started = false;
     private boolean wantStart = false;
 
-    private final Map<String, UserInfo> users = new HashMap<>();
     private DatagramFD sock;
     private final IntMap<VirtualNetwork> networks = new IntMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new LinkedHashMap<>();
@@ -91,7 +88,6 @@ public class Switch {
         this::sendPacket,
         ifaces::keySet,
         networks::get,
-        users::get,
         () -> eventLoop.getSelectorEventLoop(),
         this::onIfacePacketsArrive,
         this::utilRemoveIface,
@@ -338,27 +334,6 @@ public class Switch {
         return new ArrayList<>(ifaces.keySet());
     }
 
-    public void addUser(String user, String password, int vni,
-                        IfaceParams ifaceParams) throws AlreadyExistException, XException {
-        user = formatUserName(user);
-        Aes256Key key = new Aes256Key(password);
-        ifaceParams.fillNullFields(defaultIfaceParams);
-        UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni, ifaceParams));
-        if (old != null) {
-            throw new AlreadyExistException("the user " + user + " already exists in switch " + alias);
-        }
-    }
-
-    public void delUser(String user) throws NotFoundException {
-        if (user.length() < 8) {
-            user += Consts.USER_PADDING.repeat(8 - user.length());
-        }
-        UserInfo x = users.remove(user);
-        if (x == null) {
-            throw new NotFoundException("user in switch " + alias, user);
-        }
-    }
-
     public TapIface addTap(String dev, int vni, String postScript) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -390,7 +365,7 @@ public class Switch {
     private final AtomicInteger ifaceIndexes = new AtomicInteger(0); // only increases, never decreases
 
     private IfaceInitParams buildIfaceInitParams() {
-        return new IfaceInitParams(ifaceIndexes.incrementAndGet(), this, eventLoop.getSelectorEventLoop(), sock, packetCallback, users);
+        return new IfaceInitParams(ifaceIndexes.incrementAndGet(), this, eventLoop.getSelectorEventLoop(), sock, packetCallback);
     }
 
     @Blocking
@@ -459,53 +434,6 @@ public class Switch {
         blockAndAddPersistentIface(loop, iface);
         Logger.alert("tun device added: " + iface.getTun().getTap().dev);
         return iface;
-    }
-
-    public UserClientIface addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, XException {
-        user = formatUserName(user);
-
-        for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof UserClientIface)) {
-                continue;
-            }
-            UserClientIface ucliIface = (UserClientIface) i;
-            if (ucliIface.user.user.equals(user) && ucliIface.remote.equals(remoteAddr)) {
-                throw new AlreadyExistException("user-client", user);
-            }
-        }
-
-        SelectorEventLoop loop = eventLoop.getSelectorEventLoop();
-
-        Aes256Key key = new Aes256Key(password);
-        UserInfo info = new UserInfo(user, key, password, vni, defaultIfaceParams);
-
-        UserClientIface iface = new UserClientIface(info, key, remoteAddr);
-
-        try {
-            initIface(iface);
-        } catch (Exception e) {
-            iface.destroy();
-            throw new XException(Utils.formatErr(e));
-        }
-        blockAndAddPersistentIface(loop, iface);
-
-        return iface;
-    }
-
-    private String formatUserName(String user) throws XException {
-        char[] chars = user.toCharArray();
-        if (chars.length < 3 || chars.length > 8) {
-            throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
-        }
-        for (char c : chars) {
-            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) {
-                throw new XException("invalid user, should only contain a-zA-Z0-9");
-            }
-        }
-        if (user.length() < 8) {
-            user += Consts.USER_PADDING.repeat(8 - user.length());
-        }
-        return user;
     }
 
     public FubukiTunIface addFubuki(String nodeName, String password,
@@ -710,14 +638,6 @@ public class Switch {
         List<UMem> ls = new ArrayList<>(umems.size());
         ls.addAll(umems.values());
         return ls;
-    }
-
-    public Map<String, UserInfo> getUsers() {
-        var ret = new LinkedHashMap<String, UserInfo>();
-        for (var entry : users.entrySet()) {
-            ret.put(entry.getKey().replace(Consts.USER_PADDING, ""), entry.getValue());
-        }
-        return ret;
     }
 
     private void sendPacket(PacketBuffer pkb, Iface iface) {

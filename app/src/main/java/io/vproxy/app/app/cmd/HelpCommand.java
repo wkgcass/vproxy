@@ -1245,14 +1245,6 @@ public class HelpCommand {
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "update iface ucli:hello in switch sw0 mtu 1500 flood deny",
-                        "\"OK\""
-                    ),
-                    new Tuple<>(
-                        "update iface user:hello in switch sw0 mtu 1500 flood allow",
-                        "\"OK\""
-                    ),
-                    new Tuple<>(
                         "update iface 10.0.0.1:8472 in switch sw0 mtu 1500 flood allow",
                         "\"OK\""
                     )
@@ -1268,10 +1260,6 @@ public class HelpCommand {
                     ),
                     new Tuple<>(
                         "remove iface remote:sw-x from switch sw0",
-                        "\"OK\""
-                    ),
-                    new Tuple<>(
-                        "remove iface ucli:hello from switch sw0",
                         "\"OK\""
                     )
                 ))
@@ -1322,53 +1310,10 @@ public class HelpCommand {
                 )
             ))
         )),
-        user("user", null, "user in a switch",
-            Arrays.asList(
-                new ResActMan(ActMan.addto, "add a user to a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.pass, "password of the user"),
-                    new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
-                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, or -1 to ignore this config", "mtu setting of the switch"),
-                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch"),
-                    new ResActParamMan(ParamMan.csumrecalc, "whether the user interface needs to recalculate checksum for received packets", "csum-recalc setting of the switch")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "add user hello to switch sw0 vni 1314 password p@sSw0rD",
-                        "\"OK\""
-                    )
-                )),
-                new ResActMan(ActMan.list, "list user names in a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "list user in switch sw0",
-                        "1) \"hello\""
-                    )
-                )),
-                new ResActMan(ActMan.listdetail, "list all user info in a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "list-detail user in switch sw0",
-                        "1) \"hello\" -> vni 1314"
-                    )
-                )),
-                new ResActMan(ActMan.update, "update user info in a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, updating it will not affect connected ones. -1 means ignoring this config", "not changed"),
-                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic, updating it will not affect connected ones", "not changed"),
-                    new ResActParamMan(ParamMan.csumrecalc, "whether the user interface needs to recalculate checksum for received packets, updating it will not affect connected ones", "not changed")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "update user hello in switch sw0 mtu 1500 flood allow",
-                        "\"OK\""
-                    )
-                )),
-                new ResActMan(ActMan.removefrom, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "remove user hello from switch sw0",
-                        "\"OK\""
-                    )
-                ))
-            )),
         tap("tap", null, "add/remove a tap device and bind/detach it to/from a switch. " +
             "Note: should set -Dvfd=posix or -Dvfd=windows",
             Collections.singletonList(
-                new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
+                new ResActMan(ActMan.addto, "add a tap to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tap device is attached to"),
                     new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Collections.singletonList(
@@ -1381,7 +1326,7 @@ public class HelpCommand {
         tun("tun", null, "add/remove a tun device and bind/detach it to/from a switch. " +
             "Note: should set -Dvfd=posix",
             Collections.singletonList(
-                new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tun device because might be generated", Arrays.asList(
+                new ResActMan(ActMan.addto, "add a tun to a switch. Note: the result string is the name of the tun device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tun device is attached to"),
                     new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
                     new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
@@ -1392,19 +1337,6 @@ public class HelpCommand {
                     ),
                     new Tuple<>(
                         "add tun utun9 to switch sw0 vni 1314 mac 00:11:22:33:44:55",
-                        "\"OK\""
-                    )
-                ))
-            )),
-        usercli("user-client", "ucli", "user client of an encrypted tunnel to remote switch. Note: use list iface to see these clients",
-            Collections.singletonList(
-                new ResActMan(ActMan.addto, "add a user client to a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.pass, "password of the user"),
-                    new ResActParamMan(ParamMan.vni, "vni which the user is assigned to"),
-                    new ResActParamMan(ParamMan.address, "remote switch address to connect to")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "add user-client hello to switch sw0 password p@sSw0rD vni 1314 address 192.168.77.1:18472",
                         "\"OK\""
                     )
                 ))

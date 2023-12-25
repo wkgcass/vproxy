@@ -8,13 +8,9 @@ import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vpacket.PacketDataBuffer;
-import io.vproxy.vpacket.VProxyEncryptedPacket;
-import io.vproxy.vpacket.VXLanPacket;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.SwitchDelegate;
 import io.vproxy.vswitch.util.SwitchUtils;
-import io.vproxy.vswitch.util.UserInfo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -81,92 +77,15 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
     }
 
     private PacketBuffer handleNetworkAndGetPKB(IPPort remote) {
-        ByteArray data = raw.sub(PRESERVED_LEN, rcvBuf.position() - PRESERVED_LEN);
-
-        VProxyEncryptedPacket packet = new VProxyEncryptedPacket(uname -> {
-            var info = swCtx.getUserInfo(uname);
-            if (info == null) return null;
-            return info.key;
-        });
         PacketBuffer pkb;
-
-        String err = packet.from(new PacketDataBuffer(data), true);
-        assert Logger.lowLevelDebug("packet.from(data) = " + err);
-        if (err == null) {
-            String user = packet.getUser();
-            UserInfo info = swCtx.getUserInfo(user);
-            if (info == null) {
-                Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
-                return null;
-            }
-
-            // get iface from recorded userifaces
-            UserIface uiface = null;
-            for (Iface recorded : swCtx.getIfaces()) {
-                // find existing userIface
-                if (recorded instanceof UserIface) {
-                    var recordedUIface = (UserIface) recorded;
-                    if (recordedUIface.user.equals(user)) {
-                        if (recordedUIface.udpSockAddress.getAddress().equals(remote.getAddress())) {
-                            if (recordedUIface.udpSockAddress.getPort() == remote.getPort()) {
-                                assert Logger.lowLevelDebug("using existing uiface: " + recordedUIface);
-                                uiface = recordedUIface;
-                                break;
-                            }
-                        }
-                        Logger.warn(LogType.ALERT, "new connection established for user " + user + ", the old one will be disconnected");
-                        swCtx.destroyIface(recordedUIface);
-                        break;
-                    }
-                }
-            }
-            if (uiface == null) {
-                uiface = new UserIface(remote, user);
-                try {
-                    swCtx.initIface(uiface);
-                } catch (Exception e) {
-                    Logger.error(LogType.SYS_ERROR, "init " + uiface.name() + " failed", e);
-                    return null;
-                }
-                uiface.getParams().set(info.defaultIfaceParams);
-            }
-            uiface.setLocalSideVni(info.vni);
-
-            assert Logger.lowLevelDebug("got packet " + packet + " from " + uiface);
-
-            VXLanPacket vxLanPacket = packet.getVxlan();
-            if (vxLanPacket != null) {
-                int packetVni = vxLanPacket.getVni();
-                uiface.setRemoteSideVni(packetVni); // set vni to the iface
-                assert Logger.lowLevelDebug("setting vni for " + user + " to " + info.vni);
-                if (packetVni != info.vni) {
-                    vxLanPacket.setVni(info.vni);
-                }
-            }
-
-            if (packet.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
-                assert Logger.lowLevelDebug("is vproxy ping message, do reply");
-                sendPingTo(uiface);
-                // should reset timeout
-                swCtx.recordIface(uiface); // use record iface to reset the timer
-                return null;
-            }
-
-            pkb = PacketBuffer.fromPacket(vxLanPacket);
-            pkb.devin = uiface;
-
-            uiface.statistics.incrRxBytes(data.length());
-            // fall through
-        } else {
-            assert Logger.lowLevelDebug("is vxlan packet");
-
+        assert Logger.lowLevelDebug("handle vxlan packet");
+        {
             // check whether it's coming from remote switch
             Iface remoteSwitch = null;
             for (Iface i : swCtx.getIfaces()) {
-                if (!(i instanceof RemoteSwitchIface)) {
+                if (!(i instanceof RemoteSwitchIface rsi)) {
                     continue;
                 }
-                RemoteSwitchIface rsi = (RemoteSwitchIface) i;
                 if (remote.equals(rsi.udpSockAddress)) {
                     remoteSwitch = i;
                     break;
@@ -188,10 +107,9 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 // is from a vxlan endpoint
                 BareVXLanIface biface = null;
                 for (Iface i : swCtx.getIfaces()) {
-                    if (!(i instanceof BareVXLanIface)) {
+                    if (!(i instanceof BareVXLanIface bi)) {
                         continue;
                     }
-                    BareVXLanIface bi = (BareVXLanIface) i;
                     if (remote.equals(bi.udpSockAddress)) {
                         biface = bi;
                         break;
@@ -206,14 +124,13 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
 
             // try to parse into vxlan directly
             pkb = PacketBuffer.fromVXLanBytes(iface, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
-            err = pkb.init();
+            var err = pkb.init();
             if (err != null) {
                 assert Logger.lowLevelDebug("invalid packet for vxlan: " + err + ", drop it");
                 return null;
             }
 
-            if (iface instanceof BareVXLanIface) { // additional check
-                BareVXLanIface biface = (BareVXLanIface) iface;
+            if (iface instanceof BareVXLanIface biface) { // additional check
                 if (isNewIface) {
                     biface.setLocalSideVni(pkb.vni);
                 } else {
@@ -248,18 +165,6 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
         }
         assert Logger.lowLevelDebug("got packet " + pkb + " from " + remote);
         return pkb;
-    }
-
-    private void sendPingTo(UserIface iface) {
-        assert Logger.lowLevelDebug("sendPingTo(" + iface.name() + ")");
-        VProxyEncryptedPacket p = new VProxyEncryptedPacket(uname -> {
-            var info = swCtx.getUserInfo(uname);
-            if (info == null) return null;
-            return info.key;
-        });
-        p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
-        p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
-        iface.sendVProxyPacket(p);
     }
 
     @Override

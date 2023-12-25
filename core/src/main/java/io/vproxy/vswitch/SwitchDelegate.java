@@ -4,7 +4,6 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.vswitch.node.NodeGraphScheduler;
-import io.vproxy.vswitch.util.UserInfo;
 
 import java.util.Collection;
 
@@ -15,7 +14,6 @@ public class SwitchDelegate {
                    SendingPacket sendPacketFunc,
                    GetIfaces getIfacesFunc,
                    GetTable getTableFunc,
-                   GetUserInfo getUserInfo,
                    GetSelectorEventLoop getSelectorEventLoopFunc,
                    AlertPacketsArrive alertPacketsArriveFunc,
                    DestroyIface destroyIfaceFunc,
@@ -27,7 +25,6 @@ public class SwitchDelegate {
         this.sendPacketFunc = sendPacketFunc;
         this.getIfacesFunc = getIfacesFunc;
         this.getTableFunc = getTableFunc;
-        this.getUserInfoFunc = getUserInfo;
         this.getSelectorEventLoopFunc = getSelectorEventLoopFunc;
         this.alertPacketsArriveFunc = alertPacketsArriveFunc;
         this.destroyIfaceFunc = destroyIfaceFunc;
@@ -76,16 +73,6 @@ public class SwitchDelegate {
 
     public VirtualNetwork getNetwork(int vni) {
         return getTableFunc.getTable(vni);
-    }
-
-    public interface GetUserInfo {
-        UserInfo getUserInfo(String user);
-    }
-
-    private final GetUserInfo getUserInfoFunc;
-
-    public UserInfo getUserInfo(String user) {
-        return getUserInfoFunc.getUserInfo(user);
     }
 
     public interface GetSelectorEventLoop {

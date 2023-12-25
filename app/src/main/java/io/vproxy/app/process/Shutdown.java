@@ -12,7 +12,10 @@ import io.vproxy.base.component.elgroup.EventLoopWrapper;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.dns.DNSClient;
 import io.vproxy.base.dns.Resolver;
-import io.vproxy.base.util.*;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.Version;
 import io.vproxy.base.util.anno.Blocking;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.exception.NotFoundException;
@@ -30,7 +33,6 @@ import io.vproxy.vswitch.RouteTable;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.iface.*;
-import io.vproxy.vswitch.util.UserInfo;
 import io.vproxy.xdp.BPFObject;
 
 import java.net.URL;
@@ -725,44 +727,22 @@ public class Shutdown {
                         commands.add(cmd);
                     }
                 }
-                // create users
-                Map<String, UserInfo> users = sw.getUsers();
-                for (var entry : users.entrySet()) {
-                    var user = entry.getValue();
-                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias
-                        + " password " + user.pass
-                        + " vni " + user.vni
-                        + " " + user.defaultIfaceParams.toCommand();
-                    commands.add(cmd);
-                }
                 // create remote sw
                 for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof RemoteSwitchIface)) {
+                    if (!(iface instanceof RemoteSwitchIface rsi)) {
                         continue;
                     }
-                    var rsi = (RemoteSwitchIface) iface;
                     cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + rsi.udpSockAddress.formatToIPPortString();
                     if (!rsi.addSwitchFlag) {
                         cmd += " no-switch-flag";
                     }
                     commands.add(cmd);
                 }
-                // create user-cli
-                for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof UserClientIface)) {
-                        continue;
-                    }
-                    var ucliIface = (UserClientIface) iface;
-                    cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
-                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + ucliIface.remote.formatToIPPortString();
-                    commands.add(cmd);
-                }
                 // create tap
                 for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof TapIface)) {
+                    if (!(iface instanceof TapIface tap)) {
                         continue;
                     }
-                    var tap = (TapIface) iface;
                     cmd = "add tap " + tap.dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
                     if (tap.postScript != null && !tap.postScript.isBlank()) {
                         cmd += " post-script " + tap.postScript;
@@ -792,10 +772,9 @@ public class Shutdown {
                 }
                 // create xdp
                 for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof XDPIface)) {
+                    if (!(iface instanceof XDPIface xdp)) {
                         continue;
                     }
-                    var xdp = (XDPIface) iface;
                     if (!bpfobjectNames.contains(xdp.xskMap.bpfObject.nic)) {
                         Logger.warn(LogType.IMPROPER_USE, "the bpf-object " + xdp.xskMap.bpfObject.nic + " already removed");
                         continue;
@@ -826,10 +805,9 @@ public class Shutdown {
                 }
                 // create sub interfaces
                 for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof VLanAdaptorIface)) {
+                    if (!(iface instanceof VLanAdaptorIface vif)) {
                         continue;
                     }
-                    var vif = (VLanAdaptorIface) iface;
                     if (!switchInterfaceRequiresSaving(vif.getParentIface())) {
                         continue;
                     }
@@ -930,7 +908,6 @@ public class Shutdown {
 
     private static boolean switchInterfaceRequiresSaving(Iface iface) {
         return iface instanceof RemoteSwitchIface
-            || iface instanceof UserClientIface
             || iface instanceof XDPIface
             || iface instanceof TapIface
             || iface instanceof TunIface

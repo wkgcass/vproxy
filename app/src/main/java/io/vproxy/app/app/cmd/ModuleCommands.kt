@@ -3,7 +3,6 @@ package io.vproxy.app.app.cmd
 import io.vproxy.app.app.cmd.handle.param.*
 import io.vproxy.app.app.cmd.handle.resource.*
 import io.vproxy.base.util.display.TableBuilder
-import vjson.simple.SimpleNull
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
@@ -845,55 +844,6 @@ class ModuleCommands private constructor() : Commands() {
         }
       )
     }
-    it + Res(ResourceType.user) {
-      it + ResAct(
-        relation = ResourceType.user,
-        action = ActType.addto,
-        targetRelation = ResRelation(ResourceType.sw),
-        params = {
-          it + ResActParam(Param.pass, required)
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
-          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
-          it + ResActParam(Param.flood) { FloodHandle.check(it) }
-          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
-        },
-        exec = execUpdate { UserHandle.add(it) }
-      )
-      it + ResAct(
-        relation = ResRelation(ResourceType.user, ResRelation(ResourceType.sw)),
-        action = ActType.list,
-        exec = {
-          val users = UserHandle.names(it.resource.parentResource)
-          CmdResult(users, users, utilJoinList(users))
-        }
-      )
-      it + ResAct(
-        relation = ResRelation(ResourceType.user, ResRelation(ResourceType.sw)),
-        action = ActType.listdetail,
-        exec = {
-          val userInfoList = UserHandle.list(it.resource.parentResource)
-          val strList = userInfoList.stream().map { it.toString() }
-            .collect(Collectors.toList())
-          CmdResult(userInfoList, strList, utilJoinList(strList))
-        }
-      )
-      it + ResAct(
-        relation = ResRelation(ResourceType.user, ResRelation(ResourceType.sw)),
-        action = ActType.update,
-        params = {
-          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
-          it + ResActParam(Param.flood) { FloodHandle.check(it) }
-          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
-        },
-        exec = execUpdate { UserHandle.update(it) }
-      )
-      it + ResAct(
-        relation = ResourceType.user,
-        action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.sw),
-        exec = execUpdate { UserHandle.remove(it) }
-      )
-    }
     it + Res(ResourceType.tap) {
       it + ResAct(
         relation = ResourceType.tap,
@@ -927,19 +877,6 @@ class ModuleCommands private constructor() : Commands() {
           }
         },
         exec = execUpdate { TunHandle.add(it) }
-      )
-    }
-    it + Res(ResourceType.ucli) {
-      it + ResAct(
-        relation = ResourceType.ucli,
-        action = ActType.addto,
-        targetRelation = ResRelation(ResourceType.sw),
-        params = {
-          it + ResActParam(Param.pass, required)
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
-          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
-        },
-        exec = execUpdate { UserClientHandle.add(it) }
       )
     }
     it + Res(ResourceType.fubuki) {
