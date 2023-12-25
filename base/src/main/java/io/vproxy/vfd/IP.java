@@ -100,6 +100,34 @@ public abstract class IP implements ToByteArray {
         return fromIPv6(hostname, bytes);
     }
 
+    public static IP fromMask(boolean isIPv6, int prefixLength) {
+        if (prefixLength < 0 || prefixLength > 128) {
+            throw new IllegalArgumentException("mask " + prefixLength + " out of range");
+        }
+        if (!isIPv6 && prefixLength > 32) {
+            throw new IllegalArgumentException("mask " + prefixLength + " cannot be applied to ipv4");
+        }
+
+        byte[] res;
+        if (isIPv6) {
+            res = new byte[16];
+        } else {
+            res = new byte[4];
+        }
+        for (int i = 0; i < res.length; ++i) {
+            if (prefixLength >= 8) {
+                res[i] = (byte) 255;
+                prefixLength -= 8;
+            } else if (prefixLength == 0) {
+                res[i] = 0;
+            } else {
+                res[i] = (byte) ((0xff << (8 - prefixLength)) & 0xff);
+                prefixLength = 0;
+            }
+        }
+        return IP.from(res);
+    }
+
     public final String hostname;
     public final ByteArray bytes;
 
@@ -624,6 +652,45 @@ public abstract class IP implements ToByteArray {
         ret[2] = (byte) ((ip >> 8) & 0xff);
         ret[3] = (byte) ((ip) & 0xff);
         return ret;
+    }
+
+    public boolean isMask() {
+        return toPrefixLength() != -1;
+    }
+
+    // return -1 if not a valid ip mask
+    public int toPrefixLength() {
+        int res = 0;
+        boolean mustBeZero = false;
+        for (int i = 0; i < bytes.length(); ++i) {
+            var b = bytes.get(i);
+            if (mustBeZero) {
+                if (b != 0) {
+                    return -1;
+                }
+                continue;
+            }
+            if (b == (byte) 255) {
+                res += 8;
+                continue;
+            }
+            mustBeZero = true;
+            switch (b) {
+                case (byte) 254 -> res += 7;
+                case (byte) 252 -> res += 6;
+                case (byte) 248 -> res += 5;
+                case (byte) 240 -> res += 4;
+                case (byte) 224 -> res += 3;
+                case (byte) 192 -> res += 2;
+                case (byte) 128 -> res += 1;
+                case 0 -> {
+                }
+                default -> {
+                    return -1;
+                }
+            }
+        }
+        return res;
     }
 
     public abstract boolean isBroadcast();
