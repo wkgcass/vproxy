@@ -31,7 +31,7 @@ public class TunIface extends Iface {
     public final String postScript;
 
     private AbstractDatagramFD<?> operateTun;
-    private SelectorEventLoop bondLoop;
+    protected SelectorEventLoop bondLoop;
 
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
@@ -72,9 +72,17 @@ public class TunIface extends Iface {
         return ",vni:" + localSideVni + ",mac:" + mac;
     }
 
+    protected boolean customInitSteps() {
+        return false;
+    }
+
     @Override
     public void init(IfaceInitParams params) throws Exception {
         super.init(params);
+
+        if (customInitSteps()) {
+            return;
+        }
 
         bondLoop = params.loop;
         FDs fds = FDProvider.get().getProvided();
@@ -133,7 +141,7 @@ public class TunIface extends Iface {
     public void sendPacket(PacketBuffer pkb) {
         if (handleArpOrNdpOutput(pkb)) {
             assert Logger.lowLevelDebug("the packet is arp/ndp req, which is handled another way, " +
-                "original packet will not be sent");
+                                        "original packet will not be sent");
             return;
         }
         if (pkb.ipPkt == null) {
@@ -149,7 +157,7 @@ public class TunIface extends Iface {
 
         sndBuf.position(0).limit(sndBuf.capacity());
         var bytes = ipPkt.getRawPacket(0).toJavaArray();
-        if (OS.isMac()) { // add AF header for macos
+        if (requireAFHeader()) {
             if (ipPkt instanceof Ipv4Packet) {
                 sndBuf.putInt(Consts.AF_INET);
             } else {
@@ -163,11 +171,19 @@ public class TunIface extends Iface {
         sndBuf.put(bytes);
         sndBuf.flip();
         try {
-            operateTun.write(sndBuf);
+            sendPacket(sndBuf);
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "sending packet to " + this + " failed", e);
             statistics.incrTxErr();
         }
+    }
+
+    protected boolean requireAFHeader() {
+        return OS.isMac(); // add AF header for macos
+    }
+
+    protected void sendPacket(ByteBuffer data) throws IOException {
+        operateTun.write(data);
     }
 
     private boolean handleArpOrNdpOutput(PacketBuffer pkb) {
@@ -355,19 +371,7 @@ public class TunIface extends Iface {
                     break; // nothing read, quit loop
                 }
                 PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
-                String err = pkb.init();
-                if (err != null) {
-                    assert Logger.lowLevelDebug("got invalid packet: " + err);
-                    continue;
-                }
-
-                statistics.incrRxPkts();
-                statistics.incrRxBytes(pkb.pktBuf.length());
-
-                transformToArpOrNdpInput(pkb);
-
-                received(pkb);
-                callback.alertPacketsArrive(TunIface.this);
+                receivedPacket(pkb);
             }
         }
 
@@ -381,5 +385,21 @@ public class TunIface extends Iface {
             Logger.warn(LogType.CONN_ERROR, "tun device " + tunDatagramFD + " removed from loop, it's not handled anymore, need to be closed");
             callback.alertDeviceDown(iface);
         }
+    }
+
+    protected void receivedPacket(PacketBuffer pkb) {
+        String err = pkb.init();
+        if (err != null) {
+            assert Logger.lowLevelDebug("got invalid packet: " + err);
+            return;
+        }
+
+        statistics.incrRxPkts();
+        statistics.incrRxBytes(pkb.pktBuf.length());
+
+        transformToArpOrNdpInput(pkb);
+
+        received(pkb);
+        callback.alertPacketsArrive(TunIface.this);
     }
 }

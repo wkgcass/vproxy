@@ -33,6 +33,7 @@ public enum ResourceType {
     ip("ip"),
     route("route"),
     ucli("user-client"),
+    fubuki("fubuki"),
     vlan("vlan-adaptor"),
 
     bpfobj("bpf-object"),

@@ -682,6 +682,9 @@ public class Shutdown {
 
                     // create ips
                     for (var ipmac : network.ips.entries()) {
+                        if (ipmac.annotations.nosave) {
+                            continue;
+                        }
                         cmd = "add ip " + ipmac.ip.formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias
                             + " mac " + ipmac.mac
                             + " routing " + (ipmac.routing ? "on" : "off");
@@ -768,14 +771,22 @@ public class Shutdown {
                 }
                 // create tun
                 for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof TunIface)) {
+                    if (!(iface instanceof TunIface tun)) {
                         continue;
                     }
-                    var tun = (TunIface) iface;
-                    cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vni " + tun.localSideVni
-                        + " mac " + tun.mac;
-                    if (tun.postScript != null && !tun.postScript.isBlank()) {
-                        cmd += " post-script " + tun.postScript;
+                    if (iface instanceof FubukiTunIface f) {
+                        cmd = "add fubuki " + f.nodeName + " to switch " + sw.alias
+                              + " password " + f.key + " vni " + f.localSideVni + " mac " + f.mac
+                              + " address " + f.serverIPPort.formatToIPPortString();
+                        if (f.localAddr != null) {
+                            cmd += " ip " + f.localAddr.formatToIPMaskString();
+                        }
+                    } else {
+                        cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vni " + tun.localSideVni
+                              + " mac " + tun.mac;
+                        if (tun.postScript != null && !tun.postScript.isBlank()) {
+                            cmd += " post-script " + tun.postScript;
+                        }
                     }
                     commands.add(cmd);
                 }

@@ -3,6 +3,7 @@ package io.vproxy.app.app.cmd
 import io.vproxy.app.app.cmd.handle.param.*
 import io.vproxy.app.app.cmd.handle.resource.*
 import io.vproxy.base.util.display.TableBuilder
+import vjson.simple.SimpleNull
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
@@ -939,6 +940,21 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
         },
         exec = execUpdate { UserClientHandle.add(it) }
+      )
+    }
+    it + Res(ResourceType.fubuki) {
+      it + ResAct(
+        relation = ResourceType.fubuki,
+        action = ActType.addto,
+        targetRelation = ResRelation(ResourceType.sw),
+        params = {
+          it + ResActParam(Param.pass, required)
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.mac, required) { MacHandle.check(it) }
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.ip) { IpParamHandle.check(it, true) }
+        },
+        exec = execUpdate { FubukiHandle.add(it) }
       )
     }
     it + Res(ResourceType.xdp) {

@@ -78,6 +78,7 @@ module io.vproxy.base {
     exports io.vproxy.base.util.web;
     exports io.vproxy.commons.graph;
     exports io.vproxy.commons.util;
+    exports io.vproxy.fubuki;
     exports io.vproxy.msquic.callback;
     exports io.vproxy.msquic.wrap;
     exports io.vproxy.msquic;

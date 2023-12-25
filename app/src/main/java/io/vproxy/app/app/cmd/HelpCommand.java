@@ -398,7 +398,7 @@ public class HelpCommand {
     public enum ParamMan {
         acceptorelg("acceptor-elg", "aelg", "acceptor event loop group"),
         eventloopgroup("event-loop-group", "elg", "event loop group"),
-        address("address", "addr", "ip address -> ip:port"),
+        address("address", "addr", "l4 address, ip:port"),
         via("via", null, "the gateway ip for routing"),
         upstream("upstream", "ups", "upstream"),
         inbuffersize("in-buffer-size", null, "in buffer size"),
@@ -454,7 +454,7 @@ public class HelpCommand {
             "determining the key of the corresponding xsk when putting into a bpf map"),
         busypoll("busy-poll", null, "a number indicating whether to enable busy poll, " +
             "and may set the SO_BUSY_POLL_BUDGET as well"),
-        ip("ip", null, "ip address"),
+        ip("ip", null, "ip address or ip/mask"),
         iface("iface", null, "connected interface in switch"),
         ;
         public final String param;
@@ -1387,11 +1387,11 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add tun tun0 to switch sw0 vni 1314",
+                        "add tun tun0 to switch sw0 vni 1314 mac 00:11:22:33:44:55",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add tun utun9 to switch sw0 vni 1314",
+                        "add tun utun9 to switch sw0 vni 1314 mac 00:11:22:33:44:55",
                         "\"OK\""
                     )
                 ))
@@ -1405,6 +1405,21 @@ public class HelpCommand {
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add user-client hello to switch sw0 password p@sSw0rD vni 1314 address 192.168.77.1:18472",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        fubuki("fubuki", "fubuki", "an endpoint to fubuki network mesh",
+            Collections.singletonList(
+                new ResActMan(ActMan.addto, "add fubuki netif to a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.pass, "password (key) for fubuki config"),
+                    new ResActParamMan(ParamMan.vni, "vni which the netif is assigned to"),
+                    new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
+                    new ResActParamMan(ParamMan.address, "server address to connect to"),
+                    new ResActParamMan(ParamMan.ip, "use the specified ip/mask as tun ip")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add fubuki hello to switch sw0 password p@sSw0rD vni 1314 mac 00:11:22:33:44:55 address 192.168.77.1:18472",
                         "\"OK\""
                     )
                 ))

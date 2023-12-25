@@ -11,6 +11,7 @@ import io.vproxy.vfd.IPv6;
 import io.vproxy.vfd.MacAddress;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SyntheticIpHolder {
@@ -32,12 +33,20 @@ public class SyntheticIpHolder {
         return info.mac;
     }
 
+    public IPMac lookupIPMac(IP ip) {
+        return ipMap.get(ip);
+    }
+
     public Collection<IP> lookupByMac(MacAddress mac) {
         var set = macMap.get(mac);
         if (set == null) {
             return null;
         }
         return set.stream().map(x -> x.ip).collect(Collectors.toSet());
+    }
+
+    public Collection<IPMac> lookupIPMacByMac(MacAddress mac) {
+        return macMap.get(mac);
     }
 
     public Collection<IP> allIps() {
@@ -119,6 +128,21 @@ public class SyntheticIpHolder {
         if (set.isEmpty()) {
             macMap.remove(info.mac);
         }
+    }
+
+    public boolean deleteWithCondition(IP ip, Predicate<IPMac> cond) throws NotFoundException {
+        var info = ipMap.get(ip);
+        if (info == null) {
+            throw new NotFoundException("ip", ip.formatToIPString());
+        }
+        if (cond.test(info)) {
+            try {
+                del(ip);
+            } catch (NotFoundException ignore) {
+            }
+            return true;
+        }
+        return false;
     }
 
     @Override

@@ -21,6 +21,9 @@ public enum AnnotationKeys {
     EventLoopGroup_PreferPoll("vproxy/event-loop-group-prefer-poll"),
     EventLoopGroup_UseMsQuic("vproxy/event-loop-group-use-msquic"),
     EventLoop_CoreAffinity("vproxy/event-loop-core-affinity"),
+
+    Owner("vproxy.internal/owner"),
+    NoSave("vproxy.internal/nosave"),
     ;
     public final String name;
     public final boolean deserialize; // will deserialize into vproxy.base.util.Annotations

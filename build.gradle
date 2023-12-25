@@ -214,7 +214,7 @@ project(':dep') {
         api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.9.10'
         api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.7.3'
         api group: 'io.vproxy', name: 'pni-api-jdk21', version: PNI_VERSION
-        api (group: 'io.vproxy', name: 'vjson', version: '1.5.4-jdk9') {
+        api (group: 'io.vproxy', name: 'vjson', version: '1.5.5-jdk9') {
             exclude group: 'io.vproxy', module: 'kotlin-stdlib-lite'
         }
     }
@@ -249,6 +249,7 @@ project(':pni-template') {
                 .setFilters(List.of(
                     Pattern.compile('io\\.vproxy\\.vfd.*'),
                     Pattern.compile('io\\.vproxy\\.xdp.*'),
+                    Pattern.compile('io\\.vproxy\\.fubuki.*'),
                     Pattern.compile('io\\.vproxy\\.msquic\\.CxPlat.*'),
                     Pattern.compile('^io\\.vproxy\\.msquic\\.MsQuicMod2$'),
                 ))

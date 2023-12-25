@@ -19,6 +19,8 @@ public class Annotations {
     public final boolean EventLoopGroup_PreferPoll;
     public final boolean EventLoopGroup_UseMsQuic;
     public final long EventLoop_CoreAffinity;
+    public final String owner;
+    public final boolean nosave;
 
     public final Map<String, String> other;
 
@@ -136,6 +138,14 @@ public class Annotations {
                 }
             }
             EventLoop_CoreAffinity = coreAffinity;
+        }
+        {
+            var value = annotations.get(AnnotationKeys.Owner.name);
+            owner = value == null ? "" : value;
+        }
+        {
+            var value = annotations.get(AnnotationKeys.NoSave.name);
+            nosave = value != null && value.equals("true");
         }
 
         this.other = Collections.unmodifiableMap(other);

@@ -508,6 +508,33 @@ public class Switch {
         return user;
     }
 
+    public FubukiTunIface addFubuki(String nodeName, String password,
+                                    int vni, MacAddress mac,
+                                    IPPort remoteAddr,
+                                    IPMask localAddr) throws AlreadyExistException, XException {
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof FubukiTunIface f)) {
+                continue;
+            }
+            if (f.nodeName.equals(nodeName)) {
+                throw new AlreadyExistException("fubuki", nodeName);
+            }
+        }
+
+        var iface = new FubukiTunIface(vni, mac, nodeName, remoteAddr, localAddr, password);
+
+        try {
+            initIface(iface);
+        } catch (Exception e) {
+            iface.destroy();
+            throw new XException(Utils.formatErr(e));
+        }
+        SelectorEventLoop loop = eventLoop.getSelectorEventLoop();
+        blockAndAddPersistentIface(loop, iface);
+
+        return iface;
+    }
+
     public RemoteSwitchIface addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -917,6 +944,9 @@ public class Switch {
             if (route != null && route.isLocalDirect(network.vni)) {
                 assert Logger.lowLevelDebug("packet from " + pkb.devin + " to " + pkb.ipPkt.getDst() + " requires no routing");
                 var mac = network.arpTable.lookup(pkb.ipPkt.getDst());
+                if (mac == null) {
+                    mac = network.ips.lookup(pkb.ipPkt.getDst());
+                }
                 if (mac != null) {
                     buildEthernetHeaderForTunDev(pkb, mac);
                 } else {
@@ -924,7 +954,7 @@ public class Switch {
                 }
             } else if (route == null || route.ip == null) {
                 assert Logger.lowLevelDebug("packet from " + pkb.devin + " to " + pkb.ipPkt.getDst() + " " +
-                    "is not gateway routing, or route does not exist");
+                                            "is not gateway routing, or route does not exist");
                 var mac = network.ips.lookup(pkb.ipPkt.getDst());
                 if (mac == null) {
                     assert Logger.lowLevelDebug("the target address is not a synthetic ip");
