@@ -10,4 +10,5 @@ gcc -std=gnu99 -O2 \
     -I "../c-generated" \
     -shared -Werror -fPIC \
     io_vproxy_vfd_windows_GeneralWindows.c \
+    ../c-generated/pni.c \
     -o "$target"

@@ -26,4 +26,5 @@ gcc -std=gnu99 -O2 \
     -I "../c-generated" \
     -shared -Werror -lc -lpthread -fPIC \
     io_vproxy_vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c \
+    ../c-generated/pni.c \
     -o "$target"

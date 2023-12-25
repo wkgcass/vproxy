@@ -16,6 +16,7 @@ gcc -std=gnu99 -O2 \
     -Wl,--as-needed,--no-whole-archive \
     -shared -Werror -lc -fPIC \
     io_vproxy_xdp_NativeXDP.c ./xdp/vproxy_xdp.c ./xdp/vproxy_xdp_util.c ./xdp/vproxy_checksum.c \
+    ../c-generated/pni.c \
     -o libvpxdp.so
 
 echo "done"
