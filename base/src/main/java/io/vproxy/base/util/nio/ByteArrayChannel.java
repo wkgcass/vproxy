@@ -183,6 +183,14 @@ public class ByteArrayChannel implements ReadableByteStream, WritableByteStream 
         return readOff - initialReadOff;
     }
 
+    public void setReadOff(int readOff) {
+        if (readOff < 0)
+            throw new IllegalArgumentException();
+        if (readOff > getWriteOff())
+            throw new IllegalArgumentException();
+        this.readOff = initialReadOff + readOff;
+    }
+
     @Override
     public String toString() {
         return "ByteArrayChannel:" + arr.getClass().getSimpleName() + "(" + arr.sub(readOff, writeOff - readOff).toString().replaceAll("\\r|\\n", ".") + ")";
