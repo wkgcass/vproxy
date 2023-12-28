@@ -2,6 +2,7 @@ package io.vproxy.test.cases;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.bytearray.RandomAccessFileByteArray;
 import io.vproxy.base.util.file.MappedByteBufferLogger;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
@@ -14,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -444,5 +446,51 @@ public class TestUtils {
         assertEquals(expected.toString(), sb.toString());
         assertTrue(expected.length() > (4096d / 2 * 16384 * 0.8));
         assertTrue(expected.length() < (4096d / 2 * 16384 * 1.2));
+    }
+
+    @Test
+    public void randomAccessFileByteArray() throws Exception {
+        var p = Files.createTempFile("randomAccessFileByteArray", ".txt");
+        p.toFile().deleteOnExit();
+        Files.write(p, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});
+        try (var arr = new RandomAccessFileByteArray(p)) {
+            for (int i = 0; i < arr.length(); ++i) {
+                assertEquals(i + 1, arr.get(i));
+            }
+            for (int i = arr.length() - 1; i >= 0; --i) {
+                assertEquals(i + 1, arr.get(i));
+            }
+
+            var helloworld = "hello world".getBytes();
+            for (int i = 0; i < helloworld.length; ++i) {
+                arr.set(i, helloworld[i]);
+            }
+            var str = Files.readString(p);
+            assertEquals("hello world", str);
+
+            for (int i = 0; i < helloworld.length; ++i) {
+                arr.set(arr.length() - i - 1, helloworld[i]);
+            }
+            str = Files.readString(p);
+            assertEquals("dlrow olleh", str);
+
+            var jarr = arr.toJavaArray();
+            assertArrayEquals("dlrow olleh".getBytes(), jarr);
+
+            var buf = ByteBuffer.allocate(4);
+            buf.position(1);
+            arr.byteBufferPut(buf, 3, 2);
+            assertEquals(3, buf.position());
+            assertEquals(4, buf.limit());
+            assertEquals('o', buf.array()[1]);
+            assertEquals('w', buf.array()[2]);
+
+            buf = ByteBuffer.allocate(11);
+            buf.put("abcdefghijk".getBytes());
+            buf.flip();
+            arr.byteBufferGet(buf, 0, 11);
+            str = Files.readString(p);
+            assertEquals("abcdefghijk", str);
+        }
     }
 }
