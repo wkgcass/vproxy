@@ -189,10 +189,22 @@ public interface ByteArray extends ToByteArray {
         set(offset + 2, (byte) ((val) & 0xff));
         return this;
     }
+    default ByteArray int24ReverseNetworkByteOrder(int offset, int val) {
+        set(offset, (byte) ((val) & 0xff));
+        set(offset + 1, (byte) ((val >> 8) & 0xff));
+        set(offset + 2, (byte) ((val >> 16) & 0xff));
+        return this;
+    }
 
     default ByteArray int16(int offset, int val) {
         set(offset, (byte) ((val >> 8) & 0xff));
         set(offset + 1, (byte) ((val) & 0xff));
+        return this;
+    }
+
+    default ByteArray int16ReverseNetworkByteOrder(int offset, int val) {
+        set(offset, (byte) ((val) & 0xff));
+        set(offset + 1, (byte) ((val >> 8) & 0xff));
         return this;
     }
 
@@ -201,6 +213,14 @@ public interface ByteArray extends ToByteArray {
         set(offset + 1, (byte) ((val >> 16) & 0xff));
         set(offset + 2, (byte) ((val >> 8) & 0xff));
         set(offset + 3, (byte) ((val) & 0xff));
+        return this;
+    }
+
+    default ByteArray int32ReverseNetworkByteOrder(int offset, int val) {
+        set(offset, (byte) ((val) & 0xff));
+        set(offset + 1, (byte) ((val >> 8) & 0xff));
+        set(offset + 2, (byte) ((val >> 16) & 0xff));
+        set(offset + 3, (byte) ((val >> 24) & 0xff));
         return this;
     }
 
@@ -213,6 +233,18 @@ public interface ByteArray extends ToByteArray {
         set(offset + 5, (byte) ((val >> 16) & 0xff));
         set(offset + 6, (byte) ((val >> 8) & 0xff));
         set(offset + 7, (byte) ((val) & 0xff));
+        return this;
+    }
+
+    default ByteArray int64ReverseNetworkByteOrder(int offset, long val) {
+        set(offset, (byte) ((val) & 0xff));
+        set(offset + 1, (byte) ((val >> 8) & 0xff));
+        set(offset + 2, (byte) ((val >> 16) & 0xff));
+        set(offset + 3, (byte) ((val >> 24) & 0xff));
+        set(offset + 4, (byte) ((val >> 32) & 0xff));
+        set(offset + 5, (byte) ((val >> 40) & 0xff));
+        set(offset + 6, (byte) ((val >> 48) & 0xff));
+        set(offset + 7, (byte) ((val >> 56) & 0xff));
         return this;
     }
 

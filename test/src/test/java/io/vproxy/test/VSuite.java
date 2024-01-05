@@ -21,6 +21,7 @@ import org.junit.runners.Suite;
     TestHttp2Decoder.class,
     TestHealthCheck.class,
     TestPacket.class,
+    TestPcap.class,
     TestRouteTable.class,
     TestTCP.class,
     TestHttpServer.class,

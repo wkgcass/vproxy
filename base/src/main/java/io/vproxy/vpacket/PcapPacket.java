@@ -1,21 +1,33 @@
 package io.vproxy.vpacket;
 
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.FDProvider;
 
 public class PcapPacket {
     private int tssec;
     private int tsusec;
-    private int inclLen; /* number of octets of packet saved in file */
+    private int capLen; /* number of octets of packet saved in file */
     private int origLen;
     private AbstractPacket packet;
 
     public PcapPacket() {
     }
 
-    public PcapPacket(int tssec, int tsusec, int inclLen, int origLen) {
+    public PcapPacket(AbstractPacket packet) {
+        this(FDProvider.get().currentTimeMillis(), packet);
+    }
+
+    public PcapPacket(long ts, AbstractPacket packet) {
+        this.tssec = (int) (ts / 1000);
+        this.tsusec = (int) (ts % 1000) * 1000;
+        this.packet = packet;
+    }
+
+    public PcapPacket(int tssec, int tsusec, int capLen, int origLen) {
         this.tssec = tssec;
         this.tsusec = tsusec;
-        this.inclLen = inclLen;
+        this.capLen = capLen;
         this.origLen = origLen;
     }
 
@@ -35,12 +47,12 @@ public class PcapPacket {
         this.tsusec = tsusec;
     }
 
-    public int getInclLen() {
-        return inclLen;
+    public int getCapLen() {
+        return capLen;
     }
 
-    public void setInclLen(int inclLen) {
-        this.inclLen = inclLen;
+    public void setCapLen(int capLen) {
+        this.capLen = capLen;
     }
 
     public int getOrigLen() {
@@ -57,6 +69,20 @@ public class PcapPacket {
 
     public void setPacket(AbstractPacket packet) {
         this.packet = packet;
+    }
+
+    public ByteArray build() {
+        var pkt = packet.getRawPacket(0);
+        var origLen = this.origLen;
+        if (origLen == 0) {
+            origLen = pkt.length();
+        }
+        return ByteArray.allocate(16)
+            .int32ReverseNetworkByteOrder(0, tssec)
+            .int32ReverseNetworkByteOrder(4, tsusec)
+            .int32ReverseNetworkByteOrder(8, pkt.length())
+            .int32ReverseNetworkByteOrder(12, origLen)
+            .concat(pkt);
     }
 
     @Override

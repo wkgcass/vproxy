@@ -110,14 +110,32 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
     }
 
     @Override
+    public ByteArray int16ReverseNetworkByteOrder(int offset, int val) {
+        seg.set(SHORT_LITTLE_ENDIAN, offset, (short) val);
+        return this;
+    }
+
+    @Override
     public ByteArray int32(int offset, int val) {
         seg.set(INT_BIG_ENDIAN, offset, val);
         return this;
     }
 
     @Override
+    public ByteArray int32ReverseNetworkByteOrder(int offset, int val) {
+        seg.set(INT_LITTLE_ENDIAN, offset, val);
+        return this;
+    }
+
+    @Override
     public ByteArray int64(int offset, long val) {
         seg.set(LONG_BIG_ENDIAN, offset, val);
+        return this;
+    }
+
+    @Override
+    public ByteArray int64ReverseNetworkByteOrder(int offset, long val) {
+        seg.set(LONG_LITTLE_ENDIAN, offset, val);
         return this;
     }
 }

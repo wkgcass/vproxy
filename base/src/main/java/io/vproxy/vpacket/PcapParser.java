@@ -5,10 +5,13 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 
 import java.io.*;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PcapParser {
-    private final File file;
     private final InputStream data;
+    private boolean copyPacket = true;
     private byte[] buf = new byte[4096];
     private int state = 0;
     // 0 -> waiting for global header
@@ -17,16 +20,18 @@ public class PcapParser {
     private PcapGlobalHeader globalHeader;
 
     public PcapParser(String filename) throws FileNotFoundException {
-        this(new File(filename));
+        this(Path.of(filename));
+    }
+
+    public PcapParser(Path filepath) throws FileNotFoundException {
+        this(filepath.toFile());
     }
 
     public PcapParser(File file) throws FileNotFoundException {
-        this.file = file;
         data = new FileInputStream(file);
     }
 
     public PcapParser(InputStream data) {
-        this.file = null;
         this.data = data;
     }
 
@@ -42,18 +47,39 @@ public class PcapParser {
         }
     }
 
+    public List<PcapPacket> parseAll() throws RuntimeException {
+        var result = new ArrayList<PcapPacket>();
+        while (true) {
+            var pkt = next();
+            if (pkt == null) {
+                break;
+            }
+            result.add(pkt);
+        }
+        return result;
+    }
+
+    public boolean isCopyPacket() {
+        return copyPacket;
+    }
+
+    public void setCopyPacket(boolean copyPacket) {
+        this.copyPacket = copyPacket;
+    }
+
     private void readGlobalHeader() {
         int len = 4 + 2 + 2 + 4 + 4 + 4 + 4;
         var buf = next(len);
         if (buf == null) {
-            return;
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, "unable to read global header: EOF");
+            throw new IllegalArgumentException();
         }
         if (buf.length() != len) {
             Logger.error(LogType.INVALID_EXTERNAL_DATA, "unable to read global header: cannot read " + len + " bytes from the stream");
             throw new IllegalArgumentException();
         }
         globalHeader = new PcapGlobalHeader(
-            buf.int32(0),
+            buf.int32ReverseNetworkByteOrder(0),
             buf.uint16ReverseNetworkByteOrder(4),
             buf.uint16ReverseNetworkByteOrder(6),
             buf.int32ReverseNetworkByteOrder(8),
@@ -82,7 +108,7 @@ public class PcapParser {
             headerBuf.int32ReverseNetworkByteOrder(8),
             headerBuf.int32ReverseNetworkByteOrder(12)
         );
-        var len = pcapPacket.getInclLen();
+        var len = pcapPacket.getCapLen();
         var buf = next(len);
         if (buf == null) {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "no packet data, probably tcpdump is interrupted");
@@ -92,14 +118,32 @@ public class PcapParser {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "no packet data, probably tcpdump is interrupted, expecting " + len + ", got " + buf.length());
             return null;
         }
-        var e = new EthernetPacket();
-        try {
-            e.from(new PacketDataBuffer(buf));
-        } catch (Throwable t) {
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "invalid packet", t);
+        if (copyPacket) {
+            buf = buf.copy();
+        }
+        String err = null;
+        if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_ETHERNET) {
+            // for null type, try to use ethernet anyway
+            var e = new EthernetPacket();
+            err = e.from(new PacketDataBuffer(buf));
+            pcapPacket.setPacket(e);
+        } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_LINUX_SLL) {
+            var l = new LinuxCookedPacket();
+            err = l.from(new PacketDataBuffer(buf));
+            pcapPacket.setPacket(l);
+        } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_NULL) {
+            var bsd = new BSDLoopbackEncapsulation();
+            err = bsd.from(new PacketDataBuffer(buf));
+            pcapPacket.setPacket(bsd);
+        } else {
+            pcapPacket.setPacket(new PacketBytes(buf));
+        }
+
+        if (err != null) {
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "invalid packet: " + err);
+            pcapPacket.setPacket(new PacketBytes(buf));
             return pcapPacket;
         }
-        pcapPacket.setPacket(e);
         return pcapPacket;
     }
 

@@ -10,8 +10,11 @@ import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -488,5 +491,46 @@ public class TestPacket {
             p -> ((UdpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setSrcPort(121));
         checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
             p -> ((UdpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setDstPort(121));
+    }
+
+    @Test
+    public void pcapBuild() {
+        var packets = new ArrayList<AbstractPacket>();
+        for (int i = 0; i < 100; ++i) {
+            var rand = ThreadLocalRandom.current().nextInt(3);
+            var ether = new EthernetPacket();
+            if (rand == 0) {
+                ether.setType(Consts.ETHER_TYPE_ARP);
+                ether.setPacket(genArp());
+            } else if (rand == 1) {
+                ether.setType(Consts.ETHER_TYPE_IPv4);
+                ether.setPacket(genIpv4());
+            } else {
+                ether.setType(Consts.ETHER_TYPE_IPv6);
+                ether.setPacket(genIpv6());
+            }
+            ether.setSrc(randomMac());
+            ether.setDst(randomMac());
+            packets.add(ether);
+        }
+
+        var header = new PcapGlobalHeader();
+        var result = header.build();
+        for (var p : packets) {
+            var pcapPkt = new PcapPacket(p);
+            result = result.concat(pcapPkt.build());
+        }
+
+        var parser = new PcapParser(new ByteArrayInputStream(result.toJavaArray()));
+        var all = parser.parseAll();
+        assertEquals(packets.size(), all.size());
+        for (int i = 0; i < packets.size(); ++i) {
+            var expected = packets.get(i);
+            var parsed = all.get(i);
+
+            assertEquals(STR."mismatch \{i} expected=\{expected.description()} actual=\{parsed}",
+                expected.getRawPacket(0),
+                parsed.getPacket().getRawPacket(0));
+        }
     }
 }
