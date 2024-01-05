@@ -479,8 +479,8 @@ public class TestSwitch {
 
         var ip = (AbstractIpPacket) pkt.getPacket();
         var tcp = (TcpPacket) ip.getPacket();
-        assertEquals(Consts.TCP_FLAGS_RST, tcp.getFlags());
-        assertEquals(seq, tcp.getAckNum());
+        assertEquals(Consts.TCP_FLAGS_RST | Consts.TCP_FLAGS_ACK, tcp.getFlags());
+        assertEquals(seq + 1 /*+ 1 to ack the syn packet*/, tcp.getAckNum());
     }
 
     @Test
@@ -506,8 +506,8 @@ public class TestSwitch {
 
         var ip = (AbstractIpPacket) pkt.getPacket();
         var tcp = (TcpPacket) ip.getPacket();
-        assertEquals(Consts.TCP_FLAGS_RST, tcp.getFlags());
-        assertEquals(seq, tcp.getAckNum());
+        assertEquals(Consts.TCP_FLAGS_RST | Consts.TCP_FLAGS_ACK, tcp.getFlags());
+        assertEquals(seq + 1 /*+ 1 to ack the syn packet*/, tcp.getAckNum());
     }
 
     private EthernetPacket buildUdp(String srcMac, String srcIP, int sport, String dstMac, String dstIp, int dport) {
