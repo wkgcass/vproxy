@@ -1,8 +1,8 @@
 package io.vproxy.poc
 
+import io.vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vjson.JSON
 import vjson.util.ObjectBuilder
-import io.vproxy.lib.http1.CoroutineHttp1ClientConnection
 import java.io.File
 import java.io.FileOutputStream
 
@@ -10,17 +10,10 @@ object TLSMirror {
   @Throws(Exception::class)
   @JvmStatic
   fun main(args: Array<String>) {
-    if (io.vproxy.base.util.OS.isWindows()) {
-      System.setProperty("vproxy/vfd", "windows")
-    } else {
-      System.setProperty("vproxy/vfd", "posix")
-    }
     val config: JSON.Instance<*> = ObjectBuilder()
-      .put("enabled", true)
       .putArray("mirrors") {
         addObject {
-          put("tap", "tap3")
-          put("mtu", 47)
+          put("output", "~/dustbin/mytest.pcap")
           putArray("origins") {
             addObject {
               put("origin", "ssl")
@@ -37,7 +30,7 @@ object TLSMirror {
     fos.write(config.stringify().toByteArray())
     fos.flush()
     fos.close()
-    io.vproxy.vmirror.Mirror.init(tmpF.absolutePath)
+    io.vproxy.vmirror.Mirror.loadConfig(tmpF.absolutePath)
     println("wait for 10 seconds before start")
     Thread.sleep(5000)
     println("wait for 5 seconds before start")

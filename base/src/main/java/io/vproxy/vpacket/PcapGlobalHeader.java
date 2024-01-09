@@ -14,7 +14,7 @@ public class PcapGlobalHeader {
     public final int dataLinkType; // https://www.tcpdump.org/linktypes.html
 
     public PcapGlobalHeader() {
-        this(4096, LINKTYPE_ETHERNET);
+        this(65536, LINKTYPE_ETHERNET);
     }
 
     public PcapGlobalHeader(int snaplen, int dataLinkType) {

@@ -106,10 +106,6 @@ public class Config {
     // -DomainWhichShouldResolve
     public static final String domainWhichShouldResolve;
 
-    // the config file path for mirror
-    // -DmirrorConf=...
-    public static final String mirrorConfigPath;
-
     // the nics for dhcp to use
     // -DhcpGetDnsListNics=all or eth0,eth1,... (split with ',')
     public static final boolean dhcpGetDnsListEnabled;
@@ -134,7 +130,6 @@ public class Config {
             probe = res;
         }
         domainWhichShouldResolve = Utils.getSystemProperty("domain_which_should_resolve", "127.0.0.1.special.vproxy.io");
-        mirrorConfigPath = Utils.getSystemProperty("mirror_conf", "");
 
         String dhcpGetDnsListNicsString = Utils.getSystemProperty("dhcp_get_dns_list_nics", "");
         if (dhcpGetDnsListNicsString.isBlank()) {

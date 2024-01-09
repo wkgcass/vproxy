@@ -16,10 +16,9 @@ import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.JoinCallback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.thread.VProxyThreadJsonParserCacheHolder;
-import vjson.parser.ParserUtils;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vmirror.Mirror;
 import io.vproxy.vproxyx.*;
+import vjson.parser.ParserUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,15 +56,6 @@ public class Main {
     private static void beforeStart() {
         ParserUtils.setParserCacheHolder(new VProxyThreadJsonParserCacheHolder());
         OOMHandler.handleOOM();
-
-        if (!Config.mirrorConfigPath.isBlank()) {
-            try {
-                Mirror.init(Config.mirrorConfigPath);
-            } catch (Exception e) {
-                Logger.fatal(LogType.INVALID_EXTERNAL_DATA, "initiate mirror failed", e);
-                Utils.exit(1);
-            }
-        }
 
         {
             String gi = Utils.getSystemProperty("global_inspection");

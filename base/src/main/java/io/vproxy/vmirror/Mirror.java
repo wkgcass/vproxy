@@ -1,33 +1,28 @@
 package io.vproxy.vmirror;
 
 import io.vproxy.base.util.*;
-import io.vproxy.base.util.direct.DirectByteBuffer;
-import io.vproxy.base.util.direct.DirectMemoryUtils;
-import io.vproxy.base.util.file.FileWatcher;
-import io.vproxy.base.util.file.FileWatcherHandler;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vfd.MacAddress;
+import io.vproxy.vpacket.*;
 import vjson.CharStream;
 import vjson.JSON;
 import vjson.parser.ParserOptions;
 import vjson.parser.ParserUtils;
-import io.vproxy.vfd.*;
-import io.vproxy.vpacket.AbstractIpPacket;
-import io.vproxy.vpacket.EthernetPacket;
-import io.vproxy.vpacket.Ipv6Packet;
-import io.vproxy.vpacket.PacketBytes;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class Mirror {
     private static final Mirror mirror = new Mirror();
 
-    private boolean initialized = false;
-    private boolean enabled = false;
-    private FileWatcher watcher;
+    private volatile boolean enabled = false;
 
     private List<MirrorConfig> mirrors = Collections.emptyList();
     private Set<String> enabledOrigins = Collections.emptySet();
@@ -36,36 +31,17 @@ public class Mirror {
     private Mirror() {
     }
 
-    public static void init(String conf) throws Exception {
-        if (mirror.initialized)
-            throw new IllegalStateException("cannot initialize twice");
-        mirror.watcher = new FileWatcher(conf, new FileWatcherHandler() {
-            @Override
-            public void onFileCreated(Path file, String fileContent) {
-                mirror.loadConfig(fileContent);
-            }
-
-            @Override
-            public void onFileRemoved(Path file) {
-                mirror.enabled = false;
-            }
-
-            @Override
-            public void onFileUpdated(Path file, String fileContent) {
-                mirror.loadConfig(fileContent);
-            }
-        });
-        mirror.initialized = true;
-        mirror.watcher.start();
+    public static void destroy() {
+        mirror.enabled = false;
+        destroyMirrors();
+        mirror.filters = Collections.emptyList();
     }
 
-    public static void destroy() {
-        mirror.watcher.stop();
-        mirror.initialized = false;
-        mirror.enabled = false;
-        mirror.destroyTaps(mirror.mirrors);
+    private static void destroyMirrors() {
+        for (var m : mirror.mirrors) {
+            m.destroy();
+        }
         mirror.mirrors = Collections.emptyList();
-        mirror.filters = Collections.emptyList();
     }
 
     public static boolean isEnabled(String origin) {
@@ -79,15 +55,14 @@ public class Mirror {
         if (!mirror.enabled) return;
 
         Set<MirrorConfig> mirrors = new HashSet<>();
-        if (packet.getPacket() instanceof AbstractIpPacket) {
-            AbstractIpPacket ipPkt = (AbstractIpPacket) packet.getPacket();
+        if (packet.getPacket() instanceof AbstractIpPacket ipPkt) {
             checkHelper(mirrors, "switch", f -> f.matchIp(packet.getSrc(), packet.getDst(), ipPkt.getSrc(), ipPkt.getDst()));
         } else {
             checkHelper(mirrors, "switch", f -> f.matchEthernet(packet.getSrc(), packet.getDst()));
         }
 
         for (MirrorConfig c : mirrors) {
-            mirror.sendPacket(c.tap, packet);
+            mirror.sendPacket(c, packet);
         }
     }
 
@@ -123,7 +98,7 @@ public class Mirror {
 
         for (MirrorConfig c : mirrors) {
             var packets = formatPacket(data.ctx,
-                c.mtu, data.origin,
+                data.origin,
                 data.macSrc, data.macDst,
                 data.ipSrc, data.ipDst,
                 data.transportLayerProtocol,
@@ -131,7 +106,7 @@ public class Mirror {
                 data.applicationLayerProtocol,
                 data.meta,
                 data.flags, data.data);
-            mirror.sendPacket(c.tap, packets);
+            mirror.sendPacket(c, packets);
         }
     }
 
@@ -144,7 +119,6 @@ public class Mirror {
     }
 
     private static List<EthernetPacket> formatPacket(MirrorContext ctx,
-                                                     int mtu,
                                                      String originType,
                                                      MacAddress macSrc, MacAddress macDst,
                                                      IP ipSrc, IP ipDst,
@@ -188,14 +162,7 @@ public class Mirror {
         ByteArray dstPort = ByteArray.allocate(2).int16(0, portDst);
         // prepare payload
         List<ByteArray> dataList = new ArrayList<>();
-        while (true) {
-            if (fullData.length() <= mtu) {
-                dataList.add(fullData);
-                break;
-            }
-            dataList.add(fullData.sub(0, mtu));
-            fullData = fullData.sub(mtu, fullData.length() - mtu);
-        }
+        dataList.add(fullData);
         // the result array
         List<EthernetPacket> retList = new ArrayList<>(dataList.size());
 
@@ -312,28 +279,27 @@ public class Mirror {
         }
     }
 
-    private void loadConfig(String content) {
+    public static boolean loadConfig(String content) {
         try {
             JSON.Instance<?> inst = ParserUtils.buildFrom(CharStream.from(content), ParserOptions.allFeatures());
-            parseAndLoad(inst);
+            mirror.parseAndLoad(inst);
             Logger.alert("mirror config reloaded");
+            return true;
         } catch (Exception e) {
             Logger.error(LogType.SYS_ERROR, "loading mirror config failed", e);
+            return false;
         }
     }
 
+    @SuppressWarnings("RedundantThrows")
     private void parseAndLoad(JSON.Instance<?> inst) throws Exception {
         String handling = "";
-        boolean enabled;
         List<FilterConfig> filters;
         Set<String> enabledOrigins;
         List<MirrorConfig> mirrorConfigs;
         try {
             handling = "input";
             JSON.Object o = (JSON.Object) inst;
-
-            handling = "enabled";
-            enabled = o.getBool("enabled");
 
             handling = "mirrors";
             JSON.Array mirrors = o.getArray("mirrors");
@@ -368,90 +334,18 @@ public class Mirror {
             }
         }
 
-        FDs fds = FDProvider.get().getProvided();
-        if (!(fds instanceof FDsWithTap)) {
-            throw new Exception("the provided fd impl does not support tap devices, use -Dvfd=posix or -Dvfd=windows instead");
-        }
-        FDsWithTap tapFDs = (FDsWithTap) fds;
-
-        // check for tap devices
-        List<MirrorConfig> toCreate = new LinkedList<>();
-        List<TapDatagramFD> toDelete = new LinkedList<>();
-        for (MirrorConfig m : mirrorConfigs) {
-            boolean found = false;
-            for (MirrorConfig thisM : this.mirrors) {
-                if (thisM.tap.getTap().dev.equals(m.tapName)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                toCreate.add(m);
-            }
-        }
-        for (MirrorConfig thisM : this.mirrors) {
-            boolean found = false;
-            for (MirrorConfig m : mirrorConfigs) {
-                if (thisM.tap.getTap().dev.equals(m.tapName)) {
-                    found = true;
-                    m.tap = thisM.tap;
-                    break;
-                }
-            }
-            if (!found) {
-                toDelete.add(thisM.tap);
-            }
-        }
-
-        // create
-        for (MirrorConfig m : toCreate) {
-            TapDatagramFD fd;
-            try {
-                fd = tapFDs.openTap(m.tapName);
-            } catch (Throwable t) {
-                Logger.error(LogType.SYS_ERROR, "cannot open tap device for mirror: " + m.tapName, t);
-                destroyTaps(toCreate);
-                throw new Exception("open tap device " + m.tapName + " failed");
-            }
-            m.tap = fd;
-            if (!fd.getTap().dev.equals(m.tapName)) {
-                Logger.error(LogType.IMPROPER_USE, "should not specify tap pattern when mirroring. please create one before using");
-                destroyTaps(toCreate);
-                throw new Exception("should not specify tap pattern when mirroring. please create one before using");
-            }
-            Logger.alert("open mirror tap device " + m.tapName);
-        }
-
         boolean thisEnabledOld = this.enabled;
         this.enabled = false;
+        destroyMirrors();
         this.mirrors = mirrorConfigs;
         this.enabledOrigins = enabledOrigins;
         this.filters = filters;
-        this.enabled = enabled;
-
-        // delete
-        destroyTaps0(toDelete);
+        this.enabled = true;
 
         if (thisEnabledOld && !this.enabled) {
             Logger.alert("disable mirror");
         } else if (!thisEnabledOld && this.enabled) {
             Logger.alert("enable mirror");
-        }
-    }
-
-    private void destroyTaps(List<MirrorConfig> list) {
-        List<TapDatagramFD> ls = list.stream().filter(m -> m.tap != null).map(m -> m.tap).collect(Collectors.toList());
-        destroyTaps0(ls);
-    }
-
-    private void destroyTaps0(List<TapDatagramFD> list) {
-        for (TapDatagramFD fd : list) {
-            try {
-                fd.close();
-                Logger.warn(LogType.ALERT, "close mirror tap device " + fd.getTap().dev);
-            } catch (IOException e) {
-                Logger.shouldNotHappen("closing fd " + fd + "failed", e);
-            }
         }
     }
 
@@ -482,15 +376,19 @@ public class Mirror {
 
     private void parseAndLoadMirror(Set<String> enabledOrigins, List<FilterConfig> filters, MirrorConfig mirrorConfig, JSON.Object mirror) {
         runSub(handling -> {
-            handling[0] = "tap";
-            mirrorConfig.tapName = mirror.getString("tap");
-
-            handling[0] = "packetSize";
-            mirrorConfig.mtu = mirror.getInt("mtu");
-            if (mirrorConfig.mtu < 0)
-                throw new IllegalArgumentException("mtu should > 0");
-            if (mirrorConfig.mtu > 1500) {
-                throw new IllegalArgumentException("mtu should < 1500");
+            handling[0] = "output";
+            mirrorConfig.outputFilePath = Utils.filename(mirror.getString("output"));
+            try {
+                if (new File(mirrorConfig.outputFilePath).exists()) {
+                    mirrorConfig.output = new FileOutputStream(mirrorConfig.outputFilePath, true);
+                } else {
+                    mirrorConfig.output = new FileOutputStream(mirrorConfig.outputFilePath);
+                    mirrorConfig.output.write(new PcapGlobalHeader().build().toJavaArray());
+                }
+            } catch (FileNotFoundException e) {
+                throw new IllegalArgumentException("file not found: " + mirrorConfig.outputFilePath);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("writing pcap global header failed: " + mirrorConfig.outputFilePath);
             }
 
             handling[0] = "origins";
@@ -580,22 +478,17 @@ public class Mirror {
         });
     }
 
-    private void sendPacket(TapDatagramFD tap, EthernetPacket pkt) {
-        sendPacket(tap, Collections.singletonList(pkt));
+    private void sendPacket(MirrorConfig config, EthernetPacket pkt) {
+        sendPacket(config, Collections.singletonList(pkt));
     }
 
-    private final DirectByteBuffer writeBuffer = DirectMemoryUtils.allocateDirectBuffer(2048);
-
-    private void sendPacket(TapDatagramFD tap, List<? extends EthernetPacket> packets) {
-        for (EthernetPacket pkt : packets) {
+    private void sendPacket(MirrorConfig config, List<? extends EthernetPacket> packets) {
+        for (var pkt : packets) {
+            var pcap = new PcapPacket(pkt);
             try {
-                writeBuffer.limit(writeBuffer.capacity()).position(0);
-                writeBuffer.put(pkt.getRawPacket(0).toJavaArray());
-                writeBuffer.flip();
-                tap.write(writeBuffer.realBuffer());
-                // ignore write result
+                config.output.write(pcap.build().toJavaArray());
             } catch (Throwable t) {
-                Logger.error(LogType.CONN_ERROR, "sending mirror packet to " + tap + " failed");
+                Logger.error(LogType.CONN_ERROR, "sending mirror packet to " + config.outputFilePath + " failed");
             }
         }
     }

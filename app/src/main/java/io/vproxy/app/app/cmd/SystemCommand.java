@@ -3,11 +3,17 @@ package io.vproxy.app.app.cmd;
 import io.vproxy.app.controller.StdIOController;
 import io.vproxy.app.process.Shutdown;
 import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.exception.XException;
 import io.vproxy.vfd.IP;
+import io.vproxy.vmirror.Mirror;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,7 +55,8 @@ public class SystemCommand {
         "\n                              {enable|disable}" +
         "\n        System: remove plugin ${alias}             destroy a plugin" +
         "\n        System: list config                        show current config" +
-        "\n        System: lookup ${domain}                   resolve v4/v6 ip for the domain";
+        "\n        System: lookup ${domain}                   resolve v4/v6 ip for the domain" +
+        "\n        System: mirror <${config-file}|disable>    load mirror config or disable mirror";
 
     public static boolean allowNonStdIOController = false;
 
@@ -135,6 +142,9 @@ public class SystemCommand {
         } else if (cmd.startsWith("lookup ")) {
             executeLookup(cmd, cb);
             return;
+        } else if (cmd.startsWith("mirror ")) {
+            executeMirror(cmd, cb);
+            return;
         }
 
         // run standard format commands
@@ -176,5 +186,32 @@ public class SystemCommand {
                     cb.succeeded(new CmdResult(result, result, sb.toString()));
                 }
             }))));
+    }
+
+    private static void executeMirror(String cmd, Callback<CmdResult, Throwable> cb) {
+        var split = cmd.split(" ");
+        if (split.length != 2) {
+            cb.failed(new Exception("invalid system cmd for `mirror`: must specify mirror config path or use `disable`"));
+            return;
+        }
+        var path = split[1].trim();
+        if (path.equals("disable")) {
+            Mirror.destroy();
+            Logger.warn(LogType.ALERT, "mirror disabled");
+            cb.succeeded(new CmdResult());
+            return;
+        }
+        boolean ok;
+        try {
+            ok = Mirror.loadConfig(Files.readString(Path.of(Utils.filename(path))));
+        } catch (IOException e) {
+            cb.failed(e);
+            return;
+        }
+        if (ok) {
+            cb.succeeded(new CmdResult());
+            return;
+        }
+        cb.failed(new Exception("loading mirror config from " + path + " failed"));
     }
 }

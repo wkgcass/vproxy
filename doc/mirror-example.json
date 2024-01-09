@@ -1,9 +1,7 @@
 {
-  "enabled": false,
   "mirrors": [
     {
-      "tap": "tap0",
-      "mtu": 1500,
+      "output": "~/vproxy-mirror.pcap",
       "origins": [
         {
           "origin": "any string",
