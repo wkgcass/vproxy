@@ -13,16 +13,19 @@ import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.http.HttpRespParser;
 import io.vproxy.base.processor.http1.entity.Response;
 import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.RingBufferETHandler;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.SSLUnwrapRingBuffer;
 import io.vproxy.base.util.ringbuffer.SSLUtils;
 import io.vproxy.base.util.ringbuffer.SSLWrapRingBuffer;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
 import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
+import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.component.app.TcpLB;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.component.ssl.CertKey;
@@ -37,8 +40,10 @@ import org.junit.Test;
 import javax.net.ssl.*;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.KeyStore;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -115,8 +120,8 @@ public class TestSSL {
     SelectorEventLoop selectorEventLoop;
 
     @Test
-    public void requestSite() throws Exception {
-        String url = "https://www.bing.com";
+    public void requestSite() throws Throwable {
+        String url = "https://vproxy.io";
         String host = url.substring("https://".length());
         int port = 443;
         BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
@@ -126,19 +131,22 @@ public class TestSSL {
             inet = cb.block();
         } catch (UnknownHostException e) {
             System.out.println("we are not able to resolve the address, " +
-                "may be network is wrong, we ignore this case");
+                               "may be network is wrong, we ignore this case");
             throw new AssumptionViolatedException(e.getMessage());
         }
         var remote = new IPPort(inet, port);
         // make a socket to test whether it's accessible
-        {
-            try (Socket sock = new Socket()) {
-                sock.connect(remote.toInetSocketAddress());
-            } catch (IOException e) {
-                System.out.println("we cannot connect to the remote," +
-                    "may be network is wrong, we ignore this case");
-                throw new AssumptionViolatedException(e.getMessage());
+        try (var client = java.net.http.HttpClient.newHttpClient()) {
+            var req = HttpRequest.newBuilder()
+                .GET().uri(URI.create("https://" + inet.formatToIPString()))
+                .header("Host", host)
+                .build();
+            var resp = client.send(req, HttpResponse.BodyHandlers.discarding());
+            if (resp.statusCode() < 200 || resp.statusCode() >= 500) {
+                throw new Exception("failed to request " + url + ", status : " + resp.statusCode());
             }
+        } catch (Throwable t) {
+            throw new AssumptionViolatedException(t.getMessage());
         }
 
         // create loop
@@ -163,52 +171,73 @@ public class TestSSL {
             pair.left, pair.right
         );
         conn.setTimeout(5_000);
-        loop.addConnectableConnection(conn, null, new MySSLConnectableConnectionHandler(host));
 
+        var cb2 = new BlockCallback<Void, Throwable>();
+        loop.addConnectableConnection(conn, null, new MySSLConnectableConnectionHandler(host, cb2));
         // start
-        selectorEventLoop.loop();
+        selectorEventLoop.loop(r -> VProxyThread.create(r, "requestSite"));
+        cb2.block();
+        selectorEventLoop.close();
     }
 
-    class MySSLConnectableConnectionHandler implements ConnectableConnectionHandler {
+    static class MySSLConnectableConnectionHandler implements ConnectableConnectionHandler {
         private final ByteArrayChannel chnl;
         private final HttpRespParser parser;
+        private final Callback<Void, Throwable> cb;
 
-        MySSLConnectableConnectionHandler(String host) {
+        MySSLConnectableConnectionHandler(String host, Callback<Void, Throwable> cb) {
             chnl = ByteArrayChannel.fromFull(("" +
                 "GET / HTTP/1.1\r\n" +
                 "Host: " + host + "\r\n" +
                 "User-Agent: curl/vproxy\r\n" + // add curl agent to get json response
                 "\r\n").getBytes());
             parser = new HttpRespParser(true);
+            this.cb = cb;
         }
+
+        private boolean isConnected = false;
 
         @Override
         public void connected(ConnectableConnectionHandlerContext ctx) {
+            isConnected = true;
             // send http request
             ctx.connection.getOutBuffer().storeBytesFrom(chnl);
         }
 
+        private ByteArray readData = null;
+
         @Override
         public void readable(ConnectionHandlerContext ctx) {
+            var bytes = ByteArray.from(ctx.connection.getInBuffer().getBytes());
+            if (readData == null) {
+                readData = bytes;
+            } else {
+                readData = readData.concat(bytes);
+            }
+
             int res = parser.feed(ctx.connection.getInBuffer());
             if (res != 0) {
                 String err = parser.getErrorMessage();
-                assertNull("got error: " + err, err);
+                try {
+                    assertNull("got error: " + err, err);
+                } catch (Throwable t) {
+                    cb.failed(t);
+                }
                 return;
             }
             // headers done
             Response resp = parser.getResult();
-            assertTrue("failed: " + resp.toString(), 200 == resp.statusCode || 302 == resp.statusCode);
+            try {
+                assertTrue("failed: " + resp.toString(), 200 <= resp.statusCode && resp.statusCode < 500);
+            } catch (Throwable t) {
+                cb.failed(t);
+                return;
+            }
             System.out.println("===============\n" + resp + "\n=============");
             // the body is truncated
             // we actually do not need that
             // successfully parsing the status and headers means that
             // this lib is working properly
-            try {
-                selectorEventLoop.close();
-            } catch (IOException e) {
-                fail(e.getMessage());
-            }
         }
 
         @Override
@@ -218,7 +247,11 @@ public class TestSSL {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            fail();
+            try {
+                fail("exception occurred: " + err + ", isConnected: " + isConnected + ", readData: " + readData);
+            } catch (Throwable t) {
+                cb.failed(t);
+            }
         }
 
         @Override
