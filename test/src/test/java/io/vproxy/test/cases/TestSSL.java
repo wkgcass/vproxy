@@ -162,6 +162,7 @@ public class TestSSL {
             ConnectionOpts.getDefault(),
             pair.left, pair.right
         );
+        conn.setTimeout(5_000);
         loop.addConnectableConnection(conn, null, new MySSLConnectableConnectionHandler(host));
 
         // start
