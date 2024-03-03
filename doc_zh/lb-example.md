@@ -4,7 +4,7 @@
 
 实际使用中我们更期望使用k8s资源或者vpctl工具来配置vproxy，但是这些工具最终还是会用命令完成配置，了解了命令，再去使用这些工具会上手更快。
 
-本文的命令的详细文档均可在[这里](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)查看。
+本文的命令的详细文档均可在通过“`man`, `man $resource`, `man $resource $action`命令”查看。
 
 ## 网络拓扑
 
@@ -45,7 +45,8 @@ service nginx start
 启动vproxy实例的同时，为了方便管理，我们也配置一个`RESPController`。
 
 ```
-java vproxy.app.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
+java vproxy.app.app.Main
+> System: add resp-controller resp-admin address 10.0.3.10:16309 password m1PasSw0rd
 ```
 
 启动vproxy，并且启动了一个resp-controller，绑定了`10.0.3.10:16309`，这样`ADMIN`就可以访问它了。
@@ -58,7 +59,7 @@ java vproxy.app.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
 redis-cli -h 10.0.3.10 -p 16309 -a m1PasSw0rd
 ```
 
-如下命令可以在`redis-cli`中执行。当然，telnet也是可以的。
+如下命令可以在`redis-cli`中执行。当然，直接用telnet也是可以的。
 
 ### 3. 线程
 
@@ -74,7 +75,7 @@ add event-loop-group worker
 
 我们这里只在`acceptor`组内创建一个EventLoop（事件循环），但是，如果你的应用会有大量新建连接，那么你也可以在`acceptor`组内创建多个EventLoop。
 
-此外，因为这台机器有4个核，所以我们创建3个线程来处理网络流量。
+此外，因为这台机器有4个核，所以我们创建4个线程来处理网络流量。
 
 ```
 add event-loop acceptor1 to event-loop-group acceptor
@@ -93,7 +94,7 @@ add event-loop worker4 to event-loop-group worker
 add server-group ngx timeout 500 period 1000 up 2 down 3 method wrr event-loop-group worker
 ```
 
-我们使用 `worker` EventLoopGroup 来执行健康检查。
+上述命令为后端指定了健康检查参数，并且使用 `worker` EventLoopGroup 来执行健康检查。
 
 往组里添加后端：
 
@@ -131,7 +132,7 @@ add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:8
 
 ### 6. 检查并保存配置
 
-你可以在vproxy控制台中执行一些特殊的命令，这些命令不能通过`redis-cli`执行。（除非你在启动时指定`allowSystemCommandInNonStdIOController`，但是为了安全考虑，和本机文件系统或者进程相关的命令依然不可执行）。
+你可以在vproxy控制台中执行一些特殊的命令，这些命令不能通过`redis-cli`执行。（除非你在启动时指定`allowSystemCommandInNonStdIOController`，但是为了安全考虑，和本机文件系统或者进程相关的命令依然**不可**执行）。
 
 检查配置：
 

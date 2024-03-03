@@ -6,7 +6,7 @@
 
 ## Intro
 
-VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only requires Java 11 to run.
+VProxy is a zero-dependency loadbalancer and sdn virtual switch. The project only requires Java 21 to run.
 
 Clone it, compile it, then everything is ready for running.
 
@@ -19,6 +19,7 @@ Clone it, compile it, then everything is ready for running.
 5. DNS server and customizable A|AAAA records
 6. Kubernetes integration
 7. Many other standalone extended apps, such as `WebSocksProxyAgent` and `WebSocksProxyServer`
+8. SDN virtual switch with full TCP/IP stack support
 
 ## Make
 
@@ -56,10 +57,7 @@ Run:
 ```shell
 make init
 ```  
-to initiate submodules and some other init work.
-
-A java agent is required as a patch for gradle.  
-Copy `misc/modify-gradle-compiler-args-agent.jar` to `~/.gradle/` before compiling this project.  
+to initiate submodules and some other init work. 
 
 </details>
 
@@ -118,7 +116,7 @@ make vfdposix
 java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-And there's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are stll based on jdk selector channel.
+And there's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are still based on jdk selector channel.
 
 ```
 make vfdwindows
@@ -199,7 +197,7 @@ Current available ui tools:
 
 ## Aim
 
-* Zero dependency: no dependency other than java and kotlin standard library.
+* Zero dependency: all dependencies are implemented in vproxy subprojects.
 * Simple: keep code simple and clear.
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
@@ -329,9 +327,7 @@ See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) a
 
 * [how-to-use.md](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md): How to use config file and controllers.
 * [api.yaml](https://github.com/wkgcass/vproxy/blob/dev/doc/api.yaml): api doc for http-controller in swagger format.
-* [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): Detailed command document.
 * [lb-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/lb-example.md): An example about running a loadbalancer.
-* [docker-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/docker-example.md): An example about building and running vproxy in docker.
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): Something about the architecture.
 * [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.

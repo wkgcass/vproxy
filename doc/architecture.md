@@ -10,26 +10,31 @@ Everything is based on `FD` and `Selector`.
 
 #### FD
 
-FD is an abstraction for jdk channel or os fds. With the help of FDs, we can easily change the whole network stack without touching the upper level code. For example you can use (almost) all functionalities when you switch to the `F-Stack` fd implementation.
+FD is an abstraction for jdk channel or os fds. With the help of FDs, we can easily change the whole network stack without touching the upper level code. For example you can use all functionalities when you switch to the `vfdposix` fd implementation.
 
 Also it makes it easy to write ARQ protocols based on UDP, and wrap them into `TCP-like` API, and plug into the vproxy system. For example you can use the KCP FDs impl just like using a normal TCP channel.
 
+#### FDSelector
+
+A wrapper for selector, epoll, kqueue etc. It encapsulates core functionality related to the low level API.  
+Also provides a general `virtual` fd implementation, the upper level code don't have to care whether it's a real fd or virtual fd.
+
 #### SelectorEventLoop
 
-We first built the `SelectorEventLoop`. It provides a common callback handler wrapper for `Channel` events. Also the loop can handle time events, which is based on `selector.select(timeout)`.  
+It provides a common callback handler wrapper for `Channel` events. Also the loop can handle time events, which is based on `selector.select(timeout)`.  
 You may consider it in the same position as libae in redis.
 
 #### NetEventLoop
 
-Then we built `NetEventLoop` based on `SelectorEventLoop`, and provided a few wrappers for `SocketChannel`s, as you can see from the architecture figure. This makes network related coding easy and simple.  
+The `NetEventLoop` is based on `SelectorEventLoop`, and provided a few wrappers for `SocketChannel`s, as you can see from the architecture figure. This makes network related coding easy and simple.  
 Also, vproxy provides a `RingBuffer` (in util package, used in almost every component), which can write and read at the same time. The network handling is simple: you write into output buffer, then the lib writes that data to channel; when reading is possible, the lib calls your readable callback and you can read data from the input buffer.
 
-We start to build the lb part after having these two event loops.
+We start to build the lb part after having these event loops.
 
 #### Proxy
 
 The `Proxy` can accept connections, dispatch the connections on different loops, create connections to some remote endpoints, and then proxy the network data.  
-The accept eventloop, handle eventloop (for handling connections), which backend to use, are all configurable and can be changed when running.
+The acceptor eventloop, worker eventloop (for handling connections), which backend to use, are all configurable and can be changed when running.
 
 #### EventLoopWrapper
 
@@ -37,7 +42,7 @@ The accept eventloop, handle eventloop (for handling connections), which backend
 
 #### EventLoopGroup
 
-`EventLoopGroup` contains multiple `EventLoopWrapper`. Also it can bind resources, just like `EventLoopWrapper`. It provides a `next()` method to retrive the next running event loop. The method of selecting event loop is always RR.
+`EventLoopGroup` contains multiple `EventLoopWrapper`. Also it can bind resources, just like `EventLoopWrapper`. It provides a `next()` method to retrieve the next running event loop. The method of selecting event loop is always RR.
 
 #### ConnectClient
 
@@ -61,6 +66,42 @@ These are the main functionalities that vproxy main program provides.
 
 `TcpLB` listens on a port and does loadbalancing for TCP based protocols (e.g. HTTP). You can create multiple `TcpLB`s if you want to listen on multiple ports. `Socks5Server` is almost the same as `TcpLB` but it runs socks5 protocol and proxies netflow to client specified backend.
 
+#### DNSServer
+
+It provides basic DNS server functionalities: resolving `A|AAAA|SRV` records, based on information recorded in the `upstream`, or recursively request other DNS servers if configured.
+
+### SDN
+
+The project provides a SDN virtual switch with a complete TCP/IP stack. It allows you to forward, route, nat and handle packets.
+
+#### Switch
+
+The SDN virtual switch is provided with the `switch` resource.
+
+#### VirtualNetwork
+
+A virtual network inside the switch. The name of the VPC is a number which usually represents the VLan or VNI of the network.
+
+Inside the network, you can configure ips, route tables. You can also handle packets programmatically or with the flow generator.
+
+#### IFace
+
+The network interface encapsulation. The base class makes it very easy to implement new netif for the switch.  
+There are a bunch of `IFace` implementations, e.g. `tap, tun, xdp, vxlan, vlan, ...`
+
+The `iface` belongs to `switch`, but should be attached to a virtual network.
+
+#### Node
+
+The concept comes from VPP. Each node is one step inside the network stack, and each node decides which node should the packet be sent to.  
+A inspecting command is provided to observe the packet traveling routine, in case of debugging.
+
+#### PacketFilter
+
+A packet filter hook on `iface` ingress/egress. It can pass, drop, modify packets, and can even re-inject the packet to a specific node.
+
+The flow generator is implemented with `PacketFilter`.
+
 ### Control Plane
 
 VProxy will create a event loop named `ControlEventLoop` for controlling operations. All quick operations will be operated on this event loop, some operations that might take a very long time will be operated on new threads.
@@ -79,15 +120,12 @@ VProxy provides you with multiple ways of configuring the vproxy instance.
 
 `HTTPController` creates an HTTP server that exposes RESTful json api to manage the vproxy instance.
 
-### Service Mesh
-
-VProxy provides the ability of service discovery and can act as a sidecar.  
-You may use the combination of `TcpLB`, `Socks5Server`, `SmartGroupDelegate` and `SmartNodeDelegate` to build any role inside a mesh.
-
 ### Library
 
-With all above functionalities, vproxy wraps some of them and provides libraries with light weight API.
+With all above functionalities, vproxy wraps some of them and provides libraries with lightweight API.
+
+A netty and vertx eventloop and socket implementation is provided, makes it much easier to reuse netty features.
 
 ### Application
 
-Besides acting as a loadbalancer, vproxy provides some other network related tools, for example you may use the WebSocksProxyAgent/Server to build a tunnel through fireware.
+Besides core functionalities, vproxy provides some other network related tools, for example you may use the WebSocksProxyAgent/Server to build a tunnel through firewalls.

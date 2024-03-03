@@ -4,7 +4,7 @@
 
 ## 简介
 
-VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Java 11即可运行。
+VProxy是一个零依赖的负载均衡器和SDN虚拟交换机。本项目仅需要Java 21即可运行。
 
 1) clone，2) 编译，3) 运行！
 
@@ -17,6 +17,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 5. DNS服务，支持A|AAAA记录
 6. 与Kubernetes整合
 7. 封装好的针对特定场景的应用，例如`WebSocksProxyAgent`和`WebSocksProxyServer`
+8. 支持完整TCP/IP协议栈的SDN虚拟交换机
 
 ## 构建
 
@@ -50,8 +51,10 @@ Java运行时可以从[这里](https://adoptium.net/releases.html?variant=openjd
 
 <details><summary>打包前置需求</summary>
 
-需要一个java-agent，用作gradle的一个patch。  
-在编译前，复制`misc/modify-gradle-compiler-args-agent.jar`到`~/.gradle/`目录即可。
+运行如下命令初始化submodules以及运行一些其他的初始化工作：  
+```shell
+make init
+```
 
 </details>
 
@@ -191,7 +194,7 @@ java -cp ./ui/build/libs/vproxy-ui.jar $mainClassName
 
 ## 目标
 
-* 零依赖: 除了java和kotlin标准库外不加任何依赖。
+* 零依赖: 所有依赖均来自vproxy子项目。
 * 简单：代码简单易懂。
 * 运行时可修改：更新配置不需要重启。
 * 高效：性能是首要目标之一。
@@ -319,9 +322,7 @@ java -Deploy=Simple -jar vproxy.jar \
 
 * [how-to-use.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/how-to-use.md): 如何使用配置文件和controller。
 * [api.yaml](https://github.com/wkgcass/vproxy/blob/dev/doc/api.yaml): http-controller的api文档（swagger格式）。
-* [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): 详细的命令文档。
 * [lb-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/lb-example.md): 关于TCP负载均衡的一个使用例子。
-* [docker-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/docker-example.md): 关于构建镜像以及在docker中运行vproxy的一个例子。
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): 架构相关。
 * [extended-app.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/extended-app.md): 扩展应用的使用方式。
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.

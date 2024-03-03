@@ -4,7 +4,7 @@ This example will tell you how to use vproxy with commands. With this example, y
 
 In real world we would expect you to use k8s resources or the vpctl tool to do the configuration, however those tools would eventually generate commands to make the final configuration. It will be much clear for you to use those tools if you understand the commands.
 
-Documentation of all commands appear in this article can be found [here](https://github.com/wkgcass/vproxy/blob/master/doc/command.md).
+Documentation of all commands appear in this article can be viewed using `man`, `man $resource`, `man $resource $action` commands.
 
 ## Network Topology
 
@@ -45,11 +45,8 @@ then every server listens on `0.0.0.0:80`.
 Start vproxy instance, and configure a `RESPController` for management:
 
 ```
-tmux
-
-## then start vproxy in tmux terminal
-
-java vproxy.app.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
+java vproxy.app.app.Main
+> System: add resp-controller resp-admin address 10.0.3.10:16309 password m1PasSw0rd
 ```
 
 Start the vproxy and start a resp-controller and bind `10.0.3.10:16309` for the `ADMIN` to access.
@@ -97,7 +94,7 @@ Create a server group named `ngx`.
 add server-group ngx timeout 500 period 1000 up 2 down 3 method wrr event-loop-group worker
 ```
 
-We use the worker event loop group to run health check.
+The above command defines health check arguments for backends, and uses the worker event loop group to run health check.
 
 Attach backend to the group:
 
@@ -135,7 +132,7 @@ Then the tcp loadbalancer starts.
 
 #### 6. Check and save config
 
-You can run some special commands in vproxy console, they cannot be executed from `redis-cli`. (Unless you specify `allowSystemCommandInNonStdIOController` on start up, but methods related to local filesystem or process will not be allowed for safety concern).
+You can run some special commands in vproxy console, they cannot be executed from `redis-cli`. (Unless you specify `allowSystemCommandInNonStdIOController` on start up, but methods related to local filesystem or process would still NOT be allowed for safety concern).
 
 Check config:
 
@@ -149,6 +146,6 @@ Save config:
 System: save ~/vproxy.conf
 ```
 
-Except for saving by hand, the config can be automatically saved in `~/.vproxy/vproxy.last` for every hour. And if it's terminated by `SIGINT` or `SIGHUP`, or manually shutdown, the config will also be saved.
+Except for saving by hand, the config would be automatically saved in `~/.vproxy/vproxy.last` for every hour. And if it's terminated by `SIGINT` or `SIGHUP`, or manually shutdown, the config will also be saved.
 
-And last saved config will be loaded if the start up arguments not containing any `load` command.
+And last saved config will be loaded if the startup arguments not containing any `load` command.
