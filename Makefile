@@ -33,6 +33,7 @@ clean: clean-jar
 	rm -f ./*.so
 	rm -f ./*.dylib
 	rm -f ./*.dll
+	cd ./submodules/fubuki/ && cargo clean
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
@@ -62,19 +63,21 @@ _add_linux_so_to_zip:
 	cp ./base/src/main/c/xdp/libbpf/src/libbpf.so.0.6.0 ./io/vproxy/libbpf-$(LINUX_ARCH).so
 	cp ./libmsquic.so ./io/vproxy/libmsquic-$(LINUX_ARCH).so
 	cp ./base/src/main/c/libmsquic-java.so ./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
+	cp ./submodules/fubuki/target/release/libfubukil.so ./io/vproxy/libfubuki-$(LINUX_ARCH).so
 	zip build/libs/vproxy.jar \
 		./io/vproxy/libvfdposix-$(LINUX_ARCH).so \
 		./io/vproxy/libvpxdp-$(LINUX_ARCH).so \
 		./io/vproxy/libbpf-$(LINUX_ARCH).so \
 		./io/vproxy/libmsquic-$(LINUX_ARCH).so \
-		./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
+		./io/vproxy/libmsquic-java-$(LINUX_ARCH).so \
+		./io/vproxy/libfubuki-$(LINUX_ARCH).so
 	rm -r ./io
 
 .PHONY: native
 ifeq ($(OS),Linux)
-native: vfdposix vpxdp quic
+native: vfdposix vpxdp quic fubuki
 else ifeq ($(OS),Darwin)
-native: vfdposix-linux vpxdp-linux quic-all vfdposix
+native: vfdposix-linux vpxdp-linux quic-all fubuki-linux fubuki vfdposix
 else
 native: vfdwindows
 endif
@@ -88,10 +91,12 @@ jar-with-lib: clean jar native _add_linux_so_to_zip
 	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
 	cp ./libmsquic.dylib ./io/vproxy/libmsquic-$(ARCH).dylib
 	cp ./base/src/main/c/libmsquic-java.dylib ./io/vproxy/libmsquic-java-$(ARCH).dylib
+	cp ./submodules/fubuki/target/release/libfubukil.dylib ./io/vproxy/libfubuki-$(ARCH).dylib
 	zip build/libs/vproxy.jar \
 		./io/vproxy/libvfdposix-$(ARCH).dylib \
 		./io/vproxy/libmsquic-$(ARCH).dylib \
-		./io/vproxy/libmsquic-java-$(ARCH).dylib
+		./io/vproxy/libmsquic-java-$(ARCH).dylib \
+		./io/vproxy/libfubuki-$(ARCH).dylib
 	rm -r ./io
 endif
 
@@ -141,6 +146,11 @@ msquic-java:
 msquic:
 	cd ./submodules/msquic/ && make
 
+.PHONY: fubuki
+fubuki:
+	cd ./submodules/fubuki/ && cargo update
+	cd ./submodules/fubuki/ && cargo +nightly build --release
+
 .PHONY: vfdposix-linux
 .PHONY: vpxdp-linux
 .PHONY: msquic-java-linux
@@ -150,6 +160,7 @@ vfdposix-linux: vfdposix
 vpxdp-linux: vpxdp
 msquic-java-linux: msquic-java
 msquic-linux: msquic
+fubuki-linux: fubuki
 else
 vfdposix-linux:
 	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vfdposix
@@ -159,6 +170,8 @@ msquic-java-linux:
 	docker run --rm -v $(shell pwd):/vproxy -v "$(shell pwd)/submodules/msquic/src/inc:/msquic/src/inc" -v "$(shell pwd)/submodules/msquic/build/bin/Release:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make msquic-java
 msquic-linux:
 	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest /bin/bash -c 'cd submodules/msquic && make'
+fubuki-linux:
+	docker run --rm -v $(shell pwd):/vproxy -v $(shell pwd)/cargo-cache/git:/root/.cargo/git -v $(shell pwd)/cargo-cache/registry:/root/.cargo/registry vproxyio/compile:latest /bin/bash -c 'make fubuki'
 endif
 
 .PHONY: quic

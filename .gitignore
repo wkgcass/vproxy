@@ -76,3 +76,9 @@ test/src/test/java/io/vproxy/test/gen/packetfilters/*.java
 
 # some submodules but not tracked with gitsubmodule
 submodules/msquic/
+
+# cargo build cache
+/cargo-cache/git/*
+/cargo-cache/registry/*
+!/cargo-cache/git/.gitkeep
+!/cargo-cache/registry/.gitkeep
