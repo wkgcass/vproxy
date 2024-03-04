@@ -77,6 +77,7 @@ public class FubukiTunIface extends TunIface {
         super.destroy();
         if (fubuki != null) {
             fubuki.close();
+            fubuki = null;
         }
         clearManagedIPs();
     }
