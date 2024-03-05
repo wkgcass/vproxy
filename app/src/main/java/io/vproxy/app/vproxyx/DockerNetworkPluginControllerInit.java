@@ -47,6 +47,8 @@ public class DockerNetworkPluginControllerInit {
 
         File configFile = new File(DockerNetworkDriver.TEMPORARY_CONFIG_FILE);
         if (configFile.exists()) {
+            Logger.alert(DockerNetworkDriver.TEMPORARY_CONFIG_FILE + " already exists, trying to directly use it ...");
+
             // check whether nics require initializing
             // if the nics already initialized, at lease one xdp should be added
             String config = Files.readString(configFile.toPath());
@@ -59,9 +61,12 @@ public class DockerNetworkPluginControllerInit {
                 }
             }
             if (!ifaceInitiated) {
+                Logger.alert("no xdp iface in this config file, might be the first launch ...");
                 isFirstLaunch = true;
             }
         } else {
+            Logger.alert(DockerNetworkDriver.TEMPORARY_CONFIG_FILE + " does not exist ...");
+
             File configDir = configFile.getParentFile();
             if (!configDir.exists()) {
                 Files.createDirectories(configDir.toPath());
@@ -69,6 +74,8 @@ public class DockerNetworkPluginControllerInit {
 
             File scriptFile = new File(DockerNetworkDriver.PERSISTENT_SCRIPT);
             if (scriptFile.exists()) {
+                Logger.alert(DockerNetworkDriver.PERSISTENT_SCRIPT + " exists, will run the script ...");
+
                 if (!scriptFile.setExecutable(true)) {
                     throw new Exception("setting executable on " + scriptFile.getAbsolutePath() + " failed");
                 }
@@ -77,8 +84,12 @@ public class DockerNetworkPluginControllerInit {
             }
             File persistFile = new File(DockerNetworkDriver.PERSISTENT_CONFIG_FILE);
             if (persistFile.exists()) {
+                Logger.alert(DockerNetworkDriver.PERSISTENT_CONFIG_FILE + " exists, trying to directly use it ...");
+
                 Files.copy(persistFile.toPath(), configFile.toPath());
             } else {
+                Logger.alert(DockerNetworkDriver.PERSISTENT_CONFIG_FILE + " does not exist, might be the first launch ...");
+
                 isFirstLaunch = true;
                 Files.writeString(configFile.toPath(), DEFAULT_TEMPORARY_CONFIG);
             }

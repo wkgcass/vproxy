@@ -2,8 +2,7 @@
 	"enabled": false,
 	"mirrors": [
 		{
-			"tap": "vproxy-mirror",
-			"mtu": 1500,
+			"output": "/root/vproxy.pcap",
 			"origins": [
 				{
 					"origin": "switch",

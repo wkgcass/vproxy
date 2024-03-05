@@ -1,8 +1,6 @@
 package io.vproxy.app.controller
 
 import io.vproxy.base.util.Network
-import vjson.JSON
-import vjson.util.ObjectBuilder
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.launch
 import io.vproxy.lib.common.sleep
@@ -11,6 +9,8 @@ import io.vproxy.lib.docker.DockerClient
 import io.vproxy.lib.http.RoutingContext
 import io.vproxy.lib.http.Tool
 import io.vproxy.lib.http1.CoroutineHttp1Server
+import vjson.JSON
+import vjson.util.ObjectBuilder
 import java.net.SocketTimeoutException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -392,7 +392,7 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
       val networks = client.listNetworks()
       io.vproxy.base.util.Logger.alert("retrieved docker networks: $networks")
       for (network in networks) {
-        if (network.driver == null || network.driver!!.startsWith("vproxyio/docker-plugin:").not()) {
+        if (network.driver == null || network.driver!!.contains("vproxyio/docker-plugin:").not()) {
           continue
         }
         val createReq = DockerNetworkDriver.CreateNetworkRequest()
