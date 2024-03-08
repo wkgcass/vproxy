@@ -19,6 +19,10 @@ public class SecurityGroup {
     private final Networks<SecurityGroupRules> tcpRules = new Networks<>();
     private final Networks<SecurityGroupRules> udpRules = new Networks<>();
 
+    public static boolean isPrebuiltSecurityGroupName(String alias) {
+        return alias.equals(defaultName) || alias.equals(defaultDenyName);
+    }
+
     public SecurityGroup(String alias, boolean defaultAllow) {
         this.alias = alias;
         this.defaultAllow = defaultAllow;

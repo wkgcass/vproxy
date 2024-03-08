@@ -637,7 +637,7 @@ public class Shutdown {
                 }
 
                 // check depended resources
-                if (!securityGroupNames.contains(sw.bareVXLanAccess.alias) && !sw.bareVXLanAccess.alias.equals(SecurityGroup.defaultName)) {
+                if (!securityGroupNames.contains(sw.bareVXLanAccess.alias) && !SecurityGroup.isPrebuiltSecurityGroupName(sw.bareVXLanAccess.alias)) {
                     Logger.warn(LogType.IMPROPER_USE, "the secg " + sw.bareVXLanAccess.alias + " already removed");
                     continue;
                 }

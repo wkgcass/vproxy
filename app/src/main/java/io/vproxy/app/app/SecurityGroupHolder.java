@@ -27,6 +27,9 @@ public class SecurityGroupHolder {
         if (SecurityGroup.defaultName.equals(alias)) {
             return SecurityGroup.allowAll();
         }
+        if (SecurityGroup.defaultDenyName.equals(alias)) {
+            return SecurityGroup.denyAll();
+        }
         SecurityGroup secg = map.get(alias);
         if (secg == null)
             throw new NotFoundException("security-group", alias);
