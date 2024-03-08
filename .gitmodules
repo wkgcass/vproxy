@@ -5,5 +5,5 @@
 
 [submodule "submodules/fubuki"]
 	path = submodules/fubuki
-	url = https://github.com/xutianyi1999/fubuki
-	branch = master
+	url = https://github.com/wkgcass/fubuki
+	branch = with-Cargo-lock

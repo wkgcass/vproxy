@@ -151,7 +151,6 @@ msquic:
 
 .PHONY: fubuki
 fubuki:
-	cd ./submodules/fubuki/ && cargo update
 	cd ./submodules/fubuki/ && cargo +nightly build --release
 
 .PHONY: vfdposix-linux
