@@ -12,5 +12,5 @@ RUN mkdir -p /dev/net
 RUN mkdir -p /var/run/docker
 RUN mkdir -p /x-etc
 
-ENTRYPOINT []
+ENTRYPOINT [ "/init.sh" ]
 CMD []

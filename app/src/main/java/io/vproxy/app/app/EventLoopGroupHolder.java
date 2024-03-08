@@ -19,11 +19,11 @@ public class EventLoopGroupHolder {
         return new ArrayList<>(map.keySet());
     }
 
-    public void add(String alias) throws Exception {
-        add(alias, new Annotations());
+    public EventLoopGroup add(String alias) throws Exception {
+        return add(alias, new Annotations());
     }
 
-    public void add(String alias, Annotations annotations) throws Exception {
+    public EventLoopGroup add(String alias, Annotations annotations) throws Exception {
         if (map.containsKey(alias))
             throw new AlreadyExistException("event-loop-group", alias);
         EventLoopGroup group;
@@ -36,6 +36,7 @@ public class EventLoopGroupHolder {
             group = new EventLoopGroup(alias, annotations);
         }
         map.put(alias, group);
+        return group;
     }
 
     public EventLoopGroup get(String alias) throws NotFoundException {

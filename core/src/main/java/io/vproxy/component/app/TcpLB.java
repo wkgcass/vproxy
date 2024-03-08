@@ -20,6 +20,7 @@ import io.vproxy.component.ssl.CertKey;
 import io.vproxy.component.svrgroup.Upstream;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.UDSPath;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -224,7 +225,21 @@ public class TcpLB {
             if (Config.checkBind && alreadyBondLoops.isEmpty()) { // if it's already bond, there's no need to check
                 ServerSock.checkBind(this.bindAddress);
             }
+            var atLeastOneAlreadyBond = false;
+            for (var w : eventLoops) {
+                if (alreadyBondLoops.contains(w)) {
+                    atLeastOneAlreadyBond = true;
+                    break;
+                }
+            }
             for (EventLoopWrapper w : eventLoops) {
+                // uds doesn't support reuseaddr nor reuseport
+                if (bindAddress instanceof UDSPath) {
+                    if (atLeastOneAlreadyBond) {
+                        break;
+                    }
+                }
+
                 if (alreadyBondLoops.contains(w))
                     continue; // ignore already bond loops
 
@@ -243,6 +258,11 @@ public class TcpLB {
 
                 servers.put(server, proxy);
                 Logger.info(LogType.ALERT, "server " + alias + " " + bindAddress + " starts on loop: " + w.alias);
+
+                // uds doesn't support reuseaddr nor reuseport
+                if (bindAddress instanceof UDSPath) {
+                    break;
+                }
             }
 
             assert Logger.lowLevelDebug("lb " + alias + " started");

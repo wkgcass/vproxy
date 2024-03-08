@@ -17,6 +17,7 @@ import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.component.ssl.CertKey;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.UDSPath;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -32,7 +33,7 @@ public class Simple {
 
     static {
         StringBuilder sb = new StringBuilder();
-        sb.append(supportedProtocols.get(0));
+        sb.append(supportedProtocols.getFirst());
         for (int i = 1; i < supportedProtocols.size(); ++i) {
             sb.append("|").append(supportedProtocols.get(i));
         }
@@ -41,9 +42,9 @@ public class Simple {
 
     private static final String _HELP_STR_ = "" +
         "vproxy simple mode usage: java -Deploy=Simple " + Main.class.getName() + " \\" +
-        "\n\t\tbind {port}                                          The lb listening port" +
+        "\n\t\tbind {port|unix://path}                              The lb listening port" +
         "\n" +
-        "\n\t\tbackend {host1:port1,host2:port2}                    The proxy destination address:port" +
+        "\n\t\tbackend {host1:port1,unix://path}                    The proxy destination address:port or unix://path" +
         "\n\t\t                                                     Multiple backend are separated with `,`" +
         "\n\t\thelp                                      [Optional] Show this message and exit" +
         "\n" +
@@ -51,6 +52,7 @@ public class Simple {
         "\n\t\t                                                     Multiple certificates are separated with `,`" +
         "\n\t\tprotocol {" + supportedProtocolsStr + "}" +
         "\n\t\t                                          [Optional] The forward protocol, default tcp" +
+        "\n\t\tno-dns                                    [Optional] Disable dns" +
         "\n\t\tgen                                       [Optional] Show config and exit" +
         "";
 
@@ -61,11 +63,12 @@ public class Simple {
             return;
         }
 
-        int port = -1;
+        IPPort bind = null;
         String backend = null;
         String[] certpath = null;
         String keypath = null;
         String protocol = "tcp";
+        boolean disableDns = false;
         boolean gen = false;
         // read args
         for (int i = 0; i < args.length; i++) {
@@ -86,12 +89,19 @@ public class Simple {
                     return;
                 case "bind":
                     if (next == null) {
-                        throw new Exception("missing port in `bind {port}`");
+                        throw new Exception("missing port|unix://path in `bind {port|unix://path}`");
                     }
-                    try {
-                        port = Integer.parseInt(next);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("port is not a number in `bind {port}`");
+                    if (next.startsWith("unix://")) {
+                        bind = new UDSPath(next.substring("unix://".length()));
+                    } else {
+                        try {
+                            bind = new IPPort(Integer.parseInt(next));
+                        } catch (NumberFormatException e) {
+                            throw new Exception("port is not a number in `bind {port}`");
+                        }
+                        if (bind.getPort() < 1 || bind.getPort() > 65535) {
+                            throw new Exception("invalid port range in `bind {port}`: " + bind);
+                        }
                     }
                     i += 1;
                     break;
@@ -120,6 +130,9 @@ public class Simple {
                     protocol = next;
                     i += 1;
                     break;
+                case "no-dns":
+                    disableDns = true;
+                    break;
                 case "gen":
                     gen = true;
                     break;
@@ -128,15 +141,11 @@ public class Simple {
             }
         }
         // check args exist
-        if (port == -1) {
-            throw new Exception("use `bind {port}` to set the listening port");
+        if (bind == null) {
+            throw new Exception("use `bind {port|unix://path}` to set the listening fd");
         }
         if (backend == null) {
             throw new Exception("use `backend {host:port}` to set the backend list");
-        }
-        // check args value
-        if (port < 1 || port > 65535) {
-            throw new Exception("invalid port range in `bind {port}`: " + port);
         }
         class HostPort {
             final String host;
@@ -151,6 +160,10 @@ public class Simple {
         {
             String[] backendSplit = backend.split(",");
             for (String b : backendSplit) {
+                if (b.startsWith("unix://")) {
+                    backendList.add(new HostPort(b, 0));
+                    continue;
+                }
                 String[] foo = b.split(":");
                 if (foo.length != 2 || foo[0].isBlank() || foo[1].isBlank()) {
                     throw new Exception("invalid address format in `backend {host:port}`");
@@ -190,7 +203,9 @@ public class Simple {
             new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr, null);
         int svrCnt = 0;
         for (HostPort svr : backendList) {
-            if (IP.isIpLiteral(svr.host)) {
+            if (svr.host.startsWith("unix://")) {
+                group.add("backend" + (++svrCnt), new UDSPath(svr.host.substring("unix://".length())), 10);
+            } else if (IP.isIpLiteral(svr.host)) {
                 group.add("backend" + (++svrCnt), new IPPort(Resolver.getDefault().blockResolve(svr.host), svr.port), 10);
             } else {
                 IP addr;
@@ -207,7 +222,7 @@ public class Simple {
         Application.get().tcpLBHolder.add("loadbalancer",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME),
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
-            new IPPort(IP.from(new byte[]{0, 0, 0, 0}), port),
+            bind,
             Application.get().upstreamHolder.get(upstreamName),
             60_000,
             4096,
@@ -219,7 +234,7 @@ public class Simple {
         // might be able to run dns?
         Logger.alert("try to launch dns server on 53 (optional)");
         // try to bind 53 first
-        boolean launchUdp = true;
+        boolean launchUdp = !disableDns;
         IPPort dnsBind = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 53);
         try {
             ServerSock.checkBind(Protocol.UDP, dnsBind);

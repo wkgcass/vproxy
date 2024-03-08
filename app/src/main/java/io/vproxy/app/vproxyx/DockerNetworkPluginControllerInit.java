@@ -14,7 +14,7 @@ import java.io.File;
 import java.nio.file.Files;
 
 public class DockerNetworkPluginControllerInit {
-    private static final String vproxySock = "/var/run/docker/plugins/vproxy.sock";
+    private static final String vproxySock = "/var/run/docker/vproxy_network_plugin.sock";
     private static boolean initiated = false;
     private static String[] args;
 

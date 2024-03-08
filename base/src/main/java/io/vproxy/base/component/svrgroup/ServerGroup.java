@@ -307,6 +307,14 @@ public class ServerGroup {
                 + " cost " + h.getHcCost()
                 + " down-reason " + h.getHcDownReason();
         }
+
+        public String formatToIPPortString() {
+            if (hostName == null) {
+                return server.formatToIPPortString();
+            } else {
+                return hostName + ":" + server.getPort();
+            }
+        }
     }
 
     class Attach implements EventLoopGroupAttach {

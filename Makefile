@@ -25,7 +25,8 @@ clean: clean-jar
 	rm -f ./vproxy-*
 	rm -f ./docker/vproxy.jar
 	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
-	rm -f ./docker-plugin/vproxy.jar
+	rm -f ./docker-plugin/plugin/vproxy.jar
+	rm -f ./docker-plugin/proxy/vproxy.jar
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
 	rm -rf ./io
@@ -86,7 +87,9 @@ endif
 ifeq ($(OS),Linux)
 jar-with-lib: clean jar native _add_linux_so_to_zip
 else
-jar-with-lib: clean jar native _add_linux_so_to_zip
+jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-no-docker
+.PHONY: jar-with-lib-no-docker
+jar-with-lib-no-docker: clean jar native
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
 	cp ./libmsquic.dylib ./io/vproxy/libmsquic-$(ARCH).dylib
@@ -232,9 +235,9 @@ docker: jar-with-lib
 
 .PHONY: docker-network-plugin-rootfs
 docker-network-plugin-rootfs: jar-with-lib
-	cp build/libs/vproxy.jar ./docker-plugin/vproxy.jar
+	cp build/libs/vproxy.jar ./docker-plugin/proxy/vproxy.jar
 	docker rmi -f vproxy-rootfs:latest
-	docker build --no-cache -t vproxy-rootfs:latest ./docker-plugin
+	docker build --no-cache -t vproxy-rootfs:latest ./docker-plugin/proxy
 	docker create --name tmp vproxy-rootfs:latest /bin/bash
 	mkdir -p $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
 	docker export tmp | tar -x -C $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
@@ -244,10 +247,16 @@ docker-network-plugin-rootfs: jar-with-lib
 $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs:
 	make docker-network-plugin-rootfs
 
-.PHONY: docker-network-plugin
-docker-network-plugin: $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
-	cp docker-plugin/config.json $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
+.PHONY: docker-network-plugin-proxy
+docker-network-plugin-proxy: $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
+	cp docker-plugin/proxy/config.json $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 	docker plugin create vproxyio/docker-plugin $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
+
+.PHONY: docker-network-plugin
+docker-network-plugin: jar-with-lib
+	cp build/libs/vproxy.jar ./docker-plugin/plugin/vproxy.jar
+	docker rmi -f vproxyio/docker-network-plugin:latest
+	docker build --no-cache -t vproxyio/docker-network-plugin:latest ./docker-plugin/plugin
 
 .PHONY: dockertest
 dockertest:

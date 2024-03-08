@@ -399,6 +399,9 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
         createReq.networkId = network.id
         createReq.ipv4Data = LinkedList()
         createReq.ipv6Data = LinkedList()
+        if (network.ipam!!.config == null) {
+          network.ipam!!.config = listOf()
+        }
         for (conf in network.ipam!!.config!!) {
           val net = Network.from(conf.subnet!!)
           val data = DockerNetworkDriver.IPData()

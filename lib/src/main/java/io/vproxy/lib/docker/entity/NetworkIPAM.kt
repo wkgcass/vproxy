@@ -1,6 +1,7 @@
 package io.vproxy.lib.docker.entity
 
 import vjson.deserializer.rule.ArrayRule
+import vjson.deserializer.rule.NullableRule
 import vjson.deserializer.rule.ObjectRule
 import vjson.deserializer.rule.Rule
 
@@ -11,7 +12,8 @@ data class NetworkIPAM(
     val rule: Rule<NetworkIPAM> = ObjectRule { NetworkIPAM() }
       .put(
         "Config",
-        ArrayRule<MutableList<NetworkIPAMConfig>, NetworkIPAMConfig>({ ArrayList() }, NetworkIPAMConfig.rule) { add(it) })
+        NullableRule(ArrayRule<MutableList<NetworkIPAMConfig>, NetworkIPAMConfig>({ ArrayList() }, NetworkIPAMConfig.rule) { add(it) })
+      )
       { config = it }
   }
 }

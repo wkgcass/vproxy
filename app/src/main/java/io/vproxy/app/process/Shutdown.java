@@ -592,11 +592,7 @@ public class Shutdown {
                     if (sh.isLogicDelete()) // ignore logic deleted servers
                         continue;
                     String cmd = "add server " + sh.alias + " to server-group " + sg.alias +
-                        " address "
-                        + (sh.hostName == null
-                        ? sh.server.getAddress().formatToIPString()
-                        : sh.hostName)
-                        + ":" + sh.server.getPort()
+                        " address " + sh.formatToIPPortString()
                         + " weight " + sh.getWeight();
                     commands.add(cmd);
                 }
