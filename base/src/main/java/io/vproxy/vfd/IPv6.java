@@ -62,11 +62,11 @@ public class IPv6 extends IP {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean ipEquals(Object o) {
         if (o == null) return false;
         if (!(o instanceof IPv6)) return false;
         IPv6 that = (IPv6) o;
-        return value0 == that.value0 && value1 == that.value1 && value2 == that.value2 && value3 == that.value3 && Objects.equals(hostname, that.hostname);
+        return value0 == that.value0 && value1 == that.value1 && value2 == that.value2 && value3 == that.value3;
     }
 
     @Override

@@ -159,7 +159,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
     @Override
     public void connect(IPPort l4addr) throws IOException {
-        if (!remoteAddress.equals(l4addr)) {
+        if (!remoteAddress.ipportEquals(l4addr)) {
             throw new IOException("cannot connect to " + l4addr + "(you could only connect to " + remoteAddress + ")");
         }
         checkState();

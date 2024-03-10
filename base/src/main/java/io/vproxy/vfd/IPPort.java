@@ -81,6 +81,14 @@ public class IPPort extends SockAddr {
         return Objects.hash(ip, port);
     }
 
+    public boolean ipportEquals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IPPort ipPort = (IPPort) o;
+        return port == ipPort.port &&
+               ip.ipEquals(ipPort.ip);
+    }
+
     // BEGIN UTILS:
 
     private static final IPPort BIND_ANY_ADDRESS = new IPPort(IP.from("0.0.0.0"), 0);

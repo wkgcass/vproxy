@@ -4,7 +4,6 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 
 import java.net.Inet4Address;
-import java.util.Objects;
 
 public class IPv4 extends IP {
     private final int value;
@@ -39,11 +38,11 @@ public class IPv4 extends IP {
     }
 
     @Override
-    public boolean equals(Object that) {
+    public boolean ipEquals(Object that) {
         if (that == null) return false;
         if (!(that instanceof IPv4)) return false;
         IPv4 ipv4 = (IPv4) that;
-        return value == ipv4.value && Objects.equals(hostname, ipv4.hostname);
+        return value == ipv4.value;
     }
 
     @Override

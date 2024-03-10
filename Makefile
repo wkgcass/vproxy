@@ -89,7 +89,8 @@ jar-with-lib: clean jar native _add_linux_so_to_zip
 else
 jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-no-docker
 .PHONY: jar-with-lib-no-docker
-jar-with-lib-no-docker: clean jar native
+jar-with-lib-no-docker: clean jar native jar-with-lib-skip-native
+jar-with-lib-skip-native: clean-jar jar
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
 	cp ./libmsquic.dylib ./io/vproxy/libmsquic-$(ARCH).dylib

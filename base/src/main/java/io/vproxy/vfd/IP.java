@@ -4,15 +4,13 @@ import io.vproxy.base.dns.DnsServerListGetter;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.vpacket.dns.*;
+import io.vproxy.vpacket.dns.Formatter;
 import io.vproxy.vpacket.dns.rdata.A;
 import io.vproxy.vpacket.dns.rdata.AAAA;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class IP implements ToByteArray {
@@ -185,7 +183,15 @@ public abstract class IP implements ToByteArray {
     }
 
     @Override
-    abstract public boolean equals(Object o);
+    public boolean equals(Object o) {
+        if (!(o instanceof IP that))
+            return false;
+        if (!ipEquals(o))
+            return false;
+        return Objects.equals(hostname, that.hostname);
+    }
+
+    abstract public boolean ipEquals(Object o);
 
     @Override
     abstract public int hashCode();
