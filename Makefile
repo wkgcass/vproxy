@@ -76,7 +76,7 @@ _add_linux_so_to_zip:
 
 .PHONY: native
 ifeq ($(OS),Linux)
-native: vfdposix vpxdp quic fubuki
+native: vfdposix vpxdp quic-all fubuki
 else ifeq ($(OS),Darwin)
 native: vfdposix-linux vpxdp-linux quic-all fubuki-linux fubuki vfdposix
 else
@@ -181,14 +181,20 @@ endif
 quic: vfdposix msquic msquic-java
 .PHONY: quic-linux
 quic-linux: vfdposix-linux msquic-linux msquic-java-linux
-.PHONY: quic-all
-quic-all:
+.PHONY: _quic-all-linux
+_quic-all-linux:
 	rm -rf ./submodules/msquic/build
 	make quic-linux
 	cp ./submodules/msquic/build/bin/Release/libmsquic.so.2.2.4 ./libmsquic.so
+.PHONY: quic-all
+ifeq ($(OS),Linux)
+quic-all: _quic-all-linux
+else
+quic-all: _quic-all-linux
 	rm -rf ./submodules/msquic/build
 	make quic
 	cp ./submodules/msquic/build/bin/Release/libmsquic.2.2.4.dylib ./libmsquic.dylib
+endif
 
 .PHONY: vfdwindows
 vfdwindows:
