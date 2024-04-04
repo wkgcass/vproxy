@@ -44,6 +44,10 @@ clean-docker-plugin-rootfs:
 init:
 	./misc/init.sh
 
+.PHONY: init-apt
+init-apt:
+	./misc/init-apt.sh
+
 .PHONY: all
 all: clean jar-with-lib jlink image docker docker-network-plugin
 
