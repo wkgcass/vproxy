@@ -173,6 +173,10 @@ public class RingQueue<E> implements Iterable<E> {
 
     private class RingQueueIterator<E> implements Iterator<E> {
         private int nextIndex = start;
+
+        // 0: init, 1: had already reached the end of the array
+        // This field is only useful when eAfterS == false.
+        // If eAfterS == true then the cursor will never reach the end of the array.
         private int step = 0;
 
         @Override
@@ -196,6 +200,7 @@ public class RingQueue<E> implements Iterable<E> {
             nextIndex++;
             if (!eAfterS) {
                 if (nextIndex == array.length) {
+                    step = 1;
                     nextIndex = 0;
                 }
             }
