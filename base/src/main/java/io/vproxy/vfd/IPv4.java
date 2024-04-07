@@ -38,6 +38,13 @@ public class IPv4 extends IP {
     }
 
     @Override
+    public IPv4 stripHostname() {
+        if (hostname == null)
+            return this;
+        return new IPv4(null, bytes.toJavaArray());
+    }
+
+    @Override
     public boolean ipEquals(Object that) {
         if (that == null) return false;
         if (!(that instanceof IPv4)) return false;

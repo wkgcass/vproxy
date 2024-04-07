@@ -177,6 +177,8 @@ public abstract class IP implements ToByteArray {
 
     abstract public IPv6 to6();
 
+    abstract public IP stripHostname();
+
     @Override
     public String toString() {
         return (hostname == null ? "" : hostname) + "/" + formatToIPString(); // compatible with java InetAddress

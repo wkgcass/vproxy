@@ -114,6 +114,13 @@ public class IPv6 extends IP {
         return this;
     }
 
+    @Override
+    public IPv6 stripHostname() {
+        if (hostname == null)
+            return this;
+        return new IPv6(null, bytes.toJavaArray());
+    }
+
     public static final class Values {
         public final int value0;
         public final int value1;
