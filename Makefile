@@ -4,11 +4,25 @@ SHELL := /bin/bash
 VERSION := $(shell cat base/src/main/java/io/vproxy/base/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
 OS := $(shell uname)
 ARCH := $(shell uname -m)
+#
+ifeq ($(ARCH),arm64)
+ARCH := aarch64
+else ifeq ($(ARCH),amd64)
+ARCH := x86_64
+endif
+
 ifeq ($(OS),Linux)
 LINUX_ARCH = $(ARCH)
 else
 LINUX_ARCH = $(shell docker run --rm vproxyio/compile:latest uname -m)
 endif
+#
+ifeq ($(LINUX_ARCH),arm64)
+LINUX_ARCH := aarch64
+else ifeq ($(LINUX_ARCH),amd64)
+LINUX_ARCH := x86_64
+endif
+
 DOCKER_PLUGIN_WORKDIR ?= "."
 
 .PHONY: clean-jar
