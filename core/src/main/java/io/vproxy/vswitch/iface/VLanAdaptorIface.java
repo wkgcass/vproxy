@@ -13,7 +13,6 @@ public class VLanAdaptorIface extends Iface implements SubIface {
         this.parentIface = parentIface;
         this.remoteVLan = remoteVLan;
         this.localVni = localVni;
-        overhead = parentIface.getOverhead() + 4 /* for vlan tag */;
     }
 
     @Override
@@ -42,11 +41,14 @@ public class VLanAdaptorIface extends Iface implements SubIface {
         return localVni;
     }
 
-    private final int overhead;
-
     @Override
     public int getOverhead() {
-        return overhead;
+        var parentOverhead = parentIface.getOverhead();
+        if (parentOverhead == 0) {
+            // 0 means the parent is not encapsulated, so vlan tag won't affect overhead
+            return 0;
+        }
+        return parentOverhead + 4 /* vlan tag */;
     }
 
     @Override
@@ -59,10 +61,12 @@ public class VLanAdaptorIface extends Iface implements SubIface {
         return ",vni:" + localVni;
     }
 
+    @Override
     public boolean isReady() {
         return ready;
     }
 
+    @Override
     public void setReady() {
         this.ready = true;
     }

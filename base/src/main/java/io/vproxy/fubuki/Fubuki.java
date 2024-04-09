@@ -87,7 +87,15 @@ public class Fubuki implements AutoCloseable {
     }
 
     private static void doLoad() {
-        Utils.loadDynamicLibrary("fubuki");
+        try {
+            Utils.loadDynamicLibrary("fubuki");
+        } catch (UnsatisfiedLinkError e) {
+            try {
+                Utils.loadDynamicLibrary("fubukil");
+            } catch (UnsatisfiedLinkError _) {
+                throw e;
+            }
+        }
     }
 
     @Override

@@ -26,6 +26,7 @@ public class Consts {
     public static final int IP_PROTOCOL_TCP = 6;
     public static final int IP_PROTOCOL_UDP = 17;
     public static final int IP_PROTOCOL_SCTP = 132;
+    public static final int IP_PROTOCOL_ETHERIP = 97;
     public static final int IPv6_NEXT_HEADER_NO_NEXT_HEADER = 59;
     public static final Set<Integer> IPv6_needs_next_header = Set.of(0, 60, 43, 44, 51, 50, 135, 139, 140, 253, 254);
     public static final int ICMP_PROTOCOL_TYPE_ECHO_REQ = 8;

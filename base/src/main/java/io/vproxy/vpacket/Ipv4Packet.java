@@ -23,7 +23,7 @@ public class Ipv4Packet extends AbstractIpPacket {
     private int headerChecksum;
     private IPv4 src;
     private IPv4 dst;
-    private ByteArray options;
+    private ByteArray options = ByteArray.allocate(0);
     private AbstractPacket packet;
 
     @Override
@@ -148,15 +148,13 @@ public class Ipv4Packet extends AbstractIpPacket {
         if (packet != null) {
             return null;
         }
-        if (protocol == Consts.IP_PROTOCOL_ICMP) {
-            packet = new IcmpPacket(false);
-        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
-            packet = new TcpPacket();
-        } else if (protocol == Consts.IP_PROTOCOL_UDP) {
-            packet = new UdpPacket();
-        } else {
-            packet = new PacketBytes();
-        }
+        packet = switch (protocol) {
+            case Consts.IP_PROTOCOL_ICMP -> new IcmpPacket(false);
+            case Consts.IP_PROTOCOL_TCP -> new TcpPacket();
+            case Consts.IP_PROTOCOL_UDP -> new UdpPacket();
+            case Consts.IP_PROTOCOL_ETHERIP -> new EtherIPPacket();
+            default -> new PacketBytes();
+        };
         if (raw != null && packet instanceof PartialPacket) {
             String err = ((PartialPacket) packet).initPartial(raw);
             if (err != null) {
@@ -493,6 +491,11 @@ public class Ipv4Packet extends AbstractIpPacket {
     public void setPacket(int protocol, AbstractPacket packet) {
         setProtocol(protocol);
         setPacket(packet);
+    }
+
+    @Override
+    public int getHeaderSize() {
+        return 20 + (options != null ? options.length() : 0);
     }
 
     @Override

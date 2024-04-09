@@ -11,10 +11,7 @@ import io.vproxy.base.util.anno.Blocking;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.base.util.coll.IntMap;
 import io.vproxy.base.util.coll.RingQueue;
-import io.vproxy.base.util.exception.AlreadyExistException;
-import io.vproxy.base.util.exception.ClosedException;
-import io.vproxy.base.util.exception.NotFoundException;
-import io.vproxy.base.util.exception.XException;
+import io.vproxy.base.util.exception.*;
 import io.vproxy.base.util.objectpool.CursorList;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.component.secure.SecurityGroup;
@@ -513,6 +510,33 @@ public class Switch {
         }
         var vif = new VLanAdaptorIface(parentIface, vlan, localVni);
         parentIface.addVLanAdaptor(vif);
+
+        try {
+            initIface(vif);
+        } catch (Exception e) {
+            vif.destroy();
+            throw new XException(Utils.formatErr(e));
+        }
+
+        blockAndAddPersistentIface(loop, vif);
+        vif.setReady();
+
+        return vif;
+    }
+
+    public FubukiEtherIPIface addFubukiEtherIP(String parentIfaceName, int vni, IPv4 targetIP) throws XException, AlreadyExistException, NotFoundException, PreconditionUnsatisfiedException {
+        NetEventLoop netEventLoop = eventLoop;
+        if (netEventLoop == null) {
+            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vlan adaptor");
+        }
+        SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
+
+        var opt = sw.getIfaces().stream().filter(i -> i instanceof FubukiTunIface).filter(i -> i.name().equals("fubuki:" + parentIfaceName)).findAny();
+        if (opt.isEmpty()) {
+            throw new NotFoundException("fubuki", parentIfaceName);
+        }
+        var iface = (FubukiTunIface) opt.get();
+        var vif = iface.addEtherIPSubIface(targetIP, vni);
 
         try {
             initIface(vif);

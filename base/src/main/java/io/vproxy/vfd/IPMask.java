@@ -11,6 +11,18 @@ public class IPMask {
         this.maskInt = mask;
     }
 
+    public IPMask(IP ip, IP mask) {
+        if (!mask.isMask())
+            throw new IllegalArgumentException(mask + " is not a valid mask");
+        if (ip instanceof IPv4 && mask instanceof IPv6)
+            throw new IllegalArgumentException(ip + " and " + mask + " are not in the same address family");
+        if (ip instanceof IPv6 && mask instanceof IPv4)
+            throw new IllegalArgumentException(ip + " and " + mask + " are not in the same address family");
+        this.ip = ip;
+        this.mask = mask;
+        this.maskInt = mask.toPrefixLength();
+    }
+
     public static IPMask from(String s) {
         if (!s.contains("/")) {
             throw new IllegalArgumentException("not ip/mask " + s);

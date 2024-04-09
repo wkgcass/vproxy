@@ -533,4 +533,44 @@ public class TestPacket {
                 parsed.getPacket().getRawPacket(0));
         }
     }
+
+    @Test
+    public void etherip() {
+        var hex = "2c27d714f107b499baba7e4408004503" +
+                  "0078909c00001761fc820a0101010a01" +
+                  "01013000525400025402000e0c4cf4c4" +
+                  "0800450000540000400040012c7aac11" +
+                  "db05ac11db060800ee4355aa412aa10f" +
+                  "ef50f683010008090a0b0c0d0e0f1011" +
+                  "12131415161718191a1b1c1d1e1f2021" +
+                  "22232425262728292a2b2c2d2e2f3031" +
+                  "323334353637";
+        var bytes = ByteArray.fromHexString(hex);
+        var ether = new EthernetPacket();
+        var err = ether.from(new PacketDataBuffer(bytes));
+        assertNull(err);
+
+        assertTrue(ether.getPacket() instanceof Ipv4Packet);
+        assertTrue(((Ipv4Packet) ether.getPacket()).getPacket() instanceof EtherIPPacket);
+        var etherip = (EtherIPPacket) ((Ipv4Packet) ether.getPacket()).getPacket();
+        assertEquals(3, etherip.getVersion());
+        assertTrue(etherip.getPacket().getPacket() instanceof Ipv4Packet);
+        assertTrue(((Ipv4Packet) etherip.getPacket().getPacket()).getPacket() instanceof IcmpPacket);
+        var icmp = (IcmpPacket) ((Ipv4Packet) etherip.getPacket().getPacket()).getPacket();
+        assertEquals(Consts.ICMP_PROTOCOL_TYPE_ECHO_REQ, icmp.getType());
+
+        // build packet
+        ether.clearAllRawPackets();
+        var bytesGenerated = ether.getRawPacket(0);
+        assertEquals(bytes, bytesGenerated);
+
+        // test description
+        assertEquals(
+            "ether,dl_dst=2c:27:d7:14:f1:07,dl_src=b4:99:ba:ba:7e:44," +
+            "ip,nw_src=10.1.1.1,nw_dst=10.1.1.1," +
+            "etherip," +
+            "ether,dl_dst=52:54:00:02:54:02,dl_src=00:0e:0c:4c:f4:c4," +
+            "ip,nw_src=172.17.219.5,nw_dst=172.17.219.6,icmp",
+            ether.description());
+    }
 }

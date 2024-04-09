@@ -894,6 +894,18 @@ class ModuleCommands private constructor() : Commands() {
         exec = execUpdate { FubukiHandle.add(it) }
       )
     }
+    it + Res(ResourceType.fubukietherip) {
+      it + ResAct(
+        relation = ResourceType.fubukietherip,
+        action = ActType.addto,
+        targetRelation = ResRelation(ResourceType.sw),
+        params = {
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.ip) { IpParamHandle.check(it) }
+        },
+        exec = execUpdate { FubukiEtherIPHandle.add(it) }
+      )
+    }
     it + Res(ResourceType.xdp) {
       it + ResAct(
         relation = ResourceType.xdp,

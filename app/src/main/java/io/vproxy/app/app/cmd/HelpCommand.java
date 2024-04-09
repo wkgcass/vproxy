@@ -1356,6 +1356,19 @@ public class HelpCommand {
                     )
                 ))
             )),
+        fubukietherip("fubuki-etherip", "fubuki-etherip", "etherip encapsulation based on the fubuki network mesh." +
+            "Note: the ifname should be name of the fubuki netif to attach to.",
+            Collections.singletonList(
+                new ResActMan(ActMan.addto, "add fubuki-etherip sub-netif to a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.vni, "vni which the netif is assigned to"),
+                    new ResActParamMan(ParamMan.ip, "the target ip to send the packet to")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add fubuki-etherip hello to switch sw0 vni 1314 ip 10.99.88.2",
+                        "\"OK\""
+                    )
+                ))
+            )),
         xdp("xdp", null, "xdp socket, which is able to intercept packets from a net dev. " +
             "Note: 1) the name of the xdp iface is the nic name where this xdp handles, " +
             "2) use list iface to see the xdp sockets/interfaces, " +

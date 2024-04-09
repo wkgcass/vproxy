@@ -754,8 +754,8 @@ public class Shutdown {
                         cmd = "add fubuki " + f.nodeName + " to switch " + sw.alias
                               + " password " + f.key + " vni " + f.localSideVni + " mac " + f.mac
                               + " address " + f.serverIPPort.formatToIPPortString();
-                        if (f.localAddr != null) {
-                            cmd += " ip " + f.localAddr.formatToIPMaskString();
+                        if (f.getLocalAddr() != null) {
+                            cmd += " ip " + f.getLocalAddr().formatToIPMaskString();
                         }
                     } else {
                         cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vni " + tun.localSideVni
@@ -797,6 +797,15 @@ public class Shutdown {
                     if (xdp.rxGenChecksum) {
                         cmd += " rx-gen-csum";
                     }
+                    commands.add(cmd);
+                }
+                // create fubuki-etherip
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof FubukiEtherIPIface etherip)) {
+                        continue;
+                    }
+                    cmd = "add fubuki-etherip " + etherip.getParentIface().name().substring("fubuki:".length()) +
+                          " to switch " + sw.alias + " vni " + etherip.localSideVni + " ip " + etherip.targetIP.formatToIPString();
                     commands.add(cmd);
                 }
                 // create sub interfaces
@@ -907,6 +916,7 @@ public class Shutdown {
             || iface instanceof XDPIface
             || iface instanceof TapIface
             || iface instanceof TunIface
+            || iface instanceof FubukiEtherIPIface
             || (iface instanceof VLanAdaptorIface && switchInterfaceRequiresSaving(((VLanAdaptorIface) iface).getParentIface()));
     }
 

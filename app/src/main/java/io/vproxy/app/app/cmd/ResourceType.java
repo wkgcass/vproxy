@@ -34,6 +34,7 @@ public enum ResourceType {
     route("route"),
     ucli("user-client"),
     fubuki("fubuki"),
+    fubukietherip("fubuki-etherip"),
     vlan("vlan-adaptor"),
 
     bpfobj("bpf-object"),

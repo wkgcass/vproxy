@@ -20,7 +20,7 @@ public class Ipv6Packet extends AbstractIpPacket {
     private int hopLimit;
     private IPv6 src;
     private IPv6 dst;
-    private List<ExtHeader> extHeaders;
+    private List<ExtHeader> extHeaders = Collections.emptyList();
     private AbstractPacket packet;
 
     @Override
@@ -163,15 +163,14 @@ public class Ipv6Packet extends AbstractIpPacket {
         if (packet != null) {
             return null;
         }
-        if (protocol == Consts.IP_PROTOCOL_ICMP || protocol == Consts.IP_PROTOCOL_ICMPv6) {
-            packet = new IcmpPacket(protocol == Consts.IP_PROTOCOL_ICMPv6);
-        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
-            packet = new TcpPacket();
-        } else if (protocol == Consts.IP_PROTOCOL_UDP) {
-            packet = new UdpPacket();
-        } else {
-            packet = new PacketBytes();
-        }
+        packet = switch (protocol) {
+            case Consts.IP_PROTOCOL_ICMP -> new IcmpPacket(false);
+            case Consts.IP_PROTOCOL_ICMPv6 -> new IcmpPacket(true);
+            case Consts.IP_PROTOCOL_TCP -> new TcpPacket();
+            case Consts.IP_PROTOCOL_UDP -> new UdpPacket();
+            case Consts.IP_PROTOCOL_ETHERIP -> new EtherIPPacket();
+            default -> new PacketBytes();
+        };
         if (raw != null && packet instanceof PartialPacket) {
             String err = ((PartialPacket) packet).initPartial(raw);
             if (err != null) {
@@ -422,6 +421,18 @@ public class Ipv6Packet extends AbstractIpPacket {
         setPacket(packet);
         if (extHeaders.isEmpty()) nextHeader = protocol;
         else extHeaders.get(extHeaders.size() - 1).nextHeader = protocol;
+    }
+
+    @Override
+    public int getHeaderSize() {
+        int n = 40;
+        if (extHeaders != null) {
+            for (var h : extHeaders) {
+                n += 8;
+                n += h.hdrExtLen;
+            }
+        }
+        return n;
     }
 
     public static class ExtHeader extends AbstractPacket {

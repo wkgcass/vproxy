@@ -3,11 +3,13 @@ package io.vproxy.vswitch.iface;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.util.exception.PreconditionUnsatisfiedException;
 import io.vproxy.base.util.exception.XException;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.fubuki.Fubuki;
 import io.vproxy.fubuki.FubukiCallback;
 import io.vproxy.vfd.*;
+import io.vproxy.vpacket.EtherIPPacket;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
@@ -15,16 +17,14 @@ import io.vproxy.vswitch.VirtualNetwork;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class FubukiTunIface extends TunIface {
     public final String nodeName;
     public final IPPort serverIPPort;
-    public final IPMask localAddr;
+    private IPMask localAddr;
     public final String key;
-    private Fubuki fubuki;
+    Fubuki fubuki;
     private Switch sw;
 
     public FubukiTunIface(int localSideVni, MacAddress mac,
@@ -36,6 +36,10 @@ public class FubukiTunIface extends TunIface {
         this.serverIPPort = serverIPPort;
         this.localAddr = localAddr;
         this.key = key;
+    }
+
+    public IPMask getLocalAddr() {
+        return localAddr;
     }
 
     @Override
@@ -57,6 +61,11 @@ public class FubukiTunIface extends TunIface {
     }
 
     @Override
+    public int getOverhead() {
+        return 6 /* fubuki header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
+    }
+
+    @Override
     protected void sendPacket(ByteBuffer data) throws IOException {
         var seg = MemorySegment.ofBuffer(data);
         fubuki.send(seg);
@@ -69,12 +78,18 @@ public class FubukiTunIface extends TunIface {
 
     @Override
     protected String toStringExtra() {
-        return super.toStringExtra() + ",server=" + serverIPPort.formatToIPPortString() + ",local=" + localAddr.formatToIPMaskString();
+        return super.toStringExtra() + ",server=" + serverIPPort.formatToIPPortString() + ",local=" + (
+            localAddr == null ? "null" : localAddr.formatToIPMaskString()
+        );
     }
 
     @Override
     public void destroy() {
         super.destroy();
+        for (var key : new ArrayList<>(etheripSubIfaces.keySet())) {
+            var cable = etheripSubIfaces.get(key);
+            cable.destroy();
+        }
         if (fubuki != null) {
             fubuki.close();
             fubuki = null;
@@ -82,7 +97,23 @@ public class FubukiTunIface extends TunIface {
         clearManagedIPs();
     }
 
-    private final Set<IP> managedIPs = new HashSet<>();
+    private final Map<IPv4, FubukiEtherIPIface> etheripSubIfaces = new HashMap<>();
+
+    public FubukiEtherIPIface addEtherIPSubIface(IPv4 ip, int vni) throws AlreadyExistException, PreconditionUnsatisfiedException {
+        ip = ip.stripHostname();
+        if (etheripSubIfaces.containsKey(ip)) {
+            throw new AlreadyExistException("fubuki-cable", ip.formatToIPString());
+        }
+        var iface = new FubukiEtherIPIface(this, ip, vni);
+        etheripSubIfaces.put(ip, iface);
+        return iface;
+    }
+
+    void removeFubukiCable(FubukiEtherIPIface iface) {
+        etheripSubIfaces.remove(iface.targetIP);
+    }
+
+    private final Set<IPv4> managedIPs = new HashSet<>();
 
     private void clearManagedIPs() {
         if (sw == null) { // not initialized yet
@@ -103,13 +134,34 @@ public class FubukiTunIface extends TunIface {
     }
 
     private class Callback implements FubukiCallback {
+        private static final ByteArray PRE_PADDING = ByteArray.allocate(32);
+        private static final ByteArray POST_PADDING = ByteArray.allocate(32);
+
         @Override
         public void onPacket(Fubuki fubuki, ByteArray packet) {
-            final int PRE_PADDING = 32;
-            var p = ByteArray.allocate(PRE_PADDING).concat(packet).copy();
+            var p = PRE_PADDING.concat(packet).concat(POST_PADDING).copy().arrange();
             bondLoop.runOnLoop(() -> {
                 VProxyThread.current().newUuidDebugInfo();
-                var pkb = PacketBuffer.fromIpBytes(FubukiTunIface.this, localSideVni, p, PRE_PADDING, 0);
+                var pkb = PacketBuffer.fromIpBytes(FubukiTunIface.this, localSideVni, p, PRE_PADDING.length(), POST_PADDING.length());
+                var initErr = pkb.init();
+
+                if (initErr == null) {
+                    if (pkb.ipPkt != null && pkb.ipPkt.getPacket() instanceof EtherIPPacket) {
+                        assert Logger.lowLevelDebug("received etherip packet from " + this);
+                        //noinspection SuspiciousMethodCalls
+                        var etherip = etheripSubIfaces.get(pkb.ipPkt.getSrc());
+                        if (etherip != null && etherip.isReady()) {
+                            assert Logger.lowLevelDebug("redirecting etherip packet to " + etherip);
+
+                            etherip.onPacket(p, PRE_PADDING.length() + pkb.ipPkt.getHeaderSize() + 2 /* etherip header */, POST_PADDING.length());
+                            return;
+                        }
+                    }
+                } else {
+                    assert Logger.lowLevelDebug("unable to init the pkb because error is thrown: " + initErr);
+                }
+
+                assert Logger.lowLevelDebug("this packet is not an etherip packet or no handler iface attached or subif is not ready, handle normally");
                 receivedPacket(pkb);
             });
         }
@@ -118,6 +170,7 @@ public class FubukiTunIface extends TunIface {
         public void addAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
             bondLoop.runOnLoop(() -> {
                 Logger.warn(LogType.ALERT, STR."fubuki is trying to add ip \{ip} to vpc \{localSideVni}");
+                localAddr = new IPMask(ip, mask);
                 VirtualNetwork net;
                 try {
                     net = sw.getNetwork(localSideVni);
