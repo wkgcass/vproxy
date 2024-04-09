@@ -28,6 +28,14 @@ public class PosixNetworkFD extends PosixFD {
         return utilRead(dst, (buf, off, len) -> posix.read(fd, buf, off, len));
     }
 
+    public int readBlocking(ByteBuffer dst) throws IOException {
+        checkFD();
+        checkConnected();
+        checkNotClosed();
+
+        return utilRead(dst, (buf, off, len) -> posix.readBlocking(fd, buf, off, len));
+    }
+
     public int write(ByteBuffer src) throws IOException {
         checkFD();
         checkConnected();

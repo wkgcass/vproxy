@@ -600,6 +600,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_read
     return 0;
 }
 
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_readBlocking
+  (PNIEnv_int* env, int32_t fd, void* directBuffer, int32_t off, int32_t len) {
+    return Java_io_vproxy_vfd_posix_PosixNative_read(env, fd, directBuffer, off, len);
+}
+
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_write
   (PNIEnv_int* env, int32_t fd, void* directBuffer, int32_t off, int32_t len) {
     if (len == 0) {

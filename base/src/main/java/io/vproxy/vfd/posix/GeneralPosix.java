@@ -290,6 +290,12 @@ public class GeneralPosix implements Posix {
     }
 
     @Override
+    public int readBlocking(int fd, ByteBuffer directBuffer, int off, int len) throws IOException {
+        return PosixNative.get().readBlocking(VProxyThread.current().getEnv(),
+            fd, directBuffer, off, len);
+    }
+
+    @Override
     public int write(int fd, ByteBuffer directBuffer, int off, int len) throws IOException {
         return PosixNative.get().write(VProxyThread.current().getEnv(),
             fd, directBuffer, off, len);

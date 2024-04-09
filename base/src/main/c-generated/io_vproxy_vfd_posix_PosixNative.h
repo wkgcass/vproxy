@@ -65,6 +65,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getIPv6Remote(PNIEnv_
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getUDSLocal(PNIEnv_SocketAddressUDS_st * env, int32_t fd, SocketAddressUDS_st * return_);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getUDSRemote(PNIEnv_SocketAddressUDS_st * env, int32_t fd, SocketAddressUDS_st * return_);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_read(PNIEnv_int * env, int32_t fd, void * directBuffer, int32_t off, int32_t len);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_readBlocking(PNIEnv_int * env, int32_t fd, void * directBuffer, int32_t off, int32_t len);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_write(PNIEnv_int * env, int32_t fd, void * directBuffer, int32_t off, int32_t len);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_sendtoIPv4(PNIEnv_int * env, int32_t fd, void * directBuffer, int32_t off, int32_t len, int32_t addrHostOrder, int32_t port);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_sendtoIPv6(PNIEnv_int * env, int32_t fd, void * directBuffer, int32_t off, int32_t len, char * fullAddr, int32_t port);
@@ -80,5 +81,5 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_setCoreAffinityForCur
 }
 #endif
 #endif // _Included_io_vproxy_vfd_posix_PosixNative
-// metadata.generator-version: pni 21.0.0.12
-// sha256:fb5216887c255149d2b81e719096596542b69cf6d882a55bd40296387c1623c9
+// metadata.generator-version: pni 21.0.0.17
+// sha256:1e84eb47f36e590566f1bbbf692bdba8e228a6ba2a5900b4e62f016ecfb9a38b

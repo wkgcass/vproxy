@@ -143,6 +143,8 @@ interface PNIPosixNative {
     @LinkerOption.Critical
     int read(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
 
+    int readBlocking(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
+
     @LinkerOption.Critical
     int write(int fd, @Raw ByteBuffer directBuffer, int off, int len) throws IOException;
 

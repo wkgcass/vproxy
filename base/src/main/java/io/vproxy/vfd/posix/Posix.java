@@ -93,6 +93,8 @@ public interface Posix {
 
     int read(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
+    int readBlocking(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+
     int write(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     int sendtoIPv4(int fd, ByteBuffer directBuffer, int off, int len, int addrHostOrder, int port) throws IOException;

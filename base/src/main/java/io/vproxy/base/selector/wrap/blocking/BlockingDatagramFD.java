@@ -289,7 +289,7 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
 
         var buf = Utils.allocateByteBuffer(readBufSize);
         try {
-            fd.read(buf);
+            fd.readBlocking(buf);
         } catch (IOException e) {
             lastReadException = e;
             isReading = false;

@@ -708,6 +708,23 @@ public class PosixNative {
         return ENV.returnInt();
     }
 
+    private static final MethodHandle readBlockingMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions(), "Java_io_vproxy_vfd_posix_PosixNative_readBlocking", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */);
+
+    public int readBlocking(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len) throws java.io.IOException {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) readBlockingMH.invokeExact(ENV.MEMORY, fd, PanamaUtils.format(directBuffer), off, len);
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
+            ENV.throwIf(java.io.IOException.class);
+            ENV.throwLast();
+        }
+        return ENV.returnInt();
+    }
+
     private static final MethodHandle writeMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_posix_PosixNative_write", int.class /* fd */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */);
 
     public int write(PNIEnv ENV, int fd, ByteBuffer directBuffer, int off, int len) throws java.io.IOException {
@@ -879,5 +896,5 @@ public class PosixNative {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.17
-// sha256:168e4c184415e27beb86430bef5d5d1c23c2b272c410d8f1933413fde1ee9f67
+// metadata.generator-version: pni 21.0.0.18
+// sha256:a6ab0d88c014cf3f59f372ce03960a5a63f19153fefec2b5565170cd42416346
