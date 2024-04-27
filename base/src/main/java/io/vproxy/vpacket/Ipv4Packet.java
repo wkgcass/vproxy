@@ -258,7 +258,7 @@ public class Ipv4Packet extends AbstractIpPacket {
         ret.options = options;
         ret.packet = packet.copy();
         ret.packet.recordParent(ret);
-        return this;
+        return ret;
     }
 
     @Override

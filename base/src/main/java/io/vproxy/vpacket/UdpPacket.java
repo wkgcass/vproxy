@@ -235,6 +235,12 @@ public class UdpPacket extends TransportPacket {
         this.data = data;
     }
 
+    public void setData(ByteArray data) {
+        clearRawPacket();
+        this.data = new PacketBytes(data);
+        this.length = data.length() + 8;
+    }
+
     @Override
     public void clearAllRawPackets() {
         clearRawPacket();

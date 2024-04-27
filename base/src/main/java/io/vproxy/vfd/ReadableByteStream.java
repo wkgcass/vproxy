@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 public interface ReadableByteStream {
     int read(ByteBuffer dst) throws IOException;
 
-    default int readBlocking(ByteBuffer buf) throws IOException {
-        return read(buf);
+    default int readBlocking(ByteBuffer dst) throws IOException {
+        return read(dst);
     }
 }

@@ -563,13 +563,18 @@ public class Utils {
         } else {
             Logger.alert("trying to execute script: " + script);
         }
-        File file = File.createTempFile("script", ".sh");
+        File file = File.createTempFile("script", OS.isWindows() ? ".bat" : ".sh");
         try {
             Files.writeString(file.toPath(), script);
             if (!file.setExecutable(true)) {
                 throw new Exception("setting executable to script " + file.getAbsolutePath() + " failed");
             }
-            ProcessBuilder pb = new ProcessBuilder(file.getAbsolutePath());
+            ProcessBuilder pb;
+            if (OS.isWindows()) {
+                pb = new ProcessBuilder("cmd.exe", "/c", file.getAbsolutePath());
+            } else {
+                pb = new ProcessBuilder(file.getAbsolutePath());
+            }
             return execute(pb, timeout, getResult);
         } finally {
             //noinspection ResultOfMethodCallIgnored
@@ -951,6 +956,17 @@ public class Utils {
     }
 
     public static void loadDynamicLibrary(String name) throws UnsatisfiedLinkError {
+        loadDynamicLibrary(name, Utils.class.getClassLoader(), "io/vproxy/");
+    }
+
+    public static void loadDynamicLibrary(String name, ClassLoader cl, String basePath) throws UnsatisfiedLinkError {
+        // format basePath
+        if (basePath.startsWith("/")) {
+            basePath = basePath.substring(1);
+        }
+        if (!basePath.endsWith("/")) {
+            basePath += "/";
+        }
         // check and use bundled binaries
         String filename = "lib" + name + "-" + OS.arch();
         String suffix;
@@ -963,7 +979,7 @@ public class Utils {
             suffix = ".so";
         }
 
-        InputStream is = Utils.class.getClassLoader().getResourceAsStream("io/vproxy/" + filename + suffix);
+        InputStream is = cl.getResourceAsStream(basePath + filename + suffix);
         if (is == null) {
             System.out.println("System.loadLibrary(" + name + ")");
             System.loadLibrary(name);

@@ -14,6 +14,10 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
         this.seg = seg;
     }
 
+    public MemorySegment getMemorySegment() {
+        return seg;
+    }
+
     @Override
     public byte get(int idx) {
         return seg.get(ValueLayout.JAVA_BYTE, idx);
@@ -137,5 +141,11 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
     public ByteArray int64ReverseNetworkByteOrder(int offset, long val) {
         seg.set(LONG_LITTLE_ENDIAN, offset, val);
         return this;
+    }
+
+    @Override
+    public ByteArray sub(int fromInclusive, int len) {
+        var newSeg = seg.asSlice(fromInclusive, len);
+        return new MemorySegmentByteArray(newSeg);
     }
 }
