@@ -973,17 +973,22 @@ public class Utils {
         if (OS.isMac()) {
             suffix = ".dylib";
         } else if (OS.isWindows()) {
-            filename = name;
+            filename = name + "-" + OS.arch();
             suffix = ".dll";
         } else {
             suffix = ".so";
         }
 
-        InputStream is = cl.getResourceAsStream(basePath + filename + suffix);
+        var pathInClasspath = basePath + filename + suffix;
+        System.out.print("checking classpath " + pathInClasspath + " for dynamic library: ");
+        InputStream is = cl.getResourceAsStream(pathInClasspath);
         if (is == null) {
+            System.out.println("missing.");
             System.out.println("System.loadLibrary(" + name + ")");
             System.loadLibrary(name);
             return;
+        } else {
+            System.out.println("found.");
         }
         File f;
         try {
