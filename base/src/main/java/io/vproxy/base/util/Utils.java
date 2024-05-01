@@ -1178,4 +1178,30 @@ public class Utils {
     private static String fillToHundred(int n) {
         return (n < 10 ? "00" : (n < 100 ? "0" : "")) + n;
     }
+
+    public static String escapePath(File path) {
+        return escapePath(path.getAbsolutePath());
+    }
+
+    public static String escapePath(Path path) {
+        return escapePath(path.toAbsolutePath().toString());
+    }
+
+    public static String escapePath(String path) {
+        if (OS.isWindows()) {
+            // no need to escape for windows, no `"` would appear in path
+            return "\"" + path + "\"";
+        }
+        var escape = '\\';
+        var chars = path.toCharArray();
+        var sb = new StringBuilder("\"");
+        for (var c : chars) {
+            if (c == '"') {
+                sb.append(escape);
+            }
+            sb.append(c);
+        }
+        sb.append('\"');
+        return sb.toString();
+    }
 }

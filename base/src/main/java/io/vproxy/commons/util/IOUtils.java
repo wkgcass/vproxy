@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.function.Predicate;
 
 public class IOUtils {
     private IOUtils() {
@@ -93,17 +94,24 @@ public class IOUtils {
     }
 
     public static void copyDirectory(Path src, Path dest) throws IOException {
+        copyDirectory(src, dest, null);
+    }
+
+    public static void copyDirectory(Path src, Path dest, Predicate<Path> skipFile) throws IOException {
         try (var stream = Files.walk(src)) {
             for (var ite = stream.iterator(); ite.hasNext(); ) {
                 var source = ite.next();
-                _copyDirectory(source, dest.resolve(src.relativize(source)));
+                _copyDirectory(source, dest.resolve(src.relativize(source)), skipFile);
             }
         }
     }
 
-    private static void _copyDirectory(Path source, Path dest) throws IOException {
+    private static void _copyDirectory(Path source, Path dest, Predicate<Path> skipFile) throws IOException {
         if (source.toFile().isDirectory() && dest.toFile().isDirectory()) {
             return; // exists
+        }
+        if (skipFile != null && skipFile.test(source)) {
+            return;
         }
         Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
     }
