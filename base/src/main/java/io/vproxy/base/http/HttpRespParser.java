@@ -23,7 +23,9 @@ public class HttpRespParser extends AbstractParser<Response> {
         Processor p = ProcessorProvider.getInstance().get("http/1.x");
         Processor.Context c = p.init(null);
         //noinspection unchecked
-        Processor.SubContext s = p.initSub(c, 1, DummyConnectionDelegate.getInstance());
+        Processor.SubContext s = p.initSub(new Processor.SubContextInitParams<>(
+            c, 1, DummyConnectionDelegate.getInstance()
+        ));
         ctx = (HttpSubContext) s;
         ctx.setParserMode();
     }

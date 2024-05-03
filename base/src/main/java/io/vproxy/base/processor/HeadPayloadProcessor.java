@@ -1,7 +1,6 @@
 package io.vproxy.base.processor;
 
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.vfd.IPPort;
 
 public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProcessor.HeadPayloadContext, HeadPayloadProcessor.HeadPayloadSubContext> {
     private final String name;
@@ -22,13 +21,13 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
     }
 
     @Override
-    public HeadPayloadContext init(IPPort ignore) {
+    public HeadPayloadContext init(ContextInitParams params) {
         return new HeadPayloadContext();
     }
 
     @Override
-    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, ConnectionDelegate delegate) {
-        return new HeadPayloadSubContext(headPayloadContext, id, delegate, head, off, len, maxLen);
+    public HeadPayloadSubContext initSub(SubContextInitParams<HeadPayloadContext> params) {
+        return new HeadPayloadSubContext(params.ctx(), params.id(), params.delegate(), head, off, len, maxLen);
     }
 
     @Override

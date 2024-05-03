@@ -885,6 +885,7 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> implem
         return state;
     }
 
+    @Override
     public boolean isIdle() {
         return parsingFrame == lastParsedFrame;
     }

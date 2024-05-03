@@ -23,6 +23,14 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
         public boolean isFrontend() {
             return connId == 0;
         }
+
+        public boolean isBackend() {
+            return connId != 0;
+        }
+
+        public boolean isIdle() {
+            return false;
+        }
     }
 
     /**
@@ -37,23 +45,41 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
         return null;
     }
 
+    record ContextInitParams(
+        IPPort clientAddress
+    ) {
+    }
+
     /**
      * create a context object
      *
-     * @param clientAddress the client address
+     * @param params init params
      * @return the context
      */
-    CTX init(IPPort clientAddress);
+    CTX init(ContextInitParams params);
+
+    /**
+     * sub context init params
+     *
+     * @param ctx      context
+     * @param id       connection id attached to the sub context, 0 for the frontend connection
+     * @param delegate {@link ConnectionDelegate}
+     * @param <CTX>    type of the context
+     */
+    record SubContextInitParams<CTX extends Processor.Context>(
+        CTX ctx,
+        int id,
+        ConnectionDelegate delegate
+    ) {
+    }
 
     /**
      * create a sub context object
      *
-     * @param ctx                context
-     * @param id                 connection id attached to the sub context, 0 for the frontend connection
-     * @param connectionDelegate {@link ConnectionDelegate}
+     * @param params init params
      * @return the sub context
      */
-    SUB initSub(CTX ctx, int id, ConnectionDelegate connectionDelegate);
+    SUB initSub(SubContextInitParams<CTX> params);
 
     class ProcessorTODO {
         /**

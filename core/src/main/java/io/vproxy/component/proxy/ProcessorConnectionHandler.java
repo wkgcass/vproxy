@@ -863,7 +863,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         int newConnId = ++cursor;
         BackendConnectionHandler[] handlerPtr = new BackendConnectionHandler[]{null};
         //noinspection DuplicatedCode
-        Processor.SubContext subCtx = processor.initSub(topCtx, newConnId, new ConnectionDelegate(connector.remote) {
+        Processor.SubContext subCtx = processor.initSub(new Processor.SubContextInitParams<>(
+            topCtx, newConnId, new ConnectionDelegate(connector.remote) {
             @Override
             public void pause() {
                 assert handlerPtr[0] != null;
@@ -875,7 +876,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 assert handlerPtr[0] != null;
                 handlerPtr[0].resume();
             }
-        });
+        }));
         BackendConnectionHandler bh = new BackendConnectionHandler(subCtx, connectableConnection);
         handlerPtr[0] = bh;
         recordBackend(bh, newConnId);
@@ -941,9 +942,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
         if (allBackendRemoteClosed) {
             assert Logger.lowLevelDebug("" +
-                "all backend remote closed, " +
-                "and no current backend, " +
-                "so close the session");
+                                        "all backend remote closed, " +
+                                        "and no current backend, " +
+                                        "so close the session");
             // close the session
             ctx.connection.close();
             closed(ctx);

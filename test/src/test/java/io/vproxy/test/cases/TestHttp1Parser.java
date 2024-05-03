@@ -26,12 +26,17 @@ public class TestHttp1Parser {
         IP.from(Objects.requireNonNull(IP.parseIpv4String(forwardedFor))),
         Integer.parseInt(clientPort)
     );
+    private static final Processor.ContextInitParams ctxInitParams = new Processor.ContextInitParams(
+        address
+    );
 
     @Test
     public void simpleRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(address);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         String reqHead = "" +
@@ -75,7 +80,9 @@ public class TestHttp1Parser {
     public void simpleResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext backend = p.initSub(ctx, 1, null);
+        HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 1, null
+        ));
         backend.setParserMode();
 
         String respHead = "" +
@@ -106,7 +113,9 @@ public class TestHttp1Parser {
     public void noHeaderRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         String reqHead = "" +
@@ -136,7 +145,9 @@ public class TestHttp1Parser {
     public void noHeaderResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext backend = p.initSub(ctx, 1, null);
+        HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 1, null
+        ));
         backend.setParserMode();
 
         String respHead = "" +
@@ -164,8 +175,10 @@ public class TestHttp1Parser {
     @Test
     public void noVersionRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(address);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         String reqHead = "" +
@@ -209,7 +222,9 @@ public class TestHttp1Parser {
     public void noHeaderNorVersionRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         String reqHead = "" +
@@ -238,8 +253,10 @@ public class TestHttp1Parser {
     @Test
     public void normalRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(address);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         String reqHead = "" +
@@ -292,7 +309,9 @@ public class TestHttp1Parser {
     public void normalResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext backend = p.initSub(ctx, 1, null);
+        HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 1, null
+        ));
         backend.setParserMode();
 
         String respHead = "" +
@@ -331,8 +350,10 @@ public class TestHttp1Parser {
 
     private HttpSubContext chunkRequestNoEnd() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(address);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         String reqHead = "" +
@@ -425,7 +446,9 @@ public class TestHttp1Parser {
     private HttpSubContext chunkResponseNoEnd() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext backend = p.initSub(ctx, 1, null);
+        HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 1, null
+        ));
         backend.setParserMode();
 
         String respHead = "" +
@@ -577,7 +600,9 @@ public class TestHttp1Parser {
     public void gZipResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
-        HttpSubContext backend = p.initSub(ctx, 1, null);
+        HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 1, null
+        ));
         backend.setParserMode();
 
         Response originResponse = new Response();
@@ -615,8 +640,10 @@ public class TestHttp1Parser {
     @Test
     public void gZipRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(address);
-        HttpSubContext front = p.initSub(ctx, 0, null);
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
         front.setParserMode();
 
         Request originRequest = new Request();

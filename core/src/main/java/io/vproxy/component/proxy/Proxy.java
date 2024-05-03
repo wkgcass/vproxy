@@ -246,10 +246,13 @@ public class Proxy {
             NetEventLoop loop = config.handleLoopProvider.getHandleLoop(acceptLoop);
 
             Processor processor = config.connGen.processor();
-            Processor.Context topCtx = processor.init(frontendConnection.remote);
+            Processor.Context topCtx = processor.init(new Processor.ContextInitParams(
+                frontendConnection.remote
+            ));
             ProcessorConnectionHandler[] handlerPtr = new ProcessorConnectionHandler[]{null};
             //noinspection DuplicatedCode
-            Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0, new ConnectionDelegate(frontendConnection.remote) {
+            Processor.SubContext frontendSubCtx = processor.initSub(new Processor.SubContextInitParams<>(
+                topCtx, 0, new ConnectionDelegate(frontendConnection.remote) {
                 @Override
                 public void pause() {
                     assert handlerPtr[0] != null;
@@ -261,7 +264,7 @@ public class Proxy {
                     assert handlerPtr[0] != null;
                     handlerPtr[0].resume();
                 }
-            });
+            }));
             {
                 Processor.HandleTODO todo = processor.connected(topCtx, frontendSubCtx);
                 // currently we do not support sending nor producing when frontend connection is connected

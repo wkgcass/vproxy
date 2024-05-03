@@ -1,8 +1,6 @@
 package io.vproxy.base.processor.http1;
 
-import io.vproxy.base.processor.ConnectionDelegate;
 import io.vproxy.base.processor.OOProcessor;
-import io.vproxy.vfd.IPPort;
 
 public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     @Override
@@ -16,12 +14,12 @@ public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     }
 
     @Override
-    public HttpContext init(IPPort clientAddress) {
-        return new HttpContext(clientAddress);
+    public HttpContext init(ContextInitParams params) {
+        return new HttpContext(params.clientAddress());
     }
 
     @Override
-    public HttpSubContext initSub(HttpContext httpContext, int id, ConnectionDelegate delegate) {
-        return new HttpSubContext(httpContext, id, delegate);
+    public HttpSubContext initSub(SubContextInitParams<HttpContext> params) {
+        return new HttpSubContext(params.ctx(), params.id(), params.delegate());
     }
 }

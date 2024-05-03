@@ -1,11 +1,9 @@
 package io.vproxy.base.processor.httpbin;
 
 import io.vproxy.base.Config;
-import io.vproxy.base.processor.ConnectionDelegate;
 import io.vproxy.base.processor.OOProcessor;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.vfd.IPPort;
 
 public class BinaryHttpProcessor extends OOProcessor<BinaryHttpContext, BinaryHttpSubContext> {
     private final HttpVersion httpVersion;
@@ -27,13 +25,13 @@ public class BinaryHttpProcessor extends OOProcessor<BinaryHttpContext, BinaryHt
     }
 
     @Override
-    public BinaryHttpContext init(IPPort clientAddress) {
-        return new BinaryHttpContext(clientAddress);
+    public BinaryHttpContext init(ContextInitParams params) {
+        return new BinaryHttpContext(params.clientAddress());
     }
 
     @Override
-    public BinaryHttpSubContext initSub(BinaryHttpContext binaryHttpContext, int id, ConnectionDelegate delegate) {
-        return new BinaryHttpSubContext(binaryHttpContext, id, delegate);
+    public BinaryHttpSubContext initSub(SubContextInitParams<BinaryHttpContext> params) {
+        return new BinaryHttpSubContext(params.ctx(), params.id(), params.delegate());
     }
 
     private static final int HTTP_BIN_ZERO_COPY_THRESHOLD;

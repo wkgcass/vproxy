@@ -1,13 +1,11 @@
 package io.vproxy.base.processor.http;
 
-import io.vproxy.base.processor.ConnectionDelegate;
 import io.vproxy.base.processor.Processor;
 import io.vproxy.base.processor.http1.HttpProcessor;
 import io.vproxy.base.processor.httpbin.BinaryHttpProcessor;
 import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
 import io.vproxy.base.processor.httpbin.HttpVersion;
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.vfd.IPPort;
 
 public class GeneralHttpProcessor implements Processor<GeneralHttpContext, GeneralHttpSubContext> {
     private final HttpProcessor httpProcessor = new HttpProcessor();
@@ -29,16 +27,27 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
     }
 
     @Override
-    public GeneralHttpContext init(IPPort clientAddress) {
-        return new GeneralHttpContext(httpProcessor.init(clientAddress), http2Processor.init(clientAddress));
+    public GeneralHttpContext init(ContextInitParams params) {
+        return new GeneralHttpContext(
+            httpProcessor.init(new ContextInitParams(
+                params.clientAddress()
+            )),
+            http2Processor.init(new ContextInitParams(
+                params.clientAddress()
+            ))
+        );
     }
 
     @Override
-    public GeneralHttpSubContext initSub(GeneralHttpContext ctx, int id, ConnectionDelegate delegate) {
+    public GeneralHttpSubContext initSub(SubContextInitParams<GeneralHttpContext> params) {
         return new GeneralHttpSubContext(
-            id,
-            httpProcessor.initSub(ctx.httpContext, id, delegate),
-            http2Processor.initSub(ctx.http2Context, id, delegate)
+            params.id(),
+            httpProcessor.initSub(new SubContextInitParams<>(
+                params.ctx().httpContext, params.id(), params.delegate()
+            )),
+            http2Processor.initSub(new SubContextInitParams<>(
+                params.ctx().http2Context, params.id(), params.delegate()
+            ))
         );
     }
 

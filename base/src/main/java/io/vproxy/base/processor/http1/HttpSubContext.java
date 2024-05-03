@@ -173,6 +173,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return this.resp.build();
     }
 
+    @Override
     public boolean isIdle() {
         return state == 0;
     }

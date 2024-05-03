@@ -30,7 +30,9 @@ public class Http2Decoder extends AbstractDecoder<HttpFrame> {
         Processor p = ProcessorProvider.getInstance().get("h2");
         Processor.Context ctx = p.init(null);
         //noinspection unchecked
-        Processor.SubContext sub = p.initSub(ctx, decodeDataFromServer ? 1 : 0, DummyConnectionDelegate.getInstance());
+        Processor.SubContext sub = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, decodeDataFromServer ? 1 : 0, DummyConnectionDelegate.getInstance()
+        ));
         this.ctx = (BinaryHttpSubContext) sub;
         this.ctx.setParserMode();
     }
