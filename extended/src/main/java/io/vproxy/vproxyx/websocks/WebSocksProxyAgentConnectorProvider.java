@@ -656,8 +656,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             pool.put(alias, poolMap);
             for (NetEventLoop loop : config.workerLoopGroup.list()) {
                 poolMap.put(loop.getSelectorEventLoop(), new ConnectionPool(loop,
-                    cb -> new WebSocksPoolHandler(finalAlias, cb),
-                    config.getPoolSize()));
+                    config.getPoolSize(), params -> new WebSocksPoolHandler(finalAlias, params.poolCallback())
+                ));
             }
         }
     }

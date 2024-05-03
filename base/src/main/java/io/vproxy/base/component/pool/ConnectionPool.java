@@ -73,10 +73,12 @@ public class ConnectionPool {
     private final PoolConnHandler poolConnHandler = new PoolConnHandler();
     private boolean isPendingProviding = false;
 
-    public ConnectionPool(NetEventLoop loop, ConnectionPoolHandlerProvider handlerProvider, int capacity) {
+    public ConnectionPool(NetEventLoop loop, int capacity, ConnectionPoolHandlerProvider handlerProvider) {
         this.loop = loop;
         this.capacity = capacity;
-        this.handler = handlerProvider.provide(new PoolCallback(this));
+        this.handler = handlerProvider.provide(new ConnectionPoolHandlerProvider.ProvideParams(
+            new PoolCallback(this)
+        ));
 
         fill();
         // run keepalive for every 15 seconds
