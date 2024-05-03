@@ -1,4 +1,4 @@
-package io.vproxy.pool;
+package io.vproxy.base.component.pool;
 
 import io.vproxy.base.connection.*;
 import io.vproxy.base.selector.SelectorEventLoop;

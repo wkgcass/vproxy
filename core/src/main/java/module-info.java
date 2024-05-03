@@ -14,7 +14,6 @@ module io.vproxy.core {
     exports io.vproxy.component.ssl;
     exports io.vproxy.component.svrgroup;
     exports io.vproxy.dns;
-    exports io.vproxy.pool;
     exports io.vproxy.socks;
     exports io.vproxy.util;
     exports io.vproxy.vswitch;

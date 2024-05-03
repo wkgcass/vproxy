@@ -11,6 +11,7 @@ module io.vproxy.base {
     exports io.vproxy.base.component.check;
     exports io.vproxy.base.component.elgroup;
     exports io.vproxy.base.component.elgroup.dummy;
+    exports io.vproxy.base.component.pool;
     exports io.vproxy.base.component.svrgroup;
     exports io.vproxy.base.connection;
     exports io.vproxy.base.connection.util;
