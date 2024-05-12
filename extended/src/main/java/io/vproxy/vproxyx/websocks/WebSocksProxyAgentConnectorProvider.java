@@ -1,5 +1,6 @@
 package io.vproxy.vproxyx.websocks;
 
+import io.vproxy.base.component.pool.ConnectionPoolParams;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.component.svrgroup.SvrHandleConnector;
 import io.vproxy.base.connection.*;
@@ -656,7 +657,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             pool.put(alias, poolMap);
             for (NetEventLoop loop : config.workerLoopGroup.list()) {
                 poolMap.put(loop.getSelectorEventLoop(), new ConnectionPool(loop,
-                    config.getPoolSize(), params -> new WebSocksPoolHandler(finalAlias, params.poolCallback())
+                    new ConnectionPoolParams().setCapacity(config.getPoolSize()),
+                    params -> new WebSocksPoolHandler(finalAlias, params.poolCallback())
                 ));
             }
         }

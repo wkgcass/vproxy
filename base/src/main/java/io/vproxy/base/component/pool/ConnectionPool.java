@@ -9,6 +9,7 @@ import io.vproxy.base.util.anno.ThreadSafe;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class ConnectionPool {
@@ -31,7 +32,7 @@ public class ConnectionPool {
         public void readable(ConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("the pooled connection " + ctx.connection + " is receiving data");
             handler.keepaliveReadable((ConnectableConnection) ctx.connection);
-            if (ctx.connection.getInBuffer().used() != 0) {
+            if (!ctx.connection.isClosed() && ctx.connection.getInBuffer().used() != 0) {
                 Logger.error(LogType.IMPROPER_USE, "the user code did not consume all data in the inBuffer");
                 ctx.connection.close(true);
             }
@@ -65,27 +66,79 @@ public class ConnectionPool {
         }
     }
 
+    private volatile boolean isClosed = false;
     private final NetEventLoop loop;
     private final ConnectionPoolHandler handler;
     private final LinkedList<ConnWrap> connections = new LinkedList<>();
     private final int capacity;
+    private final int highWatermark;
+    private final int lowWatermark;
 
     private final PoolConnHandler poolConnHandler = new PoolConnHandler();
     private boolean isPendingProviding = false;
+    private boolean needToFillByWatermark = false;
 
-    public ConnectionPool(NetEventLoop loop, int capacity, ConnectionPoolHandlerProvider handlerProvider) {
+    private final int idleTimeoutInPool;
+    private final int idleTimeoutOutOfPool;
+
+    public ConnectionPool(NetEventLoop loop, ConnectionPoolParams params) {
+        this(loop, params, null);
+    }
+
+    public ConnectionPool(NetEventLoop loop, ConnectionPoolParams params,
+                          ConnectionPoolHandlerProvider handlerProvider) {
+        if (handlerProvider == null) {
+            if (params.lowWatermark != 0 || params.highWatermark != 0 || params.keepaliveInterval >= 0)
+                throw new IllegalArgumentException(
+                    "low watermark and high watermark must be 0, keepaliveInterval must be -1 if handlerProvider not specified");
+            handlerProvider = _ -> SimpleConnectionPoolHandler.get();
+        }
         this.loop = loop;
-        this.capacity = capacity;
+        if (params.capacity <= 0)
+            throw new IllegalArgumentException("capacity must be > 0");
+        this.capacity = params.capacity;
+        var highWatermark = params.highWatermark;
+        if (highWatermark < 0) {
+            highWatermark = capacity;
+        }
+        this.highWatermark = highWatermark;
+        var lowWatermark = params.lowWatermark;
+        if (lowWatermark < 0) {
+            lowWatermark = capacity;
+        }
+        this.lowWatermark = lowWatermark;
+        this.idleTimeoutInPool = params.idleTimeoutInPool;
+        this.idleTimeoutOutOfPool = params.idleTimeoutOutOfPool;
         this.handler = handlerProvider.provide(new ConnectionPoolHandlerProvider.ProvideParams(
             new PoolCallback(this)
         ));
 
         fill();
-        // run keepalive for every 15 seconds
-        loop.getSelectorEventLoop().period(15_000, this::keepalive);
+        // run keepalive
+        if (params.keepaliveInterval > 0) {
+            loop.getSelectorEventLoop().period(params.keepaliveInterval, this::keepalive);
+        }
+    }
+
+    public NetEventLoop getLoop() {
+        return loop;
     }
 
     private void fill() {
+        if (isClosed) {
+            assert Logger.lowLevelDebug("the pool is already closed, do not fill");
+            return;
+        }
+        if (!needToFillByWatermark) {
+            if (connections.size() <= lowWatermark && connections.size() <= highWatermark) {
+                assert Logger.lowLevelDebug("pooled connections <= low watermark and <= high watermark, do fill");
+                needToFillByWatermark = true;
+            }
+            if (!needToFillByWatermark) {
+                assert Logger.lowLevelDebug("no need to fill");
+                return;
+            }
+        }
         assert Logger.lowLevelDebug("try to fill the pool");
         if (connections.size() >= capacity) {
             assert Logger.lowLevelDebug("the pool is full now, do not create more");
@@ -102,20 +155,34 @@ public class ConnectionPool {
         } else if (conn.getEventLoop() == null) {
             Logger.error(LogType.IMPROPER_USE, "user code did not register the conn to event loop");
             conn.close(true);
+        } else if (conn.getEventLoop() != loop) {
+            Logger.error(LogType.IMPROPER_USE, "user code did not register the conn to the pool's event loop");
+            conn.close(true);
         } else {
             assert Logger.lowLevelDebug("new connection provided, add to pool");
+            if (idleTimeoutInPool > 0) {
+                conn.setTimeout(idleTimeoutInPool);
+            }
             ConnWrap w = new ConnWrap(conn);
-            connections.add(w);
+            _add(w);
         }
 
         // fix the delay to 1 second, the delay is not important
-        // we just don't want to make too much connections at the same time
+        // we just don't want to make too many connections at the same time
         loop.getSelectorEventLoop().delay(1_000, () -> {
             isPendingProviding = false;
             assert Logger.lowLevelDebug("pool delay triggers");
             fill();
         });
         isPendingProviding = true;
+    }
+
+    private void _add(ConnWrap w) {
+        connections.add(w);
+        if (connections.size() >= highWatermark) {
+            assert Logger.lowLevelDebug("pooled connections >= high watermark, stop filling");
+            needToFillByWatermark = false;
+        }
     }
 
     void handshakeDone(ConnectableConnection conn) {
@@ -125,7 +192,9 @@ public class ConnectionPool {
 
     private void handshakeDone(ConnWrap w) {
         w.isHandshaking = false;
-        loop.removeConnection(w.conn);
+        if (w.conn.getEventLoop() != null) {
+            loop.removeConnection(w.conn);
+        }
 
         try {
             loop.addConnectableConnection(w.conn, null, poolConnHandler);
@@ -178,7 +247,7 @@ public class ConnectionPool {
                     assert w != null; // it's definitely not null because we just added one element
                     if (w.equals(firstPolled)) {
                         assert Logger.lowLevelDebug("we got the first polled connection, " +
-                            "which means no valid connections in the pool for now");
+                                                    "which means no valid connections in the pool for now");
                         connections.add(w); // we should add it back
 
                         callerLoop.runOnLoop(() -> cb.accept(null));
@@ -190,6 +259,9 @@ public class ConnectionPool {
 
                 ConnWrap foo = w; // use a new variable just to let the lambda capture
                 loop.removeConnection(w.conn);
+                if (idleTimeoutOutOfPool > 0) {
+                    w.conn.setTimeout(idleTimeoutOutOfPool);
+                }
                 Logger.alert("pooled connection retrieved: " + w.conn);
                 // sync event loop info into memory to avoid some corner error
                 // the connection is removed from loop of pool on loop thread
@@ -203,5 +275,61 @@ public class ConnectionPool {
 
             fill(); // should try to fill the pool, checking will be handled in the method
         });
+    }
+
+    @ThreadSafe
+    public void store(ConnectableConnection conn) {
+        Objects.requireNonNull(conn);
+        if (isClosed) {
+            assert Logger.lowLevelDebug("the pool is already closed, cannot store");
+            conn.close();
+            return;
+        }
+        if (conn.getEventLoop() != null) {
+            assert Logger.lowLevelDebug("already in loop, must be removed before adding ...");
+            conn.getEventLoop().removeConnection(conn);
+        }
+        if (conn.isClosed()) {
+            assert Logger.lowLevelDebug("connection is closed, cannot add");
+            return;
+        }
+        loop.getSelectorEventLoop().runOnLoop(() -> {
+            if (isClosed) {
+                assert Logger.lowLevelDebug("the pool is already closed, cannot store");
+                conn.close();
+                return;
+            }
+            if (connections.size() >= capacity) {
+                assert Logger.lowLevelDebug("the pool is full now, cannot add");
+                conn.close();
+                return;
+            }
+            if (conn.isClosed()) {
+                assert Logger.lowLevelDebug("connection is closed, cannot add");
+                return;
+            }
+            var w = new ConnWrap(conn);
+            _add(w);
+            handshakeDone(w);
+        });
+    }
+
+    @ThreadSafe
+    public void close() {
+        if (isClosed) {
+            return;
+        }
+        isClosed = true;
+        if (loop.getSelectorEventLoop().isClosed()) {
+            for (var c : connections) {
+                c.conn.close();
+            }
+        } else {
+            loop.getSelectorEventLoop().runOnLoop(() -> {
+                for (var c : connections) {
+                    c.conn.close();
+                }
+            });
+        }
     }
 }
