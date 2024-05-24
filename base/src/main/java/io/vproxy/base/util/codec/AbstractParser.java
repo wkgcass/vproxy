@@ -27,6 +27,9 @@ public abstract class AbstractParser<T> {
             byte b = bytes[0];
             state = doSwitch(b);
             if (state == -1) { // parse failed, return -1
+                if (errorMessage == null) {
+                    errorMessage = "unexpected error";
+                }
                 return -1;
             }
             if (terminateStates.contains(state))
@@ -46,5 +49,9 @@ public abstract class AbstractParser<T> {
 
     public T getResult() {
         return result;
+    }
+
+    public int getState() {
+        return state;
     }
 }

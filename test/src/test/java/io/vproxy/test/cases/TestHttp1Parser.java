@@ -79,7 +79,7 @@ public class TestHttp1Parser {
     @Test
     public void simpleResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
@@ -112,7 +112,7 @@ public class TestHttp1Parser {
     @Test
     public void noHeaderRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 0, null
         ));
@@ -144,7 +144,7 @@ public class TestHttp1Parser {
     @Test
     public void noHeaderResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
@@ -221,7 +221,7 @@ public class TestHttp1Parser {
     @Test
     public void noHeaderNorVersionRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 0, null
         ));
@@ -308,7 +308,7 @@ public class TestHttp1Parser {
     @Test
     public void normalResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
@@ -445,7 +445,7 @@ public class TestHttp1Parser {
 
     private HttpSubContext chunkResponseNoEnd() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
@@ -599,7 +599,7 @@ public class TestHttp1Parser {
     @Test
     public void gZipResponse() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));

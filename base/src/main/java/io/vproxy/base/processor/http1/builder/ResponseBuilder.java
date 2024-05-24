@@ -1,19 +1,11 @@
 package io.vproxy.base.processor.http1.builder;
 
 import io.vproxy.base.processor.http1.entity.Response;
-import io.vproxy.base.util.ByteArray;
 
-import java.util.LinkedList;
-import java.util.List;
-
-public class ResponseBuilder {
+public class ResponseBuilder extends HttpEntityBuilder {
     public StringBuilder version = new StringBuilder();
     public StringBuilder statusCode = new StringBuilder();
     public StringBuilder reason = new StringBuilder();
-    public List<HeaderBuilder> headers;
-    public ByteArray body;
-    public List<ChunkBuilder> chunks;
-    public List<HeaderBuilder> trailers;
 
     @SuppressWarnings("Duplicates")
     public Response build() {
@@ -21,27 +13,7 @@ public class ResponseBuilder {
         resp.version = version.toString();
         resp.statusCode = Integer.parseInt(statusCode.toString());
         resp.reason = reason.toString();
-        if (headers != null) {
-            resp.headers = new LinkedList<>();
-            for (var h : headers) {
-                resp.headers.add(h.build());
-            }
-        }
-        if (body != null) {
-            resp.body = body.copy();
-        }
-        if (chunks != null) {
-            resp.chunks = new LinkedList<>();
-            for (var c : chunks) {
-                resp.chunks.add(c.build());
-            }
-        }
-        if (trailers != null) {
-            resp.trailers = new LinkedList<>();
-            for (var h : trailers) {
-                resp.trailers.add(h.build());
-            }
-        }
+        fillCommonPart(resp);
         return resp;
     }
 

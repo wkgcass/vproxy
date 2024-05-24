@@ -1,52 +1,120 @@
 package io.vproxy.base.http;
 
-import io.vproxy.base.processor.DummyConnectionDelegate;
-import io.vproxy.base.processor.Processor;
-import io.vproxy.base.processor.ProcessorProvider;
-import io.vproxy.base.processor.http1.HttpSubContext;
+import io.vproxy.base.processor.http1.builder.HttpEntityBuilder;
+import io.vproxy.base.processor.http1.builder.RequestBuilder;
 import io.vproxy.base.processor.http1.entity.Request;
-import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.codec.AbstractParser;
 
-import java.util.Set;
-
 public class HttpReqParser extends AbstractParser<Request> {
-    private final boolean parseBody;
-    private final HttpSubContext ctx;
+    /**
+     * @see HttpParserHelper#handlers
+     */
+    private final HttpParserHelper.Handler[] handlers = new HttpParserHelper.Handler[]{
+        this::state0,
+        this::state1,
+        this::state2,
+        this::state3,
+    };
+    private final HttpParserHelper helper;
+    private RequestBuilder req;
+    private final boolean parseAll;
 
-    public HttpReqParser(boolean parseBody) {
-        super(Set.of(1, 2));
-        result = null;
-        this.parseBody = parseBody;
+    public HttpReqParser(boolean parseAll) {
+        super(parseAll ? HttpParserHelper.terminateStatesParseAllMode : HttpParserHelper.terminateStatesStepsMode);
+        this.parseAll = parseAll;
+        this.helper = new HttpParserHelper(parseAll) {
+            @Override
+            int getState() {
+                return state;
+            }
 
-        Processor p = ProcessorProvider.getInstance().get("http/1.x");
-        Processor.Context c = p.init(null);
-        //noinspection unchecked
-        Processor.SubContext s = p.initSub(new Processor.SubContextInitParams<>(
-            c, 0, DummyConnectionDelegate.getInstance()
-        ));
-        ctx = (HttpSubContext) s;
-        ctx.setParserMode();
+            @Override
+            void setState(int state) {
+                HttpReqParser.this.state = state;
+            }
+
+            @Override
+            HttpEntityBuilder getHttpEntity() {
+                return req;
+            }
+        };
     }
 
+    private void nextState() {
+        try {
+            state = helper.nextState(state);
+        } catch (Exception e) {
+            Logger.shouldNotHappen("nextState(" + state + ")", e);
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @SuppressWarnings("DuplicatedCode")
     @Override
     protected int doSwitch(byte b) {
+        if (state < 0 || state >= helper.handlers.length) {
+            throw new IllegalStateException("BUG: unexpected state " + state);
+        }
+
+        if (!parseAll) {
+            if (HttpParserHelper.hasNextState.contains(state)) {
+                nextState();
+            }
+        }
+
         try {
-            ctx.feed(b);
+            if (state <= 3) {
+                return handlers[state].handle(b);
+            } else {
+                return helper.doSwitch(b);
+            }
         } catch (Exception e) {
-            // got error when parsing
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "parse http failed: " + e);
             errorMessage = e.getMessage();
             return -1;
         }
-        if (ctx.isIdle()) {
-            result = ctx.getReq();
-            state = 1;
-        } else if (!parseBody && ctx.isBeforeBody()) {
-            result = ctx.getReq();
-            state = 2;
+    }
+
+    private int state0(byte b) {
+        req = new RequestBuilder();
+        return state1(b);
+    }
+
+    private int state1(byte b) {
+        if (b == ' ') {
+            return 2;
+        } else {
+            req.method.append((char) b);
+            return 1;
         }
-        return state;
+    }
+
+    private int state2(byte b) {
+        if (b == ' ') {
+            return 3;
+        } else if (b == '\r') {
+            // do nothing
+            return 2;
+        } else if (b == '\n') {
+            return 4;
+        } else {
+            req.uri.append((char) b);
+            return 2;
+        }
+    }
+
+    private int state3(byte b) {
+        if (b == '\r') {
+            // do nothing
+            return 3;
+        } else if (b == '\n') {
+            return 4;
+        } else {
+            if (req.version == null) {
+                req.version = new StringBuilder();
+            }
+            req.version.append((char) b);
+            return 3;
+        }
     }
 }
