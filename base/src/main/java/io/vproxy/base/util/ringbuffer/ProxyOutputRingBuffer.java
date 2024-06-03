@@ -17,40 +17,69 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
 
         @Override
         public void writableET() {
-            // dose not care, because this buffer is only used as output buffer
+            var proxyHandle = ProxyOutputRingBuffer.this.proxyHandle;
+            if (proxyHandle == null) {
+                triggerWritable();
+            }
         }
     }
 
-    private class ProxiedETHandler implements RingBufferETHandler {
+    private class ProxyETHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
-            if (isProxy) {
+            var proxyHandle = ProxyOutputRingBuffer.this.proxyHandle;
+            if (proxyHandle != null && proxyHandle.enabled) {
                 triggerReadable();
             }
         }
 
         @Override
         public void writableET() {
-            // does not care, because this buffer is only used as output buffer
+            // the ProxyOutputRingBuffer will not be writable until proxy is done
         }
     }
+
+    private final ProxyETHandler proxyETHandler = new ProxyETHandler();
+
+    protected final SimpleRingBuffer defaultBuffer;
+    private final int cap;
 
     public interface ProxyDoneCallback {
         void proxyDone();
     }
 
-    private final ProxiedETHandler proxiedETHandler = new ProxiedETHandler();
+    protected class ProxyInfo {
+        public boolean enabled = false;
+        // true = write data from rb, false = write data from defaultBuffer
 
-    private boolean isProxy = false; // true = write data from attached, false = write data from
+        public final RingBuffer rb;
+        public int len;
+        public final ProxyDoneCallback cb;
 
-    private final SimpleRingBuffer defaultBuffer;
-    private final int cap;
+        public ProxyInfo(RingBuffer rb, int len, ProxyDoneCallback cb) {
+            this.rb = rb;
+            this.len = len;
+            this.cb = cb;
+            rb.addHandler(proxyETHandler);
+        }
 
-    private RingBuffer proxied;
-    private int proxyLen;
-    private ProxyDoneCallback proxyDoneCallback;
+        public void proxyDone() {
+            proxyDone(true);
+        }
 
-    private ProxyOutputRingBuffer(SimpleRingBuffer defaultBuffer) {
+        public void proxyDone(boolean triggerEvents) {
+            rb.removeHandler(proxyETHandler);
+            if (triggerEvents) {
+                triggerWritable();
+                assert Logger.lowLevelDebug("proxy end, calling proxy done callback");
+                cb.proxyDone();
+            }
+        }
+    }
+
+    protected ProxyInfo proxyHandle = null;
+
+    protected ProxyOutputRingBuffer(SimpleRingBuffer defaultBuffer) {
         this.defaultBuffer = defaultBuffer;
         this.cap = defaultBuffer.capacity();
         defaultBuffer.addHandler(new DefaultBufferETHandler());
@@ -60,62 +89,54 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
         return new ProxyOutputRingBuffer(SimpleRingBuffer.allocateDirect(cap));
     }
 
-    public void proxy(RingBuffer proxied, int proxyLen, ProxyDoneCallback cb) {
-        if (this.proxied != null)
-            throw new IllegalStateException("has a proxied buffer, with proxyLen = " + proxyLen);
+    public void proxy(RingBuffer proxyBuffer, int proxyLen, ProxyDoneCallback cb) {
+        if (proxyHandle != null)
+            throw new IllegalStateException("already has proxyHandle, with proxyLen = " + proxyHandle.len);
         assert Logger.lowLevelDebug("get a buffer to proxy, data length is " + proxyLen);
-        this.proxied = proxied;
-        this.proxyLen = proxyLen;
-        this.proxyDoneCallback = cb;
-        this.proxied.addHandler(proxiedETHandler);
+        this.proxyHandle = new ProxyInfo(proxyBuffer, proxyLen, cb);
         if (defaultBuffer.used() == 0) {
             assert Logger.lowLevelDebug("the defaultBuffer is empty now, switch to proxy mode");
-            isProxy = true;
+            proxyHandle.enabled = true;
             triggerReadable();
         } else {
             assert Logger.lowLevelDebug("still have data in the defaultBuffer");
         }
     }
 
-    public void newDataFromProxiedBuffer() {
-        if (proxied == null)
+    public void newDataFromProxyRingBuffer() {
+        if (proxyHandle == null)
             throw new IllegalStateException("no buffer to proxy but alarmed with 'new data from proxied buffer'");
-        if (isProxy) {
+        if (proxyHandle.enabled) {
             triggerReadable();
         }
     }
 
     @Override
     public int storeBytesFrom(ReadableByteStream channel) throws IOException {
-        if (proxied != null)
-            throw new IllegalStateException("has a proxied buffer, with proxyLen = " + proxyLen);
+        if (proxyHandle != null)
+            throw new IllegalStateException("already has proxyHandle, with proxyLen = " + proxyHandle.len);
         return defaultBuffer.storeBytesFrom(channel);
     }
 
     @Override
     public int writeTo(WritableByteStream channel, int maxBytesToWrite) throws IOException {
-        if (isProxy) {
-            int toWrite = Math.min(maxBytesToWrite, proxyLen);
-            int wrote = proxied.writeTo(channel, toWrite);
-            proxyLen -= wrote;
-            if (proxyLen == 0) {
-                isProxy = false;
-                proxied.removeHandler(proxiedETHandler);
-                proxied = null;
-                ProxyDoneCallback cb = proxyDoneCallback;
-                proxyDoneCallback = null;
-                assert Logger.lowLevelDebug("proxy end, calling proxy done callback");
-                cb.proxyDone();
+        if (proxyHandle != null && proxyHandle.enabled) {
+            int toWrite = Math.min(maxBytesToWrite, proxyHandle.len);
+            int wrote = proxyHandle.rb.writeTo(channel, toWrite);
+            proxyHandle.len -= wrote;
+            if (proxyHandle.len == 0) {
+                proxyHandle.proxyDone();
+                proxyHandle = null;
             }
             return wrote;
         } else {
             int wrote = defaultBuffer.writeTo(channel, maxBytesToWrite);
-            if (wrote == maxBytesToWrite)
+            if (defaultBuffer.used() == 0 && proxyHandle != null) {
+                assert Logger.lowLevelDebug("wrote all data from defaultBuffer, switch to proxy mode");
+                proxyHandle.enabled = true;
+            }
+            if (wrote == maxBytesToWrite || proxyHandle == null)
                 return wrote;
-            if (proxied == null)
-                return wrote;
-            assert Logger.lowLevelDebug("wrote all data from defaultBuffer, switch to proxy mode");
-            isProxy = true;
             return wrote + writeTo(channel, maxBytesToWrite - wrote);
         }
     }
@@ -128,18 +149,11 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
     @Override
     public int used() {
         int proxyPart = 0;
-        if (proxied != null) {
-            int ret = cap;
-            if (ret > proxyLen) ret = proxyLen;
-            int foo = proxied.used();
-            if (ret > foo) ret = foo;
-            return ret; // the minimum of cap, proxyLen, and proxied.used()
+        if (proxyHandle != null) {
+            var proxyBufferUsed = proxyHandle.rb.used();
+            proxyPart = Math.min(proxyBufferUsed, proxyHandle.len);
         }
-        if (isProxy) {
-            return proxyPart;
-        } else {
-            return Math.min(cap, defaultBuffer.used() + proxyPart);
-        }
+        return Math.min(cap, defaultBuffer.used() + proxyPart);
     }
 
     @Override
@@ -149,11 +163,9 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
 
     @Override
     public void clean() {
-        if (proxied != null) {
-            proxied.removeHandler(proxiedETHandler);
-            proxied = null;
-            proxyLen = 0;
-            proxyDoneCallback = null;
+        if (proxyHandle != null) {
+            proxyHandle.proxyDone(false);
+            proxyHandle = null;
         }
         defaultBuffer.clean();
     }

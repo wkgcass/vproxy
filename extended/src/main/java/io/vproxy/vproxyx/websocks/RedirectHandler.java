@@ -2,6 +2,7 @@ package io.vproxy.vproxyx.websocks;
 
 import io.vproxy.base.http.HttpContext;
 import io.vproxy.base.http.HttpProtocolHandler;
+import io.vproxy.base.http.HttpReqParser;
 import io.vproxy.base.processor.http1.entity.Header;
 import io.vproxy.base.processor.http1.entity.Request;
 import io.vproxy.base.processor.http1.entity.Response;
@@ -20,7 +21,7 @@ public class RedirectHandler extends HttpProtocolHandler {
     private final int port;
 
     public RedirectHandler(RedirectBaseInfo info) {
-        super(false);
+        super(new HttpReqParser.Params().setHeadersOnly(true));
         this.protocol = info.protocol;
         this.domain = info.domain;
         this.port = info.port;

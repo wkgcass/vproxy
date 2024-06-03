@@ -21,7 +21,7 @@ import java.util.Set;
  * [---------sPos---------ePos------------]
  * then
  * [  free space  ]->                      ->
- * [------------ePos--------------------sPos
+ * [------------sPos--------------------ePos
  * then
  * .........->[   free space    ]->
  * [------ePos----------------sPos--------]
@@ -154,7 +154,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     @Override
     public String toString() {
         byte[] bytes = getBytes();
-        return new String(bytes, 0, bytes.length, StandardCharsets.UTF_8);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     @Override

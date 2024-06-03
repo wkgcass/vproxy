@@ -18,12 +18,16 @@ public class HttpReqParser extends AbstractParser<Request> {
     };
     private final HttpParserHelper helper;
     private RequestBuilder req;
-    private final boolean parseAll;
+    private final Params params;
 
-    public HttpReqParser(boolean parseAll) {
-        super(parseAll ? HttpParserHelper.terminateStatesParseAllMode : HttpParserHelper.terminateStatesStepsMode);
-        this.parseAll = parseAll;
-        this.helper = new HttpParserHelper(parseAll) {
+    public HttpReqParser() {
+        this(new Params());
+    }
+
+    public HttpReqParser(Params params) {
+        super(params.segmentedParsing ? HttpParserHelper.terminateStatesStepsMode : HttpParserHelper.terminateStatesParseAllMode);
+        this.params = new Params(params);
+        this.helper = new HttpParserHelper(params) {
             @Override
             int getState() {
                 return state;
@@ -39,6 +43,10 @@ public class HttpReqParser extends AbstractParser<Request> {
                 return req;
             }
         };
+    }
+
+    public RequestBuilder getRequestBuilder() {
+        return req;
     }
 
     private void nextState() {
@@ -57,22 +65,29 @@ public class HttpReqParser extends AbstractParser<Request> {
             throw new IllegalStateException("BUG: unexpected state " + state);
         }
 
-        if (!parseAll) {
+        if (params.segmentedParsing) {
             if (HttpParserHelper.hasNextState.contains(state)) {
                 nextState();
             }
         }
 
+        int newState;
         try {
             if (state <= 3) {
-                return handlers[state].handle(b);
+                newState = handlers[state].handle(b);
             } else {
-                return helper.doSwitch(b);
+                newState = helper.doSwitch(b);
             }
         } catch (Exception e) {
             errorMessage = e.getMessage();
             return -1;
         }
+        if (newState == 0) {
+            if (params.buildResult) {
+                result = req.build();
+            }
+        }
+        return newState;
     }
 
     private int state0(byte b) {
@@ -115,6 +130,30 @@ public class HttpReqParser extends AbstractParser<Request> {
             }
             req.version.append((char) b);
             return 3;
+        }
+    }
+
+    public static class Params extends HttpParserHelper.Params {
+        public Params() {
+        }
+
+        public Params(Params params) {
+            super(params);
+        }
+
+        @Override
+        public Params setSegmentedParsing(boolean segmentedParsing) {
+            return (Params) super.setSegmentedParsing(segmentedParsing);
+        }
+
+        @Override
+        public Params setBuildResult(boolean buildResult) {
+            return (Params) super.setBuildResult(buildResult);
+        }
+
+        @Override
+        public Params setHeadersOnly(boolean headersOnly) {
+            return (Params) super.setHeadersOnly(headersOnly);
         }
     }
 }

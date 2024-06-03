@@ -6,6 +6,7 @@ import io.vproxy.base.connection.Connector;
 import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.http.HttpContext;
 import io.vproxy.base.http.HttpProtocolHandler;
+import io.vproxy.base.http.HttpReqParser;
 import io.vproxy.base.processor.http1.entity.Header;
 import io.vproxy.base.processor.http1.entity.Request;
 import io.vproxy.base.processor.http1.entity.Response;
@@ -78,7 +79,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         private final Supplier<ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>>> rootCtxGetter;
 
         protected WebSocksHttpProtocolHandler(Supplier<ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>>> rootCtxGetter) {
-            super(false);
+            super(new HttpReqParser.Params().setHeadersOnly(true));
             this.rootCtxGetter = rootCtxGetter;
         }
 

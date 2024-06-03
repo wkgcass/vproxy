@@ -3,6 +3,7 @@ package io.vproxy.vproxyx.websocks;
 import io.vproxy.base.connection.Connection;
 import io.vproxy.base.http.HttpContext;
 import io.vproxy.base.http.HttpProtocolHandler;
+import io.vproxy.base.http.HttpReqParser;
 import io.vproxy.base.processor.http1.entity.Header;
 import io.vproxy.base.processor.http1.entity.Request;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
@@ -34,7 +35,7 @@ public class PACHandler extends HttpProtocolHandler {
     private final int httpConnectPort;
 
     public PACHandler(int socksPort, int httpConnectPort) {
-        super(false);
+        super(new HttpReqParser.Params().setHeadersOnly(true));
         this.socks5Port = socksPort;
         this.httpConnectPort = httpConnectPort;
     }

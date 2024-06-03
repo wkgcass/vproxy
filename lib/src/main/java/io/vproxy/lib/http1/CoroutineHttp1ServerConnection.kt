@@ -3,7 +3,6 @@ package io.vproxy.lib.http1
 import io.vproxy.lib.http.HttpServerConnection
 import io.vproxy.lib.http.HttpServerResponse
 import io.vproxy.lib.tcp.CoroutineConnection
-import java.io.IOException
 
 class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServerConnection, AutoCloseable {
   override fun base(): io.vproxy.base.connection.Connection {
@@ -76,26 +75,8 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
    * If eof received, the function returns null
    */
   suspend fun readRequest(): io.vproxy.base.processor.http1.entity.Request? {
-    val parser = io.vproxy.base.http.HttpReqParser(true)
-    var started = false
-    while (true) {
-      val rb = conn.read() ?: if (started) {
-        throw IOException("unexpected eof")
-      } else {
-        return null
-      }
-      started = true
-
-      val res = parser.feed(rb)
-      if (res == -1) {
-        if (parser.errorMessage != null) {
-          throw IOException(parser.errorMessage)
-        }
-        continue
-      }
-      // done
-      return parser.result
-    }
+    val parser = io.vproxy.base.http.HttpReqParser()
+    return conn.read(parser)
   }
 
   override fun close() {

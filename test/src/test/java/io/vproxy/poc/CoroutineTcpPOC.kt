@@ -24,7 +24,7 @@ object CoroutineTcpPOC {
           println("accepted socket $sock")
           vplib.coroutine.with(sock).launch {
             val rb = sock.read()
-            val parser = io.vproxy.base.http.HttpReqParser(true)
+            val parser = io.vproxy.base.http.HttpReqParser()
             parser.feed(rb) // expect to be completed in this example
             val req = parser.result
             println("server received request: $req")

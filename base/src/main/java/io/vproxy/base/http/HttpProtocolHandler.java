@@ -7,10 +7,10 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {
-    private final boolean parseBody;
+    private final HttpReqParser.Params params;
 
-    protected HttpProtocolHandler(boolean parseBody) {
-        this.parseBody = parseBody;
+    protected HttpProtocolHandler(HttpReqParser.Params params) {
+        this.params = new HttpReqParser.Params(params);
     }
 
     @Override
@@ -21,7 +21,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
     @Override
     public void readable(ProtocolHandlerContext<HttpContext> ctx) {
         if (ctx.data.parser == null) {
-            ctx.data.parser = new HttpReqParser(parseBody);
+            ctx.data.parser = new HttpReqParser(params);
         }
         int err = ctx.data.parser.feed(ctx.inBuffer);
         if (err == 0) {

@@ -143,7 +143,7 @@ public class ConnectClient {
 
         HttpHCConnectableConnectionHandler(Callback<Void, IOException> callback, TimerEvent timeoutEvent) {
             super(callback, timeoutEvent);
-            parser = new HttpRespParser(false);
+            parser = new HttpRespParser(new HttpRespParser.Params().setHeadersOnly(true));
         }
 
         @Override

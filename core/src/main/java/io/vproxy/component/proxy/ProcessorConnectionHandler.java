@@ -74,7 +74,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         if (flow.currentSegment.isProxy) {
             if (flow.currentSegment.calledProxyOnBuffer) {
-                ((ProxyOutputRingBuffer) (targetConnection.getOutBuffer())).newDataFromProxiedBuffer();
+                ((ProxyOutputRingBuffer) (targetConnection.getOutBuffer())).newDataFromProxyRingBuffer();
                 return;
             }
 

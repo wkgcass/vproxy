@@ -6,6 +6,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.anno.ThreadSafe;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -19,6 +20,10 @@ public class ConnectionPool {
 
         ConnWrap(ConnectableConnection conn) {
             this.conn = conn;
+        }
+
+        public boolean match(IPPort target) {
+            return conn.getRemote().equals(target);
         }
     }
 
@@ -223,7 +228,22 @@ public class ConnectionPool {
     }
 
     @ThreadSafe
+    public void get(Consumer<ConnectableConnection> cb) {
+        get(SelectorEventLoop.current(), cb);
+    }
+
+    @ThreadSafe
+    public void get(IPPort target, Consumer<ConnectableConnection> cb) {
+        get(SelectorEventLoop.current(), target, cb);
+    }
+
+    @ThreadSafe
     public void get(SelectorEventLoop callerLoop, Consumer<ConnectableConnection> cb) {
+        get(callerLoop, null, cb);
+    }
+
+    @ThreadSafe
+    public void get(SelectorEventLoop callerLoop, IPPort target, Consumer<ConnectableConnection> cb) {
         loop.getSelectorEventLoop().runOnLoop(() -> {
 
             // here is in the connection pool event loop
@@ -239,7 +259,7 @@ public class ConnectionPool {
             }
 
             while (true) {
-                if (w.isHandshaking) {
+                if (w.isHandshaking || (target != null && /* FIXME: bad performance */ !w.match(target))) {
                     // still handshaking, we should add it back to the list
                     connections.add(w); // add to tail
                     w = connections.poll(); // retrieve from head

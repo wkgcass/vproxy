@@ -191,7 +191,7 @@ public class TestSSL {
                 "Host: " + host + "\r\n" +
                 "User-Agent: curl/vproxy\r\n" + // add curl agent to get json response
                 "\r\n").getBytes());
-            parser = new HttpRespParser(true);
+            parser = new HttpRespParser();
             this.cb = cb;
         }
 

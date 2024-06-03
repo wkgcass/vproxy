@@ -4,6 +4,7 @@ import io.vproxy.base.connection.Connector;
 import io.vproxy.base.connection.ConnectorProvider;
 import io.vproxy.base.http.HttpContext;
 import io.vproxy.base.http.HttpProtocolHandler;
+import io.vproxy.base.http.HttpReqParser;
 import io.vproxy.base.processor.http1.entity.Request;
 import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
@@ -33,7 +34,7 @@ public class HttpConnectProtocolHandler
         var outCtx = ctx; // for inner class to capture
 
         HttpConnectContext hcctx = new HttpConnectContext();
-        hcctx.handler = new HttpProtocolHandler(false) {
+        hcctx.handler = new HttpProtocolHandler(new HttpReqParser.Params().setHeadersOnly(true)) {
             @Override
             protected void request(ProtocolHandlerContext<HttpContext> ctx) {
                 // fetch data from method and url

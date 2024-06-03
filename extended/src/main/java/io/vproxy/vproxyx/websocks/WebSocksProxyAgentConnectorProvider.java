@@ -34,7 +34,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     class WebSocksPoolHandler implements ConnectionPoolHandler {
         class WebSocksClientHandshakeHandler implements ConnectableConnectionHandler {
             private final String domainOfProxy;
-            private final HttpRespParser httpRespParser = new HttpRespParser(false);
+            private final HttpRespParser httpRespParser = new HttpRespParser(new HttpRespParser.Params().setHeadersOnly(true));
 
             WebSocksClientHandshakeHandler(String domainOfProxy) {
                 this.domainOfProxy = domainOfProxy;
@@ -197,7 +197,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
 
                 step = 1;
-                httpRespParser = new HttpRespParser(false);
+                httpRespParser = new HttpRespParser(new HttpRespParser.Params().setHeadersOnly(true));
             } else {
                 // otherwise, send the WebSocket frame
                 sendWebSocketFrame(ctx);

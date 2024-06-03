@@ -12,6 +12,10 @@ public class HttpEntityBuilder {
     public List<ChunkBuilder> chunks;
     public List<HeaderBuilder> trailers;
 
+    // for state machine
+    public int dataLength = -1;
+    public boolean isChunked = false;
+
     protected void fillCommonPart(HttpEntity entity) {
         if (headers != null) {
             entity.headers = new LinkedList<>();

@@ -98,18 +98,46 @@ public abstract class HttpParserHelper {
         int handle(byte b) throws Exception;
     }
 
+    public static class Params {
+        public boolean segmentedParsing = false;
+        public boolean buildResult = true;
+        public boolean headersOnly = false;
+
+        public Params() {
+        }
+
+        public Params(Params that) {
+            this.segmentedParsing = that.segmentedParsing;
+            this.buildResult = that.buildResult;
+            this.headersOnly = that.headersOnly;
+        }
+
+        public Params setSegmentedParsing(boolean segmentedParsing) {
+            this.segmentedParsing = segmentedParsing;
+            return this;
+        }
+
+        public Params setBuildResult(boolean buildResult) {
+            this.buildResult = buildResult;
+            return this;
+        }
+
+        public Params setHeadersOnly(boolean headersOnly) {
+            this.headersOnly = headersOnly;
+            return this;
+        }
+    }
+
     abstract int getState();
 
     abstract void setState(int state);
 
     abstract HttpEntityBuilder getHttpEntity();
 
-    private final boolean parseAll;
+    private final Params params;
 
     private HeaderBuilder header;
     private List<HeaderBuilder> headers;
-    private int dataLength = -1;
-    private boolean isChunked;
     private byte[] buf;
     private int bufOffset;
     private ChunkBuilder chunk;
@@ -117,8 +145,8 @@ public abstract class HttpParserHelper {
     private HeaderBuilder trailer;
     private List<HeaderBuilder> trailers;
 
-    HttpParserHelper(boolean parseAll) {
-        this.parseAll = parseAll;
+    HttpParserHelper(Params params) {
+        this.params = new Params(params);
     }
 
     int doSwitch(byte b) throws Exception {
@@ -138,8 +166,8 @@ public abstract class HttpParserHelper {
     private int end() {
         header = null;
         headers = null;
-        dataLength = -1;
-        isChunked = false;
+        getHttpEntity().dataLength = -1;
+        getHttpEntity().isChunked = false;
         buf = null;
         bufOffset = 0;
         chunk = null;
@@ -218,15 +246,16 @@ public abstract class HttpParserHelper {
                 if (intLen < 0) {
                     throw new Exception("invalid Content-Length: " + len);
                 }
-                if (dataLength >= 0) {
+                if (getHttpEntity().dataLength >= 0) {
                     // already exists
-                    throw new Exception("duplicated Content-Length: orig: " + dataLength + ", new: " + intLen);
+                    throw new Exception("duplicated Content-Length: orig: " + getHttpEntity().dataLength + ", new: " + intLen);
                 }
+                getHttpEntity().dataLength = intLen;
             } else if (hdr.equalsIgnoreCase("transfer-encoding")) {
                 var encoding = header.value.toString().trim().toLowerCase();
                 assert Logger.lowLevelDebug("found Transfer-Encoding: " + encoding);
                 if (encoding.equals("chunked")) {
-                    isChunked = true;
+                    getHttpEntity().isChunked = true;
                 }
             }
             headers.add(header);
@@ -247,7 +276,10 @@ public abstract class HttpParserHelper {
 
     // it's for state transferring
     private int state9(@SuppressWarnings("unused") Byte b) {
-        if (!parseAll) {
+        if (params.headersOnly) {
+            return end();
+        }
+        if (params.segmentedParsing) {
             return 9;
         }
         return state9Trans();
@@ -257,13 +289,13 @@ public abstract class HttpParserHelper {
         if (headers == null) {
             return end();
         }
-        if (dataLength >= 0) {
-            if (dataLength == 0) {
+        if (getHttpEntity().dataLength >= 0) {
+            if (getHttpEntity().dataLength == 0) {
                 return end();
             } else {
                 return 10;
             }
-        } else if (isChunked) {
+        } else if (getHttpEntity().isChunked) {
             return 11;
         }
         assert Logger.lowLevelDebug("Content-Length and Transfer-Encoding both not found");
@@ -271,11 +303,10 @@ public abstract class HttpParserHelper {
     }
 
     private int state10(byte b) {
-        if (!parseAll) {
+        if (params.segmentedParsing) {
             return 10;
         }
-        int contentLength = dataLength;
-        --contentLength;
+        int contentLength = getHttpEntity().dataLength;
         var entity = getHttpEntity();
         if (entity.body == null) {
             buf = Utils.allocateByteArray(contentLength);
@@ -283,7 +314,7 @@ public abstract class HttpParserHelper {
             entity.body = ByteArray.from(buf);
         }
         buf[bufOffset++] = b;
-        if (dataLength == 0) {
+        if (bufOffset == buf.length) {
             buf = null; // gc
             return end();
         }
@@ -354,7 +385,7 @@ public abstract class HttpParserHelper {
             }
         }
         if (size != 0) {
-            dataLength = size;
+            getHttpEntity().dataLength = size;
             return 15;
         } else {
             if (b == null) { // called from other states
@@ -383,18 +414,17 @@ public abstract class HttpParserHelper {
     }
 
     private int state15(byte b) {
-        if (!parseAll) {
+        if (params.segmentedParsing) {
             return 15;
         }
-        var chunkSize = dataLength;
-        --dataLength;
+        var chunkSize = getHttpEntity().dataLength;
         if (chunk.content == null) {
             buf = Utils.allocateByteArray(chunkSize);
             bufOffset = 0;
             chunk.content = ByteArray.from(buf);
         }
         buf[bufOffset++] = b;
-        if (dataLength == 0) {
+        if (bufOffset == buf.length) {
             buf = null; // gc
             return 16;
         }
@@ -486,7 +516,7 @@ public abstract class HttpParserHelper {
     }
 
     private int state25(@SuppressWarnings("unused") Byte b) {
-        if (!parseAll) {
+        if (params.segmentedParsing) {
             return 25;
         }
         return state25Trans();

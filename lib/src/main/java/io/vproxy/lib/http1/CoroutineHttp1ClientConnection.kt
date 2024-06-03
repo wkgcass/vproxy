@@ -22,6 +22,7 @@ import io.vproxy.vfd.IP
 import io.vproxy.vfd.IPPort
 import kotlinx.coroutines.suspendCancellableCoroutine
 import vjson.JSON
+import java.io.EOFException
 import java.io.IOException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLEngine
@@ -111,19 +112,9 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
    * If eof received, an IOException would be thrown instead of returning null Response
    */
   suspend fun readResponse(): Response {
-    val parser = HttpRespParser(true)
-    while (true) {
-      val rb = conn.read() ?: throw IOException("unexpected eof")
-      val res = parser.feed(rb)
-      if (res == -1) {
-        if (parser.errorMessage != null) {
-          throw IOException(parser.errorMessage)
-        }
-        continue
-      }
-      // done
-      return parser.result
-    }
+    val parser = HttpRespParser()
+    return conn.read(parser)
+      ?: throw EOFException("EOF when reading http response, but nothing read")
   }
 
   override fun close() {

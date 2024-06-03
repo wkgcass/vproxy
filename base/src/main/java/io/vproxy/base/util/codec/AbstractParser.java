@@ -41,6 +41,25 @@ public abstract class AbstractParser<T> {
         return -1; // indicating that the parser want more data
     }
 
+    public int feed(ByteArrayChannel chnl) {
+        while (chnl.used() != 0) {
+            byte b = chnl.read();
+            state = doSwitch(b);
+            if (state == -1) { // parse failed, return -1
+                if (errorMessage == null) {
+                    errorMessage = "unexpected error";
+                }
+                return -1;
+            }
+            if (terminateStates.contains(state))
+                break;
+        }
+        if (terminateStates.contains(state)) {
+            return 0;
+        }
+        return -1; // indicating that the parser want more data
+    }
+
     protected abstract int doSwitch(byte b);
 
     public String getErrorMessage() {
