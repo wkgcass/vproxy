@@ -165,9 +165,26 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
          */
         public ByteArray send;
         /**
-         * data produced to the connection which triggers the event
+         * set by the processor library: true means all data sent
+         */
+        public boolean isSent;
+        /**
+         * all data sent (i.e. written into connection ring buffer)
+         */
+        public Consumer<HandleTODO> sendDone;
+        /**
+         * data produced to the connection which triggers the event.
+         * may be length zero or null
          */
         public ByteArray produce;
+        /**
+         * set by the processor library: true means all data produced
+         */
+        public boolean isProduced;
+        /**
+         * all data produced (i.e. written into connection ring buffer)
+         */
+        public Consumer<HandleTODO> produceDone;
         /**
          * current frame ends
          */
@@ -178,6 +195,31 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
 
         public static HandleTODO create() {
             return new HandleTODO();
+        }
+
+        public static void doneNoData(HandleTODO handleTODO) {
+            if (handleTODO == null)
+                return;
+            if (handleTODO.send == null || handleTODO.send.length() == 0) {
+                handleTODO.isSent = true;
+                handleTODO.sendDone();
+            }
+            if (handleTODO.produce == null || handleTODO.produce.length() == 0) {
+                handleTODO.isProduced = true;
+                handleTODO.produceDone();
+            }
+        }
+
+        public void sendDone() {
+            if (sendDone == null)
+                return;
+            sendDone.accept(this);
+        }
+
+        public void produceDone() {
+            if (produceDone == null)
+                return;
+            produceDone.accept(this);
         }
     }
 

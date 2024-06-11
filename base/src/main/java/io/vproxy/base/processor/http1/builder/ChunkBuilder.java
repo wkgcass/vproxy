@@ -23,9 +23,27 @@ public class ChunkBuilder {
     @Override
     public String toString() {
         return "ChunkBuilder{" +
-            "size=" + size +
-            ", extension=" + extension +
-            ", content=" + content +
-            '}';
+               "size=" + size +
+               ", extension=" + extension +
+               ", content=" + content +
+               '}';
+    }
+
+    public ByteArray headToByteArray() {
+        int charLength = size.length();
+        if (extension != null) {
+            charLength += 1;
+            charLength += extension.length();
+        }
+        charLength += 2;
+        char[] chars = new char[charLength];
+        size.getChars(0, size.length(), chars, 0);
+        if (extension != null) {
+            chars[size.length()] = ';';
+            extension.getChars(0, extension.length(), chars, size.length() + 1);
+        }
+        chars[charLength - 2] = '\r';
+        chars[charLength - 1] = '\n';
+        return ByteArray.from(new String(chars).getBytes());
     }
 }

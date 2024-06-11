@@ -458,15 +458,26 @@ project(':test') {
     task runSingleTest(type: Test) {
         outputs.upToDateWhen { return false }
 
-        doFirst {
+        def message;
+        filter {
             def c = System.getProperty("case")
             if (c == null) {
-                def message = "missing test case to run, specify it with -Dcase"
+                message = "missing test case to run, specify it with -Dcase"
+                return
+            }
+            def testCase = c
+            def m = System.getProperty("method")
+            if (m != null) {
+                testCase += '.' + m
+            }
+
+            includeTestsMatching testCase
+        }
+        doFirst {
+            if (message) {
                 println(message)
                 throw new Exception(message)
             }
-
-            include '**/' + c + '.class'
         }
     }
 

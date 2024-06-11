@@ -6,7 +6,7 @@ import io.vproxy.base.util.ByteArray;
 import java.util.LinkedList;
 import java.util.List;
 
-public class HttpEntityBuilder {
+public abstract class HttpEntityBuilder {
     public List<HeaderBuilder> headers;
     public ByteArray body;
     public List<ChunkBuilder> chunks;
@@ -15,6 +15,9 @@ public class HttpEntityBuilder {
     // for state machine
     public int dataLength = -1;
     public boolean isChunked = false;
+    public ChunkBuilder chunk;
+    // for processor
+    public String lastHostHeader = null;
 
     protected void fillCommonPart(HttpEntity entity) {
         if (headers != null) {
@@ -39,4 +42,16 @@ public class HttpEntityBuilder {
             }
         }
     }
+
+    public ByteArray trailersToByteArray() {
+        if (trailers == null || trailers.isEmpty())
+            return ByteArray.allocate(0);
+        var sb = new StringBuilder();
+        for (var h : trailers) {
+            sb.append(h.keyAsString()).append(": ").append(h.valueAsString()).append("\r\n");
+        }
+        return ByteArray.from(sb.toString());
+    }
+
+    abstract public HttpEntity build();
 }

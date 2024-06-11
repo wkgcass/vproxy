@@ -7,7 +7,7 @@ public class Response extends HttpEntity {
     public int statusCode; // notnull
     public String reason; // notnull for http/1.x
 
-    @SuppressWarnings("DuplicatedCode")
+    @Override
     public ByteArray toByteArray() {
         StringBuilder textPart = new StringBuilder();
         textPart.append(version).append(" ").append(statusCode).append(" ").append(reason).append("\r\n");

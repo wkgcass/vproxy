@@ -342,6 +342,25 @@ public class Utils {
         return ret;
     }
 
+    public static boolean equalsIgnoreCase(StringBuilder actual, char[] expected) {
+        if (actual.length() != expected.length) {
+            return false;
+        }
+        for (int i = 0; i < expected.length; ++i) {
+            char e = expected[i];
+            char a = actual.charAt(i);
+            if ('A' <= e && e <= 'Z') {
+                e += 'a' - 'A';
+            }
+            if ('A' <= a && a <= 'Z') {
+                a -= 'a' - 'A';
+            }
+            if (a != e)
+                return false;
+        }
+        return true;
+    }
+
     public static byte[] binToBytes(String bin) {
         char[] chars = bin.toCharArray();
         if (chars.length % 8 != 0) throw new IllegalArgumentException("invalid bin string");

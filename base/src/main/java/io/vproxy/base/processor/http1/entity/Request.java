@@ -7,7 +7,7 @@ public class Request extends HttpEntity {
     public String uri; // notnull
     public String version; // nullable
 
-    @SuppressWarnings("DuplicatedCode")
+    @Override
     public ByteArray toByteArray() {
         StringBuilder textPart = new StringBuilder();
         textPart.append(method).append(" ").append(uri);

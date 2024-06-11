@@ -8,6 +8,7 @@ public class RequestBuilder extends HttpEntityBuilder {
     public StringBuilder version;
 
     @SuppressWarnings("Duplicates")
+    @Override
     public Request build() {
         Request req = new Request();
         req.method = method.toString();

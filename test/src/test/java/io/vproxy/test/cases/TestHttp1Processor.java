@@ -1,5 +1,7 @@
 package io.vproxy.test.cases;
 
+import io.vproxy.base.http.HttpReqParser;
+import io.vproxy.base.http.HttpRespParser;
 import io.vproxy.base.processor.Processor;
 import io.vproxy.base.processor.http1.HttpContext;
 import io.vproxy.base.processor.http1.HttpProcessor;
@@ -19,7 +21,7 @@ import java.util.Objects;
 
 import static org.junit.Assert.*;
 
-public class TestHttp1Parser {
+public class TestHttp1Processor {
     private static final String forwardedFor = "1.2.3.4";
     private static final String clientPort = "1122";
     private static final IPPort address = new IPPort(
@@ -37,31 +39,33 @@ public class TestHttp1Parser {
         HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 0, null
         ));
-        front.setParserMode();
 
-        String reqHead = "" +
+        String reqHead =
             "GET /hello/url HTTP/1.1\r\n" +
             "Host: www.example.com\r\n" +
             "Hello: World\r\n" +
-            "\r\n" +
-            "";
+            "\r\n";
         byte[] reqHeadBytes = reqHead.getBytes();
 
-        for (byte b : reqHeadBytes) {
-            int len = front.len();
+        for (int i = 0; i < reqHeadBytes.length; i++) {
+            byte b = reqHeadBytes[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            ByteArray r = front.feed(a);
-            if (r.length() == 1) {
-                assertEquals(a, r);
+            ByteArray r = front.unittest_feed(a);
+            if (i != reqHeadBytes.length - 1) {
+                assertNull(r);
             } else {
-                assertEquals(ByteArray.from(("" +
-                    "x-forwarded-for: " + forwardedFor + "\r\n" +
-                    "x-client-port: " + clientPort + "\r\n" +
-                    "").getBytes()).concat(a), r);
+                assertEquals(ByteArray.from(
+                    "GET /hello/url HTTP/1.1\r\n" +
+                    "Host: www.example.com\r\n" +
+                    "Hello: World\r\n" +
+                    "X-Forwarded-For: " + forwardedFor + "\r\n" +
+                    "X-Client-Port: " + clientPort + "\r\n" +
+                    "\r\n"), r);
             }
         }
-        Request req = front.getReq();
+        Request req = front.unittest_getReq();
         {
             assertEquals("GET", req.method);
             assertEquals("/hello/url", req.uri);
@@ -83,21 +87,25 @@ public class TestHttp1Parser {
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
-        backend.setParserMode();
 
-        String respHead = "" +
+        String respHead =
             "HTTP/1.1 200 OK\r\n" +
             "Content-Type: application/json\r\n" +
             "\r\n";
         byte[] respHeadBytes = respHead.getBytes();
 
-        for (byte b : respHeadBytes) {
-            int len = backend.len();
+        for (int i = 0; i < respHeadBytes.length; i++) {
+            byte b = respHeadBytes[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != respHeadBytes.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(respHeadBytes), backend.unittest_feed(a));
+            }
         }
-        Response resp = backend.getResp();
+        Response resp = backend.unittest_getResp();
         {
             assertEquals("HTTP/1.1", resp.version);
             assertEquals(200, resp.statusCode);
@@ -112,31 +120,37 @@ public class TestHttp1Parser {
     @Test
     public void noHeaderRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
+        HttpContext ctx = p.init(ctxInitParams);
         HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 0, null
         ));
-        front.setParserMode();
 
-        String reqHead = "" +
+        String reqHead =
             "GET /hello/url HTTP/1.1\r\n" +
-            "\r\n" +
-            "";
+            "\r\n";
         byte[] reqHeadBytes = reqHead.getBytes();
 
-        for (byte b : reqHeadBytes) {
-            int len = front.len();
+        for (int i = 0; i < reqHeadBytes.length; i++) {
+            byte b = reqHeadBytes[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            if (i != reqHeadBytes.length - 1) {
+                assertNull(front.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(
+                    "GET /hello/url HTTP/1.1\r\n" +
+                    "X-Forwarded-For: " + forwardedFor + "\r\n" +
+                    "X-Client-Port: " + clientPort + "\r\n" +
+                    "\r\n"
+                ), front.unittest_feed(a));
+            }
         }
-        Request req = front.getReq();
+        Request req = front.unittest_getReq();
         {
             assertEquals("GET", req.method);
             assertEquals("/hello/url", req.uri);
             assertEquals("HTTP/1.1", req.version);
-
-            assertNull(req.headers);
         }
         assertTrue(front.isIdle());
     }
@@ -148,20 +162,24 @@ public class TestHttp1Parser {
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
-        backend.setParserMode();
 
-        String respHead = "" +
+        String respHead =
             "HTTP/1.1 200 OK\r\n" +
             "\r\n";
         byte[] respHeadBytes = respHead.getBytes();
 
-        for (byte b : respHeadBytes) {
-            int len = backend.len();
+        for (int i = 0; i < respHeadBytes.length; i++) {
+            byte b = respHeadBytes[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != respHeadBytes.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(respHeadBytes), backend.unittest_feed(a));
+            }
         }
-        Response resp = backend.getResp();
+        Response resp = backend.unittest_getResp();
         {
             assertEquals("HTTP/1.1", resp.version);
             assertEquals(200, resp.statusCode);
@@ -173,93 +191,14 @@ public class TestHttp1Parser {
     }
 
     @Test
-    public void noVersionRequest() throws Exception {
-        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(ctxInitParams);
-        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
-            ctx, 0, null
-        ));
-        front.setParserMode();
-
-        String reqHead = "" +
-            "GET /hello/url\r\n" +
-            "Host: www.example.com\r\n" +
-            "Hello: World\r\n" +
-            "\r\n" +
-            "";
-        byte[] reqHeadBytes = reqHead.getBytes();
-
-        for (byte b : reqHeadBytes) {
-            int len = front.len();
-            assertEquals(-1, len);
-            ByteArray a = ByteArray.from(b);
-            ByteArray r = front.feed(a);
-            if (r.length() == 1) {
-                assertEquals(a, r);
-            } else {
-                assertEquals(ByteArray.from(("" +
-                    "x-forwarded-for: " + forwardedFor + "\r\n" +
-                    "x-client-port: " + clientPort + "\r\n" +
-                    "").getBytes()).concat(a), r);
-            }
-        }
-        Request req = front.getReq();
-        {
-            assertEquals("GET", req.method);
-            assertEquals("/hello/url", req.uri);
-            assertNull(req.version);
-
-            assertEquals("Host", req.headers.get(0).key);
-            assertEquals("www.example.com", req.headers.get(0).value);
-
-            assertEquals("Hello", req.headers.get(1).key);
-            assertEquals("World", req.headers.get(1).value);
-        }
-        assertTrue(front.isIdle());
-    }
-
-    @Test
-    public void noHeaderNorVersionRequest() throws Exception {
-        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
-        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
-            ctx, 0, null
-        ));
-        front.setParserMode();
-
-        String reqHead = "" +
-            "GET /hello/url\r\n" +
-            "\r\n" +
-            "";
-        byte[] reqHeadBytes = reqHead.getBytes();
-
-        for (byte b : reqHeadBytes) {
-            int len = front.len();
-            assertEquals(-1, len);
-            ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
-        }
-        Request req = front.getReq();
-        {
-            assertEquals("GET", req.method);
-            assertEquals("/hello/url", req.uri);
-            assertNull(req.version);
-
-            assertNull(req.headers);
-        }
-        assertTrue(front.isIdle());
-    }
-
-    @Test
     public void normalRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(ctxInitParams);
         HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 0, null
         ));
-        front.setParserMode();
 
-        String reqHead = "" +
+        String reqHead =
             "PUT /hello/url HTTP/1.1\r\n" +
             "Host: www.example.com\r\n" +
             "Hello: World\r\n" +
@@ -268,21 +207,26 @@ public class TestHttp1Parser {
             "";
         byte[] reqHeadBytes = reqHead.getBytes();
 
-        for (byte b : reqHeadBytes) {
-            int len = front.len();
+        for (int i = 0; i < reqHeadBytes.length; i++) {
+            byte b = reqHeadBytes[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            ByteArray r = front.feed(a);
-            if (r.length() == 1) {
-                assertEquals(a, r);
+            ByteArray r = front.unittest_feed(a);
+            if (i != reqHeadBytes.length - 1) {
+                assertNull(r);
             } else {
-                assertEquals(ByteArray.from(("" +
-                    "x-forwarded-for: " + forwardedFor + "\r\n" +
-                    "x-client-port: " + clientPort + "\r\n" +
-                    "").getBytes()).concat(a), r);
+                assertEquals(ByteArray.from(
+                    "PUT /hello/url HTTP/1.1\r\n" +
+                    "Host: www.example.com\r\n" +
+                    "Hello: World\r\n" +
+                    "Content-Length: 10\r\n" +
+                    "X-Forwarded-For: " + forwardedFor + "\r\n" +
+                    "X-Client-Port: " + clientPort + "\r\n" +
+                    "\r\n"), r);
             }
         }
-        Request req = front.getReq();
+        Request req = front.unittest_getReq();
         {
             assertEquals("PUT", req.method);
             assertEquals("/hello/url", req.uri);
@@ -297,12 +241,8 @@ public class TestHttp1Parser {
             assertEquals("Content-Length", req.headers.get(2).key);
             assertEquals("10", req.headers.get(2).value);
         }
-        assertEquals(10, front.len());
-        front.feed(ByteArray.from("01234567".getBytes()));
-        front.feed(ByteArray.from("89".getBytes()));
-        assertTrue(front.isIdle());
-        req = front.getReq();
-        assertEquals(ByteArray.from("0123456789".getBytes()), req.body);
+        assertEquals(10, front.unittest_len());
+        assertEquals(Processor.Mode.proxy, front.unittest_mode());
     }
 
     @Test
@@ -312,22 +252,26 @@ public class TestHttp1Parser {
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
-        backend.setParserMode();
 
-        String respHead = "" +
+        String respHead =
             "HTTP/1.1 200 OK\r\n" +
             "Content-Type: application/json\r\n" +
             "Content-Length: 20\r\n" +
             "\r\n";
         byte[] respHeadBytes = respHead.getBytes();
 
-        for (byte b : respHeadBytes) {
-            int len = backend.len();
+        for (int i = 0; i < respHeadBytes.length; i++) {
+            byte b = respHeadBytes[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != respHeadBytes.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(respHeadBytes), backend.unittest_feed(a));
+            }
         }
-        Response resp = backend.getResp();
+        Response resp = backend.unittest_getResp();
         {
             assertEquals("HTTP/1.1", resp.version);
             assertEquals(200, resp.statusCode);
@@ -339,13 +283,11 @@ public class TestHttp1Parser {
             assertEquals("Content-Length", resp.headers.get(1).key);
             assertEquals("20", resp.headers.get(1).value);
         }
-        assertEquals(20, backend.len());
-        backend.feed(ByteArray.from("0123456".getBytes()));
-        backend.feed(ByteArray.from("78901234".getBytes()));
-        backend.feed(ByteArray.from("56789".getBytes()));
-        assertTrue(backend.isIdle());
-        resp = backend.getResp();
-        assertEquals(ByteArray.from("01234567890123456789".getBytes()), resp.body);
+        assertEquals(20, backend.unittest_len());
+        assertEquals(Processor.Mode.proxy, backend.unittest_mode());
+
+        // resp = backend.unittest_getResp();
+        // data not feed: assertEquals(ByteArray.from("01234567890123456789".getBytes()), resp.body);
     }
 
     private HttpSubContext chunkRequestNoEnd() throws Exception {
@@ -354,32 +296,35 @@ public class TestHttp1Parser {
         HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 0, null
         ));
-        front.setParserMode();
 
-        String reqHead = "" +
+        String reqHead =
             "POST /hello/url HTTP/1.1\r\n" +
             "Host: www.example.com\r\n" +
             "Hello: World\r\n" +
             "Transfer-Encoding: chunked\r\n" +
-            "\r\n" +
-            "";
+            "\r\n";
         byte[] reqHeadBytes = reqHead.getBytes();
 
-        for (byte b : reqHeadBytes) {
-            int len = front.len();
+        for (int i = 0; i < reqHeadBytes.length; i++) {
+            byte b = reqHeadBytes[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            ByteArray r = front.feed(a);
-            if (r.length() == 1) {
-                assertEquals(a, r);
+            ByteArray r = front.unittest_feed(a);
+            if (i != reqHeadBytes.length - 1) {
+                assertNull(r);
             } else {
-                assertEquals(ByteArray.from(("" +
-                    "x-forwarded-for: " + forwardedFor + "\r\n" +
-                    "x-client-port: " + clientPort + "\r\n" +
-                    "").getBytes()).concat(a), r);
+                assertEquals(ByteArray.from(
+                    "POST /hello/url HTTP/1.1\r\n" +
+                    "Host: www.example.com\r\n" +
+                    "Hello: World\r\n" +
+                    "Transfer-Encoding: chunked\r\n" +
+                    "X-Forwarded-For: " + forwardedFor + "\r\n" +
+                    "X-Client-Port: " + clientPort + "\r\n" +
+                    "\r\n"), r);
             }
         }
-        Request req = front.getReq();
+        Request req = front.unittest_getReq();
         {
             assertEquals("POST", req.method);
             assertEquals("/hello/url", req.uri);
@@ -400,40 +345,46 @@ public class TestHttp1Parser {
         }};
         for (byte[] chunk : chunks.keySet()) {
             ByteArray content = chunks.get(chunk);
-            for (byte b : chunk) {
-                int len = front.len();
+            for (int i = 0; i < chunk.length; i++) {
+                byte b = chunk[i];
+                int len = front.unittest_len();
                 assertEquals(-1, len);
                 ByteArray a = ByteArray.from(b);
-                assertEquals(a, front.feed(a));
+                if (i != chunk.length - 1) {
+                    assertNull(front.unittest_feed(a));
+                } else {
+                    assertEquals(ByteArray.from(chunk), front.unittest_feed(a));
+                }
             }
-            int len = front.len();
+            int len = front.unittest_len();
             assertEquals(content.length(), len);
-            front.feed(content.sub(0, content.length() - 3));
-            front.feed(content.sub(content.length() - 3, 3));
-            len = front.len();
-            assertEquals(-1, len);
-            assertEquals(ByteArray.from('\r'), front.feed(ByteArray.from('\r')));
-            assertEquals(ByteArray.from('\n'), front.feed(ByteArray.from('\n')));
+            assertNull(front.unittest_feed(ByteArray.from('\r')));
+            assertEquals(ByteArray.from("\r\n"), front.unittest_feed(ByteArray.from('\n')));
         }
 
         byte[] lastChunk = "0\r\n".getBytes();
-        for (byte b : lastChunk) {
-            int len = front.len();
+        for (int i = 0; i < lastChunk.length; i++) {
+            byte b = lastChunk[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            if (i != lastChunk.length - 1) {
+                assertNull(front.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(lastChunk), front.unittest_feed(a));
+            }
         }
-        req = front.getReq();
+        req = front.unittest_getReq();
         {
             assertEquals(3, req.chunks.size());
 
             assertEquals(26, req.chunks.get(0).size);
             assertNull(req.chunks.get(0).extension);
-            assertEquals(ByteArray.from("01234567890123456789012345".getBytes()), req.chunks.get(0).content);
+            // data is not feed: assertEquals(ByteArray.from("01234567890123456789012345".getBytes()), req.chunks.get(0).content);
 
             assertEquals(3, req.chunks.get(1).size);
             assertEquals("some-extension", req.chunks.get(1).extension);
-            assertEquals(ByteArray.from("012".getBytes()), req.chunks.get(1).content);
+            // data is not feed: assertEquals(ByteArray.from("012".getBytes()), req.chunks.get(1).content);
 
             assertEquals(0, req.chunks.get(2).size);
             assertNull(req.chunks.get(2).extension);
@@ -449,22 +400,26 @@ public class TestHttp1Parser {
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
-        backend.setParserMode();
 
-        String respHead = "" +
+        String respHead =
             "HTTP/1.1 200 OK\r\n" +
             "Content-Type: application/json\r\n" +
             "Transfer-Encoding: chunked\r\n" +
             "\r\n";
         byte[] respHeadBytes = respHead.getBytes();
 
-        for (byte b : respHeadBytes) {
-            int len = backend.len();
+        for (int i = 0; i < respHeadBytes.length; i++) {
+            byte b = respHeadBytes[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != respHeadBytes.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(respHeadBytes), backend.unittest_feed(a));
+            }
         }
-        Response resp = backend.getResp();
+        Response resp = backend.unittest_getResp();
         {
             assertEquals("HTTP/1.1", resp.version);
             assertEquals(200, resp.statusCode);
@@ -482,39 +437,45 @@ public class TestHttp1Parser {
         }};
         for (byte[] chunk : chunks.keySet()) {
             ByteArray content = chunks.get(chunk);
-            for (byte b : chunk) {
-                int len = backend.len();
+            for (int i = 0; i < chunk.length; i++) {
+                byte b = chunk[i];
+                int len = backend.unittest_len();
                 assertEquals(-1, len);
                 ByteArray a = ByteArray.from(b);
-                assertEquals(a, backend.feed(a));
+                if (i != chunk.length - 1) {
+                    assertNull(backend.unittest_feed(a));
+                } else {
+                    assertEquals(ByteArray.from(chunk), backend.unittest_feed(a));
+                }
             }
-            int len = backend.len();
+            int len = backend.unittest_len();
             assertEquals(content.length(), len);
-            backend.feed(content.sub(0, content.length() - 3));
-            backend.feed(content.sub(content.length() - 3, 3));
-            len = backend.len();
-            assertEquals(-1, len);
-            assertEquals(ByteArray.from('\r'), backend.feed(ByteArray.from('\r')));
-            assertEquals(ByteArray.from('\n'), backend.feed(ByteArray.from('\n')));
+            assertNull(backend.unittest_feed(ByteArray.from('\r')));
+            assertEquals(ByteArray.from("\r\n"), backend.unittest_feed(ByteArray.from('\n')));
         }
         byte[] lastChunkAndEnd = "0\r\n".getBytes();
-        for (byte b : lastChunkAndEnd) {
-            int len = backend.len();
+        for (int i = 0; i < lastChunkAndEnd.length; i++) {
+            byte b = lastChunkAndEnd[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != lastChunkAndEnd.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from("0\r\n"), backend.unittest_feed(a));
+            }
         }
-        resp = backend.getResp();
+        resp = backend.unittest_getResp();
         {
             assertEquals(3, resp.chunks.size());
 
             assertEquals(26, resp.chunks.get(0).size);
             assertNull(resp.chunks.get(0).extension);
-            assertEquals(ByteArray.from("01234567890123456789012345".getBytes()), resp.chunks.get(0).content);
+            // data not feed: assertEquals(ByteArray.from("01234567890123456789012345".getBytes()), resp.chunks.get(0).content);
 
             assertEquals(3, resp.chunks.get(1).size);
             assertEquals("some-extension", resp.chunks.get(1).extension);
-            assertEquals(ByteArray.from("012".getBytes()), resp.chunks.get(1).content);
+            // data not feed: assertEquals(ByteArray.from("012".getBytes()), resp.chunks.get(1).content);
 
             assertEquals(0, resp.chunks.get(2).size);
             assertNull(resp.chunks.get(2).extension);
@@ -528,11 +489,16 @@ public class TestHttp1Parser {
     public void chunkRequest() throws Exception {
         HttpSubContext front = chunkRequestNoEnd();
         byte[] end = "\r\n".getBytes();
-        for (byte b : end) {
-            int len = front.len();
+        for (int i = 0; i < end.length; i++) {
+            byte b = end[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            if (i != end.length - 1) {
+                assertNull(front.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(end), front.unittest_feed(a));
+            }
         }
         assertTrue(front.isIdle());
     }
@@ -540,19 +506,24 @@ public class TestHttp1Parser {
     @Test
     public void chunkRequestTrailers() throws Exception {
         HttpSubContext front = chunkRequestNoEnd();
-        byte[] trailersAndEnd = ("" +
+        byte[] trailersAndEnd = (
             "A-Trail: value1\r\n" +
             "B-Trail: value2\r\n" +
-            "\r\n" +
-            "").getBytes();
-        for (byte b : trailersAndEnd) {
-            int len = front.len();
+            "\r\n"
+        ).getBytes();
+        for (int i = 0; i < trailersAndEnd.length; i++) {
+            byte b = trailersAndEnd[i];
+            int len = front.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            if (i != trailersAndEnd.length - 1) {
+                assertNull(front.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(trailersAndEnd), front.unittest_feed(a));
+            }
         }
         assertTrue(front.isIdle());
-        Request req = front.getReq();
+        Request req = front.unittest_getReq();
         assertEquals(2, req.trailers.size());
         assertEquals("A-Trail", req.trailers.get(0).key);
         assertEquals("value1", req.trailers.get(0).value);
@@ -564,11 +535,16 @@ public class TestHttp1Parser {
     public void chunkResponse() throws Exception {
         HttpSubContext backend = chunkResponseNoEnd();
         byte[] lastChunkAndEnd = "\r\n".getBytes();
-        for (byte b : lastChunkAndEnd) {
-            int len = backend.len();
+        for (int i = 0; i < lastChunkAndEnd.length; i++) {
+            byte b = lastChunkAndEnd[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != lastChunkAndEnd.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(lastChunkAndEnd), backend.unittest_feed(a));
+            }
         }
         assertTrue(backend.isIdle());
     }
@@ -576,19 +552,24 @@ public class TestHttp1Parser {
     @Test
     public void chunkResponseTrailers() throws Exception {
         HttpSubContext backend = chunkResponseNoEnd();
-        byte[] trailersAndEnd = ("" +
+        byte[] trailersAndEnd = (
             "A-Trail: value1\r\n" +
             "B-Trail: value2\r\n" +
-            "\r\n" +
-            "").getBytes();
-        for (byte b : trailersAndEnd) {
-            int len = backend.len();
+            "\r\n"
+        ).getBytes();
+        for (int i = 0; i < trailersAndEnd.length; i++) {
+            byte b = trailersAndEnd[i];
+            int len = backend.unittest_len();
             assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, backend.feed(a));
+            if (i != trailersAndEnd.length - 1) {
+                assertNull(backend.unittest_feed(a));
+            } else {
+                assertEquals(ByteArray.from(trailersAndEnd), backend.unittest_feed(a));
+            }
         }
         assertTrue(backend.isIdle());
-        Response resp = backend.getResp();
+        Response resp = backend.unittest_getResp();
         assertEquals(2, resp.trailers.size());
         assertEquals("A-Trail", resp.trailers.get(0).key);
         assertEquals("value1", resp.trailers.get(0).value);
@@ -597,14 +578,106 @@ public class TestHttp1Parser {
     }
 
     @Test
-    public void gZipResponse() throws Exception {
+    public void feedHalfReqBody() throws Exception {
+        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
+        var data = ByteArray.from(
+            "GET /index.html HTTP/1.1\r\n" +
+            "Host: vproxy.io\r\n" +
+            "Content-Length: 10\r\n" +
+            "\r\n" +
+            "123"
+        );
+        var res = front.unittest_feed(data);
+        assertEquals(ByteArray.from(
+            "GET /index.html HTTP/1.1\r\n" +
+            "Host: vproxy.io\r\n" +
+            "Content-Length: 10\r\n" +
+            "X-Forwarded-For: " + forwardedFor + "\r\n" +
+            "X-Client-Port: " + clientPort + "\r\n" +
+            "\r\n" +
+            "123"
+        ), res);
+        assertEquals(7, front.unittest_len());
+        assertEquals(Processor.Mode.proxy, front.unittest_mode());
+    }
+
+    @Test
+    public void feedHalfRespBody() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(new Processor.ContextInitParams(null));
         HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
             ctx, 1, null
         ));
-        backend.setParserMode();
+        var data = ByteArray.from(
+            "HTTP/1.1 200 OK\r\n" +
+            "Host: vproxy.io\r\n" +
+            "Content-Length: 10\r\n" +
+            "\r\n" +
+            "123456"
+        );
+        var res = backend.unittest_feed(data);
+        assertEquals(data, res);
+        assertEquals(4, backend.unittest_len());
+        assertEquals(Processor.Mode.proxy, backend.unittest_mode());
+    }
 
+    @Test
+    public void feedHalfReqChunk() throws Exception {
+        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
+        HttpContext ctx = p.init(ctxInitParams);
+        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 0, null
+        ));
+        var data = ByteArray.from(
+            "GET /index.html HTTP/1.1\r\n" +
+            "Host: vproxy.io\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "\r\n" +
+            "a\r\n" +
+            "123"
+        );
+        var res = front.unittest_feed(data);
+        assertEquals(ByteArray.from(
+            "GET /index.html HTTP/1.1\r\n" +
+            "Host: vproxy.io\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "X-Forwarded-For: " + forwardedFor + "\r\n" +
+            "X-Client-Port: " + clientPort + "\r\n" +
+            "\r\n" +
+            "a\r\n" +
+            "123"
+        ), res);
+        assertEquals(7, front.unittest_len());
+        assertEquals(Processor.Mode.proxy, front.unittest_mode());
+    }
+
+    @Test
+    public void feedHalfRespChunk() throws Exception {
+        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
+        HttpContext ctx = p.init(new Processor.ContextInitParams(null));
+        HttpSubContext backend = p.initSub(new Processor.SubContextInitParams<>(
+            ctx, 1, null
+        ));
+        var data = ByteArray.from(
+            "HTTP/1.1 200 OK\r\n" +
+            "Host: vproxy.io\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "\r\n" +
+            "a\r\n" +
+            "123456"
+        );
+        var res = backend.unittest_feed(data);
+        assertEquals(data, res);
+        assertEquals(4, backend.unittest_len());
+        assertEquals(Processor.Mode.proxy, backend.unittest_mode());
+    }
+
+    @Test
+    public void gZipResponse() {
         Response originResponse = new Response();
         originResponse.version = "HTTP/1.1";
         originResponse.statusCode = 200;
@@ -618,8 +691,10 @@ public class TestHttp1Parser {
         originResponse.body = ByteArray.from(s.getBytes(StandardCharsets.UTF_8));
         ByteArray originResponseBytes = originResponse.toByteArray();
 
-        backend.feed(originResponseBytes);
-        Response newResponse = backend.getResp();
+        var parser = new HttpRespParser();
+        int res = parser.feed(originResponseBytes.toFullChannel());
+        assertEquals(0, res);
+        Response newResponse = parser.getResult();
 
         assertEquals("HTTP/1.1", newResponse.version);
         assertEquals(200, newResponse.statusCode);
@@ -633,19 +708,10 @@ public class TestHttp1Parser {
 
         assertArrayEquals(originResponse.body.toGZipJavaByteArray(), newResponse.body.toJavaArray());
         assertArrayEquals(originResponseBytes.toJavaArray(), newResponse.toByteArray().toJavaArray());
-
-        assertTrue(backend.isIdle());
     }
 
     @Test
-    public void gZipRequest() throws Exception {
-        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(ctxInitParams);
-        HttpSubContext front = p.initSub(new Processor.SubContextInitParams<>(
-            ctx, 0, null
-        ));
-        front.setParserMode();
-
+    public void gZipRequest() {
         Request originRequest = new Request();
         originRequest.method = "POST";
         originRequest.uri = "/user/1";
@@ -660,8 +726,10 @@ public class TestHttp1Parser {
         originRequest.isPlain = true;
         ByteArray originRequestBytes = originRequest.toByteArray();
 
-        front.feed(originRequestBytes);
-        Request newRequest = front.getReq();
+        var parser = new HttpReqParser();
+        var res = parser.feed(originRequestBytes.toFullChannel());
+        assertEquals(0, res);
+        Request newRequest = parser.getResult();
         assertArrayEquals(newRequest.body.toJavaArray(), originRequest.body.toGZipJavaByteArray());
         assertArrayEquals(newRequest.toByteArray().toJavaArray(), originRequest.toByteArray().toJavaArray());
     }

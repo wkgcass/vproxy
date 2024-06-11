@@ -17,7 +17,7 @@ import org.junit.runners.Suite;
     TestConnectClient.class,
     TestSSL.class,
     TestProtocols.class,
-    TestHttp1Parser.class,
+    TestHttp1Processor.class,
     TestHttp2Decoder.class,
     TestHealthCheck.class,
     TestPacket.class,

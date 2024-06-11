@@ -16,8 +16,10 @@ import io.vproxy.base.component.check.HealthCheckConfig;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.svrgroup.Method;
 import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.http.HttpRespParser;
 import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.component.app.TcpLB;
 import io.vproxy.component.secure.SecurityGroup;
@@ -42,6 +44,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -133,8 +137,8 @@ public class TestProtocols {
             Handler<HttpServerRequest> handler = req -> {
                 try {
                     assertTrue(req.uri().equals("/") ||
-                        req.uri().equals("/a") ||
-                        req.uri().equals("/b"));
+                               req.uri().equals("/a") ||
+                               req.uri().equals("/b"));
                 } catch (Throwable t) {
                     err[0] = t;
                 }
@@ -538,8 +542,8 @@ public class TestProtocols {
             Handler<HttpServerRequest> handler = req -> {
                 try {
                     assertTrue(req.uri().equals("/") ||
-                        req.uri().equals("/a") ||
-                        req.uri().equals("/b")
+                               req.uri().equals("/a") ||
+                               req.uri().equals("/b")
                     );
                 } catch (Throwable t) {
                     err[0] = t;
@@ -647,6 +651,92 @@ public class TestProtocols {
             assertEquals(1, svr2[0]);
             assertEquals(1, conn[0]);
 
+        } finally {
+            boolean[] closeDone = {false};
+            vertx.close(v -> closeDone[0] = true);
+            while (!closeDone[0]) {
+                Thread.sleep(1);
+            }
+            Thread.sleep(200);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void h1Pipeline() throws Throwable {
+        int[] svr1 = {0};
+        int[] svr2 = {0};
+        Throwable[] err = new Throwable[]{null};
+
+        Vertx vertx = Vertx.vertx();
+        try {
+            Handler<HttpServerRequest> handler = req -> {
+                try {
+                    assertTrue(req.uri().equals("/") ||
+                               req.uri().equals("/a") ||
+                               req.uri().equals("/b")
+                    );
+                } catch (Throwable t) {
+                    err[0] = t;
+                }
+                String resp = "" + req.localAddress().port();
+                req.response().end("resp-" + resp);
+            };
+            vertx.createHttpServer().requestHandler(handler).listen(port1);
+            vertx.createHttpServer().requestHandler(handler).listen(port2);
+
+            initLb("http/1.x");
+
+            try (var sock = new Socket()) {
+                sock.connect(new InetSocketAddress("127.0.0.1", lbPort));
+                sock.getOutputStream().write(
+                    ("GET / HTTP/1.1\r\n" +
+                     "\r\n" +
+                     "GET / HTTP/1.1\r\n" +
+                     "\r\n" +
+                     "GET /a HTTP/1.1\r\n" +
+                     "\r\n" +
+                     "GET /b HTTP/1.1\r\n" +
+                     "\r\n").getBytes());
+                byte[] buf = new byte[1024];
+                var parser = new HttpRespParser();
+                ByteArrayChannel chnl = null;
+                while (true) {
+                    if (chnl == null || chnl.used() == 0) {
+                        int n = sock.getInputStream().read(buf);
+                        if (n == -1) {
+                            throw new Exception("unexpected EOF while reading response");
+                        }
+                        chnl = ByteArrayChannel.from(buf, 0, n, 0);
+                        continue;
+                    }
+                    var res = parser.feed(chnl);
+                    if (res == 0) {
+                        var resp = parser.getResult();
+                        var respBody = resp.body.toString();
+                        var value = respBody.substring("resp-".length());
+                        if (value.equals("" + port1)) {
+                            ++svr1[0];
+                        } else {
+                            ++svr2[0];
+                        }
+                        ++step;
+                        if (step == 4) {
+                            break;
+                        }
+                    } else {
+                        if (parser.getErrorMessage() != null) {
+                            throw new Exception(parser.getErrorMessage());
+                        }
+                    }
+                }
+            }
+
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(4, step);
+            assertEquals(2, svr1[0]);
+            assertEquals(2, svr2[0]);
         } finally {
             boolean[] closeDone = {false};
             vertx.close(v -> closeDone[0] = true);

@@ -81,7 +81,18 @@ public interface ByteArray extends ToByteArray {
     }
 
     default ByteArray concat(ByteArray array) {
+        if (array.length() == 0) {
+            return this;
+        }
+        if (length() == 0)
+            return array;
         return new CompositeByteArray(this, array);
+    }
+
+    default ByteArray concat(String str) {
+        if (str.isEmpty())
+            return this;
+        return concat(ByteArray.from(str));
     }
 
     default ByteArray toByteArray() {

@@ -26,10 +26,10 @@ public class Header implements IHttpHeader {
     @Override
     public String toString() {
         return "Header{" +
-            "key='" + keyStr + '\'' +
-            ", value='" + new String(value) + '\'' +
-            ", caseSensitive=" + caseSensitive +
-            '}';
+               "key='" + keyStr + '\'' +
+               ", value='" + new String(value) + '\'' +
+               ", caseSensitive=" + caseSensitive +
+               '}';
     }
 
     @Override
@@ -60,6 +60,11 @@ public class Header implements IHttpHeader {
     @Override
     public byte[] valueAsBytes() {
         return value;
+    }
+
+    @Override
+    public boolean keyEqualsIgnoreCase(char[] key) {
+        return keyEqualsIgnoreCase(new String(key));
     }
 
     @Override

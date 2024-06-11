@@ -8,6 +8,7 @@ public class ResponseBuilder extends HttpEntityBuilder {
     public StringBuilder reason = new StringBuilder();
 
     @SuppressWarnings("Duplicates")
+    @Override
     public Response build() {
         Response resp = new Response();
         resp.version = version.toString();

@@ -53,6 +53,11 @@ public class Header implements IHttpHeader {
     }
 
     @Override
+    public boolean keyEqualsIgnoreCase(char[] key) {
+        return keyEqualsIgnoreCase(new String(key));
+    }
+
+    @Override
     public boolean keyEqualsIgnoreCase(String key) {
         return this.key.equalsIgnoreCase(key);
     }

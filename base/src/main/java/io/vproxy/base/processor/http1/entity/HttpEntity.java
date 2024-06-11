@@ -4,7 +4,7 @@ import io.vproxy.base.util.ByteArray;
 
 import java.util.List;
 
-public class HttpEntity {
+public abstract class HttpEntity {
     public List<Header> headers; // nullable
     public ByteArray body; // nullable
     public boolean isPlain = false;
@@ -35,6 +35,8 @@ public class HttpEntity {
         }
         return ret;
     }
+
+    abstract public ByteArray toByteArray();
 
     protected ByteArray commonToByteArray(StringBuilder textPart) {
         boolean usingGZip = false;

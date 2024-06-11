@@ -53,9 +53,27 @@ public class HeaderBuilder implements IHttpHeader {
     }
 
     @Override
-    public boolean keyEqualsIgnoreCase(String key) {
-        if (this.key.length() != key.length())
+    public boolean keyEqualsIgnoreCase(char[] key) {
+        if (this.key.length() != key.length)
             return false;
-        return this.key.toString().equalsIgnoreCase(key);
+        for (int i = 0; i < key.length; i++) {
+            char a = this.key.charAt(i);
+            if ('A' <= a && a <= 'Z') {
+                a += ('a' - 'A');
+            }
+            char e = key[i];
+            if ('A' <= e && e <= 'Z') {
+                e += ('a' - 'A');
+            }
+            if (a != e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean keyEqualsIgnoreCase(String key) {
+        return keyEqualsIgnoreCase(key.toCharArray());
     }
 }

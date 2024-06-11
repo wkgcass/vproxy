@@ -13,5 +13,7 @@ public interface IHttpHeader {
 
     byte[] valueAsBytes();
 
+    boolean keyEqualsIgnoreCase(char[] key);
+
     boolean keyEqualsIgnoreCase(String key);
 }

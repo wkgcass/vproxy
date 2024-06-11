@@ -27,9 +27,9 @@ public abstract class HttpParserHelper {
      * 11 => chunk ~> ";" -> 12 or \r\n -> 14
      * 12 => chunk-extension-split ~> -> 13 or \r\n -> 14
      * 13 => chunk-extension ~> \r\n -> 14
-     * 14 => end-chunk-size ~> (if chunk-size) -> 15 or (if !chunk-size) -> 17 or \r\n -> 21
+     * 14 => end-chunk-size ~> (if chunk-size) -> 15 or (trans -> 27 or data -> (if !chunk-size) -> 17 or \r\n -> 25)
      * 15 => chunk-content ~> \r\n -> 16
-     * 16 => end-chunk-content ~> chunk -> 11
+     * 16 => end-chunk-content ~> \r\n -> 26
      * 17 => trailer-key ~> ":" -> 18
      * 18 => trailer-split ~> -> 19 or \r\n -> 20
      * 19 => trailer-value ~> \r\n -> 20
@@ -41,11 +41,16 @@ public abstract class HttpParserHelper {
      * 24 => reason ~> \r\n -> 4
      *
      * 25 => end-all-trailers ~> -> 21
+     * 26 => end-chunk ~> -> 11
+     * 27 => end-all-chunks ~> -> 14
      */
     public static final int STATE_IDLE = 0;
     public static final int STATE_END_ALL_HEADERS = 9;
     public static final int STATE_BODY = 10;
+    public static final int STATE_CHUNK_BEGIN = 11;
     public static final int STATE_CHUNK_CONTENT = 15;
+    public static final int STATE_END_CHUNK = 26;
+    public static final int STATE_END_ALL_CHUNKS = 27;
     public static final int STATE_END_ALL_TRAILERS = 25;
 
     static final Set<Integer> terminateStatesParseAllMode = Set.of(
@@ -55,6 +60,8 @@ public abstract class HttpParserHelper {
         STATE_END_ALL_HEADERS,
         STATE_BODY,
         STATE_CHUNK_CONTENT,
+        STATE_END_CHUNK,
+        STATE_END_ALL_CHUNKS,
         STATE_END_ALL_TRAILERS,
         STATE_IDLE
     );
@@ -62,6 +69,8 @@ public abstract class HttpParserHelper {
         STATE_END_ALL_HEADERS,
         STATE_BODY,
         STATE_CHUNK_CONTENT,
+        STATE_END_CHUNK,
+        STATE_END_ALL_CHUNKS,
         STATE_END_ALL_TRAILERS
     );
 
@@ -92,6 +101,8 @@ public abstract class HttpParserHelper {
         null, // 23 resp
         null, // 24 resp
         this::state25,
+        this::state26,
+        this::state27,
     };
 
     interface Handler {
@@ -140,8 +151,6 @@ public abstract class HttpParserHelper {
     private List<HeaderBuilder> headers;
     private byte[] buf;
     private int bufOffset;
-    private ChunkBuilder chunk;
-    private List<ChunkBuilder> chunks;
     private HeaderBuilder trailer;
     private List<HeaderBuilder> trailers;
 
@@ -156,8 +165,10 @@ public abstract class HttpParserHelper {
     int nextState(int state) throws Exception {
         return switch (state) {
             case STATE_END_ALL_HEADERS -> state9Trans();
-            case STATE_BODY -> 0;
+            case STATE_BODY -> end();
             case STATE_CHUNK_CONTENT -> 16;
+            case STATE_END_CHUNK -> 11;
+            case STATE_END_ALL_CHUNKS -> 14;
             case STATE_END_ALL_TRAILERS -> state25Trans();
             default -> throw new Exception("unknown state for method `nextState`: " + state);
         };
@@ -170,8 +181,7 @@ public abstract class HttpParserHelper {
         getHttpEntity().isChunked = false;
         buf = null;
         bufOffset = 0;
-        chunk = null;
-        chunks = null;
+        getHttpEntity().chunk = null;
         trailer = null;
         trailers = null;
         return 0;
@@ -237,26 +247,17 @@ public abstract class HttpParserHelper {
             if (hdr.equalsIgnoreCase("content-length")) {
                 var len = header.value.toString().trim();
                 assert Logger.lowLevelDebug("found Content-Length: " + len);
-                int intLen;
-                try {
-                    intLen = Integer.parseInt(len);
-                } catch (NumberFormatException e) {
-                    throw new Exception("invalid Content-Length: " + len);
-                }
-                if (intLen < 0) {
-                    throw new Exception("invalid Content-Length: " + len);
-                }
-                if (getHttpEntity().dataLength >= 0) {
-                    // already exists
-                    throw new Exception("duplicated Content-Length: orig: " + getHttpEntity().dataLength + ", new: " + intLen);
-                }
-                getHttpEntity().dataLength = intLen;
+                getHttpEntity().dataLength = parseNonNegativeLen(len);
             } else if (hdr.equalsIgnoreCase("transfer-encoding")) {
                 var encoding = header.value.toString().trim().toLowerCase();
                 assert Logger.lowLevelDebug("found Transfer-Encoding: " + encoding);
                 if (encoding.equals("chunked")) {
                     getHttpEntity().isChunked = true;
                 }
+            } else if (hdr.equalsIgnoreCase("host")) {
+                var host = header.value.toString().trim();
+                assert Logger.lowLevelDebug("found Host: " + host);
+                getHttpEntity().lastHostHeader = host;
             }
             headers.add(header);
             header = null;
@@ -272,6 +273,23 @@ public abstract class HttpParserHelper {
             setState(5);
             return state5(b);
         }
+    }
+
+    private int parseNonNegativeLen(String len) throws Exception {
+        int intLen;
+        try {
+            intLen = Integer.parseInt(len);
+        } catch (NumberFormatException e) {
+            throw new Exception("invalid Content-Length: " + len);
+        }
+        if (intLen < 0) {
+            throw new Exception("invalid Content-Length: " + len);
+        }
+        if (getHttpEntity().dataLength >= 0) {
+            // already exists
+            throw new Exception("duplicated Content-Length: orig: " + getHttpEntity().dataLength + ", new: " + intLen);
+        }
+        return intLen;
     }
 
     // it's for state transferring
@@ -322,8 +340,8 @@ public abstract class HttpParserHelper {
     }
 
     private int state11(byte b) throws Exception {
-        if (chunk == null) {
-            chunk = new ChunkBuilder();
+        if (getHttpEntity().chunk == null) {
+            getHttpEntity().chunk = new ChunkBuilder();
         }
         if (b == ';') {
             return 12;
@@ -334,7 +352,7 @@ public abstract class HttpParserHelper {
             setState(14);
             return state14(null);
         } else {
-            chunk.size.append((char) b);
+            getHttpEntity().chunk.size.append((char) b);
             return 11;
         }
     }
@@ -347,10 +365,10 @@ public abstract class HttpParserHelper {
             setState(14);
             return state14(null);
         } else {
-            if (chunk.extension == null) {
-                chunk.extension = new StringBuilder();
+            if (getHttpEntity().chunk.extension == null) {
+                getHttpEntity().chunk.extension = new StringBuilder();
             }
-            chunk.extension.append((char) b);
+            getHttpEntity().chunk.extension.append((char) b);
             return 13;
         }
     }
@@ -363,22 +381,22 @@ public abstract class HttpParserHelper {
             setState(14);
             return state14(null);
         } else {
-            chunk.extension.append((char) b);
+            getHttpEntity().chunk.extension.append((char) b);
             return 13;
         }
     }
 
-    // this method may be called before entering state 9
+    // this method may be called before entering state 14
     // it's for state transferring
     private int state14(Byte b) throws Exception {
         int size;
-        if (chunk == null) {
+        if (getHttpEntity().chunk == null) {
             size = 0;
         } else {
             try {
-                size = Integer.parseInt(chunk.size.toString().trim(), 16);
+                size = Integer.parseInt(getHttpEntity().chunk.size.toString().trim(), 16);
             } catch (NumberFormatException e) {
-                throw new Exception("invalid chunk size: " + chunk.size);
+                throw new Exception("invalid chunk size: " + getHttpEntity().chunk.size);
             }
             if (size < 0) {
                 throw new Exception("invalid chunk size: " + size);
@@ -390,21 +408,19 @@ public abstract class HttpParserHelper {
         } else {
             if (b == null) { // called from other states
                 // end chunk
-                if (chunks == null) {
-                    chunks = new LinkedList<>();
+                if (getHttpEntity().chunks == null) {
+                    getHttpEntity().chunks = new LinkedList<>();
                 }
-                chunks.add(chunk);
-                chunk = null;
-                getHttpEntity().chunks = chunks;
-                chunks = null;
-                return 14;
+                getHttpEntity().chunks.add(getHttpEntity().chunk);
+                getHttpEntity().chunk = null;
+                return 27;
             } else {
                 if (b == '\r') {
                     // ignore
                     return 14;
                 } else if (b == '\n') {
-                    setState(21);
-                    return state21(null);
+                    setState(25);
+                    return state25(null);
                 } else {
                     setState(17);
                     return state17(b);
@@ -418,10 +434,10 @@ public abstract class HttpParserHelper {
             return 15;
         }
         var chunkSize = getHttpEntity().dataLength;
-        if (chunk.content == null) {
+        if (getHttpEntity().chunk.content == null) {
             buf = Utils.allocateByteArray(chunkSize);
             bufOffset = 0;
-            chunk.content = ByteArray.from(buf);
+            getHttpEntity().chunk.content = ByteArray.from(buf);
         }
         buf[bufOffset++] = b;
         if (bufOffset == buf.length) {
@@ -432,21 +448,22 @@ public abstract class HttpParserHelper {
     }
 
     private int state16(byte b) throws Exception {
-        if (chunks == null) {
-            chunks = new LinkedList<>();
+        if (getHttpEntity().chunks == null) {
+            getHttpEntity().chunks = new LinkedList<>();
         }
-        if (chunk != null) {
-            chunks.add(chunk);
-            chunk = null;
+        if (getHttpEntity().chunk != null) {
+            getHttpEntity().chunks.add(getHttpEntity().chunk);
+            getHttpEntity().chunk = null;
         }
 
         if (b == '\r') {
             // ignore
             return 16;
         } else if (b == '\n') {
-            return 11;
+            setState(26);
+            return state26(null);
         } else {
-            throw new Exception("invalid chunk end");
+            throw new Exception("invalid chunk end: `" + ((char) b) + "`");
         }
     }
 
@@ -502,8 +519,8 @@ public abstract class HttpParserHelper {
         } else if (b == '\n') {
             getHttpEntity().trailers = trailers;
             trailers = null;
-            setState(21);
-            return state21(null);
+            setState(25);
+            return state25(null);
         } else {
             setState(17);
             return state17(b);
@@ -525,5 +542,25 @@ public abstract class HttpParserHelper {
     private int state25Trans() {
         setState(21);
         return state21(null);
+    }
+
+    private int state26(@SuppressWarnings("unused") Byte b) throws Exception {
+        if (params.segmentedParsing) {
+            return 26;
+        }
+        if (b == null)
+            return 11;
+        setState(11);
+        return state11(b);
+    }
+
+    private int state27(@SuppressWarnings("unused") Byte b) throws Exception {
+        if (params.segmentedParsing) {
+            return 27;
+        }
+        if (b == null)
+            return 14;
+        setState(14);
+        return state14(b);
     }
 }

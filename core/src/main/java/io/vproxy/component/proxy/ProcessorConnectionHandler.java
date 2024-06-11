@@ -116,6 +116,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             // check whether this batch sending is done
             assert Logger.lowLevelDebug("now flow.chnl.used == " + flow.currentSegment.chnl.used());
             if (flow.currentSegment.chnl.used() == 0) {
+                assert flow.currentSegment.handleCallback != null;
+                flow.currentSegment.handleCallback.run();
                 flow.frameEnds = flow.currentSegment.frameEndsAfterSending;
                 flow.pollSendingQueue(); // poll for the next segment
             }
@@ -145,13 +147,15 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 boolean calledProxyOnBuffer = false;
                 final ByteArrayChannel chnl;
                 final boolean frameEndsAfterSending;
+                final Runnable handleCallback;
                 int bytesToProxy;
                 final Processor.ProxyTODO proxyTODO;
 
-                Segment(ByteArray byteArray, boolean frameEndsAfterSending) {
+                Segment(ByteArray byteArray, boolean frameEndsAfterSending, Runnable callback) {
                     this.isProxy = false;
                     this.chnl = byteArray.toFullChannel();
                     this.frameEndsAfterSending = frameEndsAfterSending;
+                    this.handleCallback = callback;
                     this.proxyTODO = null;
                 }
 
@@ -160,6 +164,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     this.chnl = null;
                     this.frameEndsAfterSending = false;
                     this.bytesToProxy = bytesToProxy;
+                    this.handleCallback = null;
                     this.proxyTODO = proxyTODO;
                 }
             }
@@ -193,8 +198,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 frameEnds = false;
             }
 
-            void write(ByteArray data, boolean frameEndsAfterSending) {
-                Segment seg = new Segment(data, frameEndsAfterSending);
+            void write(ByteArray data, boolean frameEndsAfterSending, Runnable callback) {
+                Segment seg = new Segment(data, frameEndsAfterSending, callback);
                 if (currentSegment == null) {
                     currentSegment = seg;
                 } else {
@@ -259,8 +264,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             this.conn = conn;
         }
 
-        void writeToBackend(ByteArray data) {
-            backendByteFlow.write(data, false /*no frame slicing check when writing to backend, so set to false is fine*/);
+        void writeToBackend(ByteArray data, Runnable callback) {
+            backendByteFlow.write(data, false /*no frame slicing check when writing to backend, so set to false is fine*/, callback);
             doBackendWrite();
         }
 
@@ -275,8 +280,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             if (backendByteFlow.currentSegment != null) doBackendWrite();
         }
 
-        void writeToFrontend(ByteArray data, boolean frameEndsAfterSending) {
-            frontendByteFlow.write(data, frameEndsAfterSending);
+        void writeToFrontend(ByteArray data, boolean frameEndsAfterSending, Runnable callback) {
+            frontendByteFlow.write(data, frameEndsAfterSending, callback);
             frontendWrite(this);
         }
 
@@ -406,16 +411,16 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     frontendConnection.close();
                     return;
                 }
+                Processor.HandleTODO.doneNoData(handleTODO);
+
                 ByteArray dataToSend = handleTODO == null ? null : handleTODO.send;
                 assert Logger.lowLevelDebug("the processor return a message of length " + (dataToSend == null ? "null" : dataToSend.length()));
 
                 // check data to write back
-                {
-                    ByteArray writeBackBytes = handleTODO == null ? null : handleTODO.produce;
-                    if (writeBackBytes != null && writeBackBytes.length() != 0) {
-                        assert Logger.lowLevelDebug("got bytes to write back, len = " + writeBackBytes.length() + ", conn = " + conn);
-                        writeToBackend(writeBackBytes);
-                    }
+                ByteArray writeBackBytes = handleTODO == null ? null : handleTODO.produce;
+                if (writeBackBytes != null && writeBackBytes.length() != 0) {
+                    assert Logger.lowLevelDebug("got bytes to write back, len = " + writeBackBytes.length() + ", conn = " + conn);
+                    writeToBackend(writeBackBytes, handleTODO::produceDone);
                 }
 
                 if (dataToSend == null || dataToSend.length() == 0) {
@@ -426,7 +431,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
                     readBackend(); // recursively call to handle more data
                 } else {
-                    writeToFrontend(dataToSend, handleTODO.frameEnds);
+                    writeToFrontend(dataToSend, handleTODO.frameEnds, handleTODO::sendDone);
                 }
             }
         }
@@ -494,12 +499,15 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             assert Logger.lowLevelDebug("backend connection " + ctx.connection + " remoteClosed");
             // backend FIN
             Processor.HandleTODO handleTODO = processor.remoteClosed(topCtx, subCtx);
+            Processor.HandleTODO.doneNoData(handleTODO);
             if (handleTODO != null) {
                 if (handleTODO.send != null) {
-                    writeToFrontend(handleTODO.send, true /* no more packets will be received from the connection, so always set this to true */);
+                    writeToFrontend(handleTODO.send,
+                        true /* no more packets will be received from the connection, so always set this to true */,
+                        handleTODO::sendDone);
                 }
                 if (handleTODO.produce != null) {
-                    writeToBackend(handleTODO.produce);
+                    writeToBackend(handleTODO.produce, handleTODO::produceDone);
                 }
             }
             informCloseToBackend();
@@ -545,17 +553,19 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     class FrontendByteFlow {
         class Segment {
             public final ByteArrayChannel chnl;
+            public final Runnable handleCallback;
 
-            Segment(ByteArray byteArray) {
+            Segment(ByteArray byteArray, Runnable callback) {
                 this.chnl = byteArray.toFullChannel();
+                this.handleCallback = callback;
             }
         }
 
         Segment currentSegment;
         final LinkedList<Segment> sendingQueue = new LinkedList<>();
 
-        void write(ByteArray byteArray) {
-            Segment seg = new Segment(byteArray);
+        void write(ByteArray byteArray, Runnable callback) {
+            Segment seg = new Segment(byteArray, callback);
             if (currentSegment == null) {
                 currentSegment = seg;
             } else {
@@ -645,6 +655,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             while (true) {
                 if (flow.currentSegment != null) {
                     if (flow.currentSegment.chnl.used() == 0) {
+                        flow.currentSegment.handleCallback.run();
                         flow.currentSegment = null;
                     }
                 }
@@ -758,12 +769,13 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 frontendConnection.close(true);
                 return;
             }
+            Processor.HandleTODO.doneNoData(handleTODO);
+
             ByteArray bytesToSend = handleTODO == null ? null : handleTODO.send;
-            {
-                ByteArray produced = handleTODO == null ? null : handleTODO.produce;
-                if (produced != null && produced.length() != 0) {
-                    frontendByteFlow.write(produced);
-                }
+            ByteArray produced = handleTODO == null ? null : handleTODO.produce;
+
+            if (produced != null && produced.length() != 0) {
+                frontendByteFlow.write(produced, handleTODO::produceDone);
             }
 
             if (bytesToSend == null || (bytesToSend.length() == 0 && bytesToSend != Processor.REQUIRE_CONNECTION)) {
@@ -787,7 +799,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 if (bytesToSend.length() == 0) {
                     readFrontend(); // recursively call to handle more data
                 } else {
-                    backend.writeToBackend(bytesToSend);
+                    backend.writeToBackend(bytesToSend, handleTODO::sendDone);
                 }
             }
         }
@@ -894,11 +906,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
 
         Processor.HandleTODO handleTODO = processor.connected(topCtx, bh.subCtx);
+        Processor.HandleTODO.doneNoData(handleTODO);
         chosen.accept(bh.subCtx);
 
         if (handleTODO != null) {
             if (handleTODO.produce != null && handleTODO.produce.length() > 0) {
-                bh.writeToBackend(handleTODO.produce);
+                bh.writeToBackend(handleTODO.produce, handleTODO::produceDone);
             }
             if (handleTODO.send != null && handleTODO.send.length() > 0) {
                 Logger.warn(LogType.IMPROPER_USE, "currently we do not support sending data to frontend when backend connection establishes");

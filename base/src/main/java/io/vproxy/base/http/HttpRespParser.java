@@ -6,7 +6,7 @@ import io.vproxy.base.processor.http1.entity.Response;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.codec.AbstractParser;
 
-public class HttpRespParser extends AbstractParser<Response> {
+public class HttpRespParser extends AbstractParser<Response> implements IHttpParser {
     /**
      * @see HttpParserHelper#handlers
      */
@@ -66,17 +66,20 @@ public class HttpRespParser extends AbstractParser<Response> {
         };
     }
 
-    public ResponseBuilder getResponseBuilder() {
+    @Override
+    public ResponseBuilder getBuilder() {
         return resp;
     }
 
-    private void nextState() {
+    @Override
+    public int nextState() {
         try {
             state = helper.nextState(state);
         } catch (Exception e) {
             Logger.shouldNotHappen("nextState(" + state + ")", e);
             throw new IllegalStateException(e);
         }
+        return state;
     }
 
     @SuppressWarnings("DuplicatedCode")
