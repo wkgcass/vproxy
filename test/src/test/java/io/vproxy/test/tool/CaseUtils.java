@@ -16,6 +16,10 @@ public class CaseUtils {
         out:
         while (nics.hasMoreElements()) {
             NetworkInterface nic = nics.nextElement();
+            var name = nic.getName();
+            if (name.startsWith("tun") || name.startsWith("tap") || name.startsWith("utun")) {
+                continue;
+            }
             var ips = nic.getInetAddresses();
             while (ips.hasMoreElements()) {
                 InetAddress addr = ips.nextElement();
