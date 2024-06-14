@@ -21,6 +21,8 @@ import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PooledAllocator;
 import io.vproxy.pni.array.IntArray;
+import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.posix.PosixFDs;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -73,6 +75,9 @@ public class EventLoopGroup implements IEventLoopGroup {
     private Registration initQuic() throws XException {
         if (!MsQuicInitializer.isSupported()) {
             throw new XException("msquic is not supported");
+        }
+        if (!(FDProvider.get().getProvided() instanceof PosixFDs)) {
+            throw new XException("vfd impl (" + FDProvider.get().getProvided() + ") does not support quic, please add -Dvfd=posix on startup");
         }
 
         var api = ApiTables.V2;
