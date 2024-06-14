@@ -469,7 +469,7 @@ public class WebSocksProxyServer {
             Logger.alert("redirect server started on " + redirectPort);
         }
         if (useQuic) {
-            Logger.alert("quic server started on " + port);
+            Logger.alert("quic server started on " + quicPort);
         }
         if (useKcp) {
             Logger.alert("kcp server started on " + port);
