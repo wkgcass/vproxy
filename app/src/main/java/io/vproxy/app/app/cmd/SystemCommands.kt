@@ -1,5 +1,11 @@
 package io.vproxy.app.app.cmd
 
+import io.vproxy.app.app.cmd.handle.param.AddrHandle
+import io.vproxy.app.app.cmd.handle.param.URLHandle
+import io.vproxy.app.app.cmd.handle.resource.DockerNetworkPluginControllerHandle
+import io.vproxy.app.app.cmd.handle.resource.HttpControllerHandle
+import io.vproxy.app.app.cmd.handle.resource.PluginHandle
+import io.vproxy.app.app.cmd.handle.resource.RespControllerHandle
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
@@ -25,25 +31,25 @@ class SystemCommands private constructor() : Commands() {
         relation = ResourceType.respcontroller,
         action = ActType.add,
         params = {
-          it + ResActParam(Param.addr, true) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
+          it + ResActParam(Param.addr, true) { AddrHandle.check(it) }
           it + ResActParam(Param.pass, true)
         }
       ) {
-        io.vproxy.app.app.cmd.handle.resource.RespControllerHandle.add(it)
+        RespControllerHandle.add(it)
         CmdResult()
       }
       it + ResAct(
         relation = ResourceType.respcontroller,
         action = ActType.list,
       ) {
-        val names = io.vproxy.app.app.cmd.handle.resource.RespControllerHandle.names()
+        val names = RespControllerHandle.names()
         CmdResult(names, names, utilJoinList(names))
       }
       it + ResAct(
         relation = ResourceType.respcontroller,
         action = ActType.listdetail
       ) {
-        val rcRefList = io.vproxy.app.app.cmd.handle.resource.RespControllerHandle.details()
+        val rcRefList = RespControllerHandle.details()
         val rcRefStrList = rcRefList.stream().map { it.toString() }.collect(Collectors.toList())
         CmdResult(rcRefList, rcRefStrList, utilJoinList(rcRefList))
       }
@@ -51,7 +57,7 @@ class SystemCommands private constructor() : Commands() {
         relation = ResourceType.respcontroller,
         action = ActType.remove
       ) {
-        io.vproxy.app.app.cmd.handle.resource.RespControllerHandle.removeAndStop(it)
+        RespControllerHandle.removeAndStop(it)
         CmdResult()
       }
     }
@@ -60,24 +66,24 @@ class SystemCommands private constructor() : Commands() {
         relation = ResourceType.httpcontroller,
         action = ActType.add,
         params = {
-          it + ResActParam(Param.addr, true) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
+          it + ResActParam(Param.addr, true) { AddrHandle.check(it) }
         }
       ) {
-        io.vproxy.app.app.cmd.handle.resource.HttpControllerHandle.add(it)
+        HttpControllerHandle.add(it)
         CmdResult()
       }
       it + ResAct(
         relation = ResourceType.httpcontroller,
         action = ActType.list
       ) {
-        val names = io.vproxy.app.app.cmd.handle.resource.HttpControllerHandle.names()
+        val names = HttpControllerHandle.names()
         CmdResult(names, names, utilJoinList(names))
       }
       it + ResAct(
         relation = ResourceType.httpcontroller,
         action = ActType.listdetail
       ) {
-        val hcRefList = io.vproxy.app.app.cmd.handle.resource.HttpControllerHandle.details()
+        val hcRefList = HttpControllerHandle.details()
         val hcRefStrList = hcRefList.stream().map { it.toString() }.collect(Collectors.toList())
         CmdResult(hcRefList, hcRefStrList, utilJoinList(hcRefList))
       }
@@ -85,7 +91,7 @@ class SystemCommands private constructor() : Commands() {
         relation = ResourceType.httpcontroller,
         action = ActType.remove
       ) {
-        io.vproxy.app.app.cmd.handle.resource.HttpControllerHandle.removeAndStop(it)
+        HttpControllerHandle.removeAndStop(it)
         CmdResult()
       }
     }
@@ -94,14 +100,14 @@ class SystemCommands private constructor() : Commands() {
         relation = ResourceType.dockernetworkplugincontroller,
         action = ActType.list,
       ) {
-        val names = io.vproxy.app.app.cmd.handle.resource.DockerNetworkPluginControllerHandle.names()
+        val names = DockerNetworkPluginControllerHandle.names()
         CmdResult(names, names, utilJoinList(names))
       }
       it + ResAct(
         relation = ResourceType.dockernetworkplugincontroller,
         action = ActType.listdetail,
       ) {
-        val dcRefList = io.vproxy.app.app.cmd.handle.resource.DockerNetworkPluginControllerHandle.details()
+        val dcRefList = DockerNetworkPluginControllerHandle.details()
         val dcRefStrList = dcRefList.stream().map { it.toString() }.collect(Collectors.toList())
         CmdResult(dcRefList, dcRefStrList, utilJoinList(dcRefList))
       }
@@ -111,26 +117,26 @@ class SystemCommands private constructor() : Commands() {
         relation = ResourceType.plugin,
         action = ActType.add,
         params = {
-          it + ResActParam(Param.url, required) { io.vproxy.app.app.cmd.handle.param.URLHandle.get(it) }
+          it + ResActParam(Param.url, required) { URLHandle.get(it) }
           it + ResActParam(Param.cls, required)
           it + ResActParam(Param.args)
         }
       ) {
-        io.vproxy.app.app.cmd.handle.resource.PluginHandle.add(it)
+        PluginHandle.add(it)
         CmdResult()
       }
       it + ResAct(
         relation = ResourceType.plugin,
         action = ActType.list,
       ) {
-        val names = io.vproxy.app.app.cmd.handle.resource.PluginHandle.names()
+        val names = PluginHandle.names()
         CmdResult(names, names, utilJoinList(names))
       }
       it + ResAct(
         relation = ResourceType.plugin,
         action = ActType.listdetail,
       ) {
-        val pluginRefList = io.vproxy.app.app.cmd.handle.resource.PluginHandle.details()
+        val pluginRefList = PluginHandle.details()
         val pluginRefStrList = pluginRefList.stream().map { it.toString() }.collect(Collectors.toList())
         CmdResult(pluginRefList, pluginRefStrList, utilJoinList(pluginRefList))
       }
@@ -146,12 +152,12 @@ class SystemCommands private constructor() : Commands() {
             throw Exception("cannot set enable and disable at the same time")
           }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.PluginHandle.update(it) }
+        exec = execUpdate { PluginHandle.update(it) }
       )
       it + ResAct(
         relation = ResourceType.plugin,
         action = ActType.remove,
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.PluginHandle.unload(it) }
+        exec = execUpdate { PluginHandle.unload(it) }
       )
     }
   }

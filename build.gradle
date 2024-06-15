@@ -7,7 +7,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    def PNI_VERSION = '21.0.0.19'
+    def PNI_VERSION = '21.0.0.20'
     ext.set("PNI_VERSION", PNI_VERSION)
     dependencies {
         classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION
@@ -17,8 +17,8 @@ buildscript {
 plugins {
     id 'application'
     id 'idea'
-    id 'org.jetbrains.kotlin.jvm' version '1.9.20-Beta2'
-    id 'org.jetbrains.dokka' version "1.9.0"
+    id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+    id 'org.jetbrains.dokka' version "1.9.20"
     id 'maven-publish'
     id 'signing'
 
@@ -64,8 +64,8 @@ subprojects {
     java {
         withSourcesJar()
 
-        sourceCompatibility = '21'
-        targetCompatibility = '21'
+        sourceCompatibility = '22'
+        targetCompatibility = '22'
     }
 
     compileKotlin {
@@ -87,18 +87,16 @@ subprojects {
     }
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
-        options.incremental = false
         options.compilerArgs += '--enable-preview'
+        options.incremental = true
     }
     tasks.withType(JavaExec) {
-        jvmArgs += '--enable-preview'
         jvmArgs += '--enable-native-access=ALL-UNNAMED'
         jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
 
         javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     }
     tasks.withType(Test) {
-        jvmArgs += '--enable-preview'
         jvmArgs += '--enable-native-access=ALL-UNNAMED'
         jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         jvmArgs += '--add-opens=java.base/java.lang=ALL-UNNAMED' // dubbo uses reflection on class loaders
@@ -211,8 +209,8 @@ project(':dep') {
         destinationDirectory = compileJava.destinationDir
     }
     dependencies {
-        api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.9.10'
-        api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.7.3'
+        api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '2.0.0'
+        api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.8.1'
         api group: 'io.vproxy', name: 'pni-api-jdk21', version: PNI_VERSION
         api (group: 'io.vproxy', name: 'vjson', version: '1.5.5-jdk9') {
             exclude group: 'io.vproxy', module: 'kotlin-stdlib-lite'
@@ -392,7 +390,7 @@ project(':ui') {
     apply plugin: 'org.openjfx.javafxplugin'
 
     javafx {
-        version = '21'
+        version = '22.0.1'
         modules = ['javafx.controls', 'javafx.swing', 'javafx.media']
     }
 
