@@ -1,6 +1,7 @@
 package io.vproxy.fubuki;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -127,5 +128,5 @@ public class FubukiHandle extends AbstractNativeObject implements NativeObject {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.18
-// sha256:19f871c87eccbe6d2ea11a7d1928b983c0a5c75444872fb35247ccc57aba9946
+// metadata.generator-version: pni 21.0.0.20
+// sha256:6e41dbee75512b5f11a184a7ad5468946cc506546a666a57fc2cd6bd11f3d9b1

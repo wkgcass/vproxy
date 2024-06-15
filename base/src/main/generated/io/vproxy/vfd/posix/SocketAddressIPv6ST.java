@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -21,19 +22,21 @@ public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeO
     private final MemorySegment ip;
 
     public String getIp() {
-        return ip.getUtf8String(0);
+        return PanamaHack.getUtf8String(ip, 0);
     }
 
     public void setIp(String ip) {
-        this.ip.setUtf8String(0, ip);
+        PanamaHack.setUtf8String(this.ip, 0, ip);
     }
 
-    private static final VarHandle portVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("port")
+    private static final VarHandleW portVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("port")
+        )
     );
 
     public short getPort() {
-        return (short) portVH.get(MEMORY);
+        return portVH.getShort(MEMORY);
     }
 
     public void setPort(short port) {
@@ -144,5 +147,5 @@ public class SocketAddressIPv6ST extends AbstractNativeObject implements NativeO
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:ea78b999ccf763ecc05286776c2af78ea39692284015dc008a2d78356c2c135a
+// metadata.generator-version: pni 21.0.0.20
+// sha256:82f7ff14b0a0ec51edd9fb4962d63710f8ce660d8bb1064b8933aba6f51bddf4

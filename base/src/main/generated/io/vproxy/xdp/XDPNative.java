@@ -1,6 +1,7 @@
 package io.vproxy.xdp;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -413,5 +414,5 @@ public class XDPNative {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.17
-// sha256:53185e45f5db252e49324076dc79f4e2ae0c62403cab57918d6ea8294142339e
+// metadata.generator-version: pni 21.0.0.20
+// sha256:90687eebef29ef983f13854152431b93306ca6014432063eed507e953929b4ab

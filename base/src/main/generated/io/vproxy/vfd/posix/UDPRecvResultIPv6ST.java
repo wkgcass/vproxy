@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -25,12 +26,14 @@ public class UDPRecvResultIPv6ST extends AbstractNativeObject implements NativeO
         return this.addr;
     }
 
-    private static final VarHandle lenVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("len")
+    private static final VarHandleW lenVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("len")
+        )
     );
 
     public int getLen() {
-        return (int) lenVH.get(MEMORY);
+        return lenVH.getInt(MEMORY);
     }
 
     public void setLen(int len) {
@@ -141,5 +144,5 @@ public class UDPRecvResultIPv6ST extends AbstractNativeObject implements NativeO
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:68089cd5891c215dc3cb4e91d1a5327a91ca37f999d3e94e93c6fa26b21b384e
+// metadata.generator-version: pni 21.0.0.20
+// sha256:f148ed6faa57e67dbafd9b93e519ee4f5805f8c30dd1c9cc0a2ef57d907beac3

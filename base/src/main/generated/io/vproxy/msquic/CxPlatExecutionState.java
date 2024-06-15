@@ -1,6 +1,7 @@
 package io.vproxy.msquic;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -119,5 +120,5 @@ public class CxPlatExecutionState extends AbstractNativeObject implements Native
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.17
-// sha256:35f4d6776a4fe5dbceea1a6ced8cbe8ca90735edc29952ada90a6c97a9e0146d
+// metadata.generator-version: pni 21.0.0.20
+// sha256:1c0b38eb3170b9a9f05a2b1d26816779f7cab73e23054ded3c56b79aa30f7263

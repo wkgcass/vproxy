@@ -1,6 +1,7 @@
 package io.vproxy.fubuki;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -23,12 +24,14 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
         return MEMORY;
     }
 
-    private static final VarHandle ctxVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("ctx")
+    private static final VarHandleW ctxVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("ctx")
+        )
     );
 
     public MemorySegment getCtx() {
-        var SEG = (MemorySegment) ctxVH.get(MEMORY);
+        var SEG = ctxVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return SEG;
     }
@@ -41,12 +44,14 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
         }
     }
 
-    private static final VarHandle nodeConfigJsonVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("nodeConfigJson")
+    private static final VarHandleW nodeConfigJsonVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("nodeConfigJson")
+        )
     );
 
     public PNIString getNodeConfigJson() {
-        var SEG = (MemorySegment) nodeConfigJsonVH.get(MEMORY);
+        var SEG = nodeConfigJsonVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return new PNIString(SEG);
     }
@@ -63,24 +68,28 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
         }
     }
 
-    private static final VarHandle deviceIndexVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("deviceIndex")
+    private static final VarHandleW deviceIndexVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("deviceIndex")
+        )
     );
 
     public int getDeviceIndex() {
-        return (int) deviceIndexVH.get(MEMORY);
+        return deviceIndexVH.getInt(MEMORY);
     }
 
     public void setDeviceIndex(int deviceIndex) {
         deviceIndexVH.set(MEMORY, deviceIndex);
     }
 
-    private static final VarHandle fnOnPacketVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("fnOnPacket")
+    private static final VarHandleW fnOnPacketVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("fnOnPacket")
+        )
     );
 
     public MemorySegment getFnOnPacket() {
-        var SEG = (MemorySegment) fnOnPacketVH.get(MEMORY);
+        var SEG = fnOnPacketVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return SEG;
     }
@@ -93,12 +102,14 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
         }
     }
 
-    private static final VarHandle fnAddAddrVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("fnAddAddr")
+    private static final VarHandleW fnAddAddrVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("fnAddAddr")
+        )
     );
 
     public MemorySegment getFnAddAddr() {
-        var SEG = (MemorySegment) fnAddAddrVH.get(MEMORY);
+        var SEG = fnAddAddrVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return SEG;
     }
@@ -111,12 +122,14 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
         }
     }
 
-    private static final VarHandle fnDeleteAddrVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("fnDeleteAddr")
+    private static final VarHandleW fnDeleteAddrVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("fnDeleteAddr")
+        )
     );
 
     public MemorySegment getFnDeleteAddr() {
-        var SEG = (MemorySegment) fnDeleteAddrVH.get(MEMORY);
+        var SEG = fnDeleteAddrVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return SEG;
     }
@@ -257,5 +270,5 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.18
-// sha256:8d3a05a296974b7c59b6ab29d526fd51e646415e93482417b28a826bd5bbc42f
+// metadata.generator-version: pni 21.0.0.20
+// sha256:10b9ae7d5ebee20b91b86c3da7ffe81ea6f0bef4ecb4dc14d5751e2a1dcbc2f9

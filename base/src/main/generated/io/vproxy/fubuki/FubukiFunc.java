@@ -1,6 +1,7 @@
 package io.vproxy.fubuki;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -29,5 +30,5 @@ public class FubukiFunc {
         return RESULT == null ? null : new io.vproxy.fubuki.FubukiHandle(RESULT);
     }
 }
-// metadata.generator-version: pni 21.0.0.18
-// sha256:f93b4aa1841b23eaa587bb8399ceacb8116e1756776528aa43817b733282eb18
+// metadata.generator-version: pni 21.0.0.20
+// sha256:9edd0bdb7b2220bb9bc06908a89d9419b9c7b4fef0e2d71855e0f08e31e5689b

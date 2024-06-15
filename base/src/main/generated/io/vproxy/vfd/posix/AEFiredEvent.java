@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -18,24 +19,28 @@ public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
         return MEMORY;
     }
 
-    private static final VarHandle fdVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("fd")
+    private static final VarHandleW fdVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("fd")
+        )
     );
 
     public int getFd() {
-        return (int) fdVH.get(MEMORY);
+        return fdVH.getInt(MEMORY);
     }
 
     public void setFd(int fd) {
         fdVH.set(MEMORY, fd);
     }
 
-    private static final VarHandle maskVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("mask")
+    private static final VarHandleW maskVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("mask")
+        )
     );
 
     public int getMask() {
-        return (int) maskVH.get(MEMORY);
+        return maskVH.getInt(MEMORY);
     }
 
     public void setMask(int mask) {
@@ -144,5 +149,5 @@ public class AEFiredEvent extends AbstractNativeObject implements NativeObject {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:340dde07b3ab4624f2e00b897ef763b72b901093d7332e55a54f3864fb53c919
+// metadata.generator-version: pni 21.0.0.20
+// sha256:061e1e32c0137e00c87b8ba3732406836b9eca9882dfba9ae49352db182621af

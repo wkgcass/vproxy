@@ -1,6 +1,7 @@
 package io.vproxy.vfd.windows;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -133,5 +134,5 @@ public class WindowsNative {
         return ENV.returnInt();
     }
 }
-// metadata.generator-version: pni 21.0.0.17
-// sha256:18f2df64b05ecb71eeb15cde61d79b27ef7d333ccd69180daa0c2eb502039ed4
+// metadata.generator-version: pni 21.0.0.20
+// sha256:29ed4f90a13978fe996aa184644f1d12ca2509f0695114179563c1d64a6c21d3

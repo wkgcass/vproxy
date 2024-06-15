@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -20,11 +21,11 @@ public class SocketAddressUDSST extends AbstractNativeObject implements NativeOb
     private final MemorySegment path;
 
     public String getPath() {
-        return path.getUtf8String(0);
+        return PanamaHack.getUtf8String(path, 0);
     }
 
     public void setPath(String path) {
-        this.path.setUtf8String(0, path);
+        PanamaHack.setUtf8String(this.path, 0, path);
     }
 
     public SocketAddressUDSST(MemorySegment MEMORY) {
@@ -125,5 +126,5 @@ public class SocketAddressUDSST extends AbstractNativeObject implements NativeOb
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:45f06cce894899cedb1823d61944030599686f97043f81fef99defcd219d68ca
+// metadata.generator-version: pni 21.0.0.20
+// sha256:f0c5f2384ed6d0e13c041313e5866f09e8e9aa2bf80fb4fa7ec5b51a27cbff4c

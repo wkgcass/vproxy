@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -21,19 +22,21 @@ public class TapInfoST extends AbstractNativeObject implements NativeObject {
     private final MemorySegment devName;
 
     public String getDevName() {
-        return devName.getUtf8String(0);
+        return PanamaHack.getUtf8String(devName, 0);
     }
 
     public void setDevName(String devName) {
-        this.devName.setUtf8String(0, devName);
+        PanamaHack.setUtf8String(this.devName, 0, devName);
     }
 
-    private static final VarHandle fdVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("fd")
+    private static final VarHandleW fdVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("fd")
+        )
     );
 
     public int getFd() {
-        return (int) fdVH.get(MEMORY);
+        return fdVH.getInt(MEMORY);
     }
 
     public void setFd(int fd) {
@@ -144,5 +147,5 @@ public class TapInfoST extends AbstractNativeObject implements NativeObject {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:8cb17c910194ee711a3497be07a84871cb98b08534094cc39fd2fbb079e0fc0b
+// metadata.generator-version: pni 21.0.0.20
+// sha256:6473450d6985f834a8e1ca384538d5007c502b5e86d6c1c47bff1dd93615fe6e

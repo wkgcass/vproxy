@@ -1,6 +1,7 @@
 package io.vproxy.msquic;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -32,12 +33,14 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         return MEMORY;
     }
 
-    private static final VarHandle workerVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("worker")
+    private static final VarHandleW workerVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("worker")
+        )
     );
 
     public MemorySegment getWorker() {
-        var SEG = (MemorySegment) workerVH.get(MEMORY);
+        var SEG = workerVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return SEG;
     }
@@ -50,12 +53,14 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         }
     }
 
-    private static final VarHandle stateVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("state")
+    private static final VarHandleW stateVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("state")
+        )
     );
 
     public io.vproxy.msquic.CxPlatExecutionState getState() {
-        var SEG = (MemorySegment) stateVH.get(MEMORY);
+        var SEG = stateVH.getMemorySegment(MEMORY);
         if (SEG.address() == 0) return null;
         return new io.vproxy.msquic.CxPlatExecutionState(SEG);
     }
@@ -68,12 +73,14 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         }
     }
 
-    private static final VarHandle waitTimeVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("waitTime")
+    private static final VarHandleW waitTimeVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("waitTime")
+        )
     );
 
     public int getWaitTime() {
-        return (int) waitTimeVH.get(MEMORY);
+        return waitTimeVH.getInt(MEMORY);
     }
 
     public void setWaitTime(int waitTime) {
@@ -190,5 +197,5 @@ public class CxPlatProcessEventLocals extends AbstractNativeObject implements Na
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.17
-// sha256:2d7323f5ad7ef63007e44dc7a8fad76d2a5ac2b32c381673844f7b0cd21dd637
+// metadata.generator-version: pni 21.0.0.20
+// sha256:5bc8637f4f08f3f7164de153120b182ce573affb6111f3bb67710aed8f27798e

@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -896,5 +897,5 @@ public class PosixNative {
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.18
-// sha256:a6ab0d88c014cf3f59f372ce03960a5a63f19153fefec2b5565170cd42416346
+// metadata.generator-version: pni 21.0.0.20
+// sha256:1354207c51a455b700abc53bbb2aaeec9608ccee9941bc38fe11d66626b6e1c3

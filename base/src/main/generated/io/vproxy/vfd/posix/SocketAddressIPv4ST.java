@@ -1,6 +1,7 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.pni.*;
+import io.vproxy.pni.hack.*;
 import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
@@ -19,24 +20,28 @@ public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeO
         return MEMORY;
     }
 
-    private static final VarHandle ipVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("ip")
+    private static final VarHandleW ipVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("ip")
+        )
     );
 
     public int getIp() {
-        return (int) ipVH.get(MEMORY);
+        return ipVH.getInt(MEMORY);
     }
 
     public void setIp(int ip) {
         ipVH.set(MEMORY, ip);
     }
 
-    private static final VarHandle portVH = LAYOUT.varHandle(
-        MemoryLayout.PathElement.groupElement("port")
+    private static final VarHandleW portVH = VarHandleW.of(
+        LAYOUT.varHandle(
+            MemoryLayout.PathElement.groupElement("port")
+        )
     );
 
     public short getPort() {
-        return (short) portVH.get(MEMORY);
+        return portVH.getShort(MEMORY);
     }
 
     public void setPort(short port) {
@@ -146,5 +151,5 @@ public class SocketAddressIPv4ST extends AbstractNativeObject implements NativeO
         }
     }
 }
-// metadata.generator-version: pni 21.0.0.15
-// sha256:29de574ba2f6c3cb349a07b51b8f8037eb04db322b1bedfe286b2fdb767ce823
+// metadata.generator-version: pni 21.0.0.20
+// sha256:6bc82fb7da365a2bcb2cdba1cfd30876e04d3c3f3a9997da7ffcd7262ef69e67
