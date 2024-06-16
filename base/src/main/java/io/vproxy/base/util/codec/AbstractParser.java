@@ -20,6 +20,10 @@ public abstract class AbstractParser<T> {
     }
 
     public int feed(RingBuffer buffer) {
+        if (buffer.used() == 0) {
+            // nothing provided
+            return -1;
+        }
         while (buffer.used() != 0) {
             chnl.reset();
             buffer.writeTo(chnl);
@@ -42,6 +46,10 @@ public abstract class AbstractParser<T> {
     }
 
     public int feed(ByteArrayChannel chnl) {
+        if (chnl.used() == 0) {
+            // nothing provided
+            return -1;
+        }
         while (chnl.used() != 0) {
             byte b = chnl.read();
             state = doSwitch(b);
