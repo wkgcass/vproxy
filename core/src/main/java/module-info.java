@@ -1,5 +1,4 @@
 module io.vproxy.core {
-    requires jdk.crypto.ec;
     requires jdk.crypto.cryptoki;
 
     requires io.vproxy.pni;
