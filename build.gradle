@@ -88,7 +88,7 @@ subprojects {
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
         options.compilerArgs += '--enable-preview'
-        options.incremental = true
+        options.incremental = false
     }
     tasks.withType(JavaExec) {
         jvmArgs += '--enable-native-access=ALL-UNNAMED'
