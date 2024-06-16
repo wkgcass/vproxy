@@ -7,10 +7,10 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    def PNI_VERSION = '21.0.0.20'
+    def PNI_VERSION = '22.0.0.20'
     ext.set("PNI_VERSION", PNI_VERSION)
     dependencies {
-        classpath group: 'io.vproxy', name: 'pni-exec', version: PNI_VERSION
+        classpath group: 'io.vproxy', name: 'pni-exec-jdk22', version: PNI_VERSION
     }
 }
 
@@ -87,7 +87,6 @@ subprojects {
     }
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
-        options.compilerArgs += '--enable-preview'
         options.incremental = false
     }
     tasks.withType(JavaExec) {
@@ -211,7 +210,7 @@ project(':dep') {
     dependencies {
         api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '2.0.0'
         api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.8.1'
-        api group: 'io.vproxy', name: 'pni-api-jdk21', version: PNI_VERSION
+        api group: 'io.vproxy', name: 'pni-api-jdk22', version: PNI_VERSION
         api (group: 'io.vproxy', name: 'vjson', version: '1.5.5-jdk9') {
             exclude group: 'io.vproxy', module: 'kotlin-stdlib-lite'
         }

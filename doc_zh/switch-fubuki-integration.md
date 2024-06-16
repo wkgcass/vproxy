@@ -25,7 +25,7 @@
 
 ```
 make jar-with-lib
-java --enable-preview -Dvfd=posix -jar build/libs/vproxy.jar
+java -Dvfd=posix -jar build/libs/vproxy.jar
 ```
 
 2. 创建虚拟交换机

@@ -27,7 +27,7 @@ After launching vproxy, we can get detailed into about the commands used in this
 
 ```
 make jar-with-lib
-java --enable-preview -Dvfd=posix -jar build/libs/vproxy.jar
+java -Dvfd=posix -jar build/libs/vproxy.jar
 ```
 
 2. Creating virtual switch
