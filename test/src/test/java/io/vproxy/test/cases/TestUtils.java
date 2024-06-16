@@ -223,7 +223,7 @@ public class TestUtils {
         if (bytes[bytes.length - 1] != 0) {
             return new String(bytes, StandardCharsets.UTF_8);
         }
-        return MemorySegment.ofArray(bytes).getUtf8String(0);
+        return MemorySegment.ofArray(bytes).getString(0);
     }
 
     private void assertFilesCnt(int cnt) {
@@ -248,7 +248,7 @@ public class TestUtils {
     @Test
     public void simpleMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-simpleMappedByteBufferLogger");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 1048576, 65536);
         logger.writeAndBlock("hello world\n");
@@ -268,7 +268,7 @@ public class TestUtils {
     @Test
     public void simpleMappedByteBufferLoggerWriteOrDrop() throws Throwable {
         tempPath = Files.createTempDirectory("test-simpleMappedByteBufferLoggerWriteOrDrop");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 1048576, 65536);
         var res = logger.writeOrDrop("hello world\n");
@@ -288,7 +288,7 @@ public class TestUtils {
     @Test
     public void splitMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-splitMappedByteBufferLogger");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 0);
         logger.writeAndBlock("hello world\n");
@@ -312,7 +312,7 @@ public class TestUtils {
     @Test
     public void splitMappedByteBufferLoggerWriteOrDrop() throws Throwable {
         tempPath = Files.createTempDirectory("test-splitMappedByteBufferLoggerWriteOrDrop");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 0);
         var res = logger.writeOrDrop("hello world\n");
@@ -340,7 +340,7 @@ public class TestUtils {
     @Test
     public void createMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-createMappedByteBufferLogger");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 1);
         logger.writeAndBlock("1234567");
@@ -369,7 +369,7 @@ public class TestUtils {
     @Test
     public void createMappedByteBufferLoggerWriteOrDrop() throws Throwable {
         tempPath = Files.createTempDirectory("test-createMappedByteBufferLoggerWriteOrDrop");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 8, 1);
         var res = logger.writeOrDrop("1234567");
@@ -407,7 +407,7 @@ public class TestUtils {
     @Test
     public void randomTestMappedByteBufferLogger() throws Exception {
         tempPath = Files.createTempDirectory("test-randomTestMappedByteBufferLogger");
-        prefix = STR."test-\{getCurrentTimestampForFileName()}-";
+        prefix = "test-" + getCurrentTimestampForFileName() + "-";
         var logger = new MappedByteBufferLogger(tempPath.toString(), prefix, ".log", 16384, 4096);
 
         var expected = new StringBuilder();
@@ -440,7 +440,7 @@ public class TestUtils {
             if (bytes[bytes.length - 1] != 0) {
                 sb.append(new String(bytes, StandardCharsets.UTF_8));
             } else {
-                sb.append(MemorySegment.ofArray(bytes).getUtf8String(0));
+                sb.append(MemorySegment.ofArray(bytes).getString(0));
             }
         }
         assertEquals(expected.toString(), sb.toString());

@@ -107,7 +107,7 @@ public class TcpEntry implements WithUserData {
 
     public void setState(TcpState state) {
         var old = this.state;
-        assert Logger.lowLevelDebug(STR."tcp state changing: \{old} -> \{state}, connectionHandler = \{connectionHandler}");
+        assert Logger.lowLevelDebug("tcp state changing: " + old + " -> " + state + ", connectionHandler = " + connectionHandler);
         this.state = state;
         if (!old.remoteClosed && state.remoteClosed) {
             if (connectionHandler != null) {
@@ -379,7 +379,7 @@ public class TcpEntry implements WithUserData {
                 this.expectingSeq = seq;
                 this.ackedSeq = seq;
             } else {
-                Logger.error(LogType.IMPROPER_USE, STR."calling setInitialSeq while expectingSeq(\{expectingSeq}) or acked(\{ackedSeq}) is not 0");
+                Logger.error(LogType.IMPROPER_USE, "calling setInitialSeq while expectingSeq(" + expectingSeq + ") or acked(" + ackedSeq + ") is not 0");
             }
         }
 

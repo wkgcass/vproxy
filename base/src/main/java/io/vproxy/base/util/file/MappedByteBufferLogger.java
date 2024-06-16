@@ -32,7 +32,7 @@ public class MappedByteBufferLogger {
         assert preNewFileThreshold >= 0;
 
         if (!new File(location).isDirectory()) {
-            throw new IOException(STR."\{location} is not a directory");
+            throw new IOException(location + " is not a directory");
         }
 
         this.prefix = new File(location).getCanonicalPath() + File.separator + prefix;
@@ -116,7 +116,7 @@ public class MappedByteBufferLogger {
             newFile();
         } catch (IOException e) {
             close();
-            Logger.error(LogType.FILE_ERROR, STR."failed creating new file for \{prefix}...\{suffix}");
+            Logger.error(LogType.FILE_ERROR, "failed creating new file for " + prefix + "..." + suffix);
             throw e;
         }
         handleTaskResultAndReplaceBuffers();

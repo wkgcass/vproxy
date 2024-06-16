@@ -189,7 +189,7 @@ public class WebSocksProxyServer {
                 webroot = next;
                 ++i;
             } else
-                throw new IllegalArgumentException(STR."unknown argument: \{arg}.\n\{HELP_STR}");
+                throw new IllegalArgumentException("unknown argument: " + arg + ".\n" + HELP_STR);
         }
         if (port == -1)
             throw new IllegalArgumentException("listening port is not specified. `listen $PORT`, " +
@@ -212,7 +212,7 @@ public class WebSocksProxyServer {
         }
         if (useKcp && useQuic) {
             if (quicPort == port) {
-                throw new IllegalArgumentException(STR."kcp and quic are both using port \{port}");
+                throw new IllegalArgumentException("kcp and quic are both using port " + port);
             }
         }
         if (ssl) {

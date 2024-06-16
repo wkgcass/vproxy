@@ -82,7 +82,7 @@ public class QuicFDs implements FDs {
     public void lookupOrCreateConnection(IPPort target,
                                          Consumer<QuicServerSocketFD> readyCallback,
                                          Consumer<QuicServerSocketFD> shutdownCallback) throws IOException {
-        assert Logger.lowLevelDebug(STR."lookupOrCreateConnection: \{target}");
+        assert Logger.lowLevelDebug("lookupOrCreateConnection: " + target);
 
         var fd = connections.get(target);
         boolean notFound = false;

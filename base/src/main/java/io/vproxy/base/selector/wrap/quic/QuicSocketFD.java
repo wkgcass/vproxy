@@ -49,24 +49,24 @@ public class QuicSocketFD extends AbstractBaseVirtualSocketFD implements SocketF
     protected QuicSocketFD(boolean withLog, Connection conn) throws IOException {
         super(false, conn.getLocalAddress(), conn.getRemoteAddress());
 
-        assert Logger.lowLevelDebug(STR."creating quic stream for conn \{conn}");
+        assert Logger.lowLevelDebug("creating quic stream for conn " + conn);
 
         var allocator = PooledAllocator.ofUnsafePooled();
         stream = new Stream(new Stream.Options(conn, allocator,
             StreamCallbackList.withLogIf(withLog, new StreamHandler()), ref ->
             conn.connectionQ.openStream(QUIC_STREAM_OPEN_FLAG_NONE, MsQuicUpcall.streamCallback, ref.MEMORY, null, allocator)));
         if (stream.streamQ == null) {
-            throw new IOException(STR."failed to create stream for \{conn}");
+            throw new IOException("failed to create stream for " + conn);
         }
 
-        assert Logger.lowLevelDebug(STR."quic stream is created for conn \{conn}");
+        assert Logger.lowLevelDebug("quic stream is created for conn " + conn);
 
         int ret = stream.start(QUIC_STREAM_START_FLAG_FAIL_BLOCKED);
         if (ret != 0) {
-            throw new IOException(STR."failed to start stream for \{conn}: \{ret}");
+            throw new IOException("failed to start stream for " + conn + ": " + ret);
         }
 
-        assert Logger.lowLevelDebug(STR."quic stream is started for conn \{conn}");
+        assert Logger.lowLevelDebug("quic stream is started for conn " + conn);
     }
 
     protected QuicSocketFD(boolean withLog, Connection conn, MemorySegment streamHQUIC) {
@@ -138,7 +138,7 @@ public class QuicSocketFD extends AbstractBaseVirtualSocketFD implements SocketF
         pendingWritingBytes += (int) mem.byteSize();
         int ret = stream.send(0, new SendContext(pool, (int) mem.byteSize()), mem);
         if (ret != 0) {
-            throw new IOException(STR."failed to send data to quic stream: \{ret}");
+            throw new IOException("failed to send data to quic stream: " + ret);
         }
         src.position(src.limit());
         return (int) mem.byteSize();
@@ -166,7 +166,7 @@ public class QuicSocketFD extends AbstractBaseVirtualSocketFD implements SocketF
 
     @Override
     protected String formatToString() {
-        return STR."QuicSocketFD{stream=\{stream}}";
+        return "QuicSocketFD{stream=" + stream + "}";
     }
 
     @Override
@@ -188,7 +188,7 @@ public class QuicSocketFD extends AbstractBaseVirtualSocketFD implements SocketF
         @Override
         public int startComplete(Stream stream, QuicStreamEventStartComplete data) {
             if (data.getStatus() != 0) {
-                raiseError(new IOException(STR."start failed: \{data.getStatus()}"));
+                raiseError(new IOException("start failed: " + data.getStatus()));
             } else {
                 alertConnected(stream.opts.connection.getLocalAddress());
             }

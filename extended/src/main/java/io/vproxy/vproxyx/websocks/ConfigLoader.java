@@ -535,7 +535,7 @@ public class ConfigLoader {
                 var ls = entry.getValue().getServers();
                 for (var svr : ls) {
                     if (svr.useQuic()) {
-                        failReasons.add(STR."agent.quic is not enabled, but server group \{group} has server using quic");
+                        failReasons.add("agent.quic is not enabled, but server group " + group + " has server using quic");
                         continue out;
                     }
                 }

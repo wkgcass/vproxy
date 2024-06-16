@@ -229,7 +229,7 @@ public class QuicGateway {
                 return 0;
             }
 
-            assert Logger.lowLevelDebug(STR."accepted new quic connection \{s}");
+            assert Logger.lowLevelDebug("accepted new quic connection " + s);
 
             var currentLoop = NetEventLoop.current();
             //noinspection Convert2Lambda,Anonymous2MethodRef
@@ -261,7 +261,7 @@ public class QuicGateway {
             try {
                 proxy.handle();
             } catch (IOException e) {
-                Logger.error(LogType.SYS_ERROR, STR."failed to start proxy for QuicGateway:\{alias}");
+                Logger.error(LogType.SYS_ERROR, "failed to start proxy for QuicGateway:" + alias);
                 s.close();
                 return 0;
             }
@@ -270,7 +270,7 @@ public class QuicGateway {
 
         @Override
         public int stopComplete(Listener listener, QuicListenerEventStopComplete data) {
-            Logger.warn(LogType.ALERT, STR."quic listener \{bindAddress} stopped");
+            Logger.warn(LogType.ALERT, "quic listener " + bindAddress + " stopped");
             cleanup2();
             return 0;
         }

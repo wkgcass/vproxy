@@ -20,10 +20,10 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
         if (this.sourceFD != null)
             throw new IllegalStateException("sourceFD is already set");
         if (!(fd instanceof DelegatingSourceFD sfd)) {
-            throw new IllegalArgumentException(STR."\{fd} is not DelegatingSourceFD");
+            throw new IllegalArgumentException(fd + " is not DelegatingSourceFD");
         }
 
-        assert Logger.lowLevelDebug(STR."\{this}.setDelegatingSourceFd(\{fd}");
+        assert Logger.lowLevelDebug(this + ".setDelegatingSourceFd(" + fd + ")");
 
         this.sourceFD = fd;
         sfd.setDelegatingTargetFD(this);
@@ -42,7 +42,7 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
         if (targetFD != null)
             throw new IllegalStateException("targetFD is already set");
 
-        assert Logger.lowLevelDebug(STR."\{this}.setDelegatingTargetFD(\{fd}");
+        assert Logger.lowLevelDebug(this + ".setDelegatingTargetFD(" + fd + ")");
 
         targetFD = fd;
         boolean readable = this.readable;
@@ -65,7 +65,7 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
             return;
         }
 
-        assert Logger.lowLevelDebug(STR."\{this}.raiseError(\{e})");
+        assert Logger.lowLevelDebug(this + ".raiseError(" + e + ")");
 
         error = e;
         if (loop == null) {
@@ -114,7 +114,7 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
 
     @Override
     public void setReadable() {
-        assert Logger.lowLevelDebug(STR."\{this} setReadable");
+        assert Logger.lowLevelDebug(this + " setReadable");
 
         if (targetFD != null) {
             targetFD.setReadable();
@@ -127,7 +127,7 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
 
     @Override
     public void setWritable() {
-        assert Logger.lowLevelDebug(STR."\{this} setWritable");
+        assert Logger.lowLevelDebug(this + " setWritable");
 
         if (targetFD != null) {
             targetFD.setWritable();
@@ -140,7 +140,7 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
 
     @Override
     public void cancelReadable() {
-        assert Logger.lowLevelDebug(STR."\{this} cancelReadable");
+        assert Logger.lowLevelDebug(this + " cancelReadable");
 
         readable = false;
         if (targetFD != null) {
@@ -153,7 +153,7 @@ public abstract class AbstractDelegateFD<SRC extends FD> implements VirtualFD, D
 
     @Override
     public void cancelWritable() {
-        assert Logger.lowLevelDebug(STR."\{this} cancelWritable");
+        assert Logger.lowLevelDebug(this + " cancelWritable");
 
         writable = false;
         if (targetFD != null) {

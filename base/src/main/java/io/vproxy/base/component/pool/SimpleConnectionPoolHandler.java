@@ -22,7 +22,7 @@ class SimpleConnectionPoolHandler implements ConnectionPoolHandler {
 
     @Override
     public void keepaliveReadable(ConnectableConnection conn) {
-        Logger.error(LogType.INVALID_EXTERNAL_DATA, STR."connection pool received readable event from \{conn}. closing ...");
+        Logger.error(LogType.INVALID_EXTERNAL_DATA, "connection pool received readable event from " + conn + ". closing ...");
         conn.close();
     }
 

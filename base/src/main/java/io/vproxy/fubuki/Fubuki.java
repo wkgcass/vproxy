@@ -50,7 +50,7 @@ public class Fubuki implements AutoCloseable {
                     .put("disable_route_operation", true)
                 )
                 .build().stringify();
-            Logger.trace(LogType.ALERT, STR."fubuki node config json generated: \{configJson}");
+            Logger.trace(LogType.ALERT, "fubuki node config json generated: " + configJson);
             opts.setNodeConfigJson(configJson, allocator);
 
             var errMsg = new PNIString(allocator.allocate(1024));
@@ -58,7 +58,7 @@ public class Fubuki implements AutoCloseable {
 
             if (handle == null) {
                 var err = errMsg.toString();
-                Logger.error(LogType.SYS_ERROR, STR."failed to start fubuki: \{err}");
+                Logger.error(LogType.SYS_ERROR, "failed to start fubuki: " + err);
                 throw new RuntimeException(err);
             }
         } catch (Throwable t) {
@@ -112,7 +112,7 @@ public class Fubuki implements AutoCloseable {
 
     public void addAddress(IPv4 ip, IPv4 mask) {
         if (!mask.isMask()) {
-            Logger.warn(LogType.SYS_ERROR, STR."received addAddress event: ip=\{ip} mask=\{mask}, not a valid mask");
+            Logger.warn(LogType.SYS_ERROR, "received addAddress event: ip=" + ip + " mask=" + mask + ", not a valid mask");
             return;
         }
         callback.addAddress(this, ip, mask);
@@ -120,7 +120,7 @@ public class Fubuki implements AutoCloseable {
 
     public void deleteAddress(IPv4 ip, IPv4 mask) {
         if (!mask.isMask()) {
-            Logger.warn(LogType.SYS_ERROR, STR."received deleteAddress event: ip=\{ip} mask=\{mask}, not a valid mask");
+            Logger.warn(LogType.SYS_ERROR, "received deleteAddress event: ip=" + ip + " mask=" + mask + ", not a valid mask");
             return;
         }
         callback.deleteAddress(this, ip, mask);

@@ -21,13 +21,13 @@ public class QuicDelegateSocketFD extends AbstractDelegateSocketFD {
                 try {
                     fd = QuicSocketFD.newStream(fds.isWithLog(), conn.getConnection());
                 } catch (IOException e) {
-                    assert Logger.lowLevelDebug(STR."failed to create stream: \{e}");
+                    assert Logger.lowLevelDebug("failed to create stream: " + e);
                     raiseError(e);
                     return;
                 }
 
                 fd.connect(l4addr);
-                assert Logger.lowLevelDebug(STR."delegating source fd is ready now: \{fd}");
+                assert Logger.lowLevelDebug("delegating source fd is ready now: " + fd);
                 setDelegatingSourceFD(fd);
             },
             _ -> raiseError(new IOException("connection shutdown")));

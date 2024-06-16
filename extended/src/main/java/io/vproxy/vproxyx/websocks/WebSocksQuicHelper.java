@@ -37,7 +37,7 @@ public class WebSocksQuicHelper {
                 .openConfiguration(alpnBuffers, alpn.size(), settings, null, retInt, confAllocator);
             if (conf_ == null) {
                 confAllocator.close();
-                throw new IOException(STR."ConfigurationOpen failed: \{retInt.get(0)}");
+                throw new IOException("ConfigurationOpen failed: " + retInt.get(0));
             }
             conf = new Configuration(new Configuration.Options(reg, conf_, confAllocator));
             QuicCredentialConfig cred;

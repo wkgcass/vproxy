@@ -528,7 +528,7 @@ public class TestPacket {
             var expected = packets.get(i);
             var parsed = all.get(i);
 
-            assertEquals(STR."mismatch \{i} expected=\{expected.description()} actual=\{parsed}",
+            assertEquals("mismatch " + i + " expected=" + expected.description() + " actual=" + parsed,
                 expected.getRawPacket(0),
                 parsed.getPacket().getRawPacket(0));
         }

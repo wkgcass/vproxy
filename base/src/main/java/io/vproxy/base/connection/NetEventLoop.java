@@ -241,7 +241,7 @@ class NetEventLoopUtils {
     }
 
     static void callExceptionEvent(ConnectionHandlerContext cctx, IOException err) {
-        assert Logger.lowLevelDebug(STR."call exception event for \{cctx.connection}: \{err}");
+        assert Logger.lowLevelDebug("call exception event for " + cctx.connection + ": " + err);
         cctx.handler.exception(cctx, err);
         if (!cctx.connection.isClosed()) {
             cctx.connection.close(true);

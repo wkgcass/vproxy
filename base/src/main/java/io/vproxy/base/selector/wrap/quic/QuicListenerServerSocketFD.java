@@ -62,7 +62,7 @@ public class QuicListenerServerSocketFD extends AbstractBaseVirtualServerSocketF
                 ConnectionCallbackList.withLogIf(fds.isWithLog(), new ConnectionHandler()), conn_));
             var err = conn_.setConfiguration(fds.conf.opts.configurationQ);
             if (err != 0) {
-                var errMsg = STR."set configuration to connection failed: \{err}";
+                var errMsg = "set configuration to connection failed: " + err;
                 Logger.error(LogType.SYS_ERROR, errMsg);
                 conn.close();
                 raiseErrorOneTime(new IOException(errMsg));
@@ -70,7 +70,7 @@ public class QuicListenerServerSocketFD extends AbstractBaseVirtualServerSocketF
             }
             conn_.setCallbackHandler(MsQuicUpcall.connectionCallback, conn.ref.MEMORY);
 
-            assert Logger.lowLevelDebug(STR."accepted new quic connection \{conn}");
+            assert Logger.lowLevelDebug("accepted new quic connection " + conn);
 
             return 0;
         }
@@ -104,7 +104,7 @@ public class QuicListenerServerSocketFD extends AbstractBaseVirtualServerSocketF
 
     @Override
     protected String formatToString() {
-        return STR."QuicListenerServerSocketFD{lsn=\{lsn}}";
+        return "QuicListenerServerSocketFD{lsn=" + lsn + "}";
     }
 
     @Override

@@ -169,13 +169,13 @@ public class FubukiTunIface extends TunIface {
         @Override
         public void addAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
             bondLoop.runOnLoop(() -> {
-                Logger.warn(LogType.ALERT, STR."fubuki is trying to add ip \{ip} to vpc \{localSideVni}");
+                Logger.warn(LogType.ALERT, "fubuki is trying to add ip " + ip + " to vpc " + localSideVni);
                 localAddr = new IPMask(ip, mask);
                 VirtualNetwork net;
                 try {
                     net = sw.getNetwork(localSideVni);
                 } catch (NotFoundException ignore) {
-                    Logger.error(LogType.IMPROPER_USE, STR."network \{localSideVni} does not exist, ip \{ip} will not be added, you will have to add the ip manually");
+                    Logger.error(LogType.IMPROPER_USE, "network " + localSideVni + " does not exist, ip " + ip + " will not be added, you will have to add the ip manually");
                     return;
                 }
                 try {
@@ -201,7 +201,7 @@ public class FubukiTunIface extends TunIface {
         @Override
         public void deleteAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
             bondLoop.runOnLoop(() -> {
-                Logger.warn(LogType.ALERT, STR."fubuki is trying to remove ip \{ip} from vpc \{localSideVni}");
+                Logger.warn(LogType.ALERT, "fubuki is trying to remove ip " + ip + " from vpc " + localSideVni);
                 VirtualNetwork net;
                 try {
                     net = sw.getNetwork(localSideVni);
@@ -211,7 +211,7 @@ public class FubukiTunIface extends TunIface {
                 try {
                     var ok = net.ips.deleteWithCondition(ip, ipmac -> ipmac.annotations.owner.equals("fubuki"));
                     if (!ok) {
-                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, STR."ip \{ip} in \{net} is not owned by fubuki but tried to remove");
+                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "ip " + ip + " in " + net + " is not owned by fubuki but tried to remove");
                     }
                 } catch (NotFoundException ignore) {
                 }

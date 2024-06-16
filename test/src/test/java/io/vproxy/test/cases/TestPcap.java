@@ -22,10 +22,10 @@ public class TestPcap {
             var ip = (AbstractIpPacket) getIP.apply(p);
             var tcp = (TcpPacket) ip.getPacket();
 
-            assertEquals(STR."src ip idx=\{i}", c.src.getAddress(), ip.getSrc());
-            assertEquals(STR."dst ip idx=\{i}", c.dst.getAddress(), ip.getDst());
-            assertEquals(STR."src port idx=\{i}", c.src.getPort(), tcp.getSrcPort());
-            assertEquals(STR."dst port idx=\{i}", c.dst.getPort(), tcp.getDstPort());
+            assertEquals("src ip idx=" + i, c.src.getAddress(), ip.getSrc());
+            assertEquals("dst ip idx=" + i, c.dst.getAddress(), ip.getDst());
+            assertEquals("src port idx=" + i, c.src.getPort(), tcp.getSrcPort());
+            assertEquals("dst port idx=" + i, c.dst.getPort(), tcp.getDstPort());
         }
     }
 

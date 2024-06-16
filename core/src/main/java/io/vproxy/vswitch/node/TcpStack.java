@@ -452,7 +452,7 @@ public class TcpStack extends Node {
             return;
         }
 
-        assert Logger.lowLevelDebug(STR."current tcp state is \{tcp.getState()}");
+        assert Logger.lowLevelDebug("current tcp state is " + tcp.getState());
         if (tcp.getState() == TcpState.CLOSED || tcp.getState() == TcpState.SYN_SENT) {
             transmitTcpSyn(network, tcp, retransmissionCount);
         } else {

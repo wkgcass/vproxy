@@ -75,7 +75,7 @@ public class QuicServerSocketFD extends AbstractBaseVirtualServerSocketFD<QuicSo
             ), conn_));
         var err = conn_.setConfiguration(conf.opts.configurationQ);
         if (err != 0) {
-            var errMsg = STR."set configuration to connection failed: \{err}";
+            var errMsg = "set configuration to connection failed: " + err;
             Logger.error(LogType.SYS_ERROR, errMsg);
             conn.close();
             throw new IOException(errMsg);
@@ -95,7 +95,7 @@ public class QuicServerSocketFD extends AbstractBaseVirtualServerSocketFD<QuicSo
 
     @Override
     protected String formatToString() {
-        return STR."QuicServerSocketFD{conn=\{conn}}";
+        return "QuicServerSocketFD{conn=" + conn + "}";
     }
 
     @Override
