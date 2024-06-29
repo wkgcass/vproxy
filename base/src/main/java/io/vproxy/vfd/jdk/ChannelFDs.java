@@ -39,11 +39,6 @@ public class ChannelFDs implements FDs {
     }
 
     @Override
-    public long currentTimeMillis() {
-        return System.currentTimeMillis();
-    }
-
-    @Override
     public boolean isV4V6DualStack() {
         return true;
     }
