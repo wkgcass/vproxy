@@ -22,6 +22,7 @@ public enum LogType {
     SYS_ERROR,
     UNEXPECTED,
     USER_HANDLE_FAIL,
+    INVALID_STATE,
 
     UNCLASSIFIED,
 }

@@ -8,7 +8,7 @@ import kotlin.coroutines.resumeWithException
 
 class CoroutineServerSock @JvmOverloads constructor(
   private val loop: io.vproxy.base.connection.NetEventLoop,
-  private val svr: io.vproxy.base.connection.ServerSock,
+  val svr: io.vproxy.base.connection.ServerSock,
   getIOBuffers: ((channel: io.vproxy.vfd.SocketFD) -> Tuple<io.vproxy.base.util.RingBuffer, io.vproxy.base.util.RingBuffer>)? = null,
 ): AutoCloseable {
   private var handlerAdded = false
@@ -22,13 +22,16 @@ class CoroutineServerSock @JvmOverloads constructor(
     loop.addServer(svr, null, handler)
   }
 
-  suspend fun accept(): CoroutineConnection {
+  suspend fun accept(): CoroutineConnection? {
     if (!handler.errQ.isEmpty()) {
       throw handler.errQ.removeFirst()
     }
     if (!handler.acceptQ.isEmpty()) {
       val conn = handler.acceptQ.removeFirst()
       return CoroutineConnection(loop, conn)
+    }
+    if (svr.isClosed) {
+      return null
     }
     ensureHandler()
     return suspendCancellableCoroutine { cont: CancellableContinuation<CoroutineConnection> ->

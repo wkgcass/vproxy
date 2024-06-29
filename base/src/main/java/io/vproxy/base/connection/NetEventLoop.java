@@ -488,6 +488,10 @@ class HandlerForConnectableConnection extends HandlerForConnection {
         if (!channel.isOpen()) {
             return;
         }
+        // user might have removed the fd from event loop (e.g. coroutine cosock.connect())
+        if (cctx.connection.getEventLoop() != cctx.eventLoop) {
+            return;
+        }
 
         EventSet ops = EventSet.read();
         if (cctx.connection.getOutBuffer().used() > 0) {

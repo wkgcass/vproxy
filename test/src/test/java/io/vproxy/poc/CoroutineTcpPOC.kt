@@ -20,7 +20,7 @@ object CoroutineTcpPOC {
         ).coroutine() }
         defer { serverSock.close() }
         while (true) {
-          val sock = serverSock.accept()
+          val sock = serverSock.accept() ?: break
           println("accepted socket $sock")
           vplib.coroutine.with(sock).launch {
             val rb = sock.read()

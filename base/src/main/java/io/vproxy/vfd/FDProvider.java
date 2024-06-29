@@ -62,4 +62,8 @@ public class FDProvider {
     public long currentTimeMillis() {
         return provided.currentTimeMillis();
     }
+
+    public long nanoTime() {
+        return provided.nanoTime();
+    }
 }

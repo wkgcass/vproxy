@@ -498,4 +498,11 @@ public class Connection implements NetFlowRecorder {
         r.run();
         noQuickWrite = false;
     }
+
+    public static Connection wrap(SocketFD fd,
+                                  ConnectionOpts opts,
+                                  RingBuffer inBuffer,
+                                  RingBuffer outBuffer) throws IOException {
+        return new Connection(fd, fd.getRemoteAddress(), fd.getLocalAddress(), opts, inBuffer, outBuffer);
+    }
 }

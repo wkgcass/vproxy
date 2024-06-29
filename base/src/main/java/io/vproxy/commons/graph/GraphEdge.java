@@ -6,7 +6,7 @@ public class GraphEdge<N extends GraphNode<N>> {
     public final String name;
     public final N from;
     public final N to;
-    public final long distance;
+    private long distance;
 
     public GraphEdge(N from, N to, long distance) {
         this(null, from, to, distance);
@@ -16,6 +16,17 @@ public class GraphEdge<N extends GraphNode<N>> {
         this.name = name;
         this.from = from;
         this.to = to;
+        setDistance(distance);
+    }
+
+    public long getDistance() {
+        return distance;
+    }
+
+    public void setDistance(long distance) {
+        if (distance < 0) {
+            distance = 0;
+        }
         this.distance = distance;
     }
 
@@ -33,7 +44,6 @@ public class GraphEdge<N extends GraphNode<N>> {
 
         GraphEdge<?> graphEdge = (GraphEdge<?>) o;
 
-        if (distance != graphEdge.distance) return false;
         if (!Objects.equals(from, graphEdge.from)) return false;
         return Objects.equals(to, graphEdge.to);
     }
@@ -42,7 +52,6 @@ public class GraphEdge<N extends GraphNode<N>> {
     public int hashCode() {
         int result = from != null ? from.hashCode() : 0;
         result = 31 * result + (to != null ? to.hashCode() : 0);
-        result = 31 * result + (int) (distance ^ (distance >>> 32));
         return result;
     }
 }

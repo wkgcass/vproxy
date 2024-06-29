@@ -4,6 +4,7 @@ import io.vproxy.lib.common.*
 import io.vproxy.lib.tcp.CoroutineServerSock
 import kotlinx.coroutines.channels.Channel
 import org.junit.*
+import java.io.EOFException
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 
@@ -49,7 +50,7 @@ class TestNetServerClient {
   fun simpleServer() {
     val channel = Channel<String>()
     val promise = loop!!.execute {
-      val conn = server!!.accept()
+      val conn = server!!.accept() ?: throw EOFException()
       vplib.coroutine.with(conn).launch {
         val buf = io.vproxy.base.util.ByteArray.allocate(1024)
         while (true) {
@@ -88,7 +89,7 @@ class TestNetServerClient {
   fun simpleClient() {
     loop!!.launch {
       while (true) {
-        val conn = server!!.accept()
+        val conn = server!!.accept() ?: throw EOFException()
         vplib.coroutine.with(conn).launch {
           val buf = io.vproxy.base.util.ByteArray.allocate(1024)
           while (true) {

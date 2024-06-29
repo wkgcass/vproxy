@@ -77,7 +77,7 @@ class CoroutineConnection(
       defer { reading = false }
 
       ensureHandler()
-      suspendCancellableCoroutine<Unit> { cont ->
+      suspendCancellableCoroutine { cont ->
         handler.readableEvent = { err ->
           if (err != null) {
             cont.resumeWithException(err)
@@ -253,7 +253,7 @@ class CoroutineConnection(
     return CoroutineHttp1ServerConnection(this)
   }
 
-  internal fun detach() {
+  fun detach() {
     if (reading) {
       throw IllegalStateException("another coroutine is reading from this connection")
     }

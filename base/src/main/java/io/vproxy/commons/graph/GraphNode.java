@@ -8,6 +8,8 @@ public class GraphNode<N extends GraphNode<N>> {
     private final Map<String, List<GraphEdge<N>>> nameMap = new HashMap<>();
     private final Set<GraphEdge<N>> allEdges = new HashSet<>();
 
+    boolean gc = false;
+
     public GraphNode(String name) {
         this.name = name;
     }
@@ -34,8 +36,37 @@ public class GraphNode<N extends GraphNode<N>> {
                 nameMap.put(edge.name, ls);
             }
             ls.add(edge);
-            ls.sort((a, b) -> (int) (a.distance - b.distance));
+            ls.sort((a, b) -> (int) (a.getDistance() - b.getDistance()));
         }
+    }
+
+    public void deregister(GraphEdge<N> edge) {
+        allEdges.remove(edge);
+        var set = edges.get(edge.to);
+        set.remove(edge);
+        if (set.isEmpty()) {
+            edges.remove(edge.to);
+        }
+        var ls = nameMap.get(edge.name);
+        ls.remove(edge);
+        if (ls.isEmpty()) {
+            nameMap.remove(edge.name);
+        }
+    }
+
+    public void deregisterEdgesTo(GraphNode<N> to) {
+        var toRemove = new HashSet<GraphEdge<N>>();
+        for (var e : allEdges) {
+            if (e.to.equals(to)) {
+                toRemove.add(e);
+            }
+        }
+        allEdges.removeAll(toRemove);
+        edges.remove(to);
+        for (var ls : nameMap.values()) {
+            ls.removeAll(toRemove);
+        }
+        nameMap.entrySet().removeIf(entry -> entry.getValue().isEmpty());
     }
 
     public Collection<GraphEdge<N>> allEdges() {

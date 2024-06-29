@@ -555,6 +555,16 @@ public class Utils {
         return n > 0;
     }
 
+    public static boolean isPortInteger(String s) {
+        int n;
+        try {
+            n = Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return 1 <= n && n <= 65535;
+    }
+
     public static boolean isLong(String s) {
         try {
             Long.parseLong(s);

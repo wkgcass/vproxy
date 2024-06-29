@@ -45,9 +45,6 @@ public class GraphBuilder<N extends GraphNode<N>> {
     }
 
     public GraphBuilder<N> addEdge(GraphEdge<N> edge) {
-        if (edge.distance < 0) {
-            throw new IllegalArgumentException("`distance`=" + edge.distance + " < 0");
-        }
         if (!nodes.containsValue(edge.from)) {
             throw new IllegalArgumentException("`from`=" + edge.from + " is not a registered node");
         }

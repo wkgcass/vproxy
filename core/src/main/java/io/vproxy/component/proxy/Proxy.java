@@ -367,10 +367,10 @@ public class Proxy {
         }
     }
 
-    static class SessionConnectionHandler implements ConnectionHandler {
+    public static class SessionConnectionHandler implements ConnectionHandler {
         private final Session session;
 
-        SessionConnectionHandler(Session session) {
+        public SessionConnectionHandler(Session session) {
             this.session = session;
         }
 

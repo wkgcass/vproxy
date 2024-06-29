@@ -12,7 +12,7 @@ if [[ ! -d ./msquic ]]; then
 else
 	refs=`cat msquic/.git/HEAD | awk '{print $2}'`
 	commit=`cat "msquic/.git/$refs"`
-	if [[ "$commit" != "b1b9c3b21ddd3696476f4db858c67319b7257692" ]]; then
+	if [[ "$commit" != "5ab70e93b9e827fbaf9e0be62fefc3bb6829cb28" ]]; then
 		rm -rf ./msquic
 		git clone https://github.com/wkgcass/msquic --branch=$MSQUIC_VERSION-modified --depth=1
 	fi

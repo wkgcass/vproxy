@@ -15,7 +15,7 @@ public class GraphPath<N extends GraphNode<N>> {
         this.path = Collections.unmodifiableList(path);
         long length = 0;
         for (var p : path) {
-            length += p.distance;
+            length += p.getDistance();
         }
         this.length = length;
         this.from = path.get(0).from;

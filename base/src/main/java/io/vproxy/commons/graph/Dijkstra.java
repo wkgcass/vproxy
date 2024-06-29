@@ -41,7 +41,7 @@ public class Dijkstra {
                 if (skipNodes.contains(edgeTo)) {
                     continue;
                 }
-                var totalLen = len + edge.distance;
+                var totalLen = len + edge.getDistance();
                 var ls = new ArrayList<>(distances.get(from)._2);
                 ls.add(edge);
                 if (!distances.containsKey(edgeTo) || distances.get(edgeTo)._1 > totalLen) {

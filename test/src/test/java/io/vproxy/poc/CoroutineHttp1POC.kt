@@ -20,7 +20,7 @@ object CoroutineHttp1POC {
         ).coroutine() }
         defer { serverSock.close() }
         while (true) {
-          val conn = serverSock.accept().asHttp1ServerConnection()
+          val conn = serverSock.accept()?.asHttp1ServerConnection() ?: break
           println("accepted socket $conn")
           vplib.coroutine.with(conn).launch {
             while (true) {

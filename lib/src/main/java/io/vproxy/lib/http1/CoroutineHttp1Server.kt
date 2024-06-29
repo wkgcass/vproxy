@@ -1,5 +1,7 @@
 package io.vproxy.lib.http1
 
+import io.vproxy.base.util.LogType
+import io.vproxy.base.util.Logger
 import io.vproxy.lib.common.vplib
 import io.vproxy.lib.http.GeneralCoroutineHttpServer
 import io.vproxy.lib.http.HttpHeaders
@@ -17,11 +19,15 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
 
     while (true) {
       val conn = server.accept()
+      if (conn == null) {
+        Logger.warn(LogType.ALERT, "server ${server.svr.bind.formatToIPPortString()} is closed")
+        break
+      }
       vplib.coroutine.with(conn).launch {
         try {
           handleConnection(conn)
         } catch (e: Throwable) {
-          io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
+          Logger.error(LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
         }
       }
     }
@@ -42,8 +48,8 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       try {
         handler(conn)
       } catch (e: Throwable) {
-        io.vproxy.base.util.Logger.error(
-          io.vproxy.base.util.LogType.IMPROPER_USE,
+        Logger.error(
+          LogType.IMPROPER_USE,
           "connectionHandler thrown exception when handling $conn",
           e
         )

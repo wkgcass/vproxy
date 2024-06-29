@@ -123,6 +123,11 @@ public class Main {
                 case "dockerplugin":
                     DockerNetworkPluginControllerInit.main0(args);
                     break;
+                case "ProxyNexus":
+                case "proxy-nexus":
+                case "proxynexus":
+                    ProxyNexus.main0(args);
+                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     Utils.exit(1);

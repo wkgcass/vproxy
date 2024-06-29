@@ -11,7 +11,13 @@ public interface FDs {
 
     FDSelector openSelector() throws IOException;
 
-    long currentTimeMillis();
+    default long currentTimeMillis() {
+        return System.currentTimeMillis();
+    }
+
+    default long nanoTime() {
+        return System.nanoTime();
+    }
 
     boolean isV4V6DualStack();
 }
