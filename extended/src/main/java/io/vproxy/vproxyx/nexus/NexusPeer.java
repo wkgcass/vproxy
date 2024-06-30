@@ -7,6 +7,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.msquic.*;
 import io.vproxy.msquic.callback.ConnectionCallback;
+import io.vproxy.msquic.callback.ConnectionCallbackList;
 import io.vproxy.msquic.wrap.Connection;
 import io.vproxy.msquic.wrap.Listener;
 import io.vproxy.pni.Allocator;
@@ -41,8 +42,15 @@ public class NexusPeer {
                                      QuicConnection connQ, Listener listener, QuicListenerEventNewConnection data, Allocator allocator) {
         var peer = new NexusPeer(nctx, remote);
         peer.isServer = true;
-        peer.quicConn = new Connection(new Connection.Options(listener, allocator, peer.new NexusNodeConnectionCallback(), connQ));
+        ConnectionCallback cb = peer.new NexusNodeConnectionCallback();
+        if (nctx.debug) {
+            cb = ConnectionCallbackList.withLog(cb, true);
+        }
+        peer.quicConn = new Connection(new Connection.Options(listener, allocator, cb, connQ));
         peer.quicConn.setConnectionInfo(data);
+        if (nctx.debug) {
+            peer.quicConn.enableTlsSecretDebug();
+        }
         connQ.setCallbackHandler(MsQuicUpcall.connectionCallback, peer.quicConn.ref.MEMORY);
         var err = connQ.setConfiguration(nctx.serverConfiguration.opts.configurationQ);
         if (err != 0) {
@@ -76,8 +84,11 @@ public class NexusPeer {
         Connection conn;
         try (var tmpAllocator = Allocator.ofConfined()) {
             var returnStatus = new IntArray(tmpAllocator, 1);
-            conn = new Connection(new Connection.Options(nctx.registration, allocator,
-                new NexusNodeConnectionCallback(),
+            ConnectionCallback cb = new NexusNodeConnectionCallback();
+            if (nctx.debug) {
+                cb = ConnectionCallbackList.withLog(cb, true);
+            }
+            conn = new Connection(new Connection.Options(nctx.registration, allocator, cb,
                 ref -> nctx.registration.opts.registrationQ.openConnection(
                     MsQuicUpcall.connectionCallback, ref.MEMORY, returnStatus, allocator
                 )));
@@ -86,6 +97,9 @@ public class NexusPeer {
                 conn.close();
                 return;
             }
+        }
+        if (nctx.debug) {
+            conn.enableTlsSecretDebug();
         }
         int errcode = conn.start(nctx.clientConfiguration, remoteAddress);
         if (errcode != 0) {
@@ -180,7 +194,7 @@ public class NexusPeer {
         }
         QuicSocketFD fd;
         try {
-            fd = QuicSocketFD.newStream(quicConn);
+            fd = QuicSocketFD.newStream(nctx.debug, quicConn);
         } catch (IOException e) {
             Logger.error(LogType.CONN_ERROR, "failed to initiate quic stream to " + quicConn.getRemoteAddress(), e);
             terminate(quicConn, "failed to initiate quic stream");
@@ -200,7 +214,7 @@ public class NexusPeer {
             nctx.loop.getSelectorEventLoop().nextTick(() -> {
                 QuicSocketFD fd;
                 try {
-                    fd = QuicSocketFD.newStream(conn);
+                    fd = QuicSocketFD.newStream(nctx.debug, conn);
                 } catch (IOException e) {
                     Logger.error(LogType.SOCKET_ERROR, "failed to create stream from " + conn, e);
                     conn.close();
@@ -219,7 +233,7 @@ public class NexusPeer {
 
         @Override
         public int peerStreamStarted(Connection conn, QuicConnectionEventPeerStreamStarted data) {
-            var fd = QuicSocketFD.wrapAcceptedStream(conn, data.getStream());
+            var fd = QuicSocketFD.wrapAcceptedStream(nctx.debug, conn, data.getStream());
             if (isInitialized) {
                 StreamHandlers.INSTANCE.handleAccepted(nctx, NexusPeer.this, fd);
             } else if (isServer) {

@@ -148,7 +148,7 @@ object StreamHandlers {
 
         val quicConn = nextNode.peer.quicConnection ?: return resultCallback(400, "node $nextNode is disconnected")
 
-        val nextFD = QuicSocketFD.newStream(quicConn)
+        val nextFD = QuicSocketFD.newStream(nctx.debug, quicConn)
         nextConn = ConnectableConnection.wrap(
           nextFD, nextNode.peer.remoteAddress, ConnectionOpts().setTimeout(NexusContext.GENERAL_TIMEOUT),
           RingBuffer.allocateDirect(4096), RingBuffer.allocateDirect(4096)
@@ -406,7 +406,6 @@ object StreamHandlers {
       Logger.warn(LogType.INVALID_EXTERNAL_DATA, "unexpected request from ${httpconn.conn.remote()}: ${req.method} ${req.uri}")
       httpconn.response(404).send()
     }
-    handleLinkStatusAdvertisement(nctx, httpconn, req)
   }
 
   private suspend fun handleLinkStatusAdvertisement(nctx: NexusContext, httpconn: CoroutineHttp1ServerConnection, req: Request) {

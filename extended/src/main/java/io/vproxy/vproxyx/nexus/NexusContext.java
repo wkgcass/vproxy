@@ -16,9 +16,11 @@ public class NexusContext {
     public final Registration registration;
     public final Configuration clientConfiguration;
     public final Configuration serverConfiguration;
+    public final boolean debug;
 
     public NexusContext(String selfNodeName, Nexus nexus, ResHolder resources, NetEventLoop loop, Registration registration,
-                        Configuration clientConfiguration, Configuration serverConfiguration) {
+                        Configuration clientConfiguration, Configuration serverConfiguration,
+                        boolean debug) {
         this.selfNodeName = selfNodeName;
         this.nexus = nexus;
         this.resources = resources;
@@ -26,5 +28,6 @@ public class NexusContext {
         this.registration = registration;
         this.clientConfiguration = clientConfiguration;
         this.serverConfiguration = serverConfiguration;
+        this.debug = debug;
     }
 }

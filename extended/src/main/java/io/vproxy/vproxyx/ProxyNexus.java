@@ -8,6 +8,8 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.msquic.MsQuicUpcall;
 import io.vproxy.msquic.MsQuicUtils;
 import io.vproxy.msquic.QuicCertificateFile;
+import io.vproxy.msquic.callback.ListenerCallback;
+import io.vproxy.msquic.callback.ListenerCallbackList;
 import io.vproxy.msquic.wrap.Configuration;
 import io.vproxy.msquic.wrap.Listener;
 import io.vproxy.pni.Allocator;
@@ -34,6 +36,7 @@ public class ProxyNexus {
                    certificate=<cert-pem-path>             Certificate used by the QUIC
                    privatekey=<key-pem-path>               Private key used by the QUIC
                    cacert=<ca-cert-pem-path>               Ca-certificate used by the QUIC
+                   debug=<on|off>                          Enable or disable debug logging
         Api:
             curl -X POST   /apis/v1.0/proxies --data '{"node":"{nodeName}", "target":"{host}:{port}", "listen":"{port}"}'
             curl -X GET    /apis/v1.0/proxies
@@ -57,6 +60,7 @@ public class ProxyNexus {
         var certificatePath = "";
         var privateKeyPath = "";
         var cacertPath = "";
+        var debug = false;
         for (var arg : args) {
             if (arg.equals("-h") || arg.equals("--help") || arg.equals("-help") || arg.equals("help")) {
                 System.out.println(HELP_STR);
@@ -105,6 +109,15 @@ public class ProxyNexus {
                 privateKeyPath = arg.substring("privatekey=".length()).trim();
             } else if (arg.startsWith("cacert=")) {
                 cacertPath = arg.substring("cacert=".length()).trim();
+            } else if (arg.startsWith("debug=")) {
+                var value = arg.substring("debug=".length()).trim();
+                if (value.equals("on")) {
+                    debug = true;
+                } else if (value.equals("off")) {
+                    debug = false;
+                } else {
+                    throw new IllegalArgumentException("debug=" + value + " is not valid");
+                }
             } else {
                 throw new IllegalArgumentException("unknown argument: " + arg);
             }
@@ -197,7 +210,7 @@ public class ProxyNexus {
 
         var nexus = new Nexus();
         var resources = new ResHolder();
-        var nctx = new NexusContext(nodeName, nexus, resources, loop, reg, clientConf, serverConf);
+        var nctx = new NexusContext(nodeName, nexus, resources, loop, reg, clientConf, serverConf, debug);
 
         var self = new NexusNode(nodeName, null);
         nexus.setSelfNode(self);
@@ -208,7 +221,11 @@ public class ProxyNexus {
 
         if (serverPort > 0) {
             var listenerAllocator = Allocator.ofUnsafe();
-            var lsn = new Listener(new Listener.Options(reg, listenerAllocator, new NexusQuicListenerCallback(nctx),
+            ListenerCallback cb = new NexusQuicListenerCallback(nctx);
+            if (debug) {
+                cb = ListenerCallbackList.withLog(cb);
+            }
+            var lsn = new Listener(new Listener.Options(reg, listenerAllocator, cb,
                 ref -> reg.opts.registrationQ.openListener(
                     MsQuicUpcall.listenerCallback, ref.MEMORY, retCode, listenerAllocator
                 )));
