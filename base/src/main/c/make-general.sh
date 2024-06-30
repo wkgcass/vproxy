@@ -20,11 +20,13 @@ fi
 
 rm -f "$target"
 
+LIBAE="../../../../submodules/libae/src"
+
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
-    -I ./dep/ae \
+    -I "$LIBAE" \
     -I "../c-generated" \
     -shared -Werror -lc -lpthread -fPIC \
-    io_vproxy_vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c \
+    io_vproxy_vfd_posix_GeneralPosix.c $LIBAE/ae.c $LIBAE/anet.c $LIBAE/zmalloc.c $LIBAE/monotonic.c \
     ../c-generated/pni.c \
     -o "$target"

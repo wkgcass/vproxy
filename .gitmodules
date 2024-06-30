@@ -7,3 +7,8 @@
 	path = submodules/fubuki
 	url = https://github.com/wkgcass/fubuki
 	branch = with-Cargo-lock
+
+[submodule "submodules/libae"]
+	path = submodules/libae
+	url = https://github.com/vproxy-tools/libae-valkey.git
+	branch = vproxy

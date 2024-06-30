@@ -47,9 +47,11 @@ then
 	AS_NEEDED="-Wl,--as-needed"
 fi
 
+LIBAE="../../../../submodules/libae/src"
+
 gcc -std=gnu11 -O2 \
     $GCC_OPTS \
-    -I ./dep/ae \
+    -I "$LIBAE" \
     -I "$MSQUIC_INC" \
     -I "../c-generated" \
     -I "../../../../submodules/msquic-java/core/src/main/c-generated" \

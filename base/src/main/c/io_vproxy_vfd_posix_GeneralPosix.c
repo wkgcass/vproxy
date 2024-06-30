@@ -2,9 +2,9 @@
 #define _GNU_SOURCE
 #endif
 
+#include "vfd_posix.h"
 #include "io_vproxy_vfd_posix_PosixNative.h"
 #include "exception.h"
-#include "vfd_posix.h"
 
 #define LISTEN_BACKLOG 512
 
@@ -120,8 +120,16 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateFileEvent
 inline static void io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
   (int64_t aex, int32_t fd, int32_t mask) {
     aeEventLoop* ae = (aeEventLoop*) aex;
-    aeDeleteFileEvent(ae, fd, 0xffffffff);
-    aeCreateFileEvent(ae, fd, mask, NULL, NULL);
+    int32_t oldMask = ae->events[fd].mask;
+    int32_t toDelete = oldMask & (~mask);
+    int32_t toAdd = mask & (~oldMask);
+
+    if (toDelete) {
+        aeDeleteFileEvent(ae, fd, toDelete);
+    }
+    if (toAdd) {
+        aeCreateFileEvent(ae, fd, mask, NULL, NULL);
+    }
 }
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeUpdateFileEvent
   (PNIEnv_void* env, int64_t aex, int32_t fd, int32_t mask) {
@@ -354,7 +362,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_bindUnixDomainSocket
     v_sockaddr_un uds_sockaddr;
     memset(&uds_sockaddr, 0, sizeof(uds_sockaddr));
     uds_sockaddr.sun_family = V_AF_UNIX;
-    strcpy(uds_sockaddr.sun_path, pathChars);
+    strncpy(uds_sockaddr.sun_path, pathChars, UNIX_PATH_MAX-1);
 
     int res = v_bind(fd, (v_sockaddr*) &uds_sockaddr, sizeof(uds_sockaddr));
     if (res < 0) {
@@ -414,10 +422,14 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_connectIPv6
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_connectUDS
   (PNIEnv_void* env, int32_t fd, char* sockChars) {
+    if (strlen(sockChars) >= UNIX_PATH_MAX) {
+        return throwIOException(env, "path too long");
+    }
+
     v_sockaddr_un addr;
     memset(&addr, 0, sizeof(v_sockaddr_un));
     addr.sun_family = V_AF_UNIX;
-    strcpy(addr.sun_path, sockChars);
+    strncpy(addr.sun_path, sockChars, UNIX_PATH_MAX-1);
     int err = connect(fd, (struct sockaddr *) &addr, sizeof(v_sockaddr_un));
     if (err) {
         return throwIOExceptionBasedOnErrno(env);
