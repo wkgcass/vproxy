@@ -6,6 +6,11 @@ import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
+import io.vproxy.pni.graal.*;
+import org.graalvm.nativeimage.*;
+import org.graalvm.nativeimage.c.function.*;
+import org.graalvm.nativeimage.c.type.VoidPointer;
+import org.graalvm.word.WordFactory;
 
 public class FubukiStartOptions extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
@@ -315,4 +320,4 @@ public class FubukiStartOptions extends AbstractNativeObject implements NativeOb
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:e02b6b16a6c495562dab227b127b793018c40181748b57301162fd8679d4fe9e
+// sha256:122d6b21df1006333490153208ea833dc1166789f4a6dcd051d7d7aed2bec9c8

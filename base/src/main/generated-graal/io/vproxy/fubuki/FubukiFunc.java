@@ -6,6 +6,11 @@ import io.vproxy.pni.array.*;
 import java.lang.foreign.*;
 import java.lang.invoke.*;
 import java.nio.ByteBuffer;
+import io.vproxy.pni.graal.*;
+import org.graalvm.nativeimage.*;
+import org.graalvm.nativeimage.c.function.*;
+import org.graalvm.nativeimage.c.type.VoidPointer;
+import org.graalvm.word.WordFactory;
 
 public class FubukiFunc {
     private FubukiFunc() {
@@ -31,4 +36,4 @@ public class FubukiFunc {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:9edd0bdb7b2220bb9bc06908a89d9419b9c7b4fef0e2d71855e0f08e31e5689b
+// sha256:f1db220905c47fa78d2f94001c27659b271124b0a4cb7ea224f231061c2729fd
