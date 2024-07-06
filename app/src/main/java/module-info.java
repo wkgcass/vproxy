@@ -2,6 +2,8 @@ module io.vproxy.app {
     requires jdk.unsupported;
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core;
+    requires org.graalvm.nativeimage;
+    requires io.vproxy.pni.graal;
     requires vjson;
     requires transitive io.vproxy.dep;
     requires transitive io.vproxy.base;

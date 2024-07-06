@@ -13,11 +13,10 @@ import java.util.List;
 
 public class ModuleInfoGenerator {
     public static void main(String[] args) throws Exception {
+        var isNativeImage = checkIsNativeImage();
         var modules = List.of("dep", "base", "core", "lib", "extended", "app");
         var requires = new LinkedHashSet<String>();
         requires.add("java.base");
-        requires.add("kotlin.stdlib");
-        requires.add("kotlinx.coroutines.core");
         var exports = new LinkedHashSet<String>();
         var uses = new LinkedHashSet<String>();
         for (var module : modules) {
@@ -33,13 +32,14 @@ public class ModuleInfoGenerator {
                     if (mod.startsWith("transitive ")) {
                         mod = mod.substring("transitive ".length()).trim();
                     }
-                    if (mod.startsWith("kotlin.") || mod.startsWith("kotlinx.")) {
-                        continue; // kotlin classes will be added to the final jar, so no need to require them
-                    }
-                    if (mod.startsWith("io.vproxy.")) {
+                    if (mod.startsWith("java.") || mod.startsWith("javax.") || mod.startsWith("jdk.")) {
+                        requires.add(mod);
                         continue;
                     }
-                    requires.add(mod);
+                    if (isNativeImage && (mod.startsWith("org.graalvm."))) {
+                        requires.add(mod);
+                        continue;
+                    }
                 } else if (line.startsWith("exports ")) {
                     exports.add(line.substring("exports ".length()).trim());
                 } else if (line.startsWith("uses ")) {
@@ -67,5 +67,13 @@ public class ModuleInfoGenerator {
 
         var output = writer.toByteArray();
         Files.write(Path.of("module-info.class"), output);
+    }
+
+    private static boolean checkIsNativeImage() {
+        var envStr = System.getenv("VPROXY_BUILD_GRAAL_NATIVE_IMAGE");
+        if (envStr == null) {
+            return false;
+        }
+        return envStr.equals("true");
     }
 }

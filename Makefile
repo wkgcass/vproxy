@@ -27,7 +27,7 @@ DOCKER_PLUGIN_WORKDIR ?= "."
 
 .PHONY: clean-jar
 clean-jar:
-	/usr/bin/env bash ./gradlew clean
+	/usr/bin/env bash ./gradlew clean --no-daemon
 
 .PHONY: clean
 clean: clean-jar
@@ -67,11 +67,11 @@ all: clean jar-with-lib jlink image docker docker-network-plugin
 
 .PHONY: generate-module-info
 generate-module-info:
-	/usr/bin/env bash ./gradlew GenerateModuleInfo
+	/usr/bin/env bash ./gradlew GenerateModuleInfo --no-daemon
 
 .PHONY: jar
 jar: generate-module-info
-	/usr/bin/env bash ./gradlew shadowJar
+	/usr/bin/env bash ./gradlew shadowJar --no-daemon
 	zip build/libs/vproxy.jar module-info.class
 
 .PHONY: _add_linux_so_to_zip
@@ -83,22 +83,26 @@ _add_linux_so_to_zip:
 	cp ./libmsquic.so ./io/vproxy/libmsquic-$(LINUX_ARCH).so
 	cp ./base/src/main/c/libmsquic-java.so ./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
 	cp ./submodules/fubuki/target/release/libfubukil.so ./io/vproxy/libfubuki-$(LINUX_ARCH).so
+	cp ./base/src/main/c/libvpfubuki.so ./io/vproxy/libvpfubuki-$(LINUX_ARCH).so
+	cp ./base/src/main/c/libpni.so ./io/vproxy/libpni-$(LINUX_ARCH).so
 	zip build/libs/vproxy.jar \
 		./io/vproxy/libvfdposix-$(LINUX_ARCH).so \
 		./io/vproxy/libvpxdp-$(LINUX_ARCH).so \
 		./io/vproxy/libbpf-$(LINUX_ARCH).so \
 		./io/vproxy/libmsquic-$(LINUX_ARCH).so \
 		./io/vproxy/libmsquic-java-$(LINUX_ARCH).so \
-		./io/vproxy/libfubuki-$(LINUX_ARCH).so
+		./io/vproxy/libfubuki-$(LINUX_ARCH).so \
+		./io/vproxy/libvpfubuki-$(LINUX_ARCH).so \
+		./io/vproxy/libpni-$(LINUX_ARCH).so
 	rm -r ./io
 
 .PHONY: native
 ifeq ($(OS),Linux)
-native: vfdposix vpxdp quic-all fubuki
+native: libpni vfdposix vpxdp quic-all fubuki
 else ifeq ($(OS),Darwin)
-native: vfdposix-linux vpxdp-linux quic-all fubuki-linux fubuki vfdposix
+native: libpni-linux libpni vfdposix-linux vfdposix vpxdp-linux quic-all fubuki-linux fubuki
 else
-native: vfdwindows
+native: libpni vfdwindows
 endif
 
 .PHONY: jar-with-lib
@@ -108,17 +112,22 @@ else
 jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-no-docker
 .PHONY: jar-with-lib-no-docker
 jar-with-lib-no-docker: clean jar native jar-with-lib-skip-native
+.PHONY: jar-with-lib-skip-native
 jar-with-lib-skip-native: clean-jar jar
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
 	cp ./libmsquic.dylib ./io/vproxy/libmsquic-$(ARCH).dylib
 	cp ./base/src/main/c/libmsquic-java.dylib ./io/vproxy/libmsquic-java-$(ARCH).dylib
 	cp ./submodules/fubuki/target/release/libfubukil.dylib ./io/vproxy/libfubuki-$(ARCH).dylib
+	cp ./base/src/main/c/libvpfubuki.dylib ./io/vproxy/libvpfubuki-$(ARCH).dylib
+	cp ./base/src/main/c/libpni.dylib ./io/vproxy/libpni-$(ARCH).dylib
 	zip build/libs/vproxy.jar \
 		./io/vproxy/libvfdposix-$(ARCH).dylib \
 		./io/vproxy/libmsquic-$(ARCH).dylib \
 		./io/vproxy/libmsquic-java-$(ARCH).dylib \
-		./io/vproxy/libfubuki-$(ARCH).dylib
+		./io/vproxy/libfubuki-$(ARCH).dylib \
+		./io/vproxy/libvpfubuki-$(ARCH).dylib \
+		./io/vproxy/libpni-$(ARCH).dylib
 	rm -r ./io
 endif
 
@@ -147,7 +156,7 @@ jlink: jar
 	cp ./jlink-scripts/vproxy.bat ./build/image/bin/vproxy.bat
 
 .PHONY: vfdposix
-vfdposix:
+vfdposix: libpni
 	cd ./base/src/main/c && /usr/bin/env bash ./make-general.sh
 
 .PHONY: vpxdp
@@ -159,7 +168,7 @@ xdp-sample-kern:
 	cd ./base/src/main/c/xdp && make kern
 
 .PHONY: msquic-java
-msquic-java:
+msquic-java: libpni
 	cd ./base/src/main/c && \
 	MSQUIC_LD=../../../../submodules/msquic/build/bin/Release \
 	MSQUIC_INC=../../../../submodules/msquic/src/inc \
@@ -169,30 +178,69 @@ msquic:
 	cd ./submodules/msquic/ && make
 
 .PHONY: fubuki
-fubuki:
+fubuki: libpni
+	cd ./base/src/main/c && ./make-vpfubuki.sh
 	cd ./submodules/fubuki/ && cargo +nightly build --release
 
+.PHONY: libpni-linux
 .PHONY: vfdposix-linux
 .PHONY: vpxdp-linux
 .PHONY: msquic-java-linux
 .PHONY: msquic-linux
 ifeq ($(OS),Linux)
+libpni-linux: libpni
 vfdposix-linux: vfdposix
 vpxdp-linux: vpxdp
 msquic-java-linux: msquic-java
 msquic-linux: msquic
 fubuki-linux: fubuki
 else
+libpni-linux:
+	docker run \
+	--rm \
+	-v $(shell pwd):/vproxy \
+	-e VPROXY_BUILD_GRAAL_NATIVE_IMAGE="${VPROXY_BUILD_GRAAL_NATIVE_IMAGE}" \
+	vproxyio/compile:latest \
+	make libpni
 vfdposix-linux:
-	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vfdposix
+	docker run \
+	--rm \
+	-v $(shell pwd):/vproxy \
+	-e VPROXY_BUILD_GRAAL_NATIVE_IMAGE="${VPROXY_BUILD_GRAAL_NATIVE_IMAGE}" \
+	vproxyio/compile:latest \
+	make vfdposix
 vpxdp-linux:
-	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vpxdp
+	docker run \
+	--rm \
+	-v $(shell pwd):/vproxy \
+	-e VPROXY_BUILD_GRAAL_NATIVE_IMAGE="${VPROXY_BUILD_GRAAL_NATIVE_IMAGE}" \
+	vproxyio/compile:latest \
+	make vpxdp
 msquic-java-linux:
-	docker run --rm -v $(shell pwd):/vproxy -v "$(shell pwd)/submodules/msquic/src/inc:/msquic/src/inc" -v "$(shell pwd)/submodules/msquic/build/bin/Release:/msquic/build/bin/Release" -e MSQUIC_INC=/msquic/src/inc -e MSQUIC_LD=/msquic/build/bin/Release vproxyio/compile:latest make msquic-java
+	docker run \
+	--rm \
+	-v $(shell pwd):/vproxy \
+	-v "$(shell pwd)/submodules/msquic/src/inc:/msquic/src/inc" \
+	-v "$(shell pwd)/submodules/msquic/build/bin/Release:/msquic/build/bin/Release" \
+	-e MSQUIC_INC=/msquic/src/inc \
+	-e MSQUIC_LD=/msquic/build/bin/Release \
+	-e VPROXY_BUILD_GRAAL_NATIVE_IMAGE="${VPROXY_BUILD_GRAAL_NATIVE_IMAGE}" \
+	vproxyio/compile:latest \
+	make msquic-java
 msquic-linux:
-	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest /bin/bash -c 'cd submodules/msquic && make'
+	docker run \
+	--rm \
+	-v $(shell pwd):/vproxy \
+	vproxyio/compile:latest \
+	make msquic
 fubuki-linux:
-	docker run --rm -v $(shell pwd):/vproxy -v $(shell pwd)/cargo-cache/git:/root/.cargo/git -v $(shell pwd)/cargo-cache/registry:/root/.cargo/registry vproxyio/compile:latest /bin/bash -c 'make fubuki'
+	docker run \
+	--rm \
+	-v $(shell pwd):/vproxy \
+	-v $(shell pwd)/cargo-cache/git:/root/.cargo/git \
+	-v $(shell pwd)/cargo-cache/registry:/root/.cargo/registry \
+	vproxyio/compile:latest \
+	make fubuki
 endif
 
 .PHONY: quic
@@ -218,9 +266,21 @@ endif
 vfdwindows:
 	cd ./base/src/main/c && ./make-windows.sh
 
+.PHONY: libpni
+libpni:
+	cd ./base/src/main/c && ./make-pni.sh
+
 .PHONY: image
-image: jar
-	native-image -jar build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy
+image:
+	VPROXY_BUILD_GRAAL_NATIVE_IMAGE="true" make jar-with-lib
+	native-image \
+	-H:+UnlockExperimentalVMOptions -H:+ForeignAPISupport \
+	-jar build/libs/vproxy.jar \
+	-J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+	--enable-native-access=ALL-UNNAMED \
+	--features=io.vproxy.base.NativeAccessGraalFeature,io.vproxy.all.GraalFeature \
+	--enable-all-security-services --no-fallback \
+	vproxy
 ifeq ($(OS),Linux)
 	cp vproxy vproxy-linux
 endif
@@ -228,16 +288,24 @@ endif
 .PHONY: image-linux
 ifeq ($(OS),Linux)
 image-linux: image
-	cp vproxy vproxy-linux
+	mv vproxy vproxy-linux
 else
 # run native-image inside a container to build linux executable file in other platforms
-image-linux: jar
-	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest \
-		native-image -jar build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy-linux
+image-linux:
+	VPROXY_BUILD_GRAAL_NATIVE_IMAGE="true" make jar-with-lib
+	docker run \
+	--rm \
+	-v $(shell pwd):/workdir \
+	vproxyio/graalvm-jdk-22:latest \
+		native-image \
+		-H:+UnlockExperimentalVMOptions -H:+ForeignAPISupport \
+		-jar build/libs/vproxy.jar \
+		-J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+		--enable-native-access=ALL-UNNAMED \
+		--features=io.vproxy.base.NativeAccessGraalFeature,io.vproxy.all.GraalFeature \
+		--enable-all-security-services --no-fallback \
+		vproxy-linux
 endif
-
-vproxy-linux:
-	make image-linux
 
 # used for releasing
 .PHONY: release

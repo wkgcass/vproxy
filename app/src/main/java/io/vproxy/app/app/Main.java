@@ -16,6 +16,7 @@ import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.JoinCallback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.thread.VProxyThreadJsonParserCacheHolder;
+import io.vproxy.pni.graal.GraalUtils;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.*;
 import vjson.parser.ParserUtils;
@@ -54,6 +55,12 @@ public class Main {
     private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
+        try {
+            Utils.loadDynamicLibrary("pni");
+        } catch (Throwable t) {
+            Logger.warn(LogType.ALERT, "unable to load dynamic library: pni, native features cannot be used");
+        }
+        GraalUtils.init();
         ParserUtils.setParserCacheHolder(new VProxyThreadJsonParserCacheHolder());
         OOMHandler.handleOOM();
 

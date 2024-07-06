@@ -122,8 +122,13 @@ public class Utils {
 
     public static String formatErr(Throwable err) {
         String base = formatErrBase(err);
-        if (err instanceof RuntimeException || Logger.stackTraceOn) {
-            return base + Arrays.asList(err.getStackTrace());
+        if (err instanceof RuntimeException || err instanceof Error || Logger.stackTraceOn) {
+            var cause = err.getCause();
+            if (cause != null) {
+                return base + Arrays.asList(err.getStackTrace()) + "\tcause: " + formatErr(cause);
+            } else {
+                return base + Arrays.asList(err.getStackTrace());
+            }
         } else {
             return base;
         }
@@ -1026,22 +1031,27 @@ public class Utils {
             throw new UnsatisfiedLinkError(Utils.formatErr(e));
         }
         f.deleteOnExit();
+        String md5hex;
         try (is) {
+            var md = MessageDigest.getInstance("MD5");
             byte[] buf = new byte[1024];
             try (FileOutputStream fos = new FileOutputStream(f)) {
                 int n;
                 while ((n = is.read(buf)) > 0) {
                     fos.write(buf, 0, n);
+                    md.update(buf, 0, n);
                 }
                 fos.flush();
             }
-        } catch (IOException e) {
+            var md5Bytes = md.digest();
+            md5hex = ByteArray.from(md5Bytes).toHexString();
+        } catch (IOException | NoSuchAlgorithmException e) {
             throw new UnsatisfiedLinkError(Utils.formatErr(e));
         }
         if (!f.setExecutable(true)) {
             throw new UnsatisfiedLinkError("failed setting executable on tmp file " + f.getAbsolutePath());
         }
-        System.out.println("System.load(" + f.getAbsolutePath() + ")");
+        System.out.println("System.load(" + f.getAbsolutePath() + ")\tmd5=" + md5hex);
         System.load(f.getAbsolutePath());
         //noinspection ResultOfMethodCallIgnored
         f.delete();

@@ -6,6 +6,9 @@ module io.vproxy.base {
 
     requires transitive io.vproxy.dep;
     requires io.vproxy.pni;
+    requires io.vproxy.pni.graal;
+    requires org.graalvm.nativeimage;
+    requires org.graalvm.word;
 
     exports io.vproxy.base;
     exports io.vproxy.base.component.check;

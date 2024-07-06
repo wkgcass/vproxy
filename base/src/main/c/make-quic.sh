@@ -49,23 +49,28 @@ fi
 
 LIBAE="../../../../submodules/libae/src"
 
+GENERATED_DIR_NAME="c-generated"
+if [ "$VPROXY_BUILD_GRAAL_NATIVE_IMAGE" == "true" ]; then
+    GENERATED_DIR_NAME="${GENERATED_DIR_NAME}-graal"
+    GCC_OPTS="$GCC_OPTS -DPNI_GRAAL=1"
+fi
+
 gcc -std=gnu11 -O2 \
     $GCC_OPTS \
     -I "$LIBAE" \
     -I "$MSQUIC_INC" \
-    -I "../c-generated" \
-    -I "../../../../submodules/msquic-java/core/src/main/c-generated" \
-    -L "$MSQUIC_LD" \
+    -I "../$GENERATED_DIR_NAME" \
+    -I "../../../../submodules/msquic-java/core/src/main/$GENERATED_DIR_NAME" \
+    -L "$MSQUIC_LD" -L . \
     -DQUIC_ENABLE_CUSTOM_EVENT_LOOP=1 \
     $cflags \
-    -shared -Werror -lc -lpthread $NO_AS_NEEDED "-lmsquic" $AS_NEEDED -fPIC \
+    -shared -Werror -lc -lpthread -lpni $NO_AS_NEEDED "-lmsquic" $AS_NEEDED -fPIC \
     io_vproxy_msquic_MsQuic.c \
-    ../c-generated/io_vproxy_msquic_CxPlatExecutionState.extra.c \
-    ../c-generated/io_vproxy_msquic_CxPlatProcessEventLocals.extra.c \
-    ../c-generated/pni.c \
+    ../$GENERATED_DIR_NAME/io_vproxy_msquic_CxPlatExecutionState.extra.c \
+    ../$GENERATED_DIR_NAME/io_vproxy_msquic_CxPlatProcessEventLocals.extra.c \
     ../../../../submodules/msquic-java/core/src/main/c/io_vproxy_msquic_MsQuic.c \
     ../../../../submodules/msquic-java/core/src/main/c/inline.c \
-    ../../../../submodules/msquic-java/core/src/main/c-generated/io_vproxy_msquic_MsQuicModUpcall.c \
-    ../../../../submodules/msquic-java/core/src/main/c-generated/io_vproxy_msquic_MsQuicUpcall.c \
-    ../../../../submodules/msquic-java/core/src/main/c-generated/io_vproxy_msquic_QuicAddr.extra.c \
+    ../../../../submodules/msquic-java/core/src/main/$GENERATED_DIR_NAME/io_vproxy_msquic_MsQuicModUpcall.c \
+    ../../../../submodules/msquic-java/core/src/main/$GENERATED_DIR_NAME/io_vproxy_msquic_MsQuicUpcall.c \
+    ../../../../submodules/msquic-java/core/src/main/$GENERATED_DIR_NAME/io_vproxy_msquic_QuicAddr.extra.c \
     -o "$target"

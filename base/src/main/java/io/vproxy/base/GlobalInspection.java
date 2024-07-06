@@ -18,6 +18,7 @@ import io.vproxy.base.util.display.TableBuilder;
 import io.vproxy.base.util.display.TreeBuilder;
 import io.vproxy.base.util.exception.NoException;
 import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.pni.graal.GraalUtils;
 import vjson.simple.SimpleString;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.NetworkFD;
@@ -162,6 +163,7 @@ public class GlobalInspection {
 
     public Runnable wrapThread(Runnable r) {
         return () -> {
+            GraalUtils.setThread();
             VProxyThread vt = (VProxyThread) Thread.currentThread();
             runningThreads.add(vt);
             threadNumberCurrent.incr(1);

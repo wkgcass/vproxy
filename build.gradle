@@ -1,6 +1,6 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-
 import java.util.regex.Pattern
+import io.vproxy.pni.exec.CompilationFlag
 
 buildscript {
     repositories {
@@ -12,6 +12,17 @@ buildscript {
     dependencies {
         classpath group: 'io.vproxy', name: 'pni-exec-jdk22', version: PNI_VERSION
     }
+
+    def buildGraalEnvVar = System.getenv("VPROXY_BUILD_GRAAL_NATIVE_IMAGE")
+    if (buildGraalEnvVar != null && buildGraalEnvVar != "true" && buildGraalEnvVar != "false") {
+        throw new RuntimeException("invalid env: VPROXY_BUILD_GRAAL_NATIVE_IMAGE: ${buildGraalEnvVar}")
+    }
+    if (buildGraalEnvVar == "true") {
+        ext.set("isNativeImage", true)
+    } else {
+        ext.set("isNativeImage", false)
+    }
+    ext.set("GRAAL_SDK_MOCK_VERSION", '1.2.2')
 }
 
 plugins {
@@ -236,28 +247,48 @@ project(':pni-template') {
         workingDir project.rootProject.rootDir.getAbsolutePath() + '/base/src/main/'
         commandLine 'bash', '-c', 'rm -rf c-generated/* && rm -rf generated/*'
     }
+
+    // ====================== pni related ========================
+    def baseOpts = () -> {
+        def workingDir = project.rootProject.rootDir.getAbsolutePath()
+        return new io.vproxy.pni.exec.CompilerOptions()
+            .setClasspath(List.of(workingDir + '/pni-template/build/classes/java/main'))
+            .setFilters(List.of(
+                Pattern.compile('io\\.vproxy\\.vfd.*'),
+                Pattern.compile('io\\.vproxy\\.xdp.*'),
+                Pattern.compile('io\\.vproxy\\.fubuki.*'),
+                Pattern.compile('io\\.vproxy\\.msquic\\.CxPlat.*'),
+                Pattern.compile('^io\\.vproxy\\.msquic\\.MsQuicMod2$'),
+            ))
+            .setJavaOutputBaseDirectory(workingDir + '/base/src/main/generated')
+            .setCOutputDirectory(workingDir + '/base/src/main/c-generated')
+            .setCompilationFlag(CompilationFlag.TYPE_NAME_PREFIX, "PNI")
+            .setCompilationFlag(CompilationFlag.RELEASE_PNI_H_FILE)
+            .setCompilationFlag(CompilationFlag.RELEASE_PNI_C_FILE)
+            .setCompilationFlag(CompilationFlag.RELEASE_JNI_H_MOCK_FILE)
+            .setCompilationFlag(CompilationFlag.ALWAYS_ALIGNED, true)
+    }
+
     task pniGenerate() {
         dependsOn compileJava
 
+        def opts = baseOpts()
+        def gen = new io.vproxy.pni.exec.Generator(opts)
+
+        doLast {
+            gen.generate()
+        }
+    }
+    task pniGenerateGraal() {
+        dependsOn compileJava
+
         def workingDir = project.rootProject.rootDir.getAbsolutePath()
-        def gen = new io.vproxy.pni.exec.Generator(
-            new io.vproxy.pni.exec.CompilerOptions()
-                .setClasspath(List.of(workingDir + '/pni-template/build/classes/java/main'))
-                .setFilters(List.of(
-                    Pattern.compile('io\\.vproxy\\.vfd.*'),
-                    Pattern.compile('io\\.vproxy\\.xdp.*'),
-                    Pattern.compile('io\\.vproxy\\.fubuki.*'),
-                    Pattern.compile('io\\.vproxy\\.msquic\\.CxPlat.*'),
-                    Pattern.compile('^io\\.vproxy\\.msquic\\.MsQuicMod2$'),
-                ))
-                .setJavaOutputBaseDirectory(workingDir + '/base/src/main/generated')
-                .setCOutputDirectory(workingDir + '/base/src/main/c-generated')
-                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.TYPE_NAME_PREFIX, "PNI")
-                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_PNI_H_FILE)
-                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_PNI_C_FILE)
-                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.RELEASE_JNI_H_MOCK_FILE)
-                .setCompilationFlag(io.vproxy.pni.exec.CompilationFlag.ALWAYS_ALIGNED)
-        )
+        def opts = baseOpts()
+            .setJavaOutputBaseDirectory(workingDir + '/base/src/main/generated-graal')
+            .setCOutputDirectory(workingDir + '/base/src/main/c-generated-graal')
+            .setCompilationFlag(CompilationFlag.GRAAL_NATIVE_IMAGE_FEATURE, "io.vproxy.base.NativeAccessGraalFeature")
+            .setCompilationFlag(CompilationFlag.GRAAL_C_ENTRYPOINT_LITERAL_UPCALL)
+        def gen = new io.vproxy.pni.exec.Generator(opts)
 
         doLast {
             gen.generate()
@@ -266,12 +297,18 @@ project(':pni-template') {
 }
 
 project(':base') {
+    def baseGenPath = 'src/main/generated'
+    def msquicGenPath = project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/generated'
+    if (isNativeImage) {
+        baseGenPath = 'src/main/generated-graal'
+        msquicGenPath = project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/generated-graal'
+    }
     sourceSets {
         main {
             java {
-                srcDirs = ['src/main/java', 'src/main/generated',
+                srcDirs = ['src/main/java', baseGenPath,
                            project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/java',
-                           project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/generated']
+                           msquicGenPath]
             }
         }
     }
@@ -284,6 +321,9 @@ project(':base') {
 
     dependencies {
         api project(':dep')
+        compileOnly group: 'io.vproxy', name: 'graal-sdk-mock-nativeimage', version: GRAAL_SDK_MOCK_VERSION
+        runtimeOnly group: 'io.vproxy', name: 'graal-sdk-mock-runtime', version: GRAAL_SDK_MOCK_VERSION
+        implementation 'io.vproxy:pni-api-graal-jdk22:' + PNI_VERSION
     }
 }
 
@@ -350,6 +390,10 @@ project(':app') {
         api project(':core')
         api project(':lib')
         api project(':extended')
+
+        implementation 'io.vproxy:pni-api-graal-jdk22:' + PNI_VERSION
+        compileOnly group: 'io.vproxy', name: 'graal-sdk-mock-nativeimage', version: GRAAL_SDK_MOCK_VERSION
+        runtimeOnly group: 'io.vproxy', name: 'graal-sdk-mock-runtime', version: GRAAL_SDK_MOCK_VERSION
     }
 }
 
@@ -361,10 +405,10 @@ project(':all') {
         api project(':core')
         api project(':extended')
         api project(':app')
-
-        api project(':adaptor-netty')
-        api project(':adaptor-vertx')
         api project(':msquic-dummy')
+
+        compileOnly group: 'io.vproxy', name: 'graal-sdk-mock-nativeimage', version: GRAAL_SDK_MOCK_VERSION
+        runtimeOnly group: 'io.vproxy', name: 'graal-sdk-mock-runtime', version: GRAAL_SDK_MOCK_VERSION
     }
 
     task runNative(type: JavaExec) {

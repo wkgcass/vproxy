@@ -18,6 +18,11 @@ interface PNIFubukiFunc {
 @Name("FubukiHandle")
 @PointerOnly
 abstract class PNIFubukiHandle {
+    @Name("fubuki_block_on")
+    @Style(Styles.critical)
+    @NoAlloc
+    abstract int fubukiBlockOn(String errorMsg);
+
     @Name("if_to_fubuki")
     @Style(Styles.critical)
     @LinkerOption.Critical
@@ -38,4 +43,6 @@ abstract class PNIFubukiStartOptions {
     MemorySegment fnOnPacket; // void (*fubuki_to_if_fn)(const uint8_t *packet, size_t len, void *ctx)
     MemorySegment fnAddAddr; // void (*add_addr_fn)(uint32_t addr, uint32_t netmask, void *ctx)
     MemorySegment fnDeleteAddr; // void (*delete_addr_fn)(uint32_t addr, uint32_t netmask, void *ctx)
+    int tunFd;
+    long flags;
 }

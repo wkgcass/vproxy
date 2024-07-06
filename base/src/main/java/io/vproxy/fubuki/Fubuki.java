@@ -4,6 +4,7 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PNIString;
@@ -15,6 +16,8 @@ import vjson.util.ObjectBuilder;
 import java.lang.foreign.MemorySegment;
 
 public class Fubuki implements AutoCloseable {
+    private static final long FUBUKI_FLAG_NO_AUTO_SPAWN = 0x0001;
+
     private final FubukiCallback callback;
     private final PNIRef<Fubuki> ref;
     private final FubukiHandle handle;
@@ -52,15 +55,27 @@ public class Fubuki implements AutoCloseable {
                 .build().stringify();
             Logger.trace(LogType.ALERT, "fubuki node config json generated: " + configJson);
             opts.setNodeConfigJson(configJson, allocator);
+            opts.setFlags(FUBUKI_FLAG_NO_AUTO_SPAWN);
 
             var errMsg = new PNIString(allocator.allocate(1024));
-            handle = FubukiFunc.get().start(opts, 1, errMsg);
+            handle = FubukiFunc.get().start(opts, 3, errMsg);
 
             if (handle == null) {
                 var err = errMsg.toString();
                 Logger.error(LogType.SYS_ERROR, "failed to start fubuki: " + err);
                 throw new RuntimeException(err);
             }
+            VProxyThread.create(() -> {
+                try (var errStrAllocator = Allocator.ofConfined()) {
+                    var errStr = new PNIString(errStrAllocator.allocate(1024));
+                    int ret = handle.fubukiBlockOn(errStr);
+                    if (ret != 0) {
+                        var err = errStr.toString();
+                        Logger.fatal(LogType.SYS_ERROR, "failed to launch fubuki: code=" + ret + ", err=" + err);
+                    }
+                }
+                Logger.warn(LogType.ALERT, "fubuki-" + ifIndex + " thread exits");
+            }, "fubuki-" + ifIndex).start();
         } catch (Throwable t) {
             ref.close();
             throw t;
@@ -84,6 +99,7 @@ public class Fubuki implements AutoCloseable {
             doLoad();
             loaded = true;
         }
+        FubukiUpcall.setImpl(new FubukiUpcallImpl());
     }
 
     private static void doLoad() {
@@ -96,6 +112,7 @@ public class Fubuki implements AutoCloseable {
                 throw e;
             }
         }
+        Utils.loadDynamicLibrary("vpfubuki");
     }
 
     @Override

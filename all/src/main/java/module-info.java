@@ -1,4 +1,5 @@
 module io.vproxy.all {
+    requires org.graalvm.nativeimage;
     requires transitive io.vproxy.dep;
     requires transitive io.vproxy.base;
     requires transitive io.vproxy.lib;
