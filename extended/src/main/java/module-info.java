@@ -9,6 +9,8 @@ module io.vproxy.extended {
     requires transitive io.vproxy.lib;
 
     exports io.vproxy.vproxyx;
+    exports io.vproxy.vproxyx.nexus;
+    exports io.vproxy.vproxyx.nexus.entity;
     exports io.vproxy.vproxyx.pktfiltergen;
     exports io.vproxy.vproxyx.pktfiltergen.flow;
     exports io.vproxy.vproxyx.util;
