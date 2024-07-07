@@ -153,17 +153,10 @@ public class WrappedSelector implements FDSelector {
     }
 
     @Override
-    public boolean supportsWakeup() {
-        return selector.supportsWakeup();
-    }
-
-    @Override
     public void wakeup() {
-        if (selector.supportsWakeup()) {
-            //noinspection unused
-            try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
-                selector.wakeup();
-            }
+        //noinspection unused
+        try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
+            selector.wakeup();
         }
     }
 

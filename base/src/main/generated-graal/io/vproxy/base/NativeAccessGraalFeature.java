@@ -53,32 +53,23 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
         /* JavaCritical_io_vproxy_msquic_MsQuic_buildQuicAddr */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(boolean.class, String.class /* addr */, int.class /* port */, MemoryLayout.class /* io.vproxy.msquic.QuicAddr.LAYOUT.getClass() */ /* result */));
 
-        /* MsQuicSetThreadCountLimit */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, int.class /* limit */));
-
-        /* MsQuicSetEventLoopThreadDispatcher */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* dispatcher */));
-
-        /* CxPlatGetCurThread */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* Thread */));
+        /* JavaCritical_io_vproxy_msquic_MsQuicMod_openExtra */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(MemoryLayout.class /* io.vproxy.msquic.QuicExtraApiTable.LAYOUT.getClass() */, int.class /* Version */, MemorySegment.class /* returnStatus */));
 
         /* JavaCritical_io_vproxy_msquic_MsQuicMod_INVOKE_LPTHREAD_START_ROUTINE */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemorySegment.class /* Callback */, MemorySegment.class /* Context */));
 
-        /* MsQuicSetIsWorker */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, boolean.class /* isWorker */));
+        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadInit */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemoryLayout.class /* io.vproxy.msquic.QuicExtraApiTable.LAYOUT.getClass() */ /* api */, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* CxPlatWorkerThreadLocals */));
 
-        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadInit */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* CxPlatWorkerThreadLocals */));
+        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadBeforePoll */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemoryLayout.class /* io.vproxy.msquic.QuicExtraApiTable.LAYOUT.getClass() */ /* api */, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* CxPlatProcessEventLocals */));
 
-        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadBeforePoll */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* CxPlatProcessEventLocals */));
+        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadAfterPoll */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(boolean.class, MemoryLayout.class /* io.vproxy.msquic.QuicExtraApiTable.LAYOUT.getClass() */ /* api */, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* locals */, int.class /* num */, MemorySegment.class /* events */));
 
-        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadAfterPoll */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(boolean.class, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* locals */, int.class /* num */, MemorySegment.class /* events */));
-
-        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadFinalize */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* CxPlatWorkerThreadLocals */));
+        /* JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadFinalize */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemoryLayout.class /* io.vproxy.msquic.QuicExtraApiTable.LAYOUT.getClass() */ /* api */, MemoryLayout.class /* io.vproxy.msquic.CxPlatProcessEventLocals.LAYOUT.getClass() */ /* CxPlatWorkerThreadLocals */));
 
         /* graal upcall for io.vproxy.msquic.MsQuicModUpcall */
         RuntimeClassInitialization.initializeAtBuildTime(io.vproxy.msquic.MsQuicModUpcall.class);
@@ -162,6 +153,18 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
 
         /* JavaCritical_io_vproxy_msquic_QuicConnection_certificateValidationComplete */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, boolean.class /* Result */, int.class /* TlsAlert */));
+
+        /* JavaCritical_io_vproxy_msquic_QuicExtraApiTable_ThreadCountLimitSet */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemorySegment.class /* self */, int.class /* limit */));
+
+        /* JavaCritical_io_vproxy_msquic_QuicExtraApiTable_EventLoopThreadDispatcherSet */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, MemorySegment.class /* dispatcher */));
+
+        /* JavaCritical_io_vproxy_msquic_QuicExtraApiTable_ThreadGetCur */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, MemorySegment.class /* Thread */));
+
+        /* JavaCritical_io_vproxy_msquic_QuicExtraApiTable_ThreadSetIsWorker */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemorySegment.class /* self */, boolean.class /* isWorker */));
 
         /* JavaCritical_io_vproxy_msquic_QuicListener_close */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemorySegment.class /* self */));
@@ -551,22 +554,29 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
             RuntimeReflection.register(CONS);
         }
 
+        /* Java_io_vproxy_vfd_windows_IOCP_getQueuedCompletionStatusEx */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.HANDLE.LAYOUT.getClass() */ /* handle */, MemorySegment.class /* completionPortEntries */, int.class /* count */, int.class /* milliseconds */, boolean.class /* alertable */));
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_IOCP_createIoCompletionPort */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* fileHandle */, MemoryLayout.class /* io.vproxy.vfd.windows.HANDLE.LAYOUT.getClass() */ /* existingCompletionPort */, MemorySegment.class /* completionKey */, int.class /* numberOfConcurrentThreads */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_IOCP_postQueuedCompletionStatus */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.HANDLE.LAYOUT.getClass() */ /* completionPort */, int.class /* numberOfBytesTransferred */, MemorySegment.class /* completionKey */, MemoryLayout.class /* io.vproxy.vfd.windows.Overlapped.LAYOUT.getClass() */ /* overlapped */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
         /* Java_io_vproxy_vfd_windows_WindowsNative_tapNonBlockingSupported */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_vfd_windows_WindowsNative_allocateOverlapped */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_vfd_windows_WindowsNative_releaseOverlapped */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* overlapped */));
         RuntimeReflection.registerAllConstructors(java.io.IOException.class);
         for (var CONS : java.io.IOException.class.getConstructors()) {
             RuntimeReflection.register(CONS);
@@ -580,21 +590,91 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
         }
 
         /* Java_io_vproxy_vfd_windows_WindowsNative_closeHandle */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* fd */));
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* handle */), PanamaHack.getCriticalOption());
         RuntimeReflection.registerAllConstructors(java.io.IOException.class);
         for (var CONS : java.io.IOException.class.getConstructors()) {
             RuntimeReflection.register(CONS);
         }
 
-        /* Java_io_vproxy_vfd_windows_WindowsNative_read */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* handle */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, long.class /* overlapped */));
+        /* Java_io_vproxy_vfd_windows_WindowsNative_cancelIo */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* handle */), PanamaHack.getCriticalOption());
         RuntimeReflection.registerAllConstructors(java.io.IOException.class);
         for (var CONS : java.io.IOException.class.getConstructors()) {
             RuntimeReflection.register(CONS);
         }
 
-        /* Java_io_vproxy_vfd_windows_WindowsNative_write */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* handle */, ByteBuffer.class /* directBuffer */, int.class /* off */, int.class /* len */, long.class /* overlapped */));
+        /* Java_io_vproxy_vfd_windows_WindowsNative_acceptEx */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* listenSocket */, MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* socketContext */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_updateAcceptContext */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* listenSocket */, MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* accepted */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */, boolean.class /* v4 */, MemoryLayout.class /* io.vproxy.vfd.posix.SocketAddressUnion.LAYOUT.getClass() */ /* addr */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_readFile */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_wsaSend */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */, boolean.class /* v4 */, MemoryLayout.class /* io.vproxy.vfd.posix.SocketAddressUnion.LAYOUT.getClass() */ /* addr */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_wsaSendDisconnect */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() */ /* socket */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_writeFile */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemoryLayout.class /* io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() */ /* ctx */), PanamaHack.getCriticalOption());
+        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
+        for (var CONS : java.io.IOException.class.getConstructors()) {
+            RuntimeReflection.register(CONS);
+        }
+
+        /* Java_io_vproxy_vfd_windows_WindowsNative_convertAddress */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(MemorySegment.class /* sockaddr */, boolean.class /* v4 */, MemoryLayout.class /* io.vproxy.vfd.posix.SocketAddressUnion.LAYOUT.getClass() */ /* addr */), PanamaHack.getCriticalOption());
         RuntimeReflection.registerAllConstructors(java.io.IOException.class);
         for (var CONS : java.io.IOException.class.getConstructors()) {
             RuntimeReflection.register(CONS);
@@ -709,4 +789,4 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:9755ee977d9b73e0b0d19d2acef474cf14f6961b83afbd560f901b39aaae2246
+// sha256:38a120bc4306f368794637a078c0c9afb54d1618acdba5a8e1f86295204ec27f

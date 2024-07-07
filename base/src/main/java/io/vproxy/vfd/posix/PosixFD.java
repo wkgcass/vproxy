@@ -56,6 +56,7 @@ public class PosixFD extends AbstractBaseFD implements FD {
             //noinspection unchecked
             setOption(entry.getKey(), entry.getValue());
         }
+        opts.clear();
     }
 
     @Override

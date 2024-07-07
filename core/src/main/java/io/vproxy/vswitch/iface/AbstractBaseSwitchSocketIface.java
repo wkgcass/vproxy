@@ -12,7 +12,6 @@ import java.nio.ByteBuffer;
 
 public abstract class AbstractBaseSwitchSocketIface extends Iface {
     protected DatagramFD sock;
-    protected boolean sockConnected = false; // default sock is the server sock in switch, so it's not connected
     public final IPPort remote;
     protected final ByteBuffer sndBuf = Utils.allocateByteBuffer(2048);
 
@@ -24,11 +23,6 @@ public abstract class AbstractBaseSwitchSocketIface extends Iface {
     public void init(IfaceInitParams params) throws Exception {
         super.init(params);
         this.sock = params.sock;
-    }
-
-    protected void setSock(DatagramFD sock, boolean connected) {
-        this.sock = sock;
-        this.sockConnected = connected;
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -50,11 +44,7 @@ public abstract class AbstractBaseSwitchSocketIface extends Iface {
         statistics.incrTxBytes(sndBuf.limit() - sndBuf.position());
 
         try {
-            if (sockConnected) {
-                sock.write(sndBuf);
-            } else {
-                sock.send(sndBuf, remote);
-            }
+            sock.send(sndBuf, remote);
         } catch (IOException e) {
             assert Logger.lowLevelDebug("sending packet to " + this + " failed: " + e);
             statistics.incrTxErr();

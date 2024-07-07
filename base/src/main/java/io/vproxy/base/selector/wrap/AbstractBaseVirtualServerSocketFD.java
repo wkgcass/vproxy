@@ -45,6 +45,7 @@ public abstract class AbstractBaseVirtualServerSocketFD<ACCEPTED extends SocketF
         if (error != null) {
             IOException err = error;
             error = null;
+            err.setStackTrace(Thread.currentThread().getStackTrace());
             throw err;
         }
     }

@@ -23,6 +23,13 @@ else ifeq ($(LINUX_ARCH),amd64)
 LINUX_ARCH := x86_64
 endif
 
+IS_WIN = 0
+ifneq (,$(findstring MINGW,$(OS)))
+  IS_WIN = 1
+else ifneq (,$(findstring Windows,$(OS)))
+  IS_WIN = 1
+endif
+
 DOCKER_PLUGIN_WORKDIR ?= "."
 
 .PHONY: clean-jar
@@ -168,11 +175,19 @@ xdp-sample-kern:
 	cd ./base/src/main/c/xdp && make kern
 
 .PHONY: msquic-java
+ifeq (0,$(IS_WIN))
 msquic-java: libpni
 	cd ./base/src/main/c && \
 	MSQUIC_LD=../../../../submodules/msquic/build/bin/Release \
 	MSQUIC_INC=../../../../submodules/msquic/src/inc \
 	/usr/bin/env bash ./make-quic.sh
+else
+msquic-java: libpni
+	cd ./base/src/main/c && \
+	MSQUIC_LD=../../../../submodules/msquic/artifacts/bin/windows/x64_Release_openssl \
+	MSQUIC_INC=../../../../submodules/msquic/src/inc \
+	/usr/bin/env bash ./make-quic.sh
+endif
 .PHONY: msquic
 msquic:
 	cd ./submodules/msquic/ && make
@@ -244,7 +259,11 @@ fubuki-linux:
 endif
 
 .PHONY: quic
+ifeq (0,$(IS_WIN))
 quic: vfdposix msquic msquic-java
+else
+quic: vfdwindows msquic msquic-java
+endif
 .PHONY: quic-linux
 quic-linux: vfdposix-linux msquic-linux msquic-java-linux
 .PHONY: _quic-all-linux
@@ -263,7 +282,7 @@ quic-all: _quic-all-linux
 endif
 
 .PHONY: vfdwindows
-vfdwindows:
+vfdwindows: libpni
 	cd ./base/src/main/c && ./make-windows.sh
 
 .PHONY: libpni

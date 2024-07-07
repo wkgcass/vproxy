@@ -179,24 +179,6 @@ interface PNIPosixNative {
 @SuppressWarnings("unused")
 @Struct
 @AlwaysAligned
-@Name("SocketAddressIPv4_st")
-class PNISocketAddressIPv4ST {
-    @Unsigned int ip;
-    @Unsigned short port;
-}
-
-@SuppressWarnings("unused")
-@Struct
-@AlwaysAligned
-@Name("SocketAddressIPv6_st")
-class PNISocketAddressIPv6ST {
-    @Len(40) String ip;
-    @Unsigned short port;
-}
-
-@SuppressWarnings("unused")
-@Struct
-@AlwaysAligned
 @Name("SocketAddressUDS_st")
 class PNISocketAddressUDSST {
     @Len(4096) String path;

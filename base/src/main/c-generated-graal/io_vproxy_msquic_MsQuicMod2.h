@@ -13,6 +13,7 @@ extern "C" {
 #include <jni.h>
 #include <pni.h>
 #include "msquic.h"
+#include "io_vproxy_msquic_QuicExtraApiTable.h"
 #include "io_vproxy_msquic_CxPlatProcessEventLocals.h"
 #include "io_vproxy_vfd_posix_AEFiredExtra.h"
 
@@ -20,14 +21,14 @@ extern "C" {
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadInit(struct CxPlatProcessEventLocals * CxPlatWorkerThreadLocals);
-JNIEXPORT void JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadBeforePoll(struct CxPlatProcessEventLocals * CxPlatProcessEventLocals);
-JNIEXPORT uint8_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadAfterPoll(struct CxPlatProcessEventLocals * locals, int32_t num, aeFiredExtra * events);
-JNIEXPORT int32_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatWorkerThreadFinalize(struct CxPlatProcessEventLocals * CxPlatWorkerThreadLocals);
+JNIEXPORT void JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadInit(QUIC_EXTRA_API_TABLE * api, struct CxPlatProcessEventLocals * CxPlatWorkerThreadLocals);
+JNIEXPORT void JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadBeforePoll(QUIC_EXTRA_API_TABLE * api, struct CxPlatProcessEventLocals * CxPlatProcessEventLocals);
+JNIEXPORT uint8_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadAfterPoll(QUIC_EXTRA_API_TABLE * api, struct CxPlatProcessEventLocals * locals, int32_t num, aeFiredExtra * events);
+JNIEXPORT int32_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_WorkerThreadFinalize(QUIC_EXTRA_API_TABLE * api, struct CxPlatProcessEventLocals * CxPlatWorkerThreadLocals);
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_msquic_MsQuicMod2
 // metadata.generator-version: pni 22.0.0.17
-// sha256:bac7d02e392bfb431ee628f5ff583914a2c4ead8e02aab37a6c759f926f65e01
+// sha256:2b219ea4cf2ac3f697f0812ba12772ce8f80a7665378abfc2db67d632ff65844

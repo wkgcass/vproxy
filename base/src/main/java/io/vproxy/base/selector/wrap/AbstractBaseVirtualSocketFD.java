@@ -55,7 +55,10 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
     }
 
     protected void checkError() throws IOException {
-        if (error != null) throw error;
+        if (error != null) {
+            error.setStackTrace(Thread.currentThread().getStackTrace());
+            throw error;
+        }
     }
 
     protected SelectorEventLoop getLoop() {
