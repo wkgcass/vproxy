@@ -12,7 +12,6 @@ extern "C" {
 
 #include <jni.h>
 #include <pni.h>
-#include "io_vproxy_vfd_windows_HANDLE.h"
 #include "io_vproxy_vfd_windows_SOCKET.h"
 #include "io_vproxy_vfd_windows_VIOContext.h"
 #include "io_vproxy_vfd_posix_SocketAddressUnion.h"
@@ -30,11 +29,13 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSend(PNIEnv_int * env, VIOContext * ctx);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, SocketAddressUnion * addr);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendDisconnect(PNIEnv_void * env, SOCKET socket);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PNIEnv_void * env, void * sockaddr, uint8_t v4, SocketAddressUnion * addr);
 
 #ifdef __cplusplus
 }
 #endif
 #endif // _Included_io_vproxy_vfd_windows_WindowsNative
 // metadata.generator-version: pni 22.0.0.17
-// sha256:143fc9d07ad78515166c434488d9a4cdeae8ec1f37a08df04354f49d8447d816
+// sha256:e761e434ddc1e5fe005be930907424a0fe822433d66d513142cc270d58ef1c8c

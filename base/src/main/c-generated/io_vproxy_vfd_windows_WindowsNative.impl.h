@@ -80,12 +80,12 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv(PNIEnv_int * env, VIOContext * ctx) {
-    int rlen = 0;
+    int nRcv = 0;
     int zeroflags = 0;
     int ret = WSARecv(
         (SOCKET)ctx->socket,
         ctx->buffers, ctx->bufferCount,
-        (LPDWORD)&rlen, (LPDWORD)&zeroflags,
+        (LPDWORD)&nRcv, (LPDWORD)&zeroflags,
         (LPWSAOVERLAPPED)&ctx->overlapped, NULL
     );
     if (ret < 0) {
@@ -95,17 +95,17 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv(PNIEnv_in
         }
         return throwIOExceptionBasedOnErrno(env);
     }
-    env->return_ = rlen;
+    env->return_ = nRcv;
     return 0;
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEnv_int * env, VIOContext * ctx) {
-    int rlen = 0;
+    int nRcv = 0;
     int zeroflags = 0;
     int ret = WSARecvFrom(
         ctx->socket,
         ctx->buffers, ctx->bufferCount,
-        (LPDWORD)&rlen, (LPDWORD)&zeroflags,
+        (LPDWORD)&nRcv, (LPDWORD)&zeroflags,
         (v_sockaddr*)&ctx->addr, &ctx->addrLen,
         (LPWSAOVERLAPPED)&ctx->overlapped, NULL
     );
@@ -115,15 +115,15 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEn
             return 0;
         }
     }
-    env->return_ = rlen;
+    env->return_ = nRcv;
     return 0;
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSend(PNIEnv_int * env, VIOContext * ctx) {
-    int wlen = 0;
+    int nSent = 0;
     int ret = WSASend(
         ctx->socket,
-        ctx->buffers, ctx->bufferCount, (LPDWORD)&wlen, 0,
+        ctx->buffers, ctx->bufferCount, (LPDWORD)&nSent, 0,
         (LPWSAOVERLAPPED)&ctx->overlapped, NULL
     );
     if (ret < 0) {
@@ -133,7 +133,34 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSend(PNIEnv_in
         }
         return throwIOExceptionBasedOnErrno(env);
     }
-    env->return_ = wlen;
+    env->return_ = nSent;
+    return 0;
+}
+
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, SocketAddressUnion * addr) {
+    v_sockaddr* name;
+    int nameSize;
+    if (ctx->v4) {
+        v_sockaddr_in v4name;
+        j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
+        name = (v_sockaddr*)&v4name;
+        nameSize = sizeof(v4name);
+    } else {
+        v_sockaddr_in6 v6name;
+        j2cSockAddrIPv6(&v6name, addr->v6.ip, addr->v6.port);
+        name = (v_sockaddr*)&v6name;
+        nameSize = sizeof(v6name);
+    }
+
+    int nSent = 0;
+    int err = WSASendTo(
+        ctx->socket,
+        ctx->buffers, ctx->bufferCount, (LPDWORD)&nSent, 0,
+        name, nameSize, &ctx->overlapped, NULL
+    );
+    if (err < 0) {
+        return throwIOExceptionBasedOnErrno(env);
+    }
     return 0;
 }
 
@@ -147,8 +174,19 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendDisconnect
     return 0;
 }
 
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PNIEnv_void * env, void * sockaddr, uint8_t v4, SocketAddressUnion * addr) {
+    if (v4) {
+        formatSocketAddressIPv4(sockaddr, &addr->v4);
+    } else {
+        if (formatSocketAddressIPv6(env, sockaddr, &addr->v6) == NULL) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:5d56a0b812097815fe8fd1940ca4411183d9920845fe53015e90f3747a200eb0
+// sha256:abecc5168746cc2e2bbb698c7796c73cf7e1f5cf5ceec0e5de13366e19abb541

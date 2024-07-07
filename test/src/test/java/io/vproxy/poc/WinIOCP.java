@@ -119,8 +119,7 @@ public class WinIOCP {
                 var sndLen = entry.getNumberOfBytesTransferred();
                 System.out.println("socket async send done: " + socket + ", wrote " + sndLen + " bytes");
 
-                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(),
-                    new HANDLE(socket.MEMORY));
+                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), socket);
             }
         }
     }

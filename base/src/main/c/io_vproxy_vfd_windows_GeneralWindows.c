@@ -1,6 +1,7 @@
 #include "vfd_posix.h"
 #include "vfd_windows.h"
 #include "exception.h"
+#include "io_vproxy_vfd_windows_WindowsNative.h"
 
 static LPFN_CONNECTEX ConnectExPtr;
 
@@ -16,6 +17,9 @@ static inline LPFN_CONNECTEX GetConnectEx() {
     // should succeed
     return ConnectExPtr;
 }
+
+extern void formatSocketAddressIPv4(v_sockaddr_in* addr, SocketAddressIPv4_st* st);
+extern SocketAddressIPv6_st* formatSocketAddressIPv6(void* env, v_sockaddr_in6* addr, SocketAddressIPv6_st* st);
 
 #include "io_vproxy_vfd_windows_WindowsNative.impl.h"
 #include "io_vproxy_vfd_windows_IOCP.impl.h"

@@ -23,7 +23,7 @@ interface PNIWindowsNative {
             return 0;
             """
     )
-    void closeHandle(@NativeType("HANDLE") PNIHANDLE handle) throws IOException;
+    void closeHandle(@NativeType("HANDLE") PNISOCKET handle) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
@@ -107,12 +107,12 @@ interface PNIWindowsNative {
     @LinkerOption.Critical
     @Impl(
         c = """
-            int rlen = 0;
+            int nRcv = 0;
             int zeroflags = 0;
             int ret = WSARecv(
                 (SOCKET)ctx->socket,
                 ctx->buffers, ctx->bufferCount,
-                (LPDWORD)&rlen, (LPDWORD)&zeroflags,
+                (LPDWORD)&nRcv, (LPDWORD)&zeroflags,
                 (LPWSAOVERLAPPED)&ctx->overlapped, NULL
             );
             if (ret < 0) {
@@ -122,7 +122,7 @@ interface PNIWindowsNative {
                 }
                 return throwIOExceptionBasedOnErrno(env);
             }
-            env->return_ = rlen;
+            env->return_ = nRcv;
             return 0;
             """
     )
@@ -131,12 +131,12 @@ interface PNIWindowsNative {
     @LinkerOption.Critical
     @Impl(
         c = """
-            int rlen = 0;
+            int nRcv = 0;
             int zeroflags = 0;
             int ret = WSARecvFrom(
                 ctx->socket,
                 ctx->buffers, ctx->bufferCount,
-                (LPDWORD)&rlen, (LPDWORD)&zeroflags,
+                (LPDWORD)&nRcv, (LPDWORD)&zeroflags,
                 (v_sockaddr*)&ctx->addr, &ctx->addrLen,
                 (LPWSAOVERLAPPED)&ctx->overlapped, NULL
             );
@@ -146,7 +146,7 @@ interface PNIWindowsNative {
                     return 0;
                 }
             }
-            env->return_ = rlen;
+            env->return_ = nRcv;
             return 0;
             """
     )
@@ -155,10 +155,10 @@ interface PNIWindowsNative {
     @LinkerOption.Critical
     @Impl(
         c = """
-            int wlen = 0;
+            int nSent = 0;
             int ret = WSASend(
                 ctx->socket,
-                ctx->buffers, ctx->bufferCount, (LPDWORD)&wlen, 0,
+                ctx->buffers, ctx->bufferCount, (LPDWORD)&nSent, 0,
                 (LPWSAOVERLAPPED)&ctx->overlapped, NULL
             );
             if (ret < 0) {
@@ -168,11 +168,42 @@ interface PNIWindowsNative {
                 }
                 return throwIOExceptionBasedOnErrno(env);
             }
-            env->return_ = wlen;
+            env->return_ = nSent;
             return 0;
             """
     )
     int wsaSend(PNIVIOContext ctx) throws IOException;
+
+    @LinkerOption.Critical
+    @Impl(
+        c = """
+            v_sockaddr* name;
+            int nameSize;
+            if (ctx->v4) {
+                v_sockaddr_in v4name;
+                j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
+                name = (v_sockaddr*)&v4name;
+                nameSize = sizeof(v4name);
+            } else {
+                v_sockaddr_in6 v6name;
+                j2cSockAddrIPv6(&v6name, addr->v6.ip, addr->v6.port);
+                name = (v_sockaddr*)&v6name;
+                nameSize = sizeof(v6name);
+            }
+
+            int nSent = 0;
+            int err = WSASendTo(
+                ctx->socket,
+                ctx->buffers, ctx->bufferCount, (LPDWORD)&nSent, 0,
+                name, nameSize, &ctx->overlapped, NULL
+            );
+            if (err < 0) {
+                return throwIOExceptionBasedOnErrno(env);
+            }
+            return 0;
+            """
+    )
+    int wsaSendTo(PNIVIOContext ctx, PNISocketAddressUnion addr) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
@@ -187,6 +218,22 @@ interface PNIWindowsNative {
             """
     )
     void wsaSendDisconnect(@NativeType("SOCKET") PNISOCKET socket) throws IOException;
+
+    @LinkerOption.Critical
+    @Impl(
+        c = """
+            if (v4) {
+                formatSocketAddressIPv4(sockaddr, &addr->v4);
+            } else {
+                if (formatSocketAddressIPv6(env, sockaddr, &addr->v6) == NULL) {
+                    return -1;
+                }
+            }
+            return 0;
+            """
+    )
+    void convertAddress(MemorySegment sockaddr, boolean v4, PNISocketAddressUnion addr)
+        throws IOException;
 }
 
 @Struct(skip = true)
