@@ -4,7 +4,6 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.direct.DirectByteBuffer;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
 import io.vproxy.base.util.objectpool.GarbageFree;
-import io.vproxy.base.util.objectpool.PrototypeObjectList;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
@@ -14,7 +13,7 @@ import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 
 public class AESelector implements FDSelector {
-    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
+    private final SelectedEntryPrototypeObjectList selectedEntryList = new SelectedEntryPrototypeObjectList(128, SelectedEntry::new);
     private final FDInfoPrototypeObjectList fdInfoList = new FDInfoPrototypeObjectList(128, FDInfo::new);
 
     private final Posix posix;
@@ -36,12 +35,8 @@ public class AESelector implements FDSelector {
         this.aeReadable = posix.aeReadable();
         this.aeWritable = posix.aeWritable();
         this.pipefd = pipefd;
-        if (pipefd == null) {
-            bufferForPipeFD = null;
-        } else {
-            bufferForPipeFD = DirectMemoryUtils.allocateDirectBuffer(8); // linux eventfd requires 8 bytes buffer
-            posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable);
-        }
+        bufferForPipeFD = DirectMemoryUtils.allocateDirectBuffer(8); // linux eventfd requires 8 bytes buffer
+        posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable);
         attachments = new Att[setsize];
         for (int i = 0; i < setsize; ++i) {
             attachments[i] = new Att();
@@ -96,7 +91,7 @@ public class AESelector implements FDSelector {
             if (att.fd == null) // for the internal pipe fds
                 continue;
             int ev = res.events();
-            selectedEntryList.add().set(att.fd, getJavaEvents(ev), att.att);
+            selectedEntryList.add(att.fd, getJavaEvents(ev), att.att);
         }
         return selectedEntryList;
     }
@@ -151,11 +146,6 @@ public class AESelector implements FDSelector {
     }
 
     @Override
-    public boolean supportsWakeup() {
-        return pipefd != null;
-    }
-
-    @Override
     public void wakeup() {
         if (pipefd == null) {
             throw new UnsupportedOperationException("does not support wakeup");
@@ -169,15 +159,17 @@ public class AESelector implements FDSelector {
         }
     }
 
-    private boolean checkFDMatch(FD fd) {
+    private void checkFDMatch(FD fd, boolean allowNotExist) {
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
-        if (attachments[fdnum].fd != fd) {
-            Logger.shouldNotHappen("fd mismatch: " +
-                "input: " + fd + ", existing: " + attachments[fdnum].fd);
-            return false;
+        if (attachments[fdnum].fd == null) {
+            if (allowNotExist)
+                return;
         }
-        return true;
+        if (attachments[fdnum].fd != fd) {
+            throw new IllegalArgumentException("fd mismatch: " +
+                "input: " + fd + ", existing: " + attachments[fdnum].fd);
+        }
     }
 
     @Override
@@ -189,7 +181,7 @@ public class AESelector implements FDSelector {
         if (stored == null) {
             return false;
         }
-        return checkFDMatch(fd);
+        return stored == fd;
     }
 
     private int getIntEvents(EventSet events) {
@@ -222,12 +214,10 @@ public class AESelector implements FDSelector {
     @Override
     public void remove(FD fd) {
         checkOpen();
+        checkFDMatch(fd, true);
+
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
-        if (attachments[fdnum].fd != fd) {
-            throw new IllegalStateException("trying to remove another fd: " +
-                "input: " + fd + ", existing: " + attachments[fdnum].fd);
-        }
         attachments[fdnum].set(null, null, null);
         posix.aeDeleteFileEvent(ae, fdnum);
     }
@@ -235,12 +225,10 @@ public class AESelector implements FDSelector {
     @Override
     public void modify(FD fd, EventSet ops) {
         checkOpen();
+        checkFDMatch(fd, false);
+
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
-        if (attachments[fdnum].fd != fd) {
-            throw new IllegalStateException("trying to modify another fd: " +
-                "input: " + fd + ", existing: " + attachments[fdnum].fd);
-        }
         attachments[fdnum].ops = ops;
         posix.aeUpdateFileEvent(ae, fdnum, getIntEvents(ops));
     }
@@ -248,7 +236,7 @@ public class AESelector implements FDSelector {
     @Override
     public EventSet events(FD fd) {
         checkOpen();
-        checkFDMatch(fd);
+        checkFDMatch(fd, false);
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
         return attachments[fdnum].ops;
@@ -257,7 +245,7 @@ public class AESelector implements FDSelector {
     @Override
     public Object attachment(FD fd) {
         checkOpen();
-        checkFDMatch(fd);
+        checkFDMatch(fd, false);
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
         return attachments[fdnum].att;
@@ -299,10 +287,6 @@ public class AESelector implements FDSelector {
                 }
             }
         }
-    }
-
-    public long getAE() {
-        return ae;
     }
 
     @SuppressWarnings({"removal"})

@@ -3,6 +3,7 @@ package io.vproxy.msquic;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.msquic.wrap.ApiExtraTables;
 
 import java.util.NoSuchElementException;
 
@@ -24,10 +25,10 @@ public class MsQuicInitializer {
             return false;
         }
 
-        MsQuicMod.get().MsQuicSetThreadCountLimit(1); // FIXME: need to implement event loop migration
+        ApiExtraTables.V2EXTRA.ThreadCountLimitSet(1); // FIXME: need to implement event loop migration
         MsQuicUpcall.setImpl(MsQuicUpcallImpl.get());
         MsQuicModUpcall.setImpl(MsQuicModUpcallImpl.get());
-        MsQuicMod.get().MsQuicSetEventLoopThreadDispatcher(MsQuicModUpcall.dispatch);
+        ApiExtraTables.V2EXTRA.EventLoopThreadDispatcherSet(MsQuicModUpcall.dispatch);
 
         supported = true;
         initialized = true;

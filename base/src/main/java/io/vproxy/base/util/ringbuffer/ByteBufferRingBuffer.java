@@ -59,4 +59,41 @@ public interface ByteBufferRingBuffer extends RingBuffer {
             throw new RuntimeException(e);
         }
     }
+
+    default int discardBytes(int maxBytesToDiscard) {
+        int[] nbytes = new int[]{0};
+        try {
+            return operateOnByteBufferWriteOut(maxBytesToDiscard, buf -> {
+                var n = buf.limit() - buf.position();
+                var bytesToDiscard = maxBytesToDiscard - nbytes[0];
+                if (bytesToDiscard > n) {
+                    bytesToDiscard = n;
+                }
+                nbytes[0] += bytesToDiscard;
+                buf.position(buf.position() + bytesToDiscard);
+            });
+        } catch (IOException e) {
+            // will not happen, it's memory operation
+            throw new RuntimeException(e);
+        }
+    }
+
+    default int fillBytes(int maxBytesToFill) {
+        int[] nbytes = new int[]{0};
+        try {
+            return operateOnByteBufferStoreIn(buf -> {
+                var n = buf.limit() - buf.position();
+                var bytesToFill = maxBytesToFill - nbytes[0];
+                if (bytesToFill > n) {
+                    bytesToFill = n;
+                }
+                nbytes[0] += bytesToFill;
+                buf.position(buf.position() + bytesToFill);
+                return true;
+            });
+        } catch (IOException e) {
+            // will not happen, it's memory operation
+            throw new RuntimeException(e);
+        }
+    }
 }

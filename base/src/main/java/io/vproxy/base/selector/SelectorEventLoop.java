@@ -17,7 +17,6 @@ import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.time.TimeQueue;
 import io.vproxy.vfd.*;
 import io.vproxy.vfd.posix.AEFiredExtra;
-import io.vproxy.vfd.posix.AESelector;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -292,13 +291,6 @@ public class SelectorEventLoop implements AutoCloseable {
                 // ignore the interruption
             }
         }
-    }
-
-    // this method is for f-stack
-    // do not use it anywhere else
-    public void _bindThread0() {
-        runningThread = Thread.currentThread();
-        VProxyThread.current().loop = this;
     }
 
     // return -1 for break
@@ -711,13 +703,9 @@ public class SelectorEventLoop implements AutoCloseable {
         if (afterPollCallback == null)
             return false;
         var selector = this.selector.getSelector();
-        if (selector instanceof AESelector ae) {
-            var num = ae.getFiredExtraNum();
-            var arr = ae.getFiredExtra();
-            return afterPollCallback.run(num, arr);
-        } else {
-            return afterPollCallback.run(0, null);
-        }
+        var num = selector.getFiredExtraNum();
+        var arr = selector.getFiredExtra();
+        return afterPollCallback.run(num, arr);
     }
 
     public void setAfterPoll(AfterPollCallback cb) {

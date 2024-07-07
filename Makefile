@@ -23,6 +23,13 @@ else ifeq ($(LINUX_ARCH),amd64)
 LINUX_ARCH := x86_64
 endif
 
+IS_WIN = 0
+ifneq (,$(findstring MINGW,$(OS)))
+  IS_WIN = 1
+else ifneq (,$(findstring Windows,$(OS)))
+  IS_WIN = 1
+endif
+
 DOCKER_PLUGIN_WORKDIR ?= "."
 
 .PHONY: clean-jar
@@ -44,7 +51,7 @@ clean: clean-jar
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
 	rm -rf ./io
-	rm -rf ./submodules/msquic/build
+	cd submodules/msquic && make clean
 	rm -f ./*.so
 	rm -f ./*.dylib
 	rm -f ./*.dll
@@ -96,22 +103,25 @@ _add_linux_so_to_zip:
 		./io/vproxy/libpni-$(LINUX_ARCH).so
 	rm -r ./io
 
+.PHONY: native-no-docker
+native-no-docker: libpni vfdposix quic fubuki
+	cp ./submodules/msquic/build/bin/Release/libmsquic.2.2.4.dylib ./libmsquic.dylib
 .PHONY: native
 ifeq ($(OS),Linux)
 native: libpni vfdposix vpxdp quic-all fubuki
 else ifeq ($(OS),Darwin)
 native: libpni-linux libpni vfdposix-linux vfdposix vpxdp-linux quic-all fubuki-linux fubuki
 else
-native: libpni vfdwindows
+native: libpni vfdwindows quic fubuki
 endif
 
 .PHONY: jar-with-lib
 ifeq ($(OS),Linux)
 jar-with-lib: clean jar native _add_linux_so_to_zip
 else
-jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-no-docker
+jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-skip-native
 .PHONY: jar-with-lib-no-docker
-jar-with-lib-no-docker: clean jar native jar-with-lib-skip-native
+jar-with-lib-no-docker: clean jar native-no-docker jar-with-lib-skip-native
 .PHONY: jar-with-lib-skip-native
 jar-with-lib-skip-native: clean-jar jar
 	mkdir -p ./io/vproxy/
@@ -168,11 +178,19 @@ xdp-sample-kern:
 	cd ./base/src/main/c/xdp && make kern
 
 .PHONY: msquic-java
+ifeq (0,$(IS_WIN))
 msquic-java: libpni
 	cd ./base/src/main/c && \
 	MSQUIC_LD=../../../../submodules/msquic/build/bin/Release \
 	MSQUIC_INC=../../../../submodules/msquic/src/inc \
 	/usr/bin/env bash ./make-quic.sh
+else
+msquic-java: libpni
+	cd ./base/src/main/c && \
+	MSQUIC_LD=../../../../submodules/msquic/artifacts/bin/windows/x64_Release_openssl \
+	MSQUIC_INC=../../../../submodules/msquic/src/inc \
+	/usr/bin/env bash ./make-quic.sh
+endif
 .PHONY: msquic
 msquic:
 	cd ./submodules/msquic/ && make
@@ -244,7 +262,11 @@ fubuki-linux:
 endif
 
 .PHONY: quic
+ifeq (0,$(IS_WIN))
 quic: vfdposix msquic msquic-java
+else
+quic: vfdwindows msquic msquic-java
+endif
 .PHONY: quic-linux
 quic-linux: vfdposix-linux msquic-linux msquic-java-linux
 .PHONY: _quic-all-linux
@@ -263,7 +285,7 @@ quic-all: _quic-all-linux
 endif
 
 .PHONY: vfdwindows
-vfdwindows:
+vfdwindows: libpni
 	cd ./base/src/main/c && ./make-windows.sh
 
 .PHONY: libpni

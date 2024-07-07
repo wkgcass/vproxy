@@ -10,8 +10,7 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithOpts, FDsWithCoreAffini
     public final Posix posix;
 
     public PosixFDs() {
-        assert VFDConfig.vfdlibname != null;
-        String lib = VFDConfig.vfdlibname;
+        String lib = "vfdposix";
         try {
             Utils.loadDynamicLibrary(lib);
         } catch (UnsatisfiedLinkError e) {
