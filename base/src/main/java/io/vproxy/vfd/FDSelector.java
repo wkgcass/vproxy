@@ -1,6 +1,7 @@
 package io.vproxy.vfd;
 
 import io.vproxy.base.util.objectpool.GarbageFree;
+import io.vproxy.vfd.posix.AEFiredExtra;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -19,8 +20,6 @@ public interface FDSelector extends Closeable {
     @GarbageFree
     Collection<SelectedEntry> select(long millis) throws IOException;
 
-    boolean supportsWakeup();
-
     void wakeup();
 
     boolean isRegistered(FD fd);
@@ -36,4 +35,12 @@ public interface FDSelector extends Closeable {
     Object attachment(FD fd);
 
     Collection<RegisterEntry> entries();
+
+    default int getFiredExtraNum() {
+        return 0;
+    }
+
+    default AEFiredExtra.Array getFiredExtra() {
+        return null;
+    }
 }

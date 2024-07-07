@@ -1,5 +1,4 @@
 #include "io_vproxy_msquic_MsQuicMod2.h"
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,10 +21,9 @@ JNIEXPORT uint8_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatW
     #elif defined(__APPLE__)
         locals->Cqes[i].udata = events[i].ud;
         locals->Cqes[i].filter = events[i].mask;
-    #else
-        locals->CqeCount = 0;
-        printf("unsupported platform\n");
-        fflush(stdout);
+    #else // windows
+        locals->Cqes[i].lpOverlapped = events[i].ud;
+        locals->Cqes[i].dwNumberOfBytesTransferred = events[i].mask;
     #endif
     }
     int ret = MsQuicCxPlatWorkerThreadAfterPoll(locals);
@@ -39,5 +37,5 @@ JNIEXPORT int32_t JNICALL JavaCritical_io_vproxy_msquic_MsQuicMod2_MsQuicCxPlatW
 #ifdef __cplusplus
 }
 #endif
-// metadata.generator-version: pni 21.0.0.14
-// sha256:6549fdff39e4231b3a3a119bf2d43235cf4b858c232cc06445c16dcc3174c06e
+// metadata.generator-version: pni 22.0.0.17
+// sha256:d415bf48163e676b954201e489e7a8eb0b17af1022578e647599f68dd6ec71f0

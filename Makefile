@@ -263,7 +263,7 @@ quic-all: _quic-all-linux
 endif
 
 .PHONY: vfdwindows
-vfdwindows:
+vfdwindows: libpni
 	cd ./base/src/main/c && ./make-windows.sh
 
 .PHONY: libpni

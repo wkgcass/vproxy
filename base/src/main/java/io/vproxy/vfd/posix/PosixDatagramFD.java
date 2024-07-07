@@ -12,14 +12,6 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
         super(posix);
     }
 
-    public void ensureDummyFD() throws IOException {
-        checkNotClosed();
-        if (fd != -1) {
-            throw new IOException("the datagram fd is already created: " + fd);
-        }
-        fd = posix.createIPv4UdpFD();
-    }
-
     @Override
     protected int createIPv4FD() throws IOException {
         return posix.createIPv4UdpFD();

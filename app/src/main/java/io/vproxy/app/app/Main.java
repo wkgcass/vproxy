@@ -8,15 +8,13 @@ import io.vproxy.app.vproxyx.GenerateCommandDoc;
 import io.vproxy.app.vproxyx.Simple;
 import io.vproxy.base.Config;
 import io.vproxy.base.dns.Resolver;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.MainUtils;
-import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.*;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.JoinCallback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.thread.VProxyThreadJsonParserCacheHolder;
 import io.vproxy.pni.graal.GraalUtils;
+import io.vproxy.r.org.graalvm.nativeimage.ImageInfoDelegate;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.*;
 import vjson.parser.ParserUtils;
@@ -59,6 +57,9 @@ public class Main {
             Utils.loadDynamicLibrary("pni");
         } catch (Throwable t) {
             Logger.warn(LogType.ALERT, "unable to load dynamic library: pni, native features cannot be used");
+            if (ImageInfoDelegate.inImageCode() && OS.isWindows()) {
+                Logger.warn(LogType.ALERT, "Tip: You may need MinGW UCRT64 (or libgcc_s_seh-1.dll,libwinpthread-1.dll) to make pni work");
+            }
         }
         GraalUtils.init();
         ParserUtils.setParserCacheHolder(new VProxyThreadJsonParserCacheHolder());

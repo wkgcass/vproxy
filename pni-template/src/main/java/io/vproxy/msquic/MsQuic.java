@@ -27,7 +27,6 @@ interface PNIMsQuicMod2 {
     void MsQuicCxPlatWorkerThreadBeforePoll(PNICxPlatProcessEventLocals CxPlatProcessEventLocals);
 
     @Impl(
-        include = "<stdio.h>",
         // language="c"
         c = """
             locals->CqeCount = num;
@@ -38,10 +37,9 @@ interface PNIMsQuicMod2 {
             #elif defined(__APPLE__)
                 locals->Cqes[i].udata = events[i].ud;
                 locals->Cqes[i].filter = events[i].mask;
-            #else
-                locals->CqeCount = 0;
-                printf("unsupported platform\\n");
-                fflush(stdout);
+            #else // windows
+                locals->Cqes[i].lpOverlapped = events[i].ud;
+                locals->Cqes[i].dwNumberOfBytesTransferred = events[i].mask;
             #endif
             }
             int ret = MsQuicCxPlatWorkerThreadAfterPoll(locals);
