@@ -1,7 +1,6 @@
-#include <winsock2.h>
-#include <mswsock.h>
-#include "vfd_windows.h"
 #include "vfd_posix.h"
+#include "vfd_windows.h"
+#include "exception.h"
 
 static LPFN_CONNECTEX ConnectExPtr;
 
@@ -13,12 +12,13 @@ static inline LPFN_CONNECTEX GetConnectEx() {
     GUID guid = WSAID_CONNECTEX;
     int numBytes = 0;
     WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
-             &ConnectExPtr, sizeof(ConnectExPtr), &numBytes, NULL, NULL);
+             &ConnectExPtr, sizeof(ConnectExPtr), (LPDWORD)&numBytes, NULL, NULL);
     // should succeed
     return ConnectExPtr;
 }
 
 #include "io_vproxy_vfd_windows_WindowsNative.impl.h"
+#include "io_vproxy_vfd_windows_IOCP.impl.h"
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tapNonBlockingSupported
   (PNIEnv_bool* env) {
@@ -57,7 +57,7 @@ BOOL findTapGuidByNameInNetworkPanel(void* env, const char* dev, char* guid) {
             throwIOExceptionBasedOnErrnoWithPrefix(env, "failed to enumerate on keys");
             return FALSE;
         }
-        snprintf(connection_string, sizeof(connection_string), "%s\\%s\\Connection",
+        _snprintf(connection_string, sizeof(connection_string), "%s\\%s\\Connection",
                  NETWORK_CONNECTIONS_KEY,
                  enum_name);
         res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, connection_string, 0, KEY_READ, &connection_key);

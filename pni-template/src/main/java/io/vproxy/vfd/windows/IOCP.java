@@ -6,35 +6,37 @@ import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 
 @Downcall
-@Include({"IoAPI.h", "exception.h"})
+@Include({"ioapiset.h", "exception.h"})
 interface PNIIOCP {
     @Impl(
         c = """
+            ULONG nRemoved = 0;
             BOOL ok = GetQueuedCompletionStatusEx(
                 handle, completionPortEntries, count,
-                numEntriesRemoved, milliseconds, alertable
+                &nRemoved, milliseconds, alertable
             );
             if (!ok) {
                 return throwIOExceptionBasedOnErrno(env);
             }
+            env->return_ = nRemoved;
             return 0;
             """
     )
-    void getQueuedCompletionStatusEx(
+    int getQueuedCompletionStatusEx(
         @NativeType("HANDLE") PNIHANDLE handle,
         @Raw PNIOverlappedEntry[] completionPortEntries,
-        @Unsigned long count,
-        @Unsigned long[] numEntriesRemoved,
+        @Unsigned int count,
         int milliseconds,
         boolean alertable
     ) throws IOException;
 
     @LinkerOption.Critical
+    @NoAlloc
     @Impl(
         c = """
             HANDLE handle = CreateIoCompletionPort(
                 fileHandle, existingCompletionPort,
-                completionKey, numberOfConcurrentThreads
+                (ULONG_PTR)completionKey, numberOfConcurrentThreads
             );
             if (handle == INVALID_HANDLE_VALUE) {
                 return throwIOExceptionBasedOnErrno(env);
@@ -46,17 +48,17 @@ interface PNIIOCP {
     PNIHANDLE createIoCompletionPort(
         @NativeType("HANDLE") PNIHANDLE fileHandle,
         @NativeType("HANDLE") PNIHANDLE existingCompletionPort,
-        @Unsigned long[] completionKey,
+        MemorySegment completionKey,
         int numberOfConcurrentThreads
-    );
+    ) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
         c = """
-            BOOL ok = postQueuedCompletionStatus(
+            BOOL ok = PostQueuedCompletionStatus(
                 completionPort,
                 numberOfBytesTransferred,
-                completionKey,
+                (ULONG_PTR)completionKey,
                 overlapped
             );
             if (!ok) {
@@ -70,25 +72,35 @@ interface PNIIOCP {
         int numberOfBytesTransferred,
         MemorySegment completionKey,
         PNIOverlapped overlapped
-    );
+    ) throws IOException;
 }
 
 @Struct(skip = true)
 @Include("minwinbase.h")
 @Name("OVERLAPPED_ENTRY")
 class PNIOverlappedEntry {
-    @Name("lpCompletionKey") MemorySegment completionKey;
-    @Name("lpOverlapped") PNIOverlapped overlapped;
-    @Name("Internal") MemorySegment internal;
-    @Name("dwNumberOfBytesTransferred") int numberOfBytesTransferred;
+    @Name("lpCompletionKey")
+    MemorySegment completionKey;
+    @Name("lpOverlapped")
+    @Pointer
+    PNIOverlapped overlapped;
+    @Name("Internal")
+    MemorySegment internal;
+    @Name("dwNumberOfBytesTransferred")
+    int numberOfBytesTransferred;
 }
 
 @Struct(skip = true)
 @Include("minwinbase.h")
 @Name("OVERLAPPED")
 class PNIOverlapped {
-    @Name("Internal") long internal;
-    @Name("InternalHigh") long internalHigh;
-    @Name("DUMMYUNIONNAME") MemorySegment dummy;
-    @Name("hEvent") PNIHANDLE event;
+    @Name("Internal")
+    long internal;
+    @Name("InternalHigh")
+    long internalHigh;
+    @Name("DUMMYUNIONNAME")
+    MemorySegment dummy;
+    @Name("hEvent")
+    @Pointer
+    PNIHANDLE event;
 }

@@ -14,7 +14,7 @@ fi
 gcc -std=gnu99 -O2 \
     -I ./ \
     -I "$GENERATED_PATH" \
-    -L . \
-    -lpni -shared -Werror -fPIC \
-    io_vproxy_vfd_windows_GeneralWindows.c \
+    -L "$WINDIR/System32" -L . \
+    -lpni -lucrt -lwsock32 -lws2_32 -shared -Werror -fPIC \
+    io_vproxy_vfd_windows_GeneralWindows.c io_vproxy_vfd_posix_GeneralPosix.c \
     -o "$target"

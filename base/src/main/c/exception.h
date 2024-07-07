@@ -4,7 +4,7 @@
 #include <pni.h>
 
 #if defined(__linux__) || defined(WIN32)
-void strlcpy(char *dst, const char *src, size_t size) {
+static inline void strlcpy(char *dst, const char *src, size_t size) {
     strncpy(dst, src, size);
     dst[size - 1] = '\0';
 }
@@ -31,7 +31,6 @@ static inline int throwIOExceptionBasedOnErrno(void* _env) {
     PNIEnv* env = _env;
     int err = GetLastError();
     env->ex.type = "java.io.IOException";
-    strncpy(env->ex.message, message, PNIExceptionMessageLen);
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                   0, err, 0, env->ex.message, PNIExceptionMessageLen, 0);
     return -1;
