@@ -5,6 +5,7 @@ import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIString;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 public class GeneralWindows implements Windows {
@@ -15,12 +16,12 @@ public class GeneralWindows implements Windows {
 
     @Override
     public long allocateOverlapped() throws IOException {
-        return WindowsNative.get().allocateOverlapped(VProxyThread.current().getEnv());
+        throw new UnsupportedEncodingException(); // TODO
     }
 
     @Override
     public void releaseOverlapped(long overlapped) throws IOException {
-        WindowsNative.get().releaseOverlapped(VProxyThread.current().getEnv(), overlapped);
+        throw new UnsupportedEncodingException(); // TODO
     }
 
     @Override
@@ -32,18 +33,16 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void closeHandle(long handle) throws IOException {
-        WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), handle);
+        throw new UnsupportedEncodingException(); // TODO
     }
 
     @Override
     public int read(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return WindowsNative.get().read(VProxyThread.current().getEnv(),
-            handle, directBuffer, off, len, overlapped);
+        throw new UnsupportedEncodingException(); // TODO
     }
 
     @Override
     public int write(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return WindowsNative.get().write(VProxyThread.current().getEnv(),
-            handle, directBuffer, off, len, overlapped);
+        throw new UnsupportedEncodingException(); // TODO
     }
 }

@@ -7,6 +7,7 @@ import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vfd.WritableByteStream;
 
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
@@ -54,6 +55,10 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
     public static SimpleRingBuffer wrap(ByteBuffer b) {
         return new SimpleRingBuffer(false, new ByteBufferEx(b), b.position(), b.limit());
+    }
+
+    public static SimpleRingBuffer wrap(MemorySegment memSeg) {
+        return wrap(memSeg.asByteBuffer());
     }
 
     private SimpleRingBuffer(boolean isDirect, ByteBufferEx buffer, int sPos, int ePos) {

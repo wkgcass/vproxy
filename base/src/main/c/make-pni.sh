@@ -29,6 +29,7 @@ fi
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
     -I "$GENERATED_PATH" \
-    -shared -Werror -fPIC \
+    -L "$WINDIR/System32" \
+    -lucrt -shared -Werror -fPIC \
     $GENERATED_PATH/pni.c \
     -o "$target"
