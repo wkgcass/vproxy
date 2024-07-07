@@ -28,7 +28,6 @@ fi
 
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
-    -DPNI_GRAAL=1 \
     -I "$GENERATED_PATH" \
     -shared -Werror -fPIC \
     $GENERATED_PATH/pni.c \
