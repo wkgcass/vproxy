@@ -45,7 +45,7 @@ public class FubukiTunIface extends TunIface {
     @Override
     public void init(IfaceInitParams params) throws Exception {
         super.init(params);
-        fubuki = new Fubuki(getIndex(), nodeName, serverIPPort, key, localAddr, new Callback());
+        fubuki = new Fubuki(new Fubuki.Data(getIndex(), nodeName, serverIPPort, key, localAddr, new Callback()));
         sw = params.sw;
         bondLoop = params.loop;
     }
@@ -78,9 +78,14 @@ public class FubukiTunIface extends TunIface {
 
     @Override
     protected String toStringExtra() {
+        var fubuki = this.fubuki;
+        var status = "off";
+        if (fubuki != null && fubuki.isRunning()) {
+            status = "on";
+        }
         return super.toStringExtra() + ",server=" + serverIPPort.formatToIPPortString() + ",local=" + (
             localAddr == null ? "null" : localAddr.formatToIPMaskString()
-        );
+        ) + ",status=" + status;
     }
 
     @Override
@@ -94,7 +99,6 @@ public class FubukiTunIface extends TunIface {
             fubuki.close();
             fubuki = null;
         }
-        clearManagedIPs();
     }
 
     private final Map<IPv4, FubukiEtherIPIface> etheripSubIfaces = new HashMap<>();
@@ -131,6 +135,7 @@ public class FubukiTunIface extends TunIface {
             } catch (NotFoundException ignore) {
             }
         }
+        managedIPs.clear();
     }
 
     private class Callback implements FubukiCallback {
@@ -215,6 +220,14 @@ public class FubukiTunIface extends TunIface {
                     }
                 } catch (NotFoundException ignore) {
                 }
+            });
+        }
+
+        @Override
+        public void terminate(Fubuki fubuki) {
+            bondLoop.runOnLoop(() -> {
+                Logger.warn(LogType.ALERT, "fubuki is terminated, clearing ips: " + managedIPs);
+                clearManagedIPs();
             });
         }
     }

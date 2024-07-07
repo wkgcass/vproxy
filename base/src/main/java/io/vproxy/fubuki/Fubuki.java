@@ -18,32 +18,47 @@ import java.lang.foreign.MemorySegment;
 public class Fubuki implements AutoCloseable {
     private static final long FUBUKI_FLAG_NO_AUTO_SPAWN = 0x0001;
 
-    private final FubukiCallback callback;
+    private final Data data;
     private final PNIRef<Fubuki> ref;
-    private final FubukiHandle handle;
+    private volatile FubukiHandle handle;
+    private volatile boolean isClosed = false;
 
-    public Fubuki(int ifIndex, String nodeName, IPPort server, String key, IPMask localAddr, FubukiCallback callback) {
+    public Fubuki(Data data) {
         loadNative();
-        this.callback = callback;
+        this.data = data;
 
         ref = PNIRef.of(this);
+        startFubuki(true);
+    }
+
+    public record Data(
+        int ifIndex,
+        String nodeName,
+        IPPort server,
+        String key,
+        IPMask localAddr,
+        FubukiCallback callback
+    ) {
+    }
+
+    private void startFubuki(boolean isFirstStart) {
         try (var allocator = Allocator.ofConfined()) {
             var opts = new FubukiStartOptions(allocator);
             opts.setCtx(ref.MEMORY);
-            opts.setDeviceIndex(ifIndex);
+            opts.setDeviceIndex(data.ifIndex);
             opts.setFnOnPacket(FubukiUpcall.onPacket);
             opts.setFnAddAddr(FubukiUpcall.addAddress);
             opts.setFnDeleteAddr(FubukiUpcall.deleteAddress);
             //noinspection DataFlowIssue
             var configJson = new ObjectBuilder()
                 .putArray("groups", arr -> arr.addObject(o -> o
-                    .put("node_name", nodeName)
-                    .put("server_addr", server.formatToIPPortString())
-                    .put("key", key)
-                    .putNullableInst("tun_addr", localAddr == null, () ->
+                    .put("node_name", data.nodeName)
+                    .put("server_addr", data.server.formatToIPPortString())
+                    .put("key", data.key)
+                    .putNullableInst("tun_addr", data.localAddr == null, () ->
                         new ObjectBuilder()
-                            .put("ip", localAddr.ip().formatToIPString())
-                            .put("netmask", localAddr.mask().formatToIPString())
+                            .put("ip", data.localAddr.ip().formatToIPString())
+                            .put("netmask", data.localAddr.mask().formatToIPString())
                             .build())
                 ))
                 .putObject("features", o -> o
@@ -58,26 +73,52 @@ public class Fubuki implements AutoCloseable {
             opts.setFlags(FUBUKI_FLAG_NO_AUTO_SPAWN);
 
             var errMsg = new PNIString(allocator.allocate(1024));
-            handle = FubukiFunc.get().start(opts, 3, errMsg);
-
+            var handle = FubukiFunc.get().start(opts, 3, errMsg);
             if (handle == null) {
                 var err = errMsg.toString();
                 Logger.error(LogType.SYS_ERROR, "failed to start fubuki: " + err);
                 throw new RuntimeException(err);
             }
+            this.handle = handle;
+            if (isClosed) {
+                handle.stop();
+                return;
+            }
+
             VProxyThread.create(() -> {
                 try (var errStrAllocator = Allocator.ofConfined()) {
                     var errStr = new PNIString(errStrAllocator.allocate(1024));
                     int ret = handle.fubukiBlockOn(errStr);
+                    Logger.warn(LogType.ALERT, "fubuki-" + data.ifIndex + " thread exits");
+                    this.handle = null;
+                    if (isClosed) {
+                        return;
+                    }
+                    handle.stop();
+                    data.callback.terminate(this);
                     if (ret != 0) {
                         var err = errStr.toString();
-                        Logger.fatal(LogType.SYS_ERROR, "failed to launch fubuki: code=" + ret + ", err=" + err);
+                        Logger.fatal(LogType.SYS_ERROR, "fubuki-" + data.ifIndex + " thread exits unexpectedly: code=" + ret + ", err=" + err);
+                    }
+                    while (!isClosed) {
+                        try {
+                            startFubuki(false);
+                            break; // break when succeeded
+                        } catch (Throwable t) {
+                            try {
+                                //noinspection BusyWait
+                                Thread.sleep(2_000);
+                            } catch (InterruptedException ignore) {
+                            }
+                        }
                     }
                 }
-                Logger.warn(LogType.ALERT, "fubuki-" + ifIndex + " thread exits");
-            }, "fubuki-" + ifIndex).start();
+            }, "fubuki-" + data.ifIndex).start();
         } catch (Throwable t) {
-            ref.close();
+            Logger.fatal(LogType.SYS_ERROR, "fubuki-" + data.ifIndex + " failed to start", t);
+            if (isFirstStart) {
+                ref.close();
+            }
             throw t;
         }
     }
@@ -115,8 +156,25 @@ public class Fubuki implements AutoCloseable {
         Utils.loadDynamicLibrary("vpfubuki");
     }
 
+    public boolean isRunning() {
+        return handle != null;
+    }
+
+    public boolean isClosed() {
+        return isClosed;
+    }
+
     @Override
     public void close() {
+        if (isClosed) {
+            return;
+        }
+        synchronized (this) {
+            if (isClosed) {
+                return;
+            }
+            isClosed = true;
+        }
         ref.close();
         if (handle != null) {
             handle.stop();
@@ -124,7 +182,7 @@ public class Fubuki implements AutoCloseable {
     }
 
     public void onPacket(ByteArray packet) {
-        callback.onPacket(this, packet);
+        data.callback.onPacket(this, packet);
     }
 
     public void addAddress(IPv4 ip, IPv4 mask) {
@@ -132,7 +190,7 @@ public class Fubuki implements AutoCloseable {
             Logger.warn(LogType.SYS_ERROR, "received addAddress event: ip=" + ip + " mask=" + mask + ", not a valid mask");
             return;
         }
-        callback.addAddress(this, ip, mask);
+        data.callback.addAddress(this, ip, mask);
     }
 
     public void deleteAddress(IPv4 ip, IPv4 mask) {
@@ -140,6 +198,6 @@ public class Fubuki implements AutoCloseable {
             Logger.warn(LogType.SYS_ERROR, "received deleteAddress event: ip=" + ip + " mask=" + mask + ", not a valid mask");
             return;
         }
-        callback.deleteAddress(this, ip, mask);
+        data.callback.deleteAddress(this, ip, mask);
     }
 }

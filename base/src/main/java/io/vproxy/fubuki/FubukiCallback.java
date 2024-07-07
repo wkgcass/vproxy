@@ -9,4 +9,6 @@ public interface FubukiCallback {
     void addAddress(Fubuki fubuki, IPv4 ip, IPv4 mask);
 
     void deleteAddress(Fubuki fubuki, IPv4 ip, IPv4 mask);
+
+    void terminate(Fubuki fubuki);
 }
