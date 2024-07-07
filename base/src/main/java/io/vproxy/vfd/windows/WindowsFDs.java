@@ -1,23 +1,21 @@
 package io.vproxy.vfd.windows;
 
-import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.*;
-import io.vproxy.vfd.jdk.ChannelFDs;
+import io.vproxy.vfd.posix.GeneralPosix;
 import io.vproxy.vfd.posix.Posix;
+import io.vproxy.vfd.posix.PosixNative;
 
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.lang.reflect.Proxy;
 
-public class WindowsFDs implements FDs, FDsWithTap {
-    private final ChannelFDs channelFDs;
+public class WindowsFDs implements FDs, FDsWithTap, FDsWithOpts {
     private final Windows windows;
+    private final Posix posix;
 
     public WindowsFDs() {
-        channelFDs = ChannelFDs.get();
-
-        assert VFDConfig.vfdlibname != null;
-        String lib = VFDConfig.vfdlibname;
+        String lib = "vfdwindows";
         try {
             Utils.loadDynamicLibrary(lib);
         } catch (UnsatisfiedLinkError e) {
@@ -37,73 +35,66 @@ public class WindowsFDs implements FDs, FDsWithTap {
                 // should not happen
                 throw new RuntimeException(e);
             }
-            windows = (Windows) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{cls}, new TraceInvocationHandler(new GeneralWindows()));
+            windows = (Windows) Proxy.newProxyInstance(Windows.class.getClassLoader(), new Class[]{cls}, new TraceInvocationHandler(new GeneralWindows()));
+
+            clsStr = Posix.class.getPackage().getName() + "." + PosixNative.class.getSimpleName().substring(0, "Posix".length());
+            try {
+                cls = Class.forName(clsStr);
+            } catch (ClassNotFoundException e) {
+                // should not happen
+                throw new RuntimeException(e);
+            }
+            posix = (Posix) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{cls}, new TraceInvocationHandler(new GeneralPosix()));
         } else {
             windows = new GeneralWindows();
+            posix = new GeneralPosix();
         }
     }
 
     @Override
     public SocketFD openSocketFD() throws IOException {
-        return channelFDs.openSocketFD();
+        return new WindowsSocketFD(windows, posix);
     }
 
     @Override
     public ServerSocketFD openServerSocketFD() throws IOException {
-        return channelFDs.openServerSocketFD();
+        return new WindowsServerSocketFD(windows, posix);
     }
 
     @Override
     public DatagramFD openDatagramFD() throws IOException {
-        return channelFDs.openDatagramFD();
+        return new WindowsDatagramFD(windows, posix);
     }
 
     @Override
     public FDSelector openSelector() throws IOException {
-        return channelFDs.openSelector();
+        return new IOCPSelector(new WinIOCP(1));
+    }
+
+    @Override
+    public FDSelector openSelector(Options opts) throws IOException {
+        if (opts.epfd() <= 0) {
+            return openSelector();
+        }
+        return new IOCPSelector(new WinIOCP(new HANDLE(MemorySegment.ofAddress(opts.epfd()))));
     }
 
     @Override
     public long currentTimeMillis() {
-        return channelFDs.currentTimeMillis();
+        return posix.currentTimeMillis();
     }
 
     @Override
     public boolean isV4V6DualStack() {
-        return true;
+        return false;
     }
 
     @Override
     public TapDatagramFD openTap(String dev) throws IOException {
-        long handle = windows.createTapHandle(dev);
-        long readOverlapped;
-        try {
-            readOverlapped = windows.allocateOverlapped();
-        } catch (IOException e) {
-            try {
-                windows.closeHandle(handle);
-            } catch (Throwable t) {
-                Logger.shouldNotHappen("close handle " + handle + " failed when allocating readOverlapped failed", t);
-            }
-            throw e;
-        }
-        long writeOverlapped;
-        try {
-            writeOverlapped = windows.allocateOverlapped();
-        } catch (IOException e) {
-            try {
-                windows.closeHandle(handle);
-            } catch (Throwable t) {
-                Logger.shouldNotHappen("close handle " + handle + " failed when allocating writeOverlapped failed", t);
-            }
-            try {
-                windows.releaseOverlapped(readOverlapped);
-            } catch (Throwable t) {
-                Logger.shouldNotHappen("releasing readOverlapped " + readOverlapped + " failed when allocating writeOverlapped failed", t);
-            }
-            throw e;
-        }
-        return new WindowsTapDatagramFD(windows, handle, new TapInfo(dev, (int) handle), readOverlapped, writeOverlapped);
+        var handle = windows.createTapHandle(dev);
+        var socket = WinSocket.ofDatagram((int) handle.MEMORY.address());
+        return new WindowsTapDatagramFD(windows, posix,
+            socket, new TapInfo(dev, (int) handle.MEMORY.address()));
     }
 
     @Override

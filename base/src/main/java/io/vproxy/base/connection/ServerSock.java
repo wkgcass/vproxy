@@ -44,14 +44,10 @@ public class ServerSock implements NetFlowRecorder {
         try {
             chnl.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             chnl.bind(new IPPort(IP.from("0.0.0.0"), 0));
-        } catch (UnsupportedOperationException ignore) {
+        } catch (UnsupportedOperationException | IOException ignore) {
             Logger.warn(LogType.SYS_ERROR, "the operating system does not support SO_REUSEPORT");
             supportReusePort = 0;
             return false;
-        } catch (IOException e) {
-            // should not happen
-            Logger.shouldNotHappen("setting SO_REUSEPORT throws IOException", e);
-            return false; // return false as default
         } finally {
             try {
                 chnl.close();

@@ -558,13 +558,19 @@ project(':test') {
         }
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
+        def msquicLD = "./submodules/msquic/build/bin/Release"
+        if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+            msquicLD = "./submodules/msquic/artifacts/bin/windows/x64_Release_openssl"
+        }
         systemProperty("java.library.path",
-            "./submodules/msquic/build/bin/Release" +
-            File.pathSeparator +
-            "./submodules/msquic-java/core/src/main/c" +
+            msquicLD +
             File.pathSeparator +
             "./base/src/main/c")
-        systemProperty("vfd", "posix")
+        if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+            systemProperty("vfd", "windows")
+        } else {
+            systemProperty("vfd", "posix")
+        }
         def gw = System.getProperty("Gateway")
         if ("true" == gw || "1" == gw) {
             main = "io.vproxy.poc.QuicGatewayPoc"
@@ -573,7 +579,7 @@ project(':test') {
         }
     }
 
-    task WinTap(type: JavaExec) {
+    task WinPoc(type: JavaExec) {
         if (!org.gradle.internal.os.OperatingSystem.current().isWindows()) {
             return
         }
@@ -584,8 +590,9 @@ project(':test') {
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
         systemProperty("java.library.path", "base\\src\\main\\c")
-        systemProperty("vfd", "windows")
-        main = "io.vproxy.poc.WinTap"
+
+        def mainClass = System.getProperty("MainClass")
+        main = "io.vproxy.poc." + mainClass
     }
 
     task GenerateModuleInfo(type: JavaExec) {

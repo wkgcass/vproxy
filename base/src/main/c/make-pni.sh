@@ -14,6 +14,7 @@ then
 	target="lib$target.dylib"
 	include_platform_dir="darwin"
 else
+	os="_WIN32"
 	target="$target.dll"
 	include_platform_dir="win32"
 fi
@@ -26,9 +27,18 @@ if [ "$VPROXY_BUILD_GRAAL_NATIVE_IMAGE" == "true" ]; then
 	GCC_OPTS="$GCC_OPTS -DPNI_GRAAL=1"
 fi
 
+inc=""
+link="-lc"
+if [ "_WIN32" == "$os" ]
+then
+	inc="-L $WINDIR/System32"
+	link="-lucrt"
+fi
+
 gcc -std=gnu99 -O2 \
     $GCC_OPTS \
     -I "$GENERATED_PATH" \
-    -shared -Werror -fPIC \
+    $inc \
+    $link -shared -Werror -fPIC \
     $GENERATED_PATH/pni.c \
     -o "$target"

@@ -11,23 +11,22 @@ interface PNIMsQuicMod2 {
     @Impl(
         // language="c"
         c = """
-            MsQuicCxPlatWorkerThreadInit(CxPlatWorkerThreadLocals);
+            api->WorkerThreadInit(CxPlatWorkerThreadLocals);
             """
     )
     @Style(Styles.critical)
-    void MsQuicCxPlatWorkerThreadInit(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
+    void WorkerThreadInit(PNIQuicExtraApiTable api, PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
 
     @Impl(
         // language="c"
         c = """
-            MsQuicCxPlatWorkerThreadBeforePoll(CxPlatProcessEventLocals);
+            api->WorkerThreadBeforePoll(CxPlatProcessEventLocals);
             """
     )
     @Style(Styles.critical)
-    void MsQuicCxPlatWorkerThreadBeforePoll(PNICxPlatProcessEventLocals CxPlatProcessEventLocals);
+    void WorkerThreadBeforePoll(PNIQuicExtraApiTable api, PNICxPlatProcessEventLocals CxPlatProcessEventLocals);
 
     @Impl(
-        include = "<stdio.h>",
         // language="c"
         c = """
             locals->CqeCount = num;
@@ -38,29 +37,29 @@ interface PNIMsQuicMod2 {
             #elif defined(__APPLE__)
                 locals->Cqes[i].udata = events[i].ud;
                 locals->Cqes[i].filter = events[i].mask;
-            #else
-                locals->CqeCount = 0;
-                printf("unsupported platform\\n");
-                fflush(stdout);
+            #else // windows
+                locals->Cqes[i].lpOverlapped = events[i].ud;
+                locals->Cqes[i].dwNumberOfBytesTransferred = events[i].mask;
             #endif
             }
-            int ret = MsQuicCxPlatWorkerThreadAfterPoll(locals);
+            int ret = api->WorkerThreadAfterPoll(locals);
             return ret;
             """
     )
     @Style(Styles.critical)
-    boolean MsQuicCxPlatWorkerThreadAfterPoll(PNICxPlatProcessEventLocals locals,
+    boolean WorkerThreadAfterPoll(PNIQuicExtraApiTable api,
+                                              PNICxPlatProcessEventLocals locals,
                                               int num,
                                               @Raw PNIAEFiredExtra[] events);
 
     @Impl(
         // language="c"
         c = """
-            return MsQuicCxPlatWorkerThreadFinalize(CxPlatWorkerThreadLocals);
+            return api->WorkerThreadFinalize(CxPlatWorkerThreadLocals);
             """
     )
     @Style(Styles.critical)
-    int MsQuicCxPlatWorkerThreadFinalize(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
+    int WorkerThreadFinalize(PNIQuicExtraApiTable api, PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
 }
 
 @Struct(skip = true, typedef = false)

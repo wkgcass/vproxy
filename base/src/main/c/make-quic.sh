@@ -33,17 +33,31 @@ then
 	include_platform_dir="darwin"
 	cflags="-DCX_PLATFORM_DARWIN=1"
 else
-	echo "unsupported platform $os"
-	exit 1
+	os="_WIN32"
+	target="$target.dll"
+	include_platform_dir="win32"
 fi
 
 rm -f "$target"
 
-NO_AS_NEEDED=""
-AS_NEEDED=""
-if [[ "Linux" == "$os" ]]
+link="-lc -lpthread"
+if [ "_WIN32" == "$os" ]
+then
+	link="-L $WINDIR/System32 -lucrt -lntdll"
+fi
+
+if [ "Linux" == "$os" ]
 then
 	NO_AS_NEEDED="-Wl,--no-as-needed"
+fi
+if [ "_WIN32" == "$os" ]
+then
+	link="$link -l:msquic.dll"
+else
+	link="$link -lmsquic"
+fi
+if [ "Linux" == "$os" ]
+then
 	AS_NEEDED="-Wl,--as-needed"
 fi
 
@@ -64,7 +78,7 @@ gcc -std=gnu11 -O2 \
     -L "$MSQUIC_LD" -L . \
     -DQUIC_ENABLE_CUSTOM_EVENT_LOOP=1 \
     $cflags \
-    -shared -Werror -lc -lpthread -lpni $NO_AS_NEEDED "-lmsquic" $AS_NEEDED -fPIC \
+    -shared -Werror $link -fPIC \
     io_vproxy_msquic_MsQuic.c \
     ../$GENERATED_DIR_NAME/io_vproxy_msquic_CxPlatExecutionState.extra.c \
     ../$GENERATED_DIR_NAME/io_vproxy_msquic_CxPlatProcessEventLocals.extra.c \

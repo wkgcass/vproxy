@@ -6,6 +6,7 @@ import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vfd.WritableByteStream;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Set;
 
 public interface RingBuffer {
@@ -29,6 +30,16 @@ public interface RingBuffer {
     }
 
     int storeBytesFrom(ReadableByteStream channel) throws IOException;
+
+    default int storeBytesFrom(ByteBuffer buf) {
+        var oldLimit = buf.limit();
+
+        var chnl = ByteArrayChannel.fromFull(buf);
+        var ret = storeBytesFrom(chnl);
+
+        buf.limit(oldLimit);
+        return ret;
+    }
 
     default int writeTo(ByteArrayChannel channel) {
         try {
@@ -63,6 +74,16 @@ public interface RingBuffer {
         int n = writeTo(chnl);
         buffer.storeBytesFrom(chnl);
         return n;
+    }
+
+    default int writeTo(ByteBuffer buf) {
+        var oldLimit = buf.limit();
+
+        var chnl = ByteArrayChannel.fromEmpty(buf);
+        var ret = writeTo(chnl);
+
+        buf.limit(oldLimit);
+        return ret;
     }
 
     int free();

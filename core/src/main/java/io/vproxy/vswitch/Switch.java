@@ -16,7 +16,6 @@ import io.vproxy.base.util.objectpool.CursorList;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vfd.*;
-import io.vproxy.vfd.posix.PosixDatagramFD;
 import io.vproxy.vmirror.Mirror;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv4Packet;
@@ -185,9 +184,7 @@ public class Switch {
             try {
                 sock.configureBlocking(false);
                 if (vxlanBindingAddress.getAddress().isBroadcast()) {
-                    if (sock instanceof PosixDatagramFD) {
-                        ((PosixDatagramFD) sock).ensureDummyFD();
-                    }
+                    sock.ensureDummyFD();
                 } else {
                     sock.bind(vxlanBindingAddress);
                 }

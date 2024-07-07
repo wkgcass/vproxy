@@ -3,9 +3,13 @@ package io.vproxy.vfd.windows;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIString;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.posix.SocketAddressIPv4;
+import io.vproxy.vfd.posix.SocketAddressIPv6;
+import io.vproxy.vfd.posix.SocketAddressUnion;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 public class GeneralWindows implements Windows {
     @Override
@@ -14,36 +18,176 @@ public class GeneralWindows implements Windows {
     }
 
     @Override
-    public long allocateOverlapped() throws IOException {
-        return WindowsNative.get().allocateOverlapped(VProxyThread.current().getEnv());
-    }
-
-    @Override
-    public void releaseOverlapped(long overlapped) throws IOException {
-        WindowsNative.get().releaseOverlapped(VProxyThread.current().getEnv(), overlapped);
-    }
-
-    @Override
-    public long createTapHandle(String dev) throws IOException {
-        try (var allocator = Allocator.ofPooled()) {
+    public HANDLE createTapHandle(String dev) throws IOException {
+        try (var allocator = Allocator.ofConfined()) {
             return WindowsNative.get().createTapHandle(VProxyThread.current().getEnv(), new PNIString(allocator, dev));
         }
     }
 
     @Override
-    public void closeHandle(long handle) throws IOException {
-        WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), handle);
+    public void closeHandle(SOCKET fd) throws IOException {
+        WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), fd);
     }
 
     @Override
-    public int read(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return WindowsNative.get().read(VProxyThread.current().getEnv(),
-            handle, directBuffer, off, len, overlapped);
+    public void acceptEx(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().acceptEx(VProxyThread.current().getEnv(),
+                socket.getListenSocket().fd, socket.recvContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
     }
 
     @Override
-    public int write(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException {
-        return WindowsNative.get().write(VProxyThread.current().getEnv(),
-            handle, directBuffer, off, len, overlapped);
+    public void updateAcceptContext(WinSocket socket) throws IOException {
+        socket.updateAcceptContext();
+    }
+
+    private interface HandleSocketAddress {
+        void handle(boolean v4, SocketAddressUnion un) throws IOException;
+    }
+
+    private static void handleSocketAddress(IPPort ipport, HandleSocketAddress f) throws IOException {
+        try (var allocator = Allocator.ofConfined()) {
+            boolean v4;
+            var un = new SocketAddressUnion(allocator);
+            if (ipport.getAddress() instanceof IPv4 ipv4) {
+                v4 = true;
+                un.getV4().setIp(ipv4.getIPv4Value());
+                un.getV4().setPort((short) ipport.getPort());
+            } else {
+                v4 = false;
+                un.getV6().setIp(ipport.getAddress().formatToIPString());
+                un.getV6().setPort((short) ipport.getPort());
+            }
+            f.handle(v4, un);
+        }
+    }
+
+    @Override
+    public void tcpConnect(WinSocket socket, IPPort ipport) throws IOException {
+        handleSocketAddress(ipport, (v4, un) -> {
+            socket.incrIORefCnt();
+            try {
+                WindowsNative.get().tcpConnect(VProxyThread.current().getEnv(), socket.sendContext, v4, un);
+            } catch (IOException e) {
+                socket.decrIORefCnt();
+                throw e;
+            }
+        });
+    }
+
+    @Override
+    public void wsaRecv(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().wsaRecv(VProxyThread.current().getEnv(), socket.recvContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void wsaRecvFrom(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().wsaRecvFrom(VProxyThread.current().getEnv(), socket.recvContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void readFile(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().readFile(VProxyThread.current().getEnv(), socket.recvContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void wsaSend(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().wsaSend(VProxyThread.current().getEnv(), socket.sendContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void wsaSend(WinSocket socket, VIOContext ctx) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().wsaSend(VProxyThread.current().getEnv(), ctx);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void wsaSendTo(WinSocket socket, VIOContext ctx, IPPort ipport) throws IOException {
+        handleSocketAddress(ipport, (v4, un) -> {
+            socket.incrIORefCnt();
+            try {
+                WindowsNative.get().wsaSendTo(VProxyThread.current().getEnv(), ctx, v4, un);
+            } catch (IOException e) {
+                socket.decrIORefCnt();
+                throw e;
+            }
+        });
+    }
+
+    @Override
+    public void writeFile(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().writeFile(VProxyThread.current().getEnv(), socket.sendContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void writeFile(WinSocket socket, VIOContext ctx) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().writeFile(VProxyThread.current().getEnv(), ctx);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void wsaSendDisconnect(WinSocket socket) throws IOException {
+        WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), socket.fd);
+    }
+
+    @Override
+    public IPPort convertAddress(WinSocket socket, boolean v4) throws IOException {
+        try (var allocator = Allocator.ofConfined()) {
+            var un = new SocketAddressUnion(allocator);
+            WindowsNative.get().convertAddress(VProxyThread.current().getEnv(),
+                socket.recvContext.getAddr().MEMORY, v4, un);
+            if (v4) {
+                var addr = new SocketAddressIPv4(un.getV4().getIp(), un.getV4().getPort() & 0xffff);
+                return addr.toIPPort();
+            } else {
+                var addr = new SocketAddressIPv6(un.getV6().getIp(), un.getV6().getPort() & 0xffff);
+                return addr.toIPPort();
+            }
+        }
     }
 }
