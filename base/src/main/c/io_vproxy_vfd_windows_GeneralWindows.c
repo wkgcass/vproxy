@@ -1,36 +1,28 @@
-#include "io_vproxy_vfd_windows_WindowsNative.h"
-#include "exception.h"
+#include <winsock2.h>
+#include <mswsock.h>
 #include "vfd_windows.h"
+#include "vfd_posix.h"
+
+static LPFN_CONNECTEX ConnectExPtr;
+
+static inline LPFN_CONNECTEX GetConnectEx() {
+    if (ConnectExPtr != NULL) {
+        return ConnectExPtr;
+    }
+    SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    GUID guid = WSAID_CONNECTEX;
+    int numBytes = 0;
+    WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
+             &ConnectExPtr, sizeof(ConnectExPtr), &numBytes, NULL, NULL);
+    // should succeed
+    return ConnectExPtr;
+}
+
+#include "io_vproxy_vfd_windows_WindowsNative.impl.h"
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tapNonBlockingSupported
   (PNIEnv_bool* env) {
-    env->return_ = JNI_FALSE;
-    return 0;
-}
-
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_allocateOverlapped
-  (PNIEnv_long* env) {
-    OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
-    memset(ov, 0, sizeof(OVERLAPPED));
-    HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (event == NULL) {
-        free(ov);
-        return throwIOExceptionBasedOnLastError(env, "create event failed");
-    }
-    ov->hEvent = event;
-    env->return_ = (jlong) ov;
-    return 0;
-}
-
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_releaseOverlapped
-  (PNIEnv_void* env, int64_t ovJ) {
-    OVERLAPPED* ov = (OVERLAPPED*) ovJ;
-    HANDLE event = ov->hEvent;
-    BOOL status = CloseHandle(event);
-    if (!status) {
-        return throwIOExceptionBasedOnLastError(env, "close event failed");
-    }
-    free(ov);
+    env->return_ = JNI_TRUE;
     return 0;
 }
 
@@ -45,7 +37,7 @@ BOOL findTapGuidByNameInNetworkPanel(void* env, const char* dev, char* guid) {
                        KEY_READ,
                        &network_connections_key);
     if (res != ERROR_SUCCESS) {
-        throwIOExceptionBasedOnLastError(env, "failed to open NETWORK_CONNECTIONS_KEY");
+        throwIOExceptionBasedOnErrnoWithPrefix(env, "failed to open NETWORK_CONNECTIONS_KEY");
         return FALSE;
     }
     int i = 0;
@@ -62,7 +54,7 @@ BOOL findTapGuidByNameInNetworkPanel(void* env, const char* dev, char* guid) {
         if (res == ERROR_NO_MORE_ITEMS) {
             break;
         } else if (res != ERROR_SUCCESS) {
-            throwIOExceptionBasedOnLastError(env, "failed to enumerate on keys");
+            throwIOExceptionBasedOnErrnoWithPrefix(env, "failed to enumerate on keys");
             return FALSE;
         }
         snprintf(connection_string, sizeof(connection_string), "%s\\%s\\Connection",
@@ -76,7 +68,7 @@ BOOL findTapGuidByNameInNetworkPanel(void* env, const char* dev, char* guid) {
         len = sizeof(name_data);
         res = RegQueryValueExW(connection_key, name_string, NULL, &name_type, (LPBYTE) name_data, &len);
         if (res != ERROR_SUCCESS) {
-            throwIOExceptionBasedOnLastError(env, "RegQueryValueExW failed");
+            throwIOExceptionBasedOnErrnoWithPrefix(env, "RegQueryValueExW failed");
             return FALSE;
         }
         if (name_type != REG_SZ) {
@@ -109,7 +101,7 @@ BOOL openTapDevice(void* env, char* guid, HANDLE* outHandle) {
                     FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
                     0);
     if (handle == INVALID_HANDLE_VALUE) {
-        throwIOExceptionBasedOnLastError(env, "open tap device failed");
+        throwIOExceptionBasedOnErrnoWithPrefix(env, "open tap device failed");
         return FALSE;
     }
     *outHandle = handle;
@@ -122,7 +114,7 @@ BOOL plugCableToTabDevice(void* env, HANDLE handle) {
     if (DeviceIoControl(handle, TAP_WIN_IOCTL_SET_MEDIA_STATUS, &x, sizeof(x), &x, sizeof(x), &len, NULL)) {
         return TRUE;
     } else {
-        throwIOExceptionBasedOnLastError(env, "setting device to CONNECTED failed");
+        throwIOExceptionBasedOnErrnoWithPrefix(env, "setting device to CONNECTED failed");
         return FALSE;
     }
 }
@@ -149,16 +141,6 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_closeHandle
-  (PNIEnv_void* env, int64_t handleJ) {
-    HANDLE handle = (HANDLE) handleJ;
-    BOOL status = CloseHandle(handle);
-    if (!status) {
-        return throwIOExceptionBasedOnLastError(env, "close failed");
-    }
-    return 0;
-}
-
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_read
   (PNIEnv_int* env, int64_t handleJ, void* directBuffer, int32_t off, int32_t len, int64_t ovJ) {
     if (len == 0) {
@@ -173,7 +155,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_read
     if (!status && GetLastError() == ERROR_IO_PENDING) {
         DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
-            return throwIOExceptionBasedOnLastError(env, "wait failed when reading");
+            return throwIOExceptionBasedOnErrnoWithPrefix(env, "wait failed when reading");
         } else if (waitStatus != WAIT_OBJECT_0) {
             if (waitStatus == WAIT_ABANDONED) {
                 return throwIOException(env, "WAIT_ABANDONED when reading");
@@ -193,7 +175,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_read
         }
     }
     if (!status) {
-        return throwIOExceptionBasedOnLastError(env, "read failed");
+        return throwIOExceptionBasedOnErrnoWithPrefix(env, "read failed");
     }
     env->return_ = (jint) n;
     return 0;
@@ -213,7 +195,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_write
     if (!status && GetLastError() == ERROR_IO_PENDING) {
         DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
-            return throwIOExceptionBasedOnLastError(env, "wait failed when writing");
+            return throwIOExceptionBasedOnErrnoWithPrefix(env, "wait failed when writing");
         } else if (waitStatus != WAIT_OBJECT_0) {
             if (waitStatus == WAIT_ABANDONED) {
                 return throwIOException(env, "WAIT_ABANDONED when writing");
@@ -233,7 +215,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_write
         }
     }
     if (!status) {
-        return throwIOExceptionBasedOnLastError(env, "write failed");
+        return throwIOExceptionBasedOnErrnoWithPrefix(env, "write failed");
     }
     env->return_ = (jint) n;
     return 0;

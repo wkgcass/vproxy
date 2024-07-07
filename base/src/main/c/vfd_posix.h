@@ -104,7 +104,8 @@
     #define v_inet_pton inet_pton
     #define v_inet_ntop inet_ntop
 
-
+    void j2cSockAddrIPv4(v_sockaddr_in* name, int32_t addrHostOrder, uint16_t port);
+    int j2cSockAddrIPv6(v_sockaddr_in6* name, char* fullAddrCharArray, uint16_t port);
 
     #include <errno.h>
     #ifndef EWOULDBLOCK

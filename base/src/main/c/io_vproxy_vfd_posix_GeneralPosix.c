@@ -10,14 +10,22 @@
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeReadable
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     env->return_ = AE_READABLE;
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeWritable
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     env->return_ = AE_WRITABLE;
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe
@@ -31,6 +39,8 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe
             fds[0] = fd;
             fds[1] = fd;
             return 0;
+        #elif defined(_WIN32)
+            return throwUnsupportedOperationException(env, "windows");
         #else
             int pipes[2];
             int res = v_pipe(pipes);
@@ -55,6 +65,9 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_openPipe
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop
   (PNIEnv_long* env, int32_t setsize, int32_t epfd, uint8_t preferPoll) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     int flags = 0;
     if (preferPoll)
         flags |= AE_FLAG_PREFER_POLL;
@@ -64,24 +77,36 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateEventLoop
     }
     env->return_ = (int64_t)ae;
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFired
   (PNIEnv_pointer * env, int64_t aex) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     aeEventLoop* ae = (aeEventLoop*) aex;
     env->return_ = ae->fired;
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtra
   (PNIEnv_pointer * env, int64_t aex) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     aeEventLoop* ae = (aeEventLoop*) aex;
     env->return_ = ae->firedExtra;
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll
   (PNIEnv_int* env, int64_t aex, int64_t wait) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     aeEventLoop* ae = (aeEventLoop*) aex;
 
     v_timeval tv;
@@ -92,33 +117,45 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll
 
     env->return_ = numevents;
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeApiPollNow
   (PNIEnv_int* env, int64_t aex) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     return Java_io_vproxy_vfd_posix_PosixNative_aeApiPoll(env, aex, 0);
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeGetFiredExtraNum
   (PNIEnv_int * env, int64_t aex) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     aeEventLoop* ae = (aeEventLoop*) aex;
     env->return_ = ae->firedExtraNum;
     return 0;
+#endif
 }
 
-inline static void io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
-  (int64_t aex, int32_t fd, int32_t mask) {
-    aeEventLoop* ae = (aeEventLoop*) aex;
-    aeCreateFileEvent(ae, fd, mask, NULL, NULL);
-}
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeCreateFileEvent
   (PNIEnv_void* env, int64_t aex, int32_t fd, int32_t mask) {
-    io_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0(aex, fd, mask);
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    aeCreateFileEvent(ae, fd, mask, NULL, NULL);
     return 0;
+#endif
 }
 
-inline static void io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
-  (int64_t aex, int32_t fd, int32_t mask) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeUpdateFileEvent
+  (PNIEnv_void* env, int64_t aex, int32_t fd, int32_t mask) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     aeEventLoop* ae = (aeEventLoop*) aex;
     int32_t oldMask = ae->events[fd].mask;
     int32_t toDelete = oldMask & (~mask);
@@ -130,29 +167,32 @@ inline static void io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
     if (toAdd) {
         aeCreateFileEvent(ae, fd, mask, NULL, NULL);
     }
-}
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeUpdateFileEvent
-  (PNIEnv_void* env, int64_t aex, int32_t fd, int32_t mask) {
-    io_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0(aex, fd, mask);
     return 0;
+#endif
 }
 
-inline static void io_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
-  (int64_t aex, int32_t fd) {
-    aeEventLoop* ae = (aeEventLoop*) aex;
-    aeDeleteFileEvent(ae, fd, 0xffffffff);
-}
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeDeleteFileEvent
   (PNIEnv_void* env, int64_t aex, int32_t fd) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    aeDeleteFileEvent(ae, fd, 0xffffffff);
+
     io_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0(aex, fd);
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeDeleteEventLoop
   (PNIEnv_void* env, int64_t aex) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     aeEventLoop* ae = (aeEventLoop*) aex;
     aeDeleteEventLoop(ae);
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_setBlocking
@@ -243,7 +283,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_close
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv4TcpFD
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    int sockfd = (int) WSASocket(V_AF_INET, V_SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+#else
     int sockfd = v_socket(V_AF_INET, V_SOCK_STREAM, 0);
+#endif
     if (sockfd < 0) {
         return throwIOExceptionBasedOnErrno(env);
     }
@@ -253,7 +297,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv4TcpFD
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv6TcpFD
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    int sockfd6 = (int) WSASocket(V_AF_INET6, V_SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+#else
     int sockfd6 = v_socket(V_AF_INET6, V_SOCK_STREAM, 0);
+#endif
     if (sockfd6 < 0) {
         return throwIOExceptionBasedOnErrno(env);
     }
@@ -263,7 +311,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv6TcpFD
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv4UdpFD
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    int sockfd = (int) WSASocket(V_AF_INET, V_SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+#else
     int sockfd = v_socket(V_AF_INET, V_SOCK_DGRAM, 0);
+#endif
     if (sockfd < 0) {
         return throwIOExceptionBasedOnErrno(env);
     }
@@ -273,7 +325,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv4UdpFD
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv6UdpFD
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    int sockfd = (int) WSASocket(V_AF_INET6, V_SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+#else
     int sockfd6 = v_socket(V_AF_INET6, V_SOCK_DGRAM, 0);
+#endif
     if (sockfd6 < 0) {
         return throwIOExceptionBasedOnErrno(env);
     }
@@ -283,12 +339,16 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createIPv6UdpFD
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createUnixDomainSocketFD
   (PNIEnv_int* env) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     int uds = v_socket(V_AF_UNIX, V_SOCK_STREAM, 0);
     if (uds < 0) {
       return throwIOExceptionBasedOnErrno(env);
     }
     env->return_ = uds;
     return 0;
+#endif
 }
 
 void j2cSockAddrIPv4(v_sockaddr_in* name, int32_t addrHostOrder, uint16_t port) {
@@ -355,6 +415,9 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_bindIPv6
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_bindUnixDomainSocket
   (PNIEnv_void* env, int32_t fd, char* pathChars) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     if (strlen(pathChars) >= UNIX_PATH_MAX) {
         return throwIOException(env, "path too long");
     }
@@ -373,6 +436,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_bindUnixDomainSocket
         return throwIOExceptionBasedOnErrno(env);
     }
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_accept
@@ -422,6 +486,9 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_connectIPv6
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_connectUDS
   (PNIEnv_void* env, int32_t fd, char* sockChars) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     if (strlen(sockChars) >= UNIX_PATH_MAX) {
         return throwIOException(env, "path too long");
     }
@@ -435,6 +502,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_connectUDS
         return throwIOExceptionBasedOnErrno(env);
     }
     return 0;
+#endif
 }
 
 int32_t handleWriteIOOperationResult(void* env, int res) {
@@ -550,6 +618,9 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getIPv6Remote
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getUDSLocal
   (PNIEnv_SocketAddressUDS_st* env, int32_t fd, SocketAddressUDS_st* result) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     v_sockaddr_un name;
     memset(&name, 0, sizeof(name));
     unsigned int foo = sizeof(name);
@@ -560,10 +631,14 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getUDSLocal
     env->return_ = result;
     formatSocketAddressUDS(&name, env->return_);
     return 0;
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getUDSRemote
   (PNIEnv_SocketAddressUDS_st* env, int32_t fd, SocketAddressUDS_st* result) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     v_sockaddr_un name;
     memset(&name, 0, sizeof(name));
     unsigned int foo = sizeof(name);
@@ -574,6 +649,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_getUDSRemote
     env->return_ = result;
     formatSocketAddressUDS(&name, env->return_);
     return 0;
+#endif
 }
 
 int32_t handleReadIOOperationResult(void* env, int res) {
@@ -756,6 +832,9 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_tunNonBlockingSupport
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_createTapFD
   (PNIEnv_TapInfo_st* env, char* devChars, uint8_t isTun, TapInfo_st* ret) {
+#ifdef _WIN32
+    return throwUnsupportedOperationException(env, "windows");
+#else
     // the returned device name
     char devName[IFNAMSIZ];
     // fd for the tap char device
@@ -869,6 +948,7 @@ fail:
           v_close(tmpFd);
       }
       return throwIOExceptionBasedOnErrno(env);
+#endif
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_setCoreAffinityForCurrentThread
