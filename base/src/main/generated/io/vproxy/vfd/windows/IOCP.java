@@ -34,9 +34,9 @@ public class IOCP {
         return ENV.returnInt();
     }
 
-    private static final MethodHandle createIoCompletionPortMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_IOCP_createIoCompletionPort", io.vproxy.vfd.windows.HANDLE.LAYOUT.getClass() /* fileHandle */, io.vproxy.vfd.windows.HANDLE.LAYOUT.getClass() /* existingCompletionPort */, MemorySegment.class /* completionKey */, int.class /* numberOfConcurrentThreads */);
+    private static final MethodHandle createIoCompletionPortMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_IOCP_createIoCompletionPort", io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() /* fileHandle */, io.vproxy.vfd.windows.HANDLE.LAYOUT.getClass() /* existingCompletionPort */, MemorySegment.class /* completionKey */, int.class /* numberOfConcurrentThreads */);
 
-    public io.vproxy.vfd.windows.HANDLE createIoCompletionPort(PNIEnv ENV, io.vproxy.vfd.windows.HANDLE fileHandle, io.vproxy.vfd.windows.HANDLE existingCompletionPort, MemorySegment completionKey, int numberOfConcurrentThreads) throws java.io.IOException {
+    public io.vproxy.vfd.windows.HANDLE createIoCompletionPort(PNIEnv ENV, io.vproxy.vfd.windows.SOCKET fileHandle, io.vproxy.vfd.windows.HANDLE existingCompletionPort, MemorySegment completionKey, int numberOfConcurrentThreads) throws java.io.IOException {
         ENV.reset();
         int ERR;
         try {
@@ -69,4 +69,4 @@ public class IOCP {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:798222733c61e0539887e5af99e64b7b551de9fb53e5bb40c7c08d70862e0fc7
+// sha256:1102ebc1732d1c97a372179333242a1f3b6bed9cd8c05e2634bbeb5eff0838b1

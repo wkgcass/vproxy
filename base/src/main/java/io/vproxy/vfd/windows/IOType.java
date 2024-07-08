@@ -1,9 +1,11 @@
 package io.vproxy.vfd.windows;
 
 public enum IOType {
-    ACCEPT(1),
-    READ(2),
-    WRITE(3),
+    READ(1),
+    WRITE(2),
+    ACCEPT(3),
+    CONNECT(4),
+    NOTIFY(5),
     ;
     public final int code;
 

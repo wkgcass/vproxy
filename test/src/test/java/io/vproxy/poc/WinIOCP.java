@@ -1,149 +1,185 @@
 package io.vproxy.poc;
 
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
-import io.vproxy.pni.PNIRef;
-import io.vproxy.pni.PNIString;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.posix.PosixNative;
 import io.vproxy.vfd.posix.SocketAddressIPv4;
+import io.vproxy.vfd.posix.SocketAddressUnion;
 import io.vproxy.vfd.windows.*;
 
+import java.io.IOException;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 
 public class WinIOCP {
-    private static final Allocator allocator = Allocator.ofUnsafe();
-
     public static void main(String[] args) throws Exception {
         System.loadLibrary("pni");
         System.loadLibrary("vfdwindows");
 
-        var iocp = IOCP.get().createIoCompletionPort(VProxyThread.current().getEnv(),
-            new HANDLE(MemorySegment.ofAddress(-1)),
-            null,
-            null, 0);
-        System.out.println("iocp = " + iocp);
+        var iocp = new io.vproxy.vfd.windows.WinIOCP();
+        {
+            Logger.alert("iocp = " + iocp);
+            VProxyThread.create(() -> loop(iocp), "iocp-loop").start();
+        }
 
-        VProxyThread.create(() -> loop(iocp), "iocp-loop").start();
+        {
+            var listenFd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
+            var listenSocket = new WinSocket(listenFd);
+            Logger.alert("listenSocket = " + listenSocket);
 
-        var listenFd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
-        var listenSocket = new SOCKET(MemorySegment.ofAddress(listenFd));
-        System.out.println("listenSocket = " + listenSocket);
+            PosixNative.get().bindIPv4(VProxyThread.current().getEnv(),
+                listenFd, IP.fromIPv4("127.0.0.1").getIPv4Value(), 8080);
 
-        PosixNative.get().bindIPv4(VProxyThread.current().getEnv(),
-            listenFd, IP.fromIPv4("127.0.0.1").getIPv4Value(), 8080);
+            deliverAccept(iocp, listenSocket);
+        }
 
-        IOCP.get().createIoCompletionPort(VProxyThread.current().getEnv(),
-            new HANDLE(MemorySegment.ofAddress(listenFd)), iocp,
-            null, 0);
+        Thread.sleep(2_000);
 
-        var acceptedFd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
-        var acceptedSocket = new SOCKET(MemorySegment.ofAddress(acceptedFd));
-        System.out.println("create a socket to handle accept event: " + acceptedSocket);
+        {
+            var fd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
+            var connectSocket = new WinSocket(fd);
+            Logger.alert("connectSocket = " + connectSocket);
+            iocp.associate(connectSocket);
 
-        var acceptCtx = new VIOContext(allocator);
-        acceptCtx.setSocket(acceptedSocket);
-        acceptCtx.setListenSocket(listenSocket);
-        acceptCtx.setIoType(IOType.ACCEPT.code);
-        acceptCtx.setV4(true);
-        acceptCtx.getBuffers().get(0).setBuf(allocator.allocate(1024));
-        acceptCtx.getBuffers().get(0).setLen(1024);
-        acceptCtx.setBufferCount(1);
-
-        boolean sync = WindowsNative.get().acceptEx(VProxyThread.current().getEnv(),
-            listenSocket, acceptCtx);
-        if (sync) {
-            System.out.println("sync accept succeeded");
-        } else {
-            System.out.println("async job delivered");
+            deliverConnect(connectSocket);
         }
     }
 
-    private static void loop(HANDLE iocp) {
-        while (true) {
-            try {
-                oneLoop(iocp);
-            } catch (Throwable t) {
-                throw new RuntimeException(t);
+    private static void deliverConnect(WinSocket socket) throws IOException {
+        try (var allocator = Allocator.ofConfined()) {
+            var un = new SocketAddressUnion(allocator);
+            var v4 = un.getV4();
+            v4.setIp(IP.fromIPv4("127.0.0.1").getIPv4Value());
+            v4.setPort((short) 8080);
+
+            socket.incrIORefCnt();
+            WindowsNative.get().tcpConnect(VProxyThread.current().getEnv(), socket.sendContext, true, un);
+        }
+        Logger.alert("async connect job delivered");
+    }
+
+    private static void deliverAccept(io.vproxy.vfd.windows.WinIOCP iocp, WinSocket listenSocket) throws Exception {
+        var acceptedFd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
+        Logger.alert("create a socket to handle accept event: " + acceptedFd);
+        var acceptedSock = new WinSocket(acceptedFd, listenSocket);
+        iocp.associate(acceptedSock);
+
+        acceptedSock.incrIORefCnt();
+        WindowsNative.get().acceptEx(VProxyThread.current().getEnv(),
+            listenSocket.fd, acceptedSock.recvContext);
+
+        Logger.alert("async accept job delivered");
+    }
+
+    private static void handleAccepted(io.vproxy.vfd.windows.WinIOCP iocp, WinSocket socket) throws Exception {
+        deliverAccept(iocp, socket.listenSocket);
+
+        WindowsNative.get().updateAcceptContext(VProxyThread.current().getEnv(), socket.listenSocket.fd, socket.fd);
+
+        try (var allocator = Allocator.ofConfined()) {
+            var st = PosixNative.get().getIPv4Remote(VProxyThread.current().getEnv(), (int) socket.fd.MEMORY.address(), allocator);
+            var addr = new SocketAddressIPv4(st.getIp(), st.getPort() & 0xffff);
+            Logger.alert("remote address is " + addr);
+        }
+
+        socket.recvContext.setIoType(IOType.READ.code);
+        deliverRead(socket);
+    }
+
+    private static void deliverRead(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        WindowsNative.get().wsaRecv(VProxyThread.current().getEnv(), socket.recvContext);
+        Logger.alert("async receive event delivered");
+    }
+
+    private static void loop(io.vproxy.vfd.windows.WinIOCP iocp) {
+        try (var allocator = Allocator.ofConfined()) {
+            var entries = new OverlappedEntry.Array(allocator, 16);
+            //noinspection InfiniteLoopStatement
+            while (true) {
+                try {
+                    oneLoop(entries, iocp);
+                } catch (Throwable t) {
+                    throw new RuntimeException(t);
+                }
             }
         }
     }
 
-    private static void oneLoop(HANDLE iocp) throws Exception {
-        var entries = new OverlappedEntry.Array(allocator, 16);
-        var nEvents = IOCP.get().getQueuedCompletionStatusEx(VProxyThread.current().getEnv(), iocp, entries, 16, -1, false);
+    private static void oneLoop(OverlappedEntry.Array entries, io.vproxy.vfd.windows.WinIOCP iocp) throws Exception {
+        var nEvents = iocp.getQueuedCompletionStatusEx(entries, 16, -1, false);
 
-        System.out.println("IOCP got " + nEvents + " events");
+        Logger.alert("IOCP got " + nEvents + " events");
 
         for (int i = 0; i < nEvents; ++i) {
             var entry = entries.get(i);
             var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());
+            var socket = (WinSocket) ctx.getRef().getRef();
+            if (socket.isClosed()) {
+                continue;
+            }
+
+            Logger.alert("last io operation error code = " + entry.getOverlapped().getInternal());
+            if (entry.getOverlapped().getInternal() != 0) {
+                socket.close();
+                continue;
+            }
 
             if (ctx.getIoType() == IOType.ACCEPT.code) {
-                var socket = ctx.getSocket();
-                System.out.println("socket accepted: " + socket);
-
-                WindowsNative.get().updateAcceptContext(VProxyThread.current().getEnv(), ctx.getListenSocket(), socket);
-
-                var st = PosixNative.get().getIPv4Remote(VProxyThread.current().getEnv(), (int) socket.MEMORY.address(), allocator);
-                var addr = new SocketAddressIPv4(st.getIp(), st.getPort() & 0xffff);
-                System.out.println("remote address is " + addr);
-
-                IOCP.get().createIoCompletionPort(VProxyThread.current().getEnv(),
-                    new HANDLE(socket.MEMORY), iocp, null, 0);
-
-                var conn = new Conn(socket, ctx);
-
-                int nRcvd = WindowsNative.get().wsaRecv(VProxyThread.current().getEnv(), conn.readCtx);
-                if (nRcvd < 0) {
-                    System.out.println("async receive event delivered");
-                } else {
-                    System.out.println("receive event directly return: " + nRcvd);
-                }
+                Logger.alert("socket accepted: " + socket);
+                handleAccepted(iocp, socket);
             } else if (ctx.getIoType() == IOType.READ.code) {
-                var socket = ctx.getSocket();
-                System.out.println("socket async recv done: " + socket);
+                Logger.alert("socket async recv done: " + socket);
 
                 var rcvLen = entry.getNumberOfBytesTransferred();
-                var rbuf = ctx.getBuffers().get(0).getBuf().reinterpret(rcvLen);
-                System.out.println("received data: " + new PNIString(rbuf));
+                Logger.alert("received " + rcvLen + " bytes");
+                if (rcvLen == 0) {
+                    socket.close();
+                    continue;
+                }
 
-                var conn = (Conn) ctx.getRef().getRef();
-                var wbuf = conn.writeCtx.getBuffers().get(0);
-                wbuf.getBuf().reinterpret(1024).copyFrom(rbuf);
+                var rbuf = ctx.getBuffers().get(0).getBuf().reinterpret(rcvLen);
+                var data = new String(rbuf.toArray(ValueLayout.JAVA_BYTE)).trim();
+                Logger.alert("received data: " + data);
+
+                if (data.trim().equals("quit")) {
+                    socket.close();
+                    continue;
+                }
+
+                var wbuf = socket.sendContext.getBuffers().get(0);
+                wbuf.setBuf(socket.sendMemSeg);
+                wbuf.getBuf().reinterpret(rcvLen).copyFrom(rbuf);
                 wbuf.setLen(rcvLen);
 
-                WindowsNative.get().wsaSend(VProxyThread.current().getEnv(), conn.writeCtx);
+                socket.incrIORefCnt();
+                WindowsNative.get().wsaSend(VProxyThread.current().getEnv(), socket.sendContext);
+                Logger.alert("async send event delivered");
             } else if (ctx.getIoType() == IOType.WRITE.code) {
-                var socket = ctx.getSocket();
                 var sndLen = entry.getNumberOfBytesTransferred();
-                System.out.println("socket async send done: " + socket + ", wrote " + sndLen + " bytes");
+                Logger.alert("socket async send done: " + socket + ", wrote " + sndLen + " bytes");
 
-                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), socket);
+                deliverRead(socket);
+            } else if (ctx.getIoType() == IOType.CONNECT.code) {
+                Logger.alert("socket connected: " + socket);
+
+                socket.sendContext.setIoType(IOType.WRITE.code);
+                var wbuf = socket.sendContext.getBuffers().get(0);
+                wbuf.setBuf(socket.sendMemSeg);
+                wbuf.getBuf().copyFrom(MemorySegment.ofArray("quit".getBytes()));
+                wbuf.setLen(4);
+
+                socket.incrIORefCnt();
+                WindowsNative.get().wsaSend(VProxyThread.current().getEnv(), socket.sendContext);
+                Logger.alert("client async send event delivered");
+
+                deliverRead(socket);
+            } else {
+                Logger.warn(LogType.ALERT, "unknown io_type: " + ctx.getIoType());
             }
-        }
-    }
-
-    private static class Conn {
-        final PNIRef<Conn> ref;
-        final VIOContext readCtx;
-        final VIOContext writeCtx;
-
-        private Conn(SOCKET socket, VIOContext readCtx) {
-            ref = PNIRef.of(this);
-
-            this.readCtx = readCtx;
-            this.readCtx.setIoType(IOType.READ.code);
-            this.readCtx.setRef(ref);
-
-            this.writeCtx = new VIOContext(allocator);
-            this.writeCtx.setSocket(socket);
-            this.writeCtx.setV4(true);
-            this.writeCtx.setBufferCount(1);
-            this.writeCtx.getBuffers().get(0).setBuf(allocator.allocate(1024));
-            this.writeCtx.getBuffers().get(0).setLen(1024);
-            this.writeCtx.setIoType(IOType.WRITE.code);
-            this.writeCtx.setRef(ref);
         }
     }
 }

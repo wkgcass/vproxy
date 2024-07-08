@@ -25,11 +25,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle(P
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_closeHandle(PNIEnv_void * env, HANDLE handle);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_acceptEx(PNIEnv_bool * env, SOCKET listenSocket, VIOContext * socketContext);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_updateAcceptContext(PNIEnv_void * env, SOCKET listenSocket, SOCKET accepted);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv_bool * env, VIOContext * ctx, SocketAddressUnion * addr);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv_bool * env, VIOContext * ctx, uint8_t v4, SocketAddressUnion * addr);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSend(PNIEnv_int * env, VIOContext * ctx);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, SocketAddressUnion * addr);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, uint8_t v4, SocketAddressUnion * addr);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendDisconnect(PNIEnv_void * env, SOCKET socket);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PNIEnv_void * env, void * sockaddr, uint8_t v4, SocketAddressUnion * addr);
 
@@ -38,4 +38,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 #endif
 #endif // _Included_io_vproxy_vfd_windows_WindowsNative
 // metadata.generator-version: pni 22.0.0.17
-// sha256:e761e434ddc1e5fe005be930907424a0fe822433d66d513142cc270d58ef1c8c
+// sha256:034ddf13bba7252a5b8141bbfa80184e85640335b32386e74e7794b6c936b180

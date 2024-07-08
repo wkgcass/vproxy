@@ -46,7 +46,7 @@ interface PNIIOCP {
             """
     )
     PNIHANDLE createIoCompletionPort(
-        @NativeType("HANDLE") PNIHANDLE fileHandle,
+        @NativeType("HANDLE") PNISOCKET fileHandle,
         @NativeType("HANDLE") PNIHANDLE existingCompletionPort,
         MemorySegment completionKey,
         int numberOfConcurrentThreads

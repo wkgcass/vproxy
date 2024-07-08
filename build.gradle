@@ -573,7 +573,7 @@ project(':test') {
         }
     }
 
-    task WinTap(type: JavaExec) {
+    task WinPoc(type: JavaExec) {
         if (!org.gradle.internal.os.OperatingSystem.current().isWindows()) {
             return
         }
@@ -584,8 +584,9 @@ project(':test') {
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
         systemProperty("java.library.path", "base\\src\\main\\c")
-        systemProperty("vfd", "windows")
-        main = "io.vproxy.poc.WinTap"
+
+        def mainClass = System.getProperty("MainClass")
+        main = "io.vproxy.poc." + mainClass
     }
 
     task GenerateModuleInfo(type: JavaExec) {

@@ -16,6 +16,7 @@ extern "C" {
 #include "exception.h"
 #include "io_vproxy_vfd_windows_HANDLE.h"
 #include "io_vproxy_vfd_windows_OverlappedEntry.h"
+#include "io_vproxy_vfd_windows_SOCKET.h"
 #include "io_vproxy_vfd_windows_Overlapped.h"
 
 #ifdef __cplusplus
@@ -31,4 +32,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_IOCP_postQueuedCompletionStatus
 #endif
 #endif // _Included_io_vproxy_vfd_windows_IOCP
 // metadata.generator-version: pni 22.0.0.17
-// sha256:a06e4c61a2a7ca0be5e81c9bce69dba2e13af6620f94a3f18dbab16fec224898
+// sha256:2840a12c7829fe33cf2187e211c4d01b08b6bd44857bca9f05b0e9c63b8082f4

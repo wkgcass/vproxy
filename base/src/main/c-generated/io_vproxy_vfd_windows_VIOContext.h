@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 PNIEnvExpand(VIOContext, VIOContext *)
-PNIBufExpand(VIOContext, VIOContext, 256)
+PNIBufExpand(VIOContext, VIOContext, 248)
 
 struct VIOContext {
     void * ptr;
@@ -32,11 +32,9 @@ struct VIOContext {
     int32_t ctxType;
     PNIRef * ref;
     SOCKET socket;
-    SOCKET listenSocket;
     int32_t ioType;
     WSABUF buffers[2];
     int32_t bufferCount;
-    uint8_t v4;
     struct sockaddr_storage addr;
     int32_t addrLen;
 };
@@ -46,4 +44,4 @@ struct VIOContext {
 #endif
 #endif // _Included_io_vproxy_vfd_windows_VIOContext
 // metadata.generator-version: pni 22.0.0.17
-// sha256:a1728c577c8b8d406085242a54a626d08f52e123a07b09a507284346d58b1f83
+// sha256:ae3f69b6767153761b77f1d8ca7d88b815aa5561e0feaefe804e966840bd9de6

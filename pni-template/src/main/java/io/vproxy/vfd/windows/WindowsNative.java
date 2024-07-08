@@ -70,7 +70,7 @@ interface PNIWindowsNative {
         c = """
             v_sockaddr* name;
             int nameSize;
-            if (ctx->v4) {
+            if (v4) {
                 v_sockaddr_in v4name;
                 j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
                 name = (v_sockaddr*)&v4name;
@@ -102,7 +102,7 @@ interface PNIWindowsNative {
             return 0;
             """
     )
-    boolean tcpConnect(PNIVIOContext ctx, PNISocketAddressUnion addr) throws IOException;
+    boolean tcpConnect(PNIVIOContext ctx, boolean v4, PNISocketAddressUnion addr) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
@@ -179,7 +179,7 @@ interface PNIWindowsNative {
         c = """
             v_sockaddr* name;
             int nameSize;
-            if (ctx->v4) {
+            if (v4) {
                 v_sockaddr_in v4name;
                 j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
                 name = (v_sockaddr*)&v4name;
@@ -203,7 +203,7 @@ interface PNIWindowsNative {
             return 0;
             """
     )
-    int wsaSendTo(PNIVIOContext ctx, PNISocketAddressUnion addr) throws IOException;
+    int wsaSendTo(PNIVIOContext ctx, boolean v4, PNISocketAddressUnion addr) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
@@ -270,16 +270,12 @@ class PNIVIOContext {
     @Pointer
     @NativeType("SOCKET")
     PNISOCKET socket;
-    @Pointer
-    @NativeType("SOCKET")
-    PNISOCKET listenSocket;
     int ioType;
     @Len(2)
     PNIWSABUF[] buffers;
     int bufferCount;
 
     // for address manipulation
-    boolean v4;
     SockaddrStorage addr;
     int addrLen;
 }

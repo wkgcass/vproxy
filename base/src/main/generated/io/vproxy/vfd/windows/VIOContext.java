@@ -15,13 +15,11 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
         MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */,
         ValueLayout.ADDRESS.withName("ref"),
         ValueLayout.ADDRESS.withName("socket"),
-        ValueLayout.ADDRESS.withName("listenSocket"),
         ValueLayout.JAVA_INT.withName("ioType"),
         MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */,
         MemoryLayout.sequenceLayout(2L, io.vproxy.vfd.windows.WSABUF.LAYOUT).withName("buffers"),
         ValueLayout.JAVA_INT.withName("bufferCount"),
-        ValueLayout.JAVA_BOOLEAN.withName("v4"),
-        MemoryLayout.sequenceLayout(3L, ValueLayout.JAVA_BYTE) /* padding */,
+        MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */,
         io.vproxy.vfd.windows.PNISockaddrStorage.LAYOUT.withName("addr"),
         ValueLayout.JAVA_INT.withName("addrLen"),
         MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */
@@ -113,26 +111,6 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
         }
     }
 
-    private static final VarHandleW listenSocketVH = VarHandleW.of(
-        LAYOUT.varHandle(
-            MemoryLayout.PathElement.groupElement("listenSocket")
-        )
-    );
-
-    public io.vproxy.vfd.windows.SOCKET getListenSocket() {
-        var SEG = listenSocketVH.getMemorySegment(MEMORY);
-        if (SEG.address() == 0) return null;
-        return new io.vproxy.vfd.windows.SOCKET(SEG);
-    }
-
-    public void setListenSocket(io.vproxy.vfd.windows.SOCKET listenSocket) {
-        if (listenSocket == null) {
-            listenSocketVH.set(MEMORY, MemorySegment.NULL);
-        } else {
-            listenSocketVH.set(MEMORY, listenSocket.MEMORY);
-        }
-    }
-
     private static final VarHandleW ioTypeVH = VarHandleW.of(
         LAYOUT.varHandle(
             MemoryLayout.PathElement.groupElement("ioType")
@@ -167,20 +145,6 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
         bufferCountVH.set(MEMORY, bufferCount);
     }
 
-    private static final VarHandleW v4VH = VarHandleW.of(
-        LAYOUT.varHandle(
-            MemoryLayout.PathElement.groupElement("v4")
-        )
-    );
-
-    public boolean isV4() {
-        return v4VH.getBool(MEMORY);
-    }
-
-    public void setV4(boolean v4) {
-        v4VH.set(MEMORY, v4);
-    }
-
     private final io.vproxy.vfd.windows.PNISockaddrStorage addr;
 
     public io.vproxy.vfd.windows.PNISockaddrStorage getAddr() {
@@ -212,14 +176,12 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
         OFFSET += 4; /* padding */
         OFFSET += ValueLayout.ADDRESS_UNALIGNED.byteSize();
         OFFSET += 8;
-        OFFSET += 8;
         OFFSET += ValueLayout.JAVA_INT_UNALIGNED.byteSize();
         OFFSET += 4; /* padding */
         this.buffers = new io.vproxy.vfd.windows.WSABUF.Array(MEMORY.asSlice(OFFSET, 2 * io.vproxy.vfd.windows.WSABUF.LAYOUT.byteSize()));
         OFFSET += 2 * io.vproxy.vfd.windows.WSABUF.LAYOUT.byteSize();
         OFFSET += ValueLayout.JAVA_INT_UNALIGNED.byteSize();
-        OFFSET += ValueLayout.JAVA_BOOLEAN.byteSize();
-        OFFSET += 3; /* padding */
+        OFFSET += 4; /* padding */
         this.addr = new io.vproxy.vfd.windows.PNISockaddrStorage(MEMORY.asSlice(OFFSET, io.vproxy.vfd.windows.PNISockaddrStorage.LAYOUT.byteSize()));
         OFFSET += io.vproxy.vfd.windows.PNISockaddrStorage.LAYOUT.byteSize();
         OFFSET += ValueLayout.JAVA_INT_UNALIGNED.byteSize();
@@ -265,12 +227,6 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
         }
         SB.append(",\n");
         {
-            SB.append(" ".repeat(INDENT + 4)).append("listenSocket => ");
-            if (CORRUPTED_MEMORY) SB.append("<?>");
-            else PanamaUtils.nativeObjectToString(getListenSocket(), SB, INDENT + 4, VISITED, CORRUPTED_MEMORY);
-        }
-        SB.append(",\n");
-        {
             SB.append(" ".repeat(INDENT + 4)).append("ioType => ");
             SB.append(getIoType());
         }
@@ -283,11 +239,6 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
         {
             SB.append(" ".repeat(INDENT + 4)).append("bufferCount => ");
             SB.append(getBufferCount());
-        }
-        SB.append(",\n");
-        {
-            SB.append(" ".repeat(INDENT + 4)).append("v4 => ");
-            SB.append(isV4());
         }
         SB.append(",\n");
         {
@@ -374,4 +325,4 @@ public class VIOContext extends AbstractNativeObject implements NativeObject {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:90a43985a2b54f668230867a9b3ead012ca70956e837eb972e8b73b0bed5a814
+// sha256:17eec6667763ac76ca21eb0aa807c4662e1e88b25d5afbfdced7c9b9c13bfeaa

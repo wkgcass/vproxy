@@ -44,10 +44,10 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_updateAcceptConte
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv_bool * env, VIOContext * ctx, SocketAddressUnion * addr) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv_bool * env, VIOContext * ctx, uint8_t v4, SocketAddressUnion * addr) {
     v_sockaddr* name;
     int nameSize;
-    if (ctx->v4) {
+    if (v4) {
         v_sockaddr_in v4name;
         j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
         name = (v_sockaddr*)&v4name;
@@ -137,10 +137,10 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSend(PNIEnv_in
     return 0;
 }
 
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, SocketAddressUnion * addr) {
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, uint8_t v4, SocketAddressUnion * addr) {
     v_sockaddr* name;
     int nameSize;
-    if (ctx->v4) {
+    if (v4) {
         v_sockaddr_in v4name;
         j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
         name = (v_sockaddr*)&v4name;
@@ -189,4 +189,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:abecc5168746cc2e2bbb698c7796c73cf7e1f5cf5ceec0e5de13366e19abb541
+// sha256:fbd3796e01342b78dcbd76403b8a5a8c48ded12f1e13fb3d7c936b42e594c9a5

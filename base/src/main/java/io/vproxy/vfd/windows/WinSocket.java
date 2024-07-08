@@ -11,29 +11,40 @@ import io.vproxy.pni.PooledAllocator;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class WinSocket implements AutoCloseable {
+public class WinSocket {
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final Allocator allocator;
     private final PNIRef<WinSocket> ref;
 
-    protected final MemorySegment recvMemSeg;
-    protected final MemorySegment sendMemSeg;
-    protected final RingBuffer recvRingBuffer;
-    protected final RingBuffer sendRingBuffer;
+    public final SOCKET fd;
+    public final WinSocket listenSocket; // optional
+
+    public final MemorySegment recvMemSeg;
+    public final MemorySegment sendMemSeg;
+    public final RingBuffer recvRingBuffer;
+    public final RingBuffer sendRingBuffer;
 
     public final VIOContext recvContext;
     public final VIOContext sendContext;
 
-    public WinSocket(int fd, boolean v4) {
-        this(fd, null, v4);
+    private final AtomicInteger refCnt = new AtomicInteger(1); // decr when close
+
+    WinIOCP iocp;
+    final ConcurrentLinkedQueue<WinIOCP.Notification> notifications = new ConcurrentLinkedQueue<>();
+
+    public WinSocket(int fd) {
+        this(fd, null);
     }
 
-    public WinSocket(int fd, SOCKET listenSocket, boolean v4) {
+    public WinSocket(int fd, WinSocket listenSocket) {
         allocator = PooledAllocator.ofUnsafePooled();
         this.ref = PNIRef.of(this);
-        var socket = new SOCKET(MemorySegment.ofAddress(fd));
+        this.fd = new SOCKET(MemorySegment.ofAddress(fd));
+        this.listenSocket = listenSocket;
 
         recvMemSeg = allocator.allocate(24576);
         sendMemSeg = allocator.allocate(24576);
@@ -42,10 +53,8 @@ public class WinSocket implements AutoCloseable {
 
         recvContext = new VIOContext(allocator);
         {
-            recvContext.setSocket(socket);
-            recvContext.setListenSocket(listenSocket);
+            recvContext.setSocket(this.fd);
             recvContext.setRef(ref);
-            recvContext.setV4(v4);
             if (listenSocket == null) {
                 recvContext.setIoType(IOType.READ.code);
             } else {
@@ -54,21 +63,54 @@ public class WinSocket implements AutoCloseable {
             recvContext.getBuffers().get(0).setBuf(recvMemSeg);
             recvContext.getBuffers().get(0).setLen(24576);
             recvContext.setBufferCount(1);
-            recvContext.setCtxType(0xFF0A);
+            recvContext.setCtxType(IOCPUtils.VPROXY_CTX_TYPE);
             IOCPUtils.setPointer(recvContext);
         }
         sendContext = new VIOContext(allocator);
         {
-            sendContext.setSocket(socket);
+            sendContext.setSocket(this.fd);
             sendContext.setRef(ref);
-            sendContext.setV4(v4);
-            sendContext.setIoType(IOType.WRITE.code);
-            sendContext.setCtxType(0xFF0A);
+            if (listenSocket == null) {
+                sendContext.setIoType(IOType.CONNECT.code);
+            } else {
+                sendContext.setIoType(IOType.WRITE.code);
+            }
+            sendContext.setBufferCount(1);
+            sendContext.setCtxType(IOCPUtils.VPROXY_CTX_TYPE);
             IOCPUtils.setPointer(sendContext);
+        }
+
+        UnderlyingIOCP.get().associate(this.fd);
+    }
+
+    WinIOCP getIocp() {
+        var iocp = this.iocp;
+        if (iocp == null) {
+            return null;
+        }
+        if (iocp.isClosed()) {
+            this.iocp = null;
+            return null;
+        }
+        return iocp;
+    }
+
+    public void incrIORefCnt() {
+        refCnt.incrementAndGet();
+    }
+
+    void decrIORefCnt() {
+        if (refCnt.decrementAndGet() == 0) {
+            if (closed.get()) {
+                realClose();
+            }
         }
     }
 
-    @Override
+    public boolean isClosed() {
+        return closed.get();
+    }
+
     public void close() {
         if (closed.get()) {
             return;
@@ -76,6 +118,20 @@ public class WinSocket implements AutoCloseable {
         if (!closed.compareAndSet(false, true)) {
             return;
         }
+        if (refCnt.decrementAndGet() == 0) {
+            realClose();
+            return;
+        }
+        //noinspection WhileCanBeDoWhile
+        while (notifications.poll() != null) {
+            if (refCnt.decrementAndGet() == 0) {
+                realClose();
+                return;
+            }
+        }
+    }
+
+    private void realClose() {
         try {
             WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
         } catch (IOException e) {
