@@ -49,11 +49,17 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv
     int nameSize;
     if (v4) {
         v_sockaddr_in v4name;
-        j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
+        j2cSockAddrIPv4(&v4name, 0, 0);
+        v_bind(ctx->socket, (v_sockaddr*)&v4name, sizeof(v4name));
+
+        j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v4.port);
         name = (v_sockaddr*)&v4name;
         nameSize = sizeof(v4name);
     } else {
         v_sockaddr_in6 v6name;
+        j2cSockAddrIPv6(&v6name, "::", 0);
+        v_bind(ctx->socket, (v_sockaddr*)&v6name, sizeof(v6name));
+
         j2cSockAddrIPv6(&v6name, addr->v6.ip, addr->v6.port);
         name = (v_sockaddr*)&v6name;
         nameSize = sizeof(v6name);
@@ -189,4 +195,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:fbd3796e01342b78dcbd76403b8a5a8c48ded12f1e13fb3d7c936b42e594c9a5
+// sha256:261d38dcfead751a0ba8f5c5ba6520013ca01c0c47ba5abc9a77f9cf91821fc2

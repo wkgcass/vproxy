@@ -46,4 +46,8 @@ public class IOCPUtils {
             ref.close();
         }
     }
+
+    public static int getContextType(VIOContext ctx) {
+        return ctx.getPtr().reinterpret(4).get(ValueLayout.JAVA_INT_UNALIGNED, 0);
+    }
 }

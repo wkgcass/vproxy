@@ -72,11 +72,17 @@ interface PNIWindowsNative {
             int nameSize;
             if (v4) {
                 v_sockaddr_in v4name;
-                j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
+                j2cSockAddrIPv4(&v4name, 0, 0);
+                v_bind(ctx->socket, (v_sockaddr*)&v4name, sizeof(v4name));
+
+                j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v4.port);
                 name = (v_sockaddr*)&v4name;
                 nameSize = sizeof(v4name);
             } else {
                 v_sockaddr_in6 v6name;
+                j2cSockAddrIPv6(&v6name, "::", 0);
+                v_bind(ctx->socket, (v_sockaddr*)&v6name, sizeof(v6name));
+
                 j2cSockAddrIPv6(&v6name, addr->v6.ip, addr->v6.port);
                 name = (v_sockaddr*)&v6name;
                 nameSize = sizeof(v6name);

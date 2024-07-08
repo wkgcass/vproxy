@@ -7,7 +7,7 @@ import io.vproxy.pni.Allocator;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -42,7 +42,7 @@ public class WinIOCP {
         }
         boolean needNotify = false;
         Notification notif;
-        while ((notif = notifications.poll()) != null) {
+        while ((notif = socket.notifications.poll()) != null) {
             notifications.add(notif);
             needNotify = true;
         }
@@ -84,21 +84,17 @@ public class WinIOCP {
         return "WinIOCP(" + handle.MEMORY.address() + ")";
     }
 
-    public int getQueuedCompletionStatusEx(OverlappedEntry.Array entries,
-                                           int count, int milliseconds, boolean alert) throws IOException {
+    public void getQueuedCompletionStatusEx(OverlappedEntry.Array entries,
+                                            List<OverlappedEntry> normalEvents,
+                                            List<OverlappedEntry> extraEvents,
+                                            int count, int milliseconds, boolean alert) throws IOException {
         var n = IOCP.get().getQueuedCompletionStatusEx(VProxyThread.current().getEnv(),
             handle, entries, count, milliseconds, alert);
-        var offset = 0;
         for (int i = 0; i < n; ++i) {
             var entry = entries.get(i);
             var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());
-            if (IOCPUtils.VPROXY_CTX_TYPE != ctx.getPtr().reinterpret(4).get(ValueLayout.JAVA_INT_UNALIGNED, 0)) {
-                if (offset == i) {
-                    ++offset;
-                    continue;
-                }
-                var target = entries.get(offset++);
-                target.MEMORY.copyFrom(entry.MEMORY);
+            if (IOCPUtils.VPROXY_CTX_TYPE != IOCPUtils.getContextType(ctx)) {
+                extraEvents.add(entry);
                 continue;
             }
             if (ctx.getIoType() == IOType.NOTIFY.code) {
@@ -108,23 +104,16 @@ public class WinIOCP {
                 ref.close();
                 continue;
             }
-            var sock = (WinSocket) ctx.getRef().getRef();
-            sock.decrIORefCnt();
-            if (offset == i) {
-                ++offset;
-                continue;
-            }
-            var target = entries.get(offset++);
-            target.MEMORY.copyFrom(entry.MEMORY);
+            normalEvents.add(entry);
         }
         Notification notif;
-        while (offset < count && ((notif = notifications.poll()) != null)) {
-            var target = entries.get(offset++);
+        while (n < count && ((notif = notifications.poll()) != null)) {
+            var target = entries.get(n++);
             target.setCompletionKey(notif.completionKey);
             target.setOverlapped(notif.overlapped);
             target.setNumberOfBytesTransferred(notif.transferredBytes);
+            normalEvents.add(target);
         }
-        return offset;
     }
 
     record Notification(

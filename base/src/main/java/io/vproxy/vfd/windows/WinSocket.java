@@ -99,11 +99,9 @@ public class WinSocket {
         refCnt.incrementAndGet();
     }
 
-    void decrIORefCnt() {
+    public void decrIORefCnt() {
         if (refCnt.decrementAndGet() == 0) {
-            if (closed.get()) {
-                realClose();
-            }
+            realClose();
         }
     }
 
@@ -118,7 +116,9 @@ public class WinSocket {
         if (!closed.compareAndSet(false, true)) {
             return;
         }
-        if (refCnt.decrementAndGet() == 0) {
+        int refCntAfterDec = refCnt.decrementAndGet();
+        assert Logger.lowLevelDebug(this + " is closing, current ioRefCnt is " + refCntAfterDec + ", notifications.size = " + notifications.size());
+        if (refCntAfterDec == 0) {
             realClose();
             return;
         }
@@ -132,6 +132,7 @@ public class WinSocket {
     }
 
     private void realClose() {
+        assert Logger.lowLevelDebug("calling realClose on " + this);
         try {
             WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
         } catch (IOException e) {
