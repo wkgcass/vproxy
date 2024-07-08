@@ -3,6 +3,7 @@ package io.vproxy.vfd.windows;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
 
@@ -88,6 +89,15 @@ public class UnderlyingIOCP {
 
     private void oneEvent(OverlappedEntry entry, Set<WinIOCP> alertIOCPs) {
         var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());
+        if (ctx.getIoType() == IOType.SEND_DISCARD.code) {
+            //noinspection unchecked
+            var tup = (Tuple<Allocator, WinSocket>) ctx.getRef().getRef();
+            var ref = ctx.getRef();
+            tup._2.decrIORefCnt();
+            tup._1.close();
+            ref.close();
+            return;
+        }
         var winSocket = (WinSocket) ctx.getRef().getRef();
 
         var transferred = entry.getNumberOfBytesTransferred();

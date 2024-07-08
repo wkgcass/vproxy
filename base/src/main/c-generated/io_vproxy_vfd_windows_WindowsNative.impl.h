@@ -120,6 +120,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEn
             env->return_ = -1;
             return 0;
         }
+        return throwIOExceptionBasedOnErrno(env);
     }
     env->return_ = nRcv;
     return 0;
@@ -148,7 +149,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_
     int nameSize;
     if (v4) {
         v_sockaddr_in v4name;
-        j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
+        j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v4.port);
         name = (v_sockaddr*)&v4name;
         nameSize = sizeof(v4name);
     } else {
@@ -195,4 +196,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:261d38dcfead751a0ba8f5c5ba6520013ca01c0c47ba5abc9a77f9cf91821fc2
+// sha256:8496e4e4da795f43ef2e79d7e85d337218ba2d1dec31243c2ec2864ddaa2796f

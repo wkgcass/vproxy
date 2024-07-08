@@ -377,9 +377,15 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_bindIPv4
     }
     res = v_listen(fd, LISTEN_BACKLOG);
     if (res < 0) {
+#ifdef _WIN32
+        if (WSAGetLastError() != WSAEOPNOTSUPP) { // maybe the fd is udp socket
+            return throwIOExceptionBasedOnErrno(env);
+        }
+#else
         if (errno != EOPNOTSUPP) { // maybe the fd is udp socket
             return throwIOExceptionBasedOnErrno(env);
         }
+#endif
     }
     return 0;
 }

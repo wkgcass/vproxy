@@ -151,6 +151,7 @@ interface PNIWindowsNative {
                     env->return_ = -1;
                     return 0;
                 }
+                return throwIOExceptionBasedOnErrno(env);
             }
             env->return_ = nRcv;
             return 0;
@@ -187,7 +188,7 @@ interface PNIWindowsNative {
             int nameSize;
             if (v4) {
                 v_sockaddr_in v4name;
-                j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v6.port);
+                j2cSockAddrIPv4(&v4name, addr->v4.ip, addr->v4.port);
                 name = (v_sockaddr*)&v4name;
                 nameSize = sizeof(v4name);
             } else {

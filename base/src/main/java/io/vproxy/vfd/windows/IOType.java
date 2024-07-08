@@ -5,7 +5,8 @@ public enum IOType {
     WRITE(2),
     ACCEPT(3),
     CONNECT(4),
-    NOTIFY(5),
+    SEND_DISCARD(5), // ref = Tuple<Allocator, WinSocket>
+    NOTIFY(6), // ref = Allocator
     ;
     public final int code;
 

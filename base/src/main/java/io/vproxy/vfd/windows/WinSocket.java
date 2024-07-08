@@ -36,20 +36,37 @@ public class WinSocket {
     WinIOCP iocp;
     final ConcurrentLinkedQueue<WinIOCP.Notification> notifications = new ConcurrentLinkedQueue<>();
 
-    public WinSocket(int fd) {
-        this(fd, null);
+    public static WinSocket ofTcp(int fd) {
+        return new WinSocket(fd, null, false);
     }
 
-    public WinSocket(int fd, WinSocket listenSocket) {
+    public static WinSocket ofAcceptedTcp(int fd, WinSocket listenSocket) {
+        return new WinSocket(fd, listenSocket, false);
+    }
+
+    public static WinSocket ofUdp(int fd) {
+        return new WinSocket(fd, null, true);
+    }
+
+    public WinSocket(int fd, WinSocket listenSocket, boolean udp) {
         allocator = PooledAllocator.ofUnsafePooled();
         this.ref = PNIRef.of(this);
         this.fd = new SOCKET(MemorySegment.ofAddress(fd));
         this.listenSocket = listenSocket;
 
         recvMemSeg = allocator.allocate(24576);
-        sendMemSeg = allocator.allocate(24576);
+        MemorySegment sendMemSeg = null;
+        if (!udp) {
+            sendMemSeg = allocator.allocate(24576);
+        }
+        this.sendMemSeg = sendMemSeg;
+
         recvRingBuffer = SimpleRingBuffer.wrap(recvMemSeg);
-        sendRingBuffer = SimpleRingBuffer.wrap(sendMemSeg);
+        RingBuffer sendRingBuffer = null;
+        if (!udp) {
+            sendRingBuffer = SimpleRingBuffer.wrap(sendMemSeg);
+        }
+        this.sendRingBuffer = sendRingBuffer;
 
         recvContext = new VIOContext(allocator);
         {
@@ -64,10 +81,12 @@ public class WinSocket {
             recvContext.getBuffers().get(0).setLen(24576);
             recvContext.setBufferCount(1);
             recvContext.setCtxType(IOCPUtils.VPROXY_CTX_TYPE);
+            recvContext.setAddrLen((int) PNISockaddrStorage.LAYOUT.byteSize());
             IOCPUtils.setPointer(recvContext);
         }
-        sendContext = new VIOContext(allocator);
-        {
+        VIOContext sendContext = null;
+        if (!udp) {
+            sendContext = new VIOContext(allocator);
             sendContext.setSocket(this.fd);
             sendContext.setRef(ref);
             if (listenSocket == null) {
@@ -79,6 +98,7 @@ public class WinSocket {
             sendContext.setCtxType(IOCPUtils.VPROXY_CTX_TYPE);
             IOCPUtils.setPointer(sendContext);
         }
+        this.sendContext = sendContext;
 
         UnderlyingIOCP.get().associate(this.fd);
     }
@@ -144,6 +164,6 @@ public class WinSocket {
 
     @Override
     public String toString() {
-        return "Socket(" + recvContext.getSocket().MEMORY.address() + ")";
+        return "Socket(" + recvContext.getSocket().MEMORY.address() + ", refCnt=" + refCnt.get() + ")";
     }
 }

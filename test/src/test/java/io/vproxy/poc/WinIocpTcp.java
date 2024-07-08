@@ -29,7 +29,7 @@ public class WinIocpTcp {
 
         {
             var listenFd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
-            var listenSocket = new WinSocket(listenFd);
+            var listenSocket = WinSocket.ofTcp(listenFd);
             Logger.alert("listenSocket = " + listenSocket);
 
             PosixNative.get().bindIPv4(VProxyThread.current().getEnv(),
@@ -42,7 +42,7 @@ public class WinIocpTcp {
 
         {
             var fd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
-            var connectSocket = new WinSocket(fd);
+            var connectSocket = WinSocket.ofTcp(fd);
             Logger.alert("connectSocket = " + connectSocket);
             iocp.associate(connectSocket);
 
@@ -66,7 +66,7 @@ public class WinIocpTcp {
     private static void deliverAccept(io.vproxy.vfd.windows.WinIOCP iocp, WinSocket listenSocket) throws Exception {
         var acceptedFd = PosixNative.get().createIPv4TcpFD(VProxyThread.current().getEnv());
         Logger.alert("create a socket to handle accept event: " + acceptedFd);
-        var acceptedSock = new WinSocket(acceptedFd, listenSocket);
+        var acceptedSock = WinSocket.ofAcceptedTcp(acceptedFd, listenSocket);
         iocp.associate(acceptedSock);
 
         acceptedSock.incrIORefCnt();
@@ -139,7 +139,7 @@ public class WinIocpTcp {
             }
             socket.decrIORefCnt();
 
-            Logger.alert("last io operation error code = " + entry.getOverlapped().getInternal());
+            Logger.alert("last io operation ntstatus = " + entry.getOverlapped().getInternal());
             if (entry.getOverlapped().getInternal() != 0) {
                 socket.close();
                 continue;
