@@ -11,7 +11,8 @@ import java.lang.foreign.MemorySegment;
 interface PNIWindowsNative {
     boolean tapNonBlockingSupported() throws IOException;
 
-    long createTapHandle(String dev) throws IOException;
+    @NoAlloc
+    PNISOCKET createTapHandle(String dev) throws IOException;
 
     @LinkerOption.Critical
     @Impl(

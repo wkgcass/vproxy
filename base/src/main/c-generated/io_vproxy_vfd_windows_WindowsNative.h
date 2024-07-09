@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tapNonBlockingSupported(PNIEnv_bool * env);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle(PNIEnv_long * env, char * dev);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle(PNIEnv_dummySOCKET * env, char * dev);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_closeHandle(PNIEnv_void * env, HANDLE handle);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_acceptEx(PNIEnv_bool * env, SOCKET listenSocket, VIOContext * socketContext);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_updateAcceptContext(PNIEnv_void * env, SOCKET listenSocket, SOCKET accepted);
@@ -38,4 +38,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 #endif
 #endif // _Included_io_vproxy_vfd_windows_WindowsNative
 // metadata.generator-version: pni 22.0.0.17
-// sha256:034ddf13bba7252a5b8141bbfa80184e85640335b32386e74e7794b6c936b180
+// sha256:95baf8b4d6a45b0b632c5ec33686928d11b32565e17a15b010606b5642a2e377

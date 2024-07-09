@@ -75,35 +75,9 @@ public class WindowsFDs implements FDs, FDsWithTap {
 
     @Override
     public TapDatagramFD openTap(String dev) throws IOException {
-        long handle = windows.createTapHandle(dev);
-        long readOverlapped;
-        try {
-            readOverlapped = windows.allocateOverlapped();
-        } catch (IOException e) {
-            try {
-                windows.closeHandle(handle);
-            } catch (Throwable t) {
-                Logger.shouldNotHappen("close handle " + handle + " failed when allocating readOverlapped failed", t);
-            }
-            throw e;
-        }
-        long writeOverlapped;
-        try {
-            writeOverlapped = windows.allocateOverlapped();
-        } catch (IOException e) {
-            try {
-                windows.closeHandle(handle);
-            } catch (Throwable t) {
-                Logger.shouldNotHappen("close handle " + handle + " failed when allocating writeOverlapped failed", t);
-            }
-            try {
-                windows.releaseOverlapped(readOverlapped);
-            } catch (Throwable t) {
-                Logger.shouldNotHappen("releasing readOverlapped " + readOverlapped + " failed when allocating writeOverlapped failed", t);
-            }
-            throw e;
-        }
-        return new WindowsTapDatagramFD(windows, handle, new TapInfo(dev, (int) handle), readOverlapped, writeOverlapped);
+        var handle = windows.createTapHandle(dev);
+        var socket = WinSocket.ofTcp((int) handle.MEMORY.address());
+        return new WindowsTapDatagramFD(windows, socket, new TapInfo(dev, (int) handle.MEMORY.address()));
     }
 
     @Override

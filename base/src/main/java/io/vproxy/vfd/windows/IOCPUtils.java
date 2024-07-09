@@ -49,6 +49,16 @@ public class IOCPUtils {
 
     public static VIOContext buildContextForSendingUDPPacket(WinSocket socket, int dataLen) {
         var allocator = PooledAllocator.ofUnsafePooled();
+        var data = allocator.allocate(dataLen);
+        return buildContextForSendingUDPPacket(socket, allocator, data);
+    }
+
+    public static VIOContext buildContextForSendingUDPPacket(WinSocket socket, MemorySegment data) {
+        var allocator = PooledAllocator.ofUnsafePooled();
+        return buildContextForSendingUDPPacket(socket, allocator, data);
+    }
+
+    public static VIOContext buildContextForSendingUDPPacket(WinSocket socket, Allocator allocator, MemorySegment data) {
         var ref = PNIRef.of(new Tuple<>(allocator, socket));
 
         var ctx = new VIOContext(allocator);
@@ -58,8 +68,8 @@ public class IOCPUtils {
         ctx.setRef(ref);
         ctx.setSocket(socket.fd);
         var buf = ctx.getBuffers().get(0);
-        buf.setBuf(allocator.allocate(dataLen));
-        buf.setLen(dataLen);
+        buf.setBuf(data);
+        buf.setLen(data.byteSize());
         ctx.setBufferCount(1);
 
         return ctx;

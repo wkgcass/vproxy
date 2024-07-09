@@ -36,12 +36,8 @@ public class AESelector implements FDSelector {
         this.aeReadable = posix.aeReadable();
         this.aeWritable = posix.aeWritable();
         this.pipefd = pipefd;
-        if (pipefd == null) {
-            bufferForPipeFD = null;
-        } else {
-            bufferForPipeFD = DirectMemoryUtils.allocateDirectBuffer(8); // linux eventfd requires 8 bytes buffer
-            posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable);
-        }
+        bufferForPipeFD = DirectMemoryUtils.allocateDirectBuffer(8); // linux eventfd requires 8 bytes buffer
+        posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable);
         attachments = new Att[setsize];
         for (int i = 0; i < setsize; ++i) {
             attachments[i] = new Att();
@@ -148,11 +144,6 @@ public class AESelector implements FDSelector {
         }
         fillFDsList(n);
         return handleSelectResult();
-    }
-
-    @Override
-    public boolean supportsWakeup() {
-        return pipefd != null;
     }
 
     @Override

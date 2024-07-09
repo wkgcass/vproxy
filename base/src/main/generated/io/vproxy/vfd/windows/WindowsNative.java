@@ -36,7 +36,7 @@ public class WindowsNative {
 
     private static final MethodHandle createTapHandleMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions(), "Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle", String.class /* dev */);
 
-    public long createTapHandle(PNIEnv ENV, PNIString dev) throws java.io.IOException {
+    public io.vproxy.vfd.windows.SOCKET createTapHandle(PNIEnv ENV, PNIString dev) throws java.io.IOException {
         ENV.reset();
         int ERR;
         try {
@@ -48,7 +48,8 @@ public class WindowsNative {
             ENV.throwIf(java.io.IOException.class);
             ENV.throwLast();
         }
-        return ENV.returnLong();
+        var RESULT = ENV.returnPointer();
+        return RESULT == null ? null : new io.vproxy.vfd.windows.SOCKET(RESULT);
     }
 
     private static final MethodHandle closeHandleMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_closeHandle", io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() /* handle */);
@@ -218,4 +219,4 @@ public class WindowsNative {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:967c11e8620f773496ed85bc6491b1b2f4e2e539f4b74334e29fee9a1ee013d1
+// sha256:6603e8b19afc7ce64a49f9b3468b0bc570eef4c089c938ca4d43790aa94170cc

@@ -1,20 +1,32 @@
 package io.vproxy.vfd.windows;
 
+import io.vproxy.vfd.IPPort;
+
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.lang.foreign.MemorySegment;
 
 public interface Windows {
     boolean tapNonBlockingSupported() throws IOException;
 
-    long allocateOverlapped() throws IOException;
+    SOCKET createTapHandle(String dev) throws IOException;
 
-    void releaseOverlapped(long overlapped) throws IOException;
+    void closeHandle(SOCKET handle) throws IOException;
 
-    long createTapHandle(String dev) throws IOException;
+    void acceptEx(WinSocket socket) throws IOException;
 
-    void closeHandle(long fd) throws IOException;
+    void updateAcceptContext(WinSocket socket) throws IOException;
 
-    int read(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException;
+    void tcpConnect(WinSocket socket, IPPort ipport) throws IOException;
 
-    int write(long handle, ByteBuffer directBuffer, int off, int len, long overlapped) throws IOException;
+    void wsaRecv(WinSocket socket) throws IOException;
+
+    void wsaRecvFrom(WinSocket socket) throws IOException;
+
+    void wsaSend(WinSocket socket) throws IOException;
+
+    void wsaSendTo(WinSocket socket, MemorySegment data, IPPort ipport) throws IOException;
+
+    void wsaSendDisconnect(WinSocket socket) throws IOException;
+
+    IPPort convertAddress(WinSocket socket, boolean v4) throws IOException;
 }

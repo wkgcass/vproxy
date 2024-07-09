@@ -8,6 +8,12 @@ import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PooledAllocator;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vfd.posix.PosixNative;
+import io.vproxy.vfd.posix.SocketAddressIPv4;
+import io.vproxy.vfd.posix.SocketAddressIPv6;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
@@ -22,6 +28,7 @@ public class WinSocket {
 
     public final SOCKET fd;
     public final WinSocket listenSocket; // optional
+    public Object ud = null;
 
     public final MemorySegment recvMemSeg;
     public final MemorySegment sendMemSeg;
@@ -164,6 +171,79 @@ public class WinSocket {
 
     @Override
     public String toString() {
-        return "Socket(" + recvContext.getSocket().MEMORY.address() + ", refCnt=" + refCnt.get() + ")";
+        var sb = new StringBuilder();
+        sb.append("Socket(").append(recvContext.getSocket().MEMORY.address())
+            .append(", refCnt=").append(refCnt.get());
+        if (localAddress != null) {
+            sb.append(", local=").append(localAddress.formatToIPPortString());
+        }
+        if (remoteAddress != null) {
+            sb.append(", remote=").append(remoteAddress.formatToIPPortString());
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private IPPort localAddress;
+    private IPPort remoteAddress;
+
+    public IPPort getLocalAddress(boolean v4) throws IOException {
+        if (localAddress != null) {
+            if (v4) {
+                if (localAddress.getAddress() instanceof IPv4) {
+                    return localAddress;
+                }
+                throw new IOException(this + " is not an ipv4 socket");
+            } else {
+                if (localAddress.getAddress() instanceof IPv6) {
+                    return localAddress;
+                }
+                throw new IOException(this + " is not an ipv6 socket");
+            }
+        }
+        try (var allocator = Allocator.ofConfined()) {
+            if (v4) {
+                var st = PosixNative.get().getIPv4Local(VProxyThread.current().getEnv(),
+                    (int) fd.MEMORY.address(), allocator);
+                var addr = new SocketAddressIPv4(st.getIp(), st.getPort() & 0xffff);
+                localAddress = addr.toIPPort();
+            } else {
+                var st = PosixNative.get().getIPv6Local(VProxyThread.current().getEnv(),
+                    (int) fd.MEMORY.address(), allocator);
+                var addr = new SocketAddressIPv6(st.getIp(), st.getPort() & 0xffff);
+                localAddress = addr.toIPPort();
+            }
+        }
+        return localAddress;
+    }
+
+    public IPPort getRemoteAddress(boolean v4) throws IOException {
+        if (remoteAddress != null) {
+            if (v4) {
+                if (remoteAddress.getAddress() instanceof IPv4) {
+                    return remoteAddress;
+                }
+                throw new IOException(this + " is not an ipv4 socket");
+            } else {
+                if (remoteAddress.getAddress() instanceof IPv6) {
+                    return remoteAddress;
+                }
+                throw new IOException(this + " is not an ipv6 socket");
+            }
+        }
+        try (var allocator = Allocator.ofConfined()) {
+            if (v4) {
+                var st = PosixNative.get().getIPv4Remote(VProxyThread.current().getEnv(),
+                    (int) fd.MEMORY.address(), allocator);
+                var addr = new SocketAddressIPv4(st.getIp(), st.getPort() & 0xffff);
+                remoteAddress = addr.toIPPort();
+            } else {
+                var st = PosixNative.get().getIPv6Remote(VProxyThread.current().getEnv(),
+                    (int) fd.MEMORY.address(), allocator);
+                var addr = new SocketAddressIPv6(st.getIp(), st.getPort() & 0xffff);
+                remoteAddress = addr.toIPPort();
+            }
+        }
+        return remoteAddress;
     }
 }

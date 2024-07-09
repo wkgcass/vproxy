@@ -112,7 +112,7 @@ BOOL openTapDevice(void* env, char* guid, HANDLE* outHandle) {
     return TRUE;
 }
 
-BOOL plugCableToTabDevice(void* env, HANDLE handle) {
+BOOL plugCableToTapDevice(void* env, HANDLE handle) {
     ULONG x = TRUE;
     DWORD len;
     if (DeviceIoControl(handle, TAP_WIN_IOCTL_SET_MEDIA_STATUS, &x, sizeof(x), &x, sizeof(x), &len, NULL)) {
@@ -136,91 +136,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle
     if (!status) {
         return -1;
     }
-    status = plugCableToTabDevice(env, handle);
+    status = plugCableToTapDevice(env, handle);
     if (!status) {
         CloseHandle(handle);
         return -1;
     }
-    env->return_ = (jlong) handle;
-    return 0;
-}
-
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_read
-  (PNIEnv_int* env, int64_t handleJ, void* directBuffer, int32_t off, int32_t len, int64_t ovJ) {
-    if (len == 0) {
-        env->return_ = 0;
-        return 0;
-    }
-    byte* buf = (void*) directBuffer;
-    DWORD n = 0;
-    HANDLE handle = (HANDLE) handleJ;
-    OVERLAPPED* ov = (OVERLAPPED*) ovJ;
-    BOOL status = ReadFile(handle, buf + off, len, NULL, ov);
-    if (!status && GetLastError() == ERROR_IO_PENDING) {
-        DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
-        if (waitStatus == WAIT_FAILED) {
-            return throwIOExceptionBasedOnErrnoWithPrefix(env, "wait failed when reading");
-        } else if (waitStatus != WAIT_OBJECT_0) {
-            if (waitStatus == WAIT_ABANDONED) {
-                return throwIOException(env, "WAIT_ABANDONED when reading");
-            } else if (waitStatus == WAIT_TIMEOUT) {
-                return throwIOException(env, "WAIT_TIMEOUT when reading");
-            } else {
-                return throwIOException(env, "unknown WAIT error when reading");
-            }
-        }
-        status = GetOverlappedResult(handle, ov, &n, TRUE);
-        if (status) {
-            unsigned long long offset = ((unsigned long long) (ov->Offset)) |
-                                       (((unsigned long long) (ov->OffsetHigh)) << 32);
-            offset += n;
-            ov->Offset = offset & 0xffffffff;
-            ov->OffsetHigh = (offset >> 32) & 0xffffffff;
-        }
-    }
-    if (!status) {
-        return throwIOExceptionBasedOnErrnoWithPrefix(env, "read failed");
-    }
-    env->return_ = (jint) n;
-    return 0;
-}
-
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_write
-  (PNIEnv_int* env, int64_t handleJ, void * directBuffer, int32_t off, int32_t len, int64_t ovJ) {
-    if (len == 0) {
-        env->return_ = 0;
-        return 0;
-    }
-    byte* buf = (void*) directBuffer;
-    DWORD n = 0;
-    HANDLE handle = (HANDLE) handleJ;
-    OVERLAPPED* ov = (OVERLAPPED*) ovJ;
-    BOOL status = WriteFile(handle, buf + off, len, NULL, ov);
-    if (!status && GetLastError() == ERROR_IO_PENDING) {
-        DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
-        if (waitStatus == WAIT_FAILED) {
-            return throwIOExceptionBasedOnErrnoWithPrefix(env, "wait failed when writing");
-        } else if (waitStatus != WAIT_OBJECT_0) {
-            if (waitStatus == WAIT_ABANDONED) {
-                return throwIOException(env, "WAIT_ABANDONED when writing");
-            } else if (waitStatus == WAIT_TIMEOUT) {
-                return throwIOException(env, "WAIT_TIMEOUT when writing");
-            } else {
-                return throwIOException(env, "unknown WAIT error when writing");
-            }
-        }
-        status = GetOverlappedResult(handle, ov, &n, TRUE);
-        if (status) {
-            unsigned long long offset = ((unsigned long long) (ov->Offset)) |
-                                       (((unsigned long long) (ov->OffsetHigh)) << 32);
-            offset += n;
-            ov->Offset = offset & 0xffffffff;
-            ov->OffsetHigh = (offset >> 32) & 0xffffffff;
-        }
-    }
-    if (!status) {
-        return throwIOExceptionBasedOnErrnoWithPrefix(env, "write failed");
-    }
-    env->return_ = (jint) n;
+    env->return_ = (void*) handle;
     return 0;
 }
