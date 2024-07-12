@@ -89,7 +89,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv(PNIEnv_in
     int nRcv = 0;
     int zeroflags = 0;
     int ret = WSARecv(
-        (SOCKET)ctx->socket,
+        ctx->socket,
         ctx->buffers, ctx->bufferCount,
         (LPDWORD)&nRcv, (LPDWORD)&zeroflags,
         (LPWSAOVERLAPPED)&ctx->overlapped, NULL
@@ -123,6 +123,26 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEn
         return throwIOExceptionBasedOnErrno(env);
     }
     env->return_ = nRcv;
+    return 0;
+}
+
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_readFile(PNIEnv_int * env, VIOContext * ctx) {
+    int nRead = 0;
+    int zeroflags = 0;
+    BOOL ok = ReadFile(
+        (HANDLE)ctx->socket,
+        ctx->buffers[0].buf, ctx->buffers[0].len,
+        (LPDWORD)&nRead,
+        (LPOVERLAPPED)&ctx->overlapped
+    );
+    if (!ok) {
+        if (GetLastError() == ERROR_IO_PENDING) {
+            env->return_ = -1;
+            return 0;
+        }
+        return throwIOExceptionBasedOnErrno(env);
+    }
+    env->return_ = nRead;
     return 0;
 }
 
@@ -181,6 +201,25 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendDisconnect
     return 0;
 }
 
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_writeFile(PNIEnv_int * env, VIOContext * ctx) {
+    int nWrote = 0;
+    int ret = WriteFile(
+        (HANDLE)ctx->socket,
+        ctx->buffers[0].buf, ctx->buffers[0].len,
+        (LPDWORD)&nWrote,
+        (LPOVERLAPPED)&ctx->overlapped
+    );
+    if (ret < 0) {
+        if (GetLastError() == ERROR_IO_PENDING) {
+            env->return_ = -1;
+            return 0;
+        }
+        return throwIOExceptionBasedOnErrno(env);
+    }
+    env->return_ = nWrote;
+    return 0;
+}
+
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PNIEnv_void * env, void * sockaddr, uint8_t v4, SocketAddressUnion * addr) {
     if (v4) {
         formatSocketAddressIPv4(sockaddr, &addr->v4);
@@ -196,4 +235,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:8496e4e4da795f43ef2e79d7e85d337218ba2d1dec31243c2ec2864ddaa2796f
+// sha256:25b7a54e644c9c13cd04cf5f4eabeffb06ca0c5711bfe3dafbe0ee804d0bebdc

@@ -2,7 +2,6 @@ package io.vproxy.vfd.windows;
 
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
@@ -28,12 +27,13 @@ public class WinSocket {
 
     public final SOCKET fd;
     public final WinSocket listenSocket; // optional
+    private final boolean datagram;
     public Object ud = null;
 
     public final MemorySegment recvMemSeg;
     public final MemorySegment sendMemSeg;
-    public final RingBuffer recvRingBuffer;
-    public final RingBuffer sendRingBuffer;
+    public final SimpleRingBuffer recvRingBuffer;
+    public final SimpleRingBuffer sendRingBuffer;
 
     public final VIOContext recvContext;
     public final VIOContext sendContext;
@@ -43,34 +43,35 @@ public class WinSocket {
     WinIOCP iocp;
     final ConcurrentLinkedQueue<WinIOCP.Notification> notifications = new ConcurrentLinkedQueue<>();
 
-    public static WinSocket ofTcp(int fd) {
+    public static WinSocket ofStream(int fd) {
         return new WinSocket(fd, null, false);
     }
 
-    public static WinSocket ofAcceptedTcp(int fd, WinSocket listenSocket) {
+    public static WinSocket ofAcceptedStream(int fd, WinSocket listenSocket) {
         return new WinSocket(fd, listenSocket, false);
     }
 
-    public static WinSocket ofUdp(int fd) {
+    public static WinSocket ofDatagram(int fd) {
         return new WinSocket(fd, null, true);
     }
 
-    public WinSocket(int fd, WinSocket listenSocket, boolean udp) {
+    public WinSocket(int fd, WinSocket listenSocket, boolean datagram) {
         allocator = PooledAllocator.ofUnsafePooled();
         this.ref = PNIRef.of(this);
         this.fd = new SOCKET(MemorySegment.ofAddress(fd));
         this.listenSocket = listenSocket;
+        this.datagram = datagram;
 
         recvMemSeg = allocator.allocate(24576);
         MemorySegment sendMemSeg = null;
-        if (!udp) {
+        if (!datagram) {
             sendMemSeg = allocator.allocate(24576);
         }
         this.sendMemSeg = sendMemSeg;
 
         recvRingBuffer = SimpleRingBuffer.wrap(recvMemSeg);
-        RingBuffer sendRingBuffer = null;
-        if (!udp) {
+        SimpleRingBuffer sendRingBuffer = null;
+        if (!datagram) {
             sendRingBuffer = SimpleRingBuffer.wrap(sendMemSeg);
         }
         this.sendRingBuffer = sendRingBuffer;
@@ -92,7 +93,7 @@ public class WinSocket {
             IOCPUtils.setPointer(recvContext);
         }
         VIOContext sendContext = null;
-        if (!udp) {
+        if (!datagram) {
             sendContext = new VIOContext(allocator);
             sendContext.setSocket(this.fd);
             sendContext.setRef(ref);
@@ -108,6 +109,10 @@ public class WinSocket {
         this.sendContext = sendContext;
 
         UnderlyingIOCP.get().associate(this.fd);
+    }
+
+    public static WinSocket ofServer(int fd) {
+        return new WinSocket(fd, null, false);
     }
 
     WinIOCP getIocp() {
@@ -169,6 +174,14 @@ public class WinSocket {
         allocator.close();
     }
 
+    public boolean isDatagramSocket() {
+        return datagram;
+    }
+
+    public boolean isStreamSocket() {
+        return !datagram;
+    }
+
     @Override
     public String toString() {
         var sb = new StringBuilder();
@@ -184,8 +197,8 @@ public class WinSocket {
         return sb.toString();
     }
 
-    private IPPort localAddress;
-    private IPPort remoteAddress;
+    IPPort localAddress;
+    IPPort remoteAddress;
 
     public IPPort getLocalAddress(boolean v4) throws IOException {
         if (localAddress != null) {

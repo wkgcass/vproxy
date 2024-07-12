@@ -12,7 +12,7 @@ interface PNIWindowsNative {
     boolean tapNonBlockingSupported() throws IOException;
 
     @NoAlloc
-    PNISOCKET createTapHandle(String dev) throws IOException;
+    PNIHANDLE createTapHandle(String dev) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
@@ -117,7 +117,7 @@ interface PNIWindowsNative {
             int nRcv = 0;
             int zeroflags = 0;
             int ret = WSARecv(
-                (SOCKET)ctx->socket,
+                ctx->socket,
                 ctx->buffers, ctx->bufferCount,
                 (LPDWORD)&nRcv, (LPDWORD)&zeroflags,
                 (LPWSAOVERLAPPED)&ctx->overlapped, NULL
@@ -159,6 +159,30 @@ interface PNIWindowsNative {
             """
     )
     int wsaRecvFrom(PNIVIOContext ctx) throws IOException;
+
+    @LinkerOption.Critical
+    @Impl(
+        c = """
+            int nRead = 0;
+            int zeroflags = 0;
+            BOOL ok = ReadFile(
+                (HANDLE)ctx->socket,
+                ctx->buffers[0].buf, ctx->buffers[0].len,
+                (LPDWORD)&nRead,
+                (LPOVERLAPPED)&ctx->overlapped
+            );
+            if (!ok) {
+                if (GetLastError() == ERROR_IO_PENDING) {
+                    env->return_ = -1;
+                    return 0;
+                }
+                return throwIOExceptionBasedOnErrno(env);
+            }
+            env->return_ = nRead;
+            return 0;
+            """
+    )
+    int readFile(PNIVIOContext ctx) throws IOException;
 
     @LinkerOption.Critical
     @Impl(
@@ -230,6 +254,29 @@ interface PNIWindowsNative {
     @LinkerOption.Critical
     @Impl(
         c = """
+            int nWrote = 0;
+            int ret = WriteFile(
+                (HANDLE)ctx->socket,
+                ctx->buffers[0].buf, ctx->buffers[0].len,
+                (LPDWORD)&nWrote,
+                (LPOVERLAPPED)&ctx->overlapped
+            );
+            if (ret < 0) {
+                if (GetLastError() == ERROR_IO_PENDING) {
+                    env->return_ = -1;
+                    return 0;
+                }
+                return throwIOExceptionBasedOnErrno(env);
+            }
+            env->return_ = nWrote;
+            return 0;
+            """
+    )
+    int writeFile(PNIVIOContext ctx) throws IOException;
+
+    @LinkerOption.Critical
+    @Impl(
+        c = """
             if (v4) {
                 formatSocketAddressIPv4(sockaddr, &addr->v4);
             } else {
@@ -248,7 +295,7 @@ interface PNIWindowsNative {
 @Include("ws2def.h")
 class PNIWSABUF {
     @Unsigned
-    long len;
+    int len;
     MemorySegment buf;
 }
 

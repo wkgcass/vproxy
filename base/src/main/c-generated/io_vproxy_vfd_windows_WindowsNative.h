@@ -12,6 +12,7 @@ extern "C" {
 
 #include <jni.h>
 #include <pni.h>
+#include "io_vproxy_vfd_windows_HANDLE.h"
 #include "io_vproxy_vfd_windows_SOCKET.h"
 #include "io_vproxy_vfd_windows_VIOContext.h"
 #include "io_vproxy_vfd_posix_SocketAddressUnion.h"
@@ -21,16 +22,18 @@ extern "C" {
 #endif
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tapNonBlockingSupported(PNIEnv_bool * env);
-JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle(PNIEnv_dummySOCKET * env, char * dev);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle(PNIEnv_dummyHANDLE * env, char * dev);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_closeHandle(PNIEnv_void * env, HANDLE handle);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_acceptEx(PNIEnv_bool * env, SOCKET listenSocket, VIOContext * socketContext);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_updateAcceptContext(PNIEnv_void * env, SOCKET listenSocket, SOCKET accepted);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_tcpConnect(PNIEnv_bool * env, VIOContext * ctx, uint8_t v4, SocketAddressUnion * addr);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecv(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaRecvFrom(PNIEnv_int * env, VIOContext * ctx);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_readFile(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSend(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendTo(PNIEnv_int * env, VIOContext * ctx, uint8_t v4, SocketAddressUnion * addr);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_wsaSendDisconnect(PNIEnv_void * env, SOCKET socket);
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_writeFile(PNIEnv_int * env, VIOContext * ctx);
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PNIEnv_void * env, void * sockaddr, uint8_t v4, SocketAddressUnion * addr);
 
 #ifdef __cplusplus
@@ -38,4 +41,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 #endif
 #endif // _Included_io_vproxy_vfd_windows_WindowsNative
 // metadata.generator-version: pni 22.0.0.17
-// sha256:95baf8b4d6a45b0b632c5ec33686928d11b32565e17a15b010606b5642a2e377
+// sha256:a52564fee7977cedefe78e78bf8351330540137a4f080684057c880a83b2701f

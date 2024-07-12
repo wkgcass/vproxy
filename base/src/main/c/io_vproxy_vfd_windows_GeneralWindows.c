@@ -124,7 +124,7 @@ BOOL plugCableToTapDevice(void* env, HANDLE handle) {
 }
 
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle
-  (PNIEnv_long* env, char* devChars) {
+  (PNIEnv_dummyHANDLE* env, char* devChars) {
     BOOL status;
     char guid[GUID_MAX_LEN];
     HANDLE handle;

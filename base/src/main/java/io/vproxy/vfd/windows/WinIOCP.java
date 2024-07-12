@@ -15,14 +15,20 @@ public class WinIOCP {
     public final HANDLE handle;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final ConcurrentLinkedQueue<Notification> notifications = new ConcurrentLinkedQueue<>();
+    boolean polling = false;
+    boolean notified = false;
 
     public WinIOCP(HANDLE handle) {
         this.handle = handle;
     }
 
     public WinIOCP() throws IOException {
+        this(0);
+    }
+
+    public WinIOCP(int concurrency) throws IOException {
         this.handle = IOCP.get().createIoCompletionPort(VProxyThread.current().getEnv(),
-            IOCPUtils.INVALID_HANDLE, null, null, 0);
+            IOCPUtils.INVALID_HANDLE, null, null, concurrency);
     }
 
     public void associate(WinSocket socket) throws IOException {
@@ -47,7 +53,7 @@ public class WinIOCP {
             needNotify = true;
         }
         if (needNotify) {
-            IOCPUtils.notify(this.handle);
+            IOCPUtils.notify(this);
         }
     }
 
@@ -77,6 +83,17 @@ public class WinIOCP {
         } catch (IOException e) {
             Logger.error(LogType.SYS_ERROR, "closing iocp " + handle + " failed", e);
         }
+        Notification notif;
+        while ((notif = notifications.poll()) != null) {
+            var ctx = IOCPUtils.getIOContextOf(notif.overlapped);
+            var socket = (WinSocket) ctx.getRef().getRef();
+            if (socket.isClosed()) {
+                Logger.warn(LogType.SOCKET_ERROR, socket + " and " + this + " are closed, while pending io operation is done");
+                socket.decrIORefCnt();
+            } else {
+                socket.notifications.add(notif);
+            }
+        }
     }
 
     @Override
@@ -88,8 +105,30 @@ public class WinIOCP {
                                             List<OverlappedEntry> normalEvents,
                                             List<OverlappedEntry> extraEvents,
                                             int count, int milliseconds, boolean alert) throws IOException {
+        if (milliseconds != 0) {
+            // need to poll directly because there are notifications
+            if (!notifications.isEmpty()) {
+                milliseconds = 0;
+            }
+        }
+        if (milliseconds != 0) {
+            synchronized (this) {
+                if (notified) {
+                    // need to poll directly because it's notified
+                    milliseconds = 0;
+                } else {
+                    // if it's not notified, we go for polling
+                    polling = true;
+                }
+            }
+        }
+
         var n = IOCP.get().getQueuedCompletionStatusEx(VProxyThread.current().getEnv(),
             handle, entries, count, milliseconds, alert);
+
+        notified = false;
+        polling = false;
+
         for (int i = 0; i < n; ++i) {
             var entry = entries.get(i);
             var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());

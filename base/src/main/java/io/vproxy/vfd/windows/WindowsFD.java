@@ -1,9 +1,9 @@
 package io.vproxy.vfd.windows;
 
-import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.vfd.EventSet;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.abs.AbstractBaseFD;
-import io.vproxy.vfd.posix.PosixNative;
+import io.vproxy.vfd.posix.Posix;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -13,13 +13,15 @@ import java.util.Map;
 
 public abstract class WindowsFD extends AbstractBaseFD implements FD {
     protected final Windows windows;
+    protected final Posix posix;
     private boolean closed = false;
     protected WinSocket socket;
     @SuppressWarnings("rawtypes")
     private final Map<SocketOption, Object> opts = new HashMap<>();
 
-    public WindowsFD(Windows windows) {
+    public WindowsFD(Windows windows, Posix posix) {
         this.windows = windows;
+        this.posix = posix;
     }
 
     public int getFD() {
@@ -77,17 +79,13 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
             opts.put(name, value);
         } else {
             if (name == StandardSocketOptions.SO_LINGER) {
-                PosixNative.get().setSoLinger(VProxyThread.current().getEnv(),
-                    getFD(), (Integer) value);
+                posix.setSoLinger(getFD(), (Integer) value);
             } else if (name == StandardSocketOptions.SO_RCVBUF) {
-                PosixNative.get().setRcvBuf(VProxyThread.current().getEnv(),
-                    getFD(), (Integer) value);
+                posix.setRcvBuf(getFD(), (Integer) value);
             } else if (name == StandardSocketOptions.TCP_NODELAY) {
-                PosixNative.get().setTcpNoDelay(VProxyThread.current().getEnv(),
-                    getFD(), (Boolean) value);
+                posix.setTcpNoDelay(getFD(), (Boolean) value);
             } else if (name == StandardSocketOptions.SO_BROADCAST) {
-                PosixNative.get().setBroadcast(VProxyThread.current().getEnv(),
-                    getFD(), (Boolean) value);
+                posix.setBroadcast(getFD(), (Boolean) value);
             } else {
                 throw new IOException("not supported " + name);
             }
@@ -125,8 +123,64 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "{" +
-            "fd=" + socket +
-            ", closed=" + closed +
-            '}';
+               "fd=" + socket +
+               ", closed=" + closed +
+               '}';
     }
+
+    // ============
+    // similar to virtual fd
+
+    IOCPSelector selector;
+    boolean firingReadable;
+    boolean firingWritable;
+    EventSet watchingEvents = EventSet.none();
+    Object attachment;
+
+    protected void setReadable() {
+        firingReadable = true;
+        setEventToSelector();
+    }
+
+    protected void setWritable() {
+        firingWritable = true;
+        setEventToSelector();
+    }
+
+    private void setEventToSelector() {
+        var selector = this.selector;
+        if (selector != null) {
+            selector.firedFds.add(this);
+            IOCPUtils.notify(selector.iocp);
+        }
+    }
+
+    protected void clearReadable() {
+        if (!firingReadable) {
+            return;
+        }
+        firingReadable = false;
+        if (!firingWritable) {
+            clearEventFromSelector();
+        }
+    }
+
+    protected void clearWritable() {
+        if (!firingWritable) {
+            return;
+        }
+        firingWritable = false;
+        if (!firingReadable) {
+            clearEventFromSelector();
+        }
+    }
+
+    private void clearEventFromSelector() {
+        var selector = this.selector;
+        if (selector != null) {
+            selector.firedFds.remove(this);
+        }
+    }
+
+    abstract protected void ioComplete(VIOContext ctx, int nbytes);
 }

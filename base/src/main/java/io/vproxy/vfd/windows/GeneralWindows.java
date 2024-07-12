@@ -19,7 +19,7 @@ public class GeneralWindows implements Windows {
     }
 
     @Override
-    public SOCKET createTapHandle(String dev) throws IOException {
+    public HANDLE createTapHandle(String dev) throws IOException {
         try (var allocator = Allocator.ofPooled()) {
             return WindowsNative.get().createTapHandle(VProxyThread.current().getEnv(), new PNIString(allocator, dev));
         }
@@ -105,6 +105,17 @@ public class GeneralWindows implements Windows {
     }
 
     @Override
+    public void readFile(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().readFile(VProxyThread.current().getEnv(), socket.recvContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
     public void wsaSend(WinSocket socket) throws IOException {
         socket.incrIORefCnt();
         try {
@@ -116,8 +127,19 @@ public class GeneralWindows implements Windows {
     }
 
     @Override
+    public void wsaSend(WinSocket socket, VIOContext ctx) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().wsaSend(VProxyThread.current().getEnv(), ctx);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
     public void wsaSendTo(WinSocket socket, MemorySegment data, IPPort ipport) throws IOException {
-        var ctx = IOCPUtils.buildContextForSendingUDPPacket(socket, data);
+        var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, data);
         handleSocketAddress(ipport, (v4, un) -> {
             socket.incrIORefCnt();
             try {
@@ -127,6 +149,28 @@ public class GeneralWindows implements Windows {
                 throw e;
             }
         });
+    }
+
+    @Override
+    public void writeFile(WinSocket socket) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().writeFile(VProxyThread.current().getEnv(), socket.sendContext);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
+    }
+
+    @Override
+    public void writeFile(WinSocket socket, VIOContext ctx) throws IOException {
+        socket.incrIORefCnt();
+        try {
+            WindowsNative.get().writeFile(VProxyThread.current().getEnv(), ctx);
+        } catch (IOException e) {
+            socket.decrIORefCnt();
+            throw e;
+        }
     }
 
     @Override

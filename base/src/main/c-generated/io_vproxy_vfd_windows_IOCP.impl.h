@@ -11,7 +11,11 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_IOCP_getQueuedCompletionStatusE
         &nRemoved, milliseconds, alertable
     );
     if (!ok) {
-        return throwIOExceptionBasedOnErrno(env);
+        if (GetLastError() == WAIT_TIMEOUT) {
+            nRemoved = 0;
+        } else {
+            return throwIOExceptionBasedOnErrno(env);
+        }
     }
     env->return_ = nRemoved;
     return 0;
@@ -46,4 +50,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_IOCP_postQueuedCompletionStatus
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:fe81a902948e3b1d94ffbf2d1b97c8c210645dd3b3a23656f0fa67dbf1702620
+// sha256:5730e82ee6793f27cb30fde6f9a909967bd0ff262a9f6e03304b7940c80314ad

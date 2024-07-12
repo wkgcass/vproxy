@@ -3,6 +3,7 @@ package io.vproxy.vfd.windows;
 import io.vproxy.vfd.NoSockAddr;
 import io.vproxy.vfd.TapDatagramFD;
 import io.vproxy.vfd.TapInfo;
+import io.vproxy.vfd.posix.Posix;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,11 +11,12 @@ import java.nio.ByteBuffer;
 public class WindowsTapDatagramFD extends WindowsNetworkFD implements TapDatagramFD {
     public final TapInfo tap;
 
-    public WindowsTapDatagramFD(Windows windows, WinSocket socket, TapInfo tap) {
-        super(windows);
+    public WindowsTapDatagramFD(Windows windows, Posix posix, WinSocket socket, TapInfo tap) {
+        super(windows, posix);
         setSocket(socket);
         this.connected = true;
         this.tap = tap;
+        deliverReadOperation();
     }
 
     @Override
@@ -55,5 +57,20 @@ public class WindowsTapDatagramFD extends WindowsNetworkFD implements TapDatagra
     @Override
     public NoSockAddr getRemoteAddress() throws IOException {
         throw new IOException(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doRecv() throws IOException {
+        windows.readFile(socket);
+    }
+
+    @Override
+    protected void doSend() throws IOException {
+        windows.writeFile(socket);
+    }
+
+    @Override
+    protected void doSend(VIOContext ctx) throws IOException {
+        windows.writeFile(socket, ctx);
     }
 }

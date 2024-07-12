@@ -16,7 +16,11 @@ interface PNIIOCP {
                 &nRemoved, milliseconds, alertable
             );
             if (!ok) {
-                return throwIOExceptionBasedOnErrno(env);
+                if (GetLastError() == WAIT_TIMEOUT) {
+                    nRemoved = 0;
+                } else {
+                    return throwIOExceptionBasedOnErrno(env);
+                }
             }
             env->return_ = nRemoved;
             return 0;

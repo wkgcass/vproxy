@@ -31,7 +31,14 @@ public class IOCPUtils {
                 Overlapped.LAYOUT.byteSize()));
     }
 
-    public static void notify(HANDLE iocp) {
+    public static void notify(WinIOCP iocp) {
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (iocp) {
+            if (!iocp.polling) {
+                iocp.notified = true;
+                return;
+            }
+        }
         var allocator = Allocator.ofAllocateAndForgetUnsafe();
         var ctx = new VIOContext(allocator);
         IOCPUtils.setPointer(ctx);
@@ -40,25 +47,25 @@ public class IOCPUtils {
 
         try {
             IOCP.get().postQueuedCompletionStatus(VProxyThread.current().getEnv(),
-                iocp, 0, null, ctx.getOverlapped());
+                iocp.handle, 0, null, ctx.getOverlapped());
         } catch (IOException e) {
-            Logger.error(LogType.SYS_ERROR, "failed to notify iocp: " + iocp.MEMORY.address());
+            Logger.error(LogType.SYS_ERROR, "failed to notify iocp: " + iocp);
             SunUnsafe.freeMemory(ctx.MEMORY.address());
         }
     }
 
-    public static VIOContext buildContextForSendingUDPPacket(WinSocket socket, int dataLen) {
+    public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, int dataLen) {
         var allocator = PooledAllocator.ofUnsafePooled();
         var data = allocator.allocate(dataLen);
-        return buildContextForSendingUDPPacket(socket, allocator, data);
+        return buildContextForSendingDatagramPacket(socket, allocator, data);
     }
 
-    public static VIOContext buildContextForSendingUDPPacket(WinSocket socket, MemorySegment data) {
+    public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, MemorySegment data) {
         var allocator = PooledAllocator.ofUnsafePooled();
-        return buildContextForSendingUDPPacket(socket, allocator, data);
+        return buildContextForSendingDatagramPacket(socket, allocator, data);
     }
 
-    public static VIOContext buildContextForSendingUDPPacket(WinSocket socket, Allocator allocator, MemorySegment data) {
+    public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, Allocator allocator, MemorySegment data) {
         var ref = PNIRef.of(new Tuple<>(allocator, socket));
 
         var ctx = new VIOContext(allocator);
@@ -69,7 +76,7 @@ public class IOCPUtils {
         ctx.setSocket(socket.fd);
         var buf = ctx.getBuffers().get(0);
         buf.setBuf(data);
-        buf.setLen(data.byteSize());
+        buf.setLen((int) data.byteSize());
         ctx.setBufferCount(1);
 
         return ctx;
@@ -77,5 +84,9 @@ public class IOCPUtils {
 
     public static int getContextType(VIOContext ctx) {
         return ctx.getPtr().reinterpret(4).get(ValueLayout.JAVA_INT_UNALIGNED, 0);
+    }
+
+    public static String convertNTStatusToString(long ntstatus) {
+        return "Unexpected NTSTATUS: " + Long.toHexString(ntstatus);
     }
 }

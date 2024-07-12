@@ -36,7 +36,7 @@ public class WindowsNative {
 
     private static final MethodHandle createTapHandleMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions(), "Java_io_vproxy_vfd_windows_WindowsNative_createTapHandle", String.class /* dev */);
 
-    public io.vproxy.vfd.windows.SOCKET createTapHandle(PNIEnv ENV, PNIString dev) throws java.io.IOException {
+    public io.vproxy.vfd.windows.HANDLE createTapHandle(PNIEnv ENV, PNIString dev) throws java.io.IOException {
         ENV.reset();
         int ERR;
         try {
@@ -49,7 +49,7 @@ public class WindowsNative {
             ENV.throwLast();
         }
         var RESULT = ENV.returnPointer();
-        return RESULT == null ? null : new io.vproxy.vfd.windows.SOCKET(RESULT);
+        return RESULT == null ? null : new io.vproxy.vfd.windows.HANDLE(RESULT);
     }
 
     private static final MethodHandle closeHandleMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_closeHandle", io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() /* handle */);
@@ -152,6 +152,23 @@ public class WindowsNative {
         return ENV.returnInt();
     }
 
+    private static final MethodHandle readFileMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_readFile", io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() /* ctx */);
+
+    public int readFile(PNIEnv ENV, io.vproxy.vfd.windows.VIOContext ctx) throws java.io.IOException {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) readFileMH.invokeExact(ENV.MEMORY, (MemorySegment) (ctx == null ? MemorySegment.NULL : ctx.MEMORY));
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
+            ENV.throwIf(java.io.IOException.class);
+            ENV.throwLast();
+        }
+        return ENV.returnInt();
+    }
+
     private static final MethodHandle wsaSendMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_wsaSend", io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() /* ctx */);
 
     public int wsaSend(PNIEnv ENV, io.vproxy.vfd.windows.VIOContext ctx) throws java.io.IOException {
@@ -202,6 +219,23 @@ public class WindowsNative {
         }
     }
 
+    private static final MethodHandle writeFileMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_writeFile", io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() /* ctx */);
+
+    public int writeFile(PNIEnv ENV, io.vproxy.vfd.windows.VIOContext ctx) throws java.io.IOException {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) writeFileMH.invokeExact(ENV.MEMORY, (MemorySegment) (ctx == null ? MemorySegment.NULL : ctx.MEMORY));
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
+            ENV.throwIf(java.io.IOException.class);
+            ENV.throwLast();
+        }
+        return ENV.returnInt();
+    }
+
     private static final MethodHandle convertAddressMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_convertAddress", MemorySegment.class /* sockaddr */, boolean.class /* v4 */, io.vproxy.vfd.posix.SocketAddressUnion.LAYOUT.getClass() /* addr */);
 
     public void convertAddress(PNIEnv ENV, MemorySegment sockaddr, boolean v4, io.vproxy.vfd.posix.SocketAddressUnion addr) throws java.io.IOException {
@@ -219,4 +253,4 @@ public class WindowsNative {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:6603e8b19afc7ce64a49f9b3468b0bc570eef4c089c938ca4d43790aa94170cc
+// sha256:ffa309b45eda2812b28ab2833f9a7a9b588c2757f7a6d0bba85fa011cff74396

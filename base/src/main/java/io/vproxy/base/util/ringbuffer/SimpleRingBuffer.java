@@ -58,7 +58,9 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     public static SimpleRingBuffer wrap(MemorySegment memSeg) {
-        return wrap(memSeg.asByteBuffer());
+        var buf = memSeg.asByteBuffer();
+        buf.limit(0).position(0);
+        return wrap(buf);
     }
 
     private SimpleRingBuffer(boolean isDirect, ByteBufferEx buffer, int sPos, int ePos) {
@@ -482,15 +484,15 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return buffer;
     }
 
-    int getSPos() {
+    public int getSPos() {
         return sPos;
     }
 
-    int getEPos() {
+    public int getEPos() {
         return ePos;
     }
 
-    boolean getEPosIsAfterSPos() {
+    public boolean getEPosIsAfterSPos() {
         return ePosIsAfterSPos;
     }
 

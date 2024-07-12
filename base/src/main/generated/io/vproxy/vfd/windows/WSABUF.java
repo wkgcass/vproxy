@@ -9,7 +9,8 @@ import java.nio.ByteBuffer;
 
 public class WSABUF extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("len"),
+        ValueLayout.JAVA_INT.withName("len"),
+        MemoryLayout.sequenceLayout(4L, ValueLayout.JAVA_BYTE) /* padding */,
         ValueLayout.ADDRESS.withName("buf")
     ).withByteAlignment(8);
     public final MemorySegment MEMORY;
@@ -25,11 +26,11 @@ public class WSABUF extends AbstractNativeObject implements NativeObject {
         )
     );
 
-    public long getLen() {
-        return lenVH.getLong(MEMORY);
+    public int getLen() {
+        return lenVH.getInt(MEMORY);
     }
 
-    public void setLen(long len) {
+    public void setLen(int len) {
         lenVH.set(MEMORY, len);
     }
 
@@ -57,7 +58,8 @@ public class WSABUF extends AbstractNativeObject implements NativeObject {
         MEMORY = MEMORY.reinterpret(LAYOUT.byteSize());
         this.MEMORY = MEMORY;
         long OFFSET = 0;
-        OFFSET += ValueLayout.JAVA_LONG_UNALIGNED.byteSize();
+        OFFSET += ValueLayout.JAVA_INT_UNALIGNED.byteSize();
+        OFFSET += 4; /* padding */
         OFFSET += ValueLayout.ADDRESS_UNALIGNED.byteSize();
     }
 
@@ -156,4 +158,4 @@ public class WSABUF extends AbstractNativeObject implements NativeObject {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:189f5cb8ea911b2c230c82e087f64c0f4e0c3bb3d71b87e8bf406f4040ba0e5e
+// sha256:99a674a28742443b47b00483a9be384588b6ff0bea89c5b11f59ec964bfb6c2a

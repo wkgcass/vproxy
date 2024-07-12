@@ -31,7 +31,7 @@ public class WinIocpUdp {
 
         {
             var listenFd = PosixNative.get().createIPv4UdpFD(VProxyThread.current().getEnv());
-            listenSocket = WinSocket.ofUdp(listenFd);
+            listenSocket = WinSocket.ofDatagram(listenFd);
             Logger.alert("listenSocket = " + listenSocket);
 
             PosixNative.get().bindIPv4(VProxyThread.current().getEnv(),
@@ -45,7 +45,7 @@ public class WinIocpUdp {
 
         {
             var fd = PosixNative.get().createIPv4UdpFD(VProxyThread.current().getEnv());
-            var connectSocket = WinSocket.ofUdp(fd);
+            var connectSocket = WinSocket.ofDatagram(fd);
             Logger.alert("connectSocket = " + connectSocket);
             iocp.associate(connectSocket);
 
@@ -64,7 +64,7 @@ public class WinIocpUdp {
     }
 
     private static void deliverSend(WinSocket socket) throws IOException {
-        var sendContext = IOCPUtils.buildContextForSendingUDPPacket(socket, 5);
+        var sendContext = IOCPUtils.buildContextForSendingDatagramPacket(socket, 5);
         sendContext.getBuffers().get(0).getBuf().reinterpret(5).copyFrom(MemorySegment.ofArray("hello".getBytes()));
 
         socket.incrIORefCnt();
@@ -91,7 +91,7 @@ public class WinIocpUdp {
 
             deliverRecvFrom(socket);
 
-            var ctx = IOCPUtils.buildContextForSendingUDPPacket(socket, len);
+            var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, len);
             ctx.getBuffers().get(0).getBuf().reinterpret(len).copyFrom(socket.recvMemSeg.reinterpret(len));
 
             socket.incrIORefCnt();

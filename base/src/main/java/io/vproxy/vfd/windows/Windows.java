@@ -8,7 +8,7 @@ import java.lang.foreign.MemorySegment;
 public interface Windows {
     boolean tapNonBlockingSupported() throws IOException;
 
-    SOCKET createTapHandle(String dev) throws IOException;
+    HANDLE createTapHandle(String dev) throws IOException;
 
     void closeHandle(SOCKET handle) throws IOException;
 
@@ -22,9 +22,17 @@ public interface Windows {
 
     void wsaRecvFrom(WinSocket socket) throws IOException;
 
+    void readFile(WinSocket socket) throws IOException;
+
     void wsaSend(WinSocket socket) throws IOException;
 
+    void wsaSend(WinSocket socket, VIOContext ctx) throws IOException;
+
     void wsaSendTo(WinSocket socket, MemorySegment data, IPPort ipport) throws IOException;
+
+    void writeFile(WinSocket socket) throws IOException;
+
+    void writeFile(WinSocket socket, VIOContext ctx) throws IOException;
 
     void wsaSendDisconnect(WinSocket socket) throws IOException;
 

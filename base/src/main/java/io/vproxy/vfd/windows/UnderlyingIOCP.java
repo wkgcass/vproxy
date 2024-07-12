@@ -9,6 +9,7 @@ import io.vproxy.pni.Allocator;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 public class UnderlyingIOCP {
@@ -82,7 +83,7 @@ public class UnderlyingIOCP {
             return;
         }
         for (var iocp : notifyIOCPs) {
-            IOCPUtils.notify(iocp.handle);
+            IOCPUtils.notify(iocp);
         }
         notifyIOCPs.clear();
     }
@@ -109,8 +110,16 @@ public class UnderlyingIOCP {
         synchronized (winSocket) {
             var iocp = winSocket.getIocp();
             if (iocp == null) {
+                if (winSocket.listenSocket != null) {
+                    iocp = winSocket.listenSocket.getIocp();
+                }
+            }
+            if (iocp == null) {
                 assert Logger.lowLevelDebug(winSocket + " is not associated with iocp, push notification to itself");
-                winSocket.notifications.add(notif);
+                Objects.requireNonNullElse(
+                        winSocket.listenSocket,
+                        winSocket)
+                    .notifications.add(notif);
                 return;
             }
             iocp.postEvent(notif);

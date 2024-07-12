@@ -32,7 +32,7 @@ static inline int throwIOExceptionBasedOnErrno(void* _env) {
     int err = GetLastError();
     env->ex.type = "java.io.IOException";
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                  0, err, 0, env->ex.message, PNIExceptionMessageLen, 0);
+                  0, err, 0x0409 /* en-US */, env->ex.message, PNIExceptionMessageLen, 0);
     return -1;
 }
 
@@ -46,7 +46,7 @@ static inline int throwIOExceptionBasedOnErrnoWithPrefix(void* _env, char* msgPr
     env->ex.message[prefixLen + (extraChars++)] = ':';
     env->ex.message[prefixLen + (extraChars++)] = ' ';
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                  0, err, 0,
+                  0, err, 0x0409 /* en-US */,
                   env->ex.message + prefixLen + extraChars,
                   PNIExceptionMessageLen - prefixLen - extraChars,
                   0);
