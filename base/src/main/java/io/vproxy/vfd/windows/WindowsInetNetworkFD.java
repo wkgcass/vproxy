@@ -49,7 +49,6 @@ public abstract class WindowsInetNetworkFD extends WindowsNetworkFD {
             finishConfigAfterFDCreated();
 
             doConnect(l4addr);
-            ipv4 = false;
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());
         }

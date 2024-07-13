@@ -113,7 +113,15 @@ public class IOCPSelector implements FDSelector {
             extraEventsNative.get(i).setUd(e.getOverlapped().MEMORY);
             extraEventsNative.get(i).setMask(e.getNumberOfBytesTransferred());
         }
-        for (var fired : firedFds) {
+        for (var iterator = firedFds.iterator(); iterator.hasNext(); ) {
+            var fired = iterator.next();
+            if (!fired.isOpen()) {
+                assert Logger.lowLevelDebug(fired + " is closed, clear events of this fd");
+                watchedFds.remove(fired);
+                iterator.remove();
+                continue;
+            }
+
             var ready = EventSet.none();
             if (fired.firingReadable && fired.watchingEvents.have(Event.READABLE)) {
                 ready = ready.combine(EventSet.read());
@@ -170,6 +178,7 @@ public class IOCPSelector implements FDSelector {
             winfd.watchingEvents = ops;
             winfd.attachment = registerData;
         }
+        IOCPUtils.notify(iocp);
     }
 
     @Override
@@ -184,6 +193,7 @@ public class IOCPSelector implements FDSelector {
                 firedFds.remove(winfd);
                 winfd.watchingEvents = EventSet.none();
                 winfd.attachment = null;
+                iocp.dissociate(winfd.socket);
             }
         }
     }
@@ -195,6 +205,8 @@ public class IOCPSelector implements FDSelector {
 
         var winfd = (WindowsFD) fd.real();
         winfd.watchingEvents = ops;
+
+        IOCPUtils.notify(iocp);
     }
 
     @Override

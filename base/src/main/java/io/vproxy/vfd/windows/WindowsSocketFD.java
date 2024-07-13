@@ -6,15 +6,19 @@ import io.vproxy.vfd.posix.Posix;
 import java.io.IOException;
 
 public class WindowsSocketFD extends WindowsInetNetworkFD implements SocketFD {
-    public WindowsSocketFD(Windows windows, Posix posix) {
+    protected WindowsSocketFD(Windows windows, Posix posix) {
         super(windows, posix);
     }
 
-    public WindowsSocketFD(Windows windows, Posix posix, WinSocket socket, boolean ipv4) {
+    // accepted socket
+    protected WindowsSocketFD(Windows windows, Posix posix, WinSocket socket, boolean ipv4) {
         this(windows, posix);
         setSocket(socket);
         this.ipv4 = ipv4;
         connected = true;
+
+        deliverStreamSocketReadOperation();
+        setWritable();
     }
 
     @Override
@@ -33,7 +37,7 @@ public class WindowsSocketFD extends WindowsInetNetworkFD implements SocketFD {
             throw new IOException("not connected yet");
         }
         connected = true;
-        clearWritable();
+        deliverStreamSocketReadOperation();
         return true;
     }
 }

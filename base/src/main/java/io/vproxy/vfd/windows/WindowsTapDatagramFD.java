@@ -11,12 +11,12 @@ import java.nio.ByteBuffer;
 public class WindowsTapDatagramFD extends WindowsNetworkFD implements TapDatagramFD {
     public final TapInfo tap;
 
-    public WindowsTapDatagramFD(Windows windows, Posix posix, WinSocket socket, TapInfo tap) {
+    public WindowsTapDatagramFD(Windows windows, Posix posix, WinSocket socket, TapInfo tap) throws IOException {
         super(windows, posix);
         setSocket(socket);
         this.connected = true;
         this.tap = tap;
-        deliverReadOperation();
+        doRecv();
     }
 
     @Override

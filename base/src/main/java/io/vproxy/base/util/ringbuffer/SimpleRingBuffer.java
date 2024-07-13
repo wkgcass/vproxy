@@ -34,9 +34,9 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private final boolean isDirect;
     private /*may change after defragment*/ ByteBufferEx buffer;
     private int ePos; // end pos
-    private int sPos; // start pos
+    protected int sPos; // start pos
     private final int cap;
-    private boolean ePosIsAfterSPos = true; // true then end is limit, otherwise start is limit
+    protected boolean ePosIsAfterSPos = true;
 
     private boolean notFirstOperator = false;
     private boolean operating = false;
@@ -63,7 +63,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return wrap(buf);
     }
 
-    private SimpleRingBuffer(boolean isDirect, ByteBufferEx buffer, int sPos, int ePos) {
+    protected SimpleRingBuffer(boolean isDirect, ByteBufferEx buffer, int sPos, int ePos) {
         this.isDirect = isDirect;
         this.buffer = buffer;
         this.cap = buffer.capacity();
@@ -105,7 +105,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return operateOnByteBufferStoreIn(b -> channel.read(b.realBuffer()) != -1);
     }
 
-    private void resetCursors() {
+    protected void resetCursors() {
         assert Logger.lowLevelNetDebug("reset cursors");
         sPos = 0;
         ePos = 0;

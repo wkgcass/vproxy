@@ -81,10 +81,12 @@ public interface ByteBufferRingBuffer extends RingBuffer {
         try {
             return operateOnByteBufferStoreIn(buf -> {
                 var n = buf.limit() - buf.position();
-                if (nbytes[0] + n > maxBytesToFill) {
-                    n = maxBytesToFill - nbytes[0];
+                var bytesToFill = maxBytesToFill - nbytes[0];
+                if (bytesToFill > n) {
+                    bytesToFill = n;
                 }
-                buf.position(buf.position() + n);
+                nbytes[0] += bytesToFill;
+                buf.position(buf.position() + bytesToFill);
                 return true;
             });
         } catch (IOException e) {

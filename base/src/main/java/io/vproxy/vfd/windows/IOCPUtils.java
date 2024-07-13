@@ -87,6 +87,9 @@ public class IOCPUtils {
     }
 
     public static String convertNTStatusToString(long ntstatus) {
+        if (ntstatus == 0xc000020dL) {
+            return "Connection reset";
+        }
         return "Unexpected NTSTATUS: " + Long.toHexString(ntstatus);
     }
 }

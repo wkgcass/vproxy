@@ -122,10 +122,7 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + "{" +
-               "fd=" + socket +
-               ", closed=" + closed +
-               '}';
+        return this.getClass().getSimpleName() + ":" + socket;
     }
 
     // ============

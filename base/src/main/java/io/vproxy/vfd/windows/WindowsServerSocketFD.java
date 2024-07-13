@@ -42,6 +42,7 @@ public class WindowsServerSocketFD extends WindowsFD implements ServerSocketFD {
     private void checkError() throws IOException {
         var e = errors.poll();
         if (e != null) {
+            e.setStackTrace(Thread.currentThread().getStackTrace());
             throw e;
         }
     }
@@ -75,9 +76,8 @@ public class WindowsServerSocketFD extends WindowsFD implements ServerSocketFD {
             throw new IOException("unknown l3addr " + l4addr.getAddress());
         }
 
-        deliverAccept();
-
         socket.localAddress = l4addr;
+        deliverAccept();
     }
 
     private void deliverAccept() {
@@ -94,7 +94,7 @@ public class WindowsServerSocketFD extends WindowsFD implements ServerSocketFD {
             return;
         }
         var newSocket = WinSocket.ofAcceptedStream(fd, socket);
-        newSocket.ud = this; // will call ioComplete method defined here
+        newSocket.ud = this; // will call ioComplete method of this fd
         try {
             windows.acceptEx(newSocket);
         } catch (IOException e) {
@@ -110,9 +110,17 @@ public class WindowsServerSocketFD extends WindowsFD implements ServerSocketFD {
             return;
         }
 
-        var newSocket = (WinSocket) ctx.getRef().getRef();
-
-        var fd = new WindowsSocketFD(windows, posix, newSocket, ipv4);
+        var acceptedSocket = (WinSocket) ctx.getRef().getRef();
+        acceptedSocket.recvContext.setIoType(IOType.READ.code);
+        try {
+            windows.updateAcceptContext(acceptedSocket);
+        } catch (IOException e) {
+            Logger.error(LogType.SOCKET_ERROR, "failed to update accept context for " + acceptedSocket);
+            pushError(e);
+            acceptedSocket.close();
+            return;
+        }
+        var fd = new WindowsSocketFD(windows, posix, acceptedSocket, ipv4);
 
         acceptQueue.add(fd);
         setReadable();

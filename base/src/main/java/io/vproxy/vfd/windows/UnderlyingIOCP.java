@@ -93,6 +93,7 @@ public class UnderlyingIOCP {
         if (ctx.getIoType() == IOType.DISCARD.code) {
             //noinspection unchecked
             var tup = (Tuple<Allocator, WinSocket>) ctx.getRef().getRef();
+            assert Logger.lowLevelDebug("underlying-iocp got event: " + tup._2 + " io-type=" + ctx.getIoType());
             var ref = ctx.getRef();
             tup._2.decrIORefCnt();
             tup._1.close();
@@ -100,6 +101,7 @@ public class UnderlyingIOCP {
             return;
         }
         var winSocket = (WinSocket) ctx.getRef().getRef();
+        assert Logger.lowLevelDebug("underlying-iocp got event: " + winSocket + " io-type=" + ctx.getIoType());
 
         var transferred = entry.getNumberOfBytesTransferred();
         var completionKey = entry.getCompletionKey();

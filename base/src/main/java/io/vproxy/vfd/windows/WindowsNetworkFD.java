@@ -30,6 +30,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
 
     protected void checkError() throws IOException {
         if (exception != null) {
+            exception.setStackTrace(Thread.currentThread().getStackTrace());
             throw exception;
         }
     }
@@ -56,12 +57,17 @@ public abstract class WindowsNetworkFD extends WindowsFD {
         }
 
         var freeBeforeRead = socket.recvRingBuffer.free();
-
         int ret = socket.recvRingBuffer.writeTo(dst);
+
+        if (socket.recvRingBuffer.used() == 0) {
+            clearReadable();
+        }
+
         if (socket.isStreamSocket()) {
-            // the read operation is not delivered, need to deliver now
+            // ring buffer was full so the read operation was not delivered in ioComplete
+            // need to deliver now
             if (freeBeforeRead == 0 && ret > 0) {
-                deliverReadOperation();
+                deliverStreamSocketReadOperation();
             }
             return ret;
         }
@@ -93,8 +99,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
         }
 
         int ret;
-        if (socket.sendContext == null) {
-            // might be udp, just send
+        if (socket.isDatagramSocket()) {
             var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, srcLen);
             ByteArray.from(ctx.getBuffers().get(0).getBuf().reinterpret(srcLen)).byteBufferGet(src, 0, srcLen);
             doSend(ctx);
@@ -173,6 +178,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             setReadable(); // let user read from it
         } else {
             setException(new IOException("unexpected IOType " + ctx.getIoType() + " with recvContext"));
+            return;
         }
 
         // datagram socket should only deliver read operation when user reads the packet
@@ -180,11 +186,30 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             return;
         }
         if (socket.recvRingBuffer.free() > 0) {
-            deliverReadOperation();
+            deliverStreamSocketReadOperation();
         }
     }
 
-    protected void deliverReadOperation() {
+    private void sendComplete(VIOContext ctx, int nbytes) {
+        assert Logger.lowLevelDebug("sendComplete for " + socket + ", ioType=" + ctx.getIoType() + ", sent " + nbytes + " bytes");
+        if (ctx.getIoType() == IOType.CONNECT.code) {
+            ctx.setIoType(IOType.WRITE.code);
+            canBeConnected = true;
+            setWritable();
+        } else if (ctx.getIoType() == IOType.WRITE.code) {
+            if (nbytes != 0) {
+                socket.sendRingBuffer.discardBytes(nbytes);
+                setWritable();
+            } else {
+                // do not handle the condition where nbytes == 0
+                assert Logger.lowLevelDebug("write operation completed, but wrote 0 bytes");
+            }
+        } else {
+            setException(new IOException("unexpected IOType " + ctx.getIoType() + " with sendContext"));
+        }
+    }
+
+    protected void deliverStreamSocketReadOperation() {
         // do not read anymore if remoteClosed
         if (remoteClosed) {
             return;
@@ -199,10 +224,10 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             buf.setBuf(socket.recvMemSeg);
             buf.setLen(spos - epos);
             socket.recvContext.setBufferCount(1);
-        } else if (epos == 0) {
+        } else if (spos == 0) {
             var buf = socket.recvContext.getBuffers().get(0);
-            buf.setBuf(socket.recvMemSeg);
-            buf.setLen(socket.recvRingBuffer.capacity());
+            buf.setBuf(socket.recvMemSeg.asSlice(epos));
+            buf.setLen(socket.recvRingBuffer.capacity() - epos);
             socket.recvContext.setBufferCount(1);
         } else {
             var buf1 = socket.recvContext.getBuffers().get(0);
@@ -231,24 +256,5 @@ public abstract class WindowsNetworkFD extends WindowsFD {
 
     protected void doSend(VIOContext ctx) throws IOException {
         windows.wsaSend(socket, ctx);
-    }
-
-    private void sendComplete(VIOContext ctx, int nbytes) {
-        assert Logger.lowLevelDebug("sendComplete for " + socket + ", ioType=" + ctx.getIoType() + ", sent " + nbytes + " bytes");
-        if (ctx.getIoType() == IOType.CONNECT.code) {
-            ctx.setIoType(IOType.WRITE.code);
-            canBeConnected = true;
-            setWritable();
-        } else if (ctx.getIoType() == IOType.WRITE.code) {
-            if (nbytes != 0) {
-                socket.sendRingBuffer.discardBytes(nbytes);
-                setWritable();
-            } else {
-                // do not handle the condition where nbytes == 0
-                assert Logger.lowLevelDebug("write operation completed, but wrote 0 bytes");
-            }
-        } else {
-            setException(new IOException("unexpected IOType " + ctx.getIoType() + " with sendContext"));
-        }
     }
 }

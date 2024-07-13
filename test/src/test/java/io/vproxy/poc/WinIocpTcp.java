@@ -23,9 +23,9 @@ public class WinIocpTcp {
 
         {
             var listenFd = fds.openServerSocketFD();
-            Logger.alert("listenSocket = " + listenFd);
 
             listenFd.bind(new IPPort("127.0.0.1:8080"));
+            Logger.alert("listenSocket = " + listenFd);
 
             iocp.register(listenFd, EventSet.read(), null);
         }
@@ -34,8 +34,8 @@ public class WinIocpTcp {
 
         {
             var fd = fds.openSocketFD();
-            Logger.alert("connectSocket = " + fd);
             fd.connect(new IPPort("127.0.0.1:8080"));
+            Logger.alert("connectSocket = " + fd);
 
             connectFD = fd;
 
@@ -71,6 +71,7 @@ public class WinIocpTcp {
             if (fd instanceof ServerSocketFD server) {
                 if (ready.have(Event.READABLE)) {
                     var accepted = server.accept();
+                    Logger.alert("accepted socket: " + accepted);
                     iocp.register(accepted, EventSet.read(), null);
                 }
                 continue;
@@ -81,7 +82,7 @@ public class WinIocpTcp {
                 buf.limit(buf.capacity()).position(0);
                 int n = sock.read(buf);
                 Logger.alert("received " + n + " bytes");
-                if (n == 0) {
+                if (n < 0) {
                     Logger.warn(LogType.ALERT, sock + " is closed by remote");
                     fd.close();
                     continue;

@@ -2,7 +2,9 @@ package io.vproxy.vfd.windows;
 
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
+import io.vproxy.base.util.ringbuffer.SimpleRingBufferPreserveEPos;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.PNIRef;
@@ -44,18 +46,22 @@ public class WinSocket {
     final ConcurrentLinkedQueue<WinIOCP.Notification> notifications = new ConcurrentLinkedQueue<>();
 
     public static WinSocket ofStream(int fd) {
-        return new WinSocket(fd, null, false);
+        return new WinSocket(fd, null, false, false);
     }
 
     public static WinSocket ofAcceptedStream(int fd, WinSocket listenSocket) {
-        return new WinSocket(fd, listenSocket, false);
+        return new WinSocket(fd, listenSocket, false, false);
     }
 
     public static WinSocket ofDatagram(int fd) {
-        return new WinSocket(fd, null, true);
+        return new WinSocket(fd, null, true, false);
     }
 
-    public WinSocket(int fd, WinSocket listenSocket, boolean datagram) {
+    public static WinSocket ofServer(int fd) {
+        return new WinSocket(fd, null, false, true);
+    }
+
+    private WinSocket(int fd, WinSocket listenSocket, boolean datagram, boolean isListenSocket) {
         allocator = PooledAllocator.ofUnsafePooled();
         this.ref = PNIRef.of(this);
         this.fd = new SOCKET(MemorySegment.ofAddress(fd));
@@ -69,10 +75,10 @@ public class WinSocket {
         }
         this.sendMemSeg = sendMemSeg;
 
-        recvRingBuffer = SimpleRingBuffer.wrap(recvMemSeg);
+        recvRingBuffer = SimpleRingBufferPreserveEPos.wrap(recvMemSeg);
         SimpleRingBuffer sendRingBuffer = null;
         if (!datagram) {
-            sendRingBuffer = SimpleRingBuffer.wrap(sendMemSeg);
+            sendRingBuffer = SimpleRingBufferPreserveEPos.wrap(sendMemSeg);
         }
         this.sendRingBuffer = sendRingBuffer;
 
@@ -93,7 +99,7 @@ public class WinSocket {
             IOCPUtils.setPointer(recvContext);
         }
         VIOContext sendContext = null;
-        if (!datagram) {
+        if (!datagram && !isListenSocket) {
             sendContext = new VIOContext(allocator);
             sendContext.setSocket(this.fd);
             sendContext.setRef(ref);
@@ -109,10 +115,6 @@ public class WinSocket {
         this.sendContext = sendContext;
 
         UnderlyingIOCP.get().associate(this.fd);
-    }
-
-    public static WinSocket ofServer(int fd) {
-        return new WinSocket(fd, null, false);
     }
 
     WinIOCP getIocp() {
@@ -133,7 +135,7 @@ public class WinSocket {
 
     public void decrIORefCnt() {
         if (refCnt.decrementAndGet() == 0) {
-            realClose();
+            release();
         }
     }
 
@@ -148,27 +150,34 @@ public class WinSocket {
         if (!closed.compareAndSet(false, true)) {
             return;
         }
+
+        try {
+            WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), recvContext.getSocket());
+        } catch (IOException e) {
+            assert Logger.lowLevelDebug("failed to disconnect " + this + ": " + Utils.formatErr(e));
+        }
+
         int refCntAfterDec = refCnt.decrementAndGet();
         assert Logger.lowLevelDebug(this + " is closing, current ioRefCnt is " + refCntAfterDec + ", notifications.size = " + notifications.size());
         if (refCntAfterDec == 0) {
-            realClose();
+            release();
             return;
         }
         //noinspection WhileCanBeDoWhile
         while (notifications.poll() != null) {
             if (refCnt.decrementAndGet() == 0) {
-                realClose();
+                release();
                 return;
             }
         }
     }
 
-    private void realClose() {
-        assert Logger.lowLevelDebug("calling realClose on " + this);
+    private void release() {
+        assert Logger.lowLevelDebug("calling release on " + this);
         try {
             WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
         } catch (IOException e) {
-            Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this);
+            Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this, e);
         }
         ref.close();
         allocator.close();
@@ -185,15 +194,26 @@ public class WinSocket {
     @Override
     public String toString() {
         var sb = new StringBuilder();
-        sb.append("Socket(").append(recvContext.getSocket().MEMORY.address())
-            .append(", refCnt=").append(refCnt.get());
+        sb.append("WinSocket(").append(recvContext.getSocket().MEMORY.address())
+            .append("#").append(refCnt.get());
+        if (localAddress != null || remoteAddress != null) {
+            sb.append("#");
+        }
         if (localAddress != null) {
-            sb.append(", local=").append(localAddress.formatToIPPortString());
+            sb.append(localAddress.formatToIPPortString()).append("->");
         }
         if (remoteAddress != null) {
-            sb.append(", remote=").append(remoteAddress.formatToIPPortString());
+            if (localAddress == null) {
+                sb.append("->");
+            }
+            sb.append(remoteAddress.formatToIPPortString());
         }
         sb.append(")");
+        if (closed.get()) {
+            sb.append("[closed]");
+        } else {
+            sb.append("[open]");
+        }
         return sb.toString();
     }
 
