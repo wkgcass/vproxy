@@ -41,17 +41,14 @@ public abstract class WindowsInetNetworkFD extends WindowsNetworkFD {
             int fd = createIPv4FD();
             setSocket(wrapSocket(fd));
             finishConfigAfterFDCreated();
-
-            doConnect(l4addr);
         } else if (l4addr.getAddress() instanceof IPv6) {
             int fd = createIPv6FD();
             setSocket(wrapSocket(fd));
             finishConfigAfterFDCreated();
-
-            doConnect(l4addr);
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());
         }
+        doConnect(l4addr);
         // record the remote addr
         socket.remoteAddress = l4addr;
     }

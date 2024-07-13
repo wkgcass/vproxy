@@ -24,11 +24,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class WinSocket {
     private final AtomicBoolean closed = new AtomicBoolean(false);
+    private volatile boolean fdClosed = false;
     private final Allocator allocator;
     private final PNIRef<WinSocket> ref;
 
     public final SOCKET fd;
-    public final WinSocket listenSocket; // optional
+    private WinSocket listenSocket; // optional
     private final boolean datagram;
     public Object ud = null;
 
@@ -75,7 +76,11 @@ public class WinSocket {
         }
         this.sendMemSeg = sendMemSeg;
 
-        recvRingBuffer = SimpleRingBufferPreserveEPos.wrap(recvMemSeg);
+        if (datagram) {
+            recvRingBuffer = SimpleRingBuffer.wrap(recvMemSeg);
+        } else {
+            recvRingBuffer = SimpleRingBufferPreserveEPos.wrap(recvMemSeg);
+        }
         SimpleRingBuffer sendRingBuffer = null;
         if (!datagram) {
             sendRingBuffer = SimpleRingBufferPreserveEPos.wrap(sendMemSeg);
@@ -117,6 +122,14 @@ public class WinSocket {
         UnderlyingIOCP.get().associate(this.fd);
     }
 
+    public WinSocket getListenSocket() {
+        return listenSocket;
+    }
+
+    public void clearListenSocket() {
+        listenSocket = null;
+    }
+
     WinIOCP getIocp() {
         var iocp = this.iocp;
         if (iocp == null) {
@@ -152,7 +165,12 @@ public class WinSocket {
         }
 
         try {
-            WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), recvContext.getSocket());
+            if (isStreamSocket()) {
+                WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), recvContext.getSocket());
+            } else {
+                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
+                fdClosed = true;
+            }
         } catch (IOException e) {
             assert Logger.lowLevelDebug("failed to disconnect " + this + ": " + Utils.formatErr(e));
         }
@@ -174,10 +192,13 @@ public class WinSocket {
 
     private void release() {
         assert Logger.lowLevelDebug("calling release on " + this);
-        try {
-            WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
-        } catch (IOException e) {
-            Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this, e);
+        if (!fdClosed) {
+            try {
+                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
+                fdClosed = true;
+            } catch (IOException e) {
+                Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this, e);
+            }
         }
         ref.close();
         allocator.close();

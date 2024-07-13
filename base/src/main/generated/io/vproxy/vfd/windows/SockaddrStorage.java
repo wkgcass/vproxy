@@ -10,10 +10,9 @@ import java.nio.ByteBuffer;
 public class SockaddrStorage extends AbstractNativeObject implements NativeObject {
     public static final MemoryLayout LAYOUT = MemoryLayout.structLayout(
         ValueLayout.JAVA_SHORT.withName("family"),
-        MemoryLayout.sequenceLayout(48L, ValueLayout.JAVA_CHAR).withName("pad1"),
-        MemoryLayout.sequenceLayout(6L, ValueLayout.JAVA_BYTE) /* padding */,
+        MemoryLayout.sequenceLayout(6L, ValueLayout.JAVA_BYTE).withName("pad1"),
         ValueLayout.JAVA_LONG.withName("align"),
-        MemoryLayout.sequenceLayout(8L, ValueLayout.JAVA_CHAR).withName("pad2")
+        MemoryLayout.sequenceLayout(112L, ValueLayout.JAVA_BYTE).withName("pad2")
     ).withByteAlignment(8);
     public final MemorySegment MEMORY;
 
@@ -36,9 +35,9 @@ public class SockaddrStorage extends AbstractNativeObject implements NativeObjec
         familyVH.set(MEMORY, family);
     }
 
-    private final CharArray pad1;
+    private final MemorySegment pad1;
 
-    public CharArray getPad1() {
+    public MemorySegment getPad1() {
         return this.pad1;
     }
 
@@ -56,9 +55,9 @@ public class SockaddrStorage extends AbstractNativeObject implements NativeObjec
         alignVH.set(MEMORY, align);
     }
 
-    private final CharArray pad2;
+    private final MemorySegment pad2;
 
-    public CharArray getPad2() {
+    public MemorySegment getPad2() {
         return this.pad2;
     }
 
@@ -67,12 +66,11 @@ public class SockaddrStorage extends AbstractNativeObject implements NativeObjec
         this.MEMORY = MEMORY;
         long OFFSET = 0;
         OFFSET += ValueLayout.JAVA_SHORT_UNALIGNED.byteSize();
-        this.pad1 = new CharArray(MEMORY.asSlice(OFFSET, 48 * ValueLayout.JAVA_CHAR_UNALIGNED.byteSize()));
-        OFFSET += 48 * ValueLayout.JAVA_CHAR_UNALIGNED.byteSize();
-        OFFSET += 6; /* padding */
+        this.pad1 = MEMORY.asSlice(OFFSET, 6);
+        OFFSET += 6;
         OFFSET += ValueLayout.JAVA_LONG_UNALIGNED.byteSize();
-        this.pad2 = new CharArray(MEMORY.asSlice(OFFSET, 8 * ValueLayout.JAVA_CHAR_UNALIGNED.byteSize()));
-        OFFSET += 8 * ValueLayout.JAVA_CHAR_UNALIGNED.byteSize();
+        this.pad2 = MEMORY.asSlice(OFFSET, 112);
+        OFFSET += 112;
     }
 
     public SockaddrStorage(Allocator ALLOCATOR) {
@@ -93,7 +91,7 @@ public class SockaddrStorage extends AbstractNativeObject implements NativeObjec
         SB.append(",\n");
         {
             SB.append(" ".repeat(INDENT + 4)).append("pad1 => ");
-            PanamaUtils.nativeObjectToString(getPad1(), SB, INDENT + 4, VISITED, CORRUPTED_MEMORY);
+            SB.append(PanamaUtils.memorySegmentToString(getPad1()));
         }
         SB.append(",\n");
         {
@@ -103,7 +101,7 @@ public class SockaddrStorage extends AbstractNativeObject implements NativeObjec
         SB.append(",\n");
         {
             SB.append(" ".repeat(INDENT + 4)).append("pad2 => ");
-            PanamaUtils.nativeObjectToString(getPad2(), SB, INDENT + 4, VISITED, CORRUPTED_MEMORY);
+            SB.append(PanamaUtils.memorySegmentToString(getPad2()));
         }
         SB.append("\n");
         SB.append(" ".repeat(INDENT)).append("}@").append(Long.toString(MEMORY.address(), 16));
@@ -180,4 +178,4 @@ public class SockaddrStorage extends AbstractNativeObject implements NativeObjec
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:0934e3a9f0cdc553c6aa079f80178798650d2df94deec1dde8280d565b185cc3
+// sha256:3bbe04ff02d7730c3c290f76d7049dd060ca5d91dcf861e27b37216d8cb01ebc

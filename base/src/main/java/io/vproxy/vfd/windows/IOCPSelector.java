@@ -258,4 +258,13 @@ public class IOCPSelector implements FDSelector {
     public AEFiredExtra.Array getFiredExtra() {
         return extraEventsNative;
     }
+
+    @Override
+    public String toString() {
+        var openclosed = "[closed]";
+        if (isOpen()) {
+            openclosed = "[open]";
+        }
+        return "IOCPSelector:" + iocp + openclosed;
+    }
 }

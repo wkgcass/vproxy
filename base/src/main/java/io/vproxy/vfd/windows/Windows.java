@@ -28,7 +28,7 @@ public interface Windows {
 
     void wsaSend(WinSocket socket, VIOContext ctx) throws IOException;
 
-    void wsaSendTo(WinSocket socket, MemorySegment data, IPPort ipport) throws IOException;
+    void wsaSendTo(WinSocket socket, VIOContext ctx, IPPort ipport) throws IOException;
 
     void writeFile(WinSocket socket) throws IOException;
 

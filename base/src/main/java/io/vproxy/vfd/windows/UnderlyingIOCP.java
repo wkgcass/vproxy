@@ -112,14 +112,14 @@ public class UnderlyingIOCP {
         synchronized (winSocket) {
             var iocp = winSocket.getIocp();
             if (iocp == null) {
-                if (winSocket.listenSocket != null) {
-                    iocp = winSocket.listenSocket.getIocp();
+                if (winSocket.getListenSocket() != null) {
+                    iocp = winSocket.getListenSocket().getIocp();
                 }
             }
             if (iocp == null) {
                 assert Logger.lowLevelDebug(winSocket + " is not associated with iocp, push notification to itself");
                 Objects.requireNonNullElse(
-                        winSocket.listenSocket,
+                        winSocket.getListenSocket(),
                         winSocket)
                     .notifications.add(notif);
                 return;

@@ -67,19 +67,13 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             // ring buffer was full so the read operation was not delivered in ioComplete
             // need to deliver now
             if (freeBeforeRead == 0 && ret > 0) {
-                deliverStreamSocketReadOperation();
+                deliverReadOperation();
             }
             return ret;
         }
 
         // deliver read operation for datagram socket
-
-        var buf = socket.recvContext.getBuffers().get(0);
-        buf.setBuf(socket.recvMemSeg);
-        buf.setLen(socket.recvRingBuffer.capacity());
-        socket.recvContext.setBufferCount(1);
-
-        doRecv();
+        deliverReadOperation();
 
         return ret;
     }
@@ -175,6 +169,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             } else {
                 socket.recvRingBuffer.fillBytes(nbytes);
             }
+            onReadComplete();
             setReadable(); // let user read from it
         } else {
             setException(new IOException("unexpected IOType " + ctx.getIoType() + " with recvContext"));
@@ -186,8 +181,12 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             return;
         }
         if (socket.recvRingBuffer.free() > 0) {
-            deliverStreamSocketReadOperation();
+            deliverReadOperation();
         }
+    }
+
+    protected void onReadComplete() {
+        // do nothing here
     }
 
     private void sendComplete(VIOContext ctx, int nbytes) {
@@ -197,6 +196,9 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             canBeConnected = true;
             setWritable();
         } else if (ctx.getIoType() == IOType.WRITE.code) {
+            if (socket.isDatagramSocket()) {
+                return;
+            }
             if (nbytes != 0) {
                 socket.sendRingBuffer.discardBytes(nbytes);
                 setWritable();
@@ -209,8 +211,11 @@ public abstract class WindowsNetworkFD extends WindowsFD {
         }
     }
 
-    protected void deliverStreamSocketReadOperation() {
-        // do not read anymore if remoteClosed
+    protected void deliverReadOperation() {
+        // do not read anymore if closed
+        if (socket.isClosed()) {
+            return;
+        }
         if (remoteClosed) {
             return;
         }

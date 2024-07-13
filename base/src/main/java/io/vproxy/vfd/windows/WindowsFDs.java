@@ -63,8 +63,7 @@ public class WindowsFDs implements FDs, FDsWithTap {
 
     @Override
     public DatagramFD openDatagramFD() throws IOException {
-        // TODO
-        throw new UnsupportedOperationException();
+        return new WindowsDatagramFD(windows, posix);
     }
 
     @Override

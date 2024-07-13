@@ -16,7 +16,7 @@ public class WindowsTapDatagramFD extends WindowsNetworkFD implements TapDatagra
         setSocket(socket);
         this.connected = true;
         this.tap = tap;
-        doRecv();
+        deliverReadOperation();
     }
 
     @Override

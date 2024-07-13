@@ -304,11 +304,11 @@ class PNIWSABUF {
 @Include("ws2def.h")
 class PNISockaddrStorage {
     short family;
-    @Len(48)
-    char[] pad1;
+    @Len(6)
+    byte[] pad1;
     long align;
-    @Len(8)
-    char[] pad2;
+    @Len(112)
+    byte[] pad2;
 }
 
 @Struct

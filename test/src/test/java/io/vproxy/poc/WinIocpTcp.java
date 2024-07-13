@@ -84,6 +84,7 @@ public class WinIocpTcp {
                 Logger.alert("received " + n + " bytes");
                 if (n < 0) {
                     Logger.warn(LogType.ALERT, sock + " is closed by remote");
+                    iocp.remove(fd);
                     fd.close();
                     continue;
                 }
@@ -96,6 +97,7 @@ public class WinIocpTcp {
                 Logger.alert("received data: " + data);
                 if (data.trim().equals("quit")) {
                     Logger.warn(LogType.ALERT, "closing " + fd);
+                    iocp.remove(fd);
                     fd.close();
                     continue;
                 }

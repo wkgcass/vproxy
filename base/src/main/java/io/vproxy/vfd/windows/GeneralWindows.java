@@ -10,7 +10,6 @@ import io.vproxy.vfd.posix.SocketAddressIPv6;
 import io.vproxy.vfd.posix.SocketAddressUnion;
 
 import java.io.IOException;
-import java.lang.foreign.MemorySegment;
 
 public class GeneralWindows implements Windows {
     @Override
@@ -35,7 +34,7 @@ public class GeneralWindows implements Windows {
         socket.incrIORefCnt();
         try {
             WindowsNative.get().acceptEx(VProxyThread.current().getEnv(),
-                socket.listenSocket.fd, socket.recvContext);
+                socket.getListenSocket().fd, socket.recvContext);
         } catch (IOException e) {
             socket.decrIORefCnt();
             throw e;
@@ -44,8 +43,10 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void updateAcceptContext(WinSocket socket) throws IOException {
+        var listenSocket = socket.getListenSocket();
+        socket.clearListenSocket();
         WindowsNative.get().updateAcceptContext(VProxyThread.current().getEnv(),
-            socket.listenSocket.fd, socket.fd);
+            listenSocket.fd, socket.fd);
     }
 
     private interface HandleSocketAddress {
@@ -138,8 +139,7 @@ public class GeneralWindows implements Windows {
     }
 
     @Override
-    public void wsaSendTo(WinSocket socket, MemorySegment data, IPPort ipport) throws IOException {
-        var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, data);
+    public void wsaSendTo(WinSocket socket, VIOContext ctx, IPPort ipport) throws IOException {
         handleSocketAddress(ipport, (v4, un) -> {
             socket.incrIORefCnt();
             try {
@@ -185,7 +185,7 @@ public class GeneralWindows implements Windows {
             WindowsNative.get().convertAddress(VProxyThread.current().getEnv(),
                 socket.recvContext.getAddr().MEMORY, v4, un);
             if (v4) {
-                var addr = new SocketAddressIPv4(un.getV4().getIp(), un.getV6().getPort() & 0xffff);
+                var addr = new SocketAddressIPv4(un.getV4().getIp(), un.getV4().getPort() & 0xffff);
                 return addr.toIPPort();
             } else {
                 var addr = new SocketAddressIPv6(un.getV6().getIp(), un.getV6().getPort() & 0xffff);

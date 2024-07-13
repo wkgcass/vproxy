@@ -17,7 +17,7 @@ public class WindowsSocketFD extends WindowsInetNetworkFD implements SocketFD {
         this.ipv4 = ipv4;
         connected = true;
 
-        deliverStreamSocketReadOperation();
+        deliverReadOperation();
         setWritable();
     }
 
@@ -37,7 +37,7 @@ public class WindowsSocketFD extends WindowsInetNetworkFD implements SocketFD {
             throw new IOException("not connected yet");
         }
         connected = true;
-        deliverStreamSocketReadOperation();
+        deliverReadOperation();
         return true;
     }
 }
