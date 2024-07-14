@@ -65,10 +65,12 @@ public interface ByteBufferRingBuffer extends RingBuffer {
         try {
             return operateOnByteBufferWriteOut(maxBytesToDiscard, buf -> {
                 var n = buf.limit() - buf.position();
-                if (nbytes[0] + n > maxBytesToDiscard) {
-                    n = maxBytesToDiscard - nbytes[0];
+                var bytesToDiscard = maxBytesToDiscard - nbytes[0];
+                if (bytesToDiscard > n) {
+                    bytesToDiscard = n;
                 }
-                buf.position(buf.position() + n);
+                nbytes[0] += bytesToDiscard;
+                buf.position(buf.position() + bytesToDiscard);
             });
         } catch (IOException e) {
             // will not happen, it's memory operation

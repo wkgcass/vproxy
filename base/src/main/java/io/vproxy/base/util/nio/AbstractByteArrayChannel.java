@@ -44,7 +44,7 @@ public abstract class AbstractByteArrayChannel implements ByteArrayChannel {
             throw new IllegalArgumentException("len = " + len + " < 0");
         }
         if (src.used() < len) {
-            throw new IndexOutOfBoundsException("src.used = " + src.used() + ", len = " + len + " < 0");
+            throw new IndexOutOfBoundsException("src.used = " + src.used() + " < len = " + len);
         }
 
         int writeBytes = Math.min(writeLen, len);

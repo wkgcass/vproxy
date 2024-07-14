@@ -19,7 +19,7 @@ public class GeneralWindows implements Windows {
 
     @Override
     public HANDLE createTapHandle(String dev) throws IOException {
-        try (var allocator = Allocator.ofPooled()) {
+        try (var allocator = Allocator.ofConfined()) {
             return WindowsNative.get().createTapHandle(VProxyThread.current().getEnv(), new PNIString(allocator, dev));
         }
     }

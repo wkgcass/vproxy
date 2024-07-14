@@ -1,7 +1,7 @@
 package io.vproxy.vfd.windows;
 
 public enum IOType {
-    READ(1),
+    READ(1), // ref = WinSocket
     WRITE(2),
     ACCEPT(3),
     CONNECT(4),

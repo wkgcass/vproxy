@@ -27,7 +27,7 @@ public class IOCPSelector implements FDSelector {
     private final SelectedEntryPrototypeObjectList selectedEntryList = new SelectedEntryPrototypeObjectList(ONE_POLL_LIMIT, SelectedEntry::new);
 
     final Lock VIRTUAL_LOCK = Lock.create();
-    final Set<WindowsFD> watchedFds = new HashSet<>();
+    final Map<WindowsFD, FD> watchedFds = new HashMap<>(); // real -> fd
     final Set<WindowsFD> firedFds = new HashSet<>();
 
     public IOCPSelector(WinIOCP iocp) {
@@ -132,7 +132,12 @@ public class IOCPSelector implements FDSelector {
             if (ready.equals(EventSet.none())) {
                 continue;
             }
-            selectedEntryList.add(fired, ready, fired.attachment);
+            var registered = watchedFds.get(fired);
+            if (registered == null) {
+                Logger.error(LogType.SYS_ERROR, fired + " is not registered into " + this + " but firing events");
+                continue;
+            }
+            selectedEntryList.add(registered, ready, fired.attachment);
         }
         return selectedEntryList;
     }
@@ -144,7 +149,7 @@ public class IOCPSelector implements FDSelector {
 
     private void checkFDMatch(FD fd) {
         var real = (WindowsFD) fd.real();
-        if (!watchedFds.contains(real)) {
+        if (!watchedFds.containsKey(real)) {
             throw new IllegalArgumentException("fd is not registered: " + fd);
         }
     }
@@ -152,7 +157,7 @@ public class IOCPSelector implements FDSelector {
     @Override
     public boolean isRegistered(FD fd) {
         //noinspection SuspiciousMethodCalls
-        return watchedFds.contains(fd.real());
+        return watchedFds.containsKey(fd.real());
     }
 
     @Override
@@ -162,21 +167,21 @@ public class IOCPSelector implements FDSelector {
             throw new ClosedChannelException();
         }
 
-        var winfd = (WindowsFD) fd.real();
+        var real = (WindowsFD) fd.real();
         try (var _ = VIRTUAL_LOCK.lock()) {
             try {
-                iocp.associate(winfd.socket);
+                iocp.associate(real.socket);
             } catch (IOException e) {
                 Logger.error(LogType.SYS_ERROR, "register " + fd + " to " + iocp + " failed", e);
                 return;
             }
-            winfd.selector = this;
-            watchedFds.add(winfd);
-            if (winfd.firingReadable || winfd.firingWritable) {
-                firedFds.add(winfd);
+            real.selector = this;
+            watchedFds.put(real, fd);
+            if (real.firingReadable || real.firingWritable) {
+                firedFds.add(real);
             }
-            winfd.watchingEvents = ops;
-            winfd.attachment = registerData;
+            real.watchingEvents = ops;
+            real.attachment = registerData;
         }
         IOCPUtils.notify(iocp);
     }
@@ -187,13 +192,13 @@ public class IOCPSelector implements FDSelector {
         try (var _ = VIRTUAL_LOCK.lock()) {
             //noinspection SuspiciousMethodCalls
             var removed = watchedFds.remove(fd.real());
-            if (removed) {
-                var winfd = (WindowsFD) fd.real();
-                winfd.selector = null;
-                firedFds.remove(winfd);
-                winfd.watchingEvents = EventSet.none();
-                winfd.attachment = null;
-                iocp.dissociate(winfd.socket);
+            if (removed != null) {
+                var real = (WindowsFD) fd.real();
+                real.selector = null;
+                firedFds.remove(real);
+                real.watchingEvents = EventSet.none();
+                real.attachment = null;
+                iocp.dissociate(real.socket);
             }
         }
     }
@@ -203,8 +208,8 @@ public class IOCPSelector implements FDSelector {
         checkOpen();
         checkFDMatch(fd);
 
-        var winfd = (WindowsFD) fd.real();
-        winfd.watchingEvents = ops;
+        var real = (WindowsFD) fd.real();
+        real.watchingEvents = ops;
 
         IOCPUtils.notify(iocp);
     }
@@ -214,8 +219,8 @@ public class IOCPSelector implements FDSelector {
         checkOpen();
         checkFDMatch(fd);
 
-        var winfd = (WindowsFD) fd.real();
-        return winfd.watchingEvents;
+        var real = (WindowsFD) fd.real();
+        return real.watchingEvents;
     }
 
     @Override
@@ -223,16 +228,18 @@ public class IOCPSelector implements FDSelector {
         checkOpen();
         checkFDMatch(fd);
 
-        var winfd = (WindowsFD) fd.real();
-        return winfd.attachment;
+        var real = (WindowsFD) fd.real();
+        return real.attachment;
     }
 
     @Override
     public Collection<RegisterEntry> entries() {
         var result = new ArrayList<RegisterEntry>();
-        for (var fd : watchedFds) {
-            var entry = new RegisterEntry(fd, fd.watchingEvents, fd.attachment);
-            result.add(entry);
+        for (var entry : watchedFds.entrySet()) {
+            var real = entry.getKey();
+            var fd = entry.getValue();
+            var rentry = new RegisterEntry(fd, real.watchingEvents, real.attachment);
+            result.add(rentry);
         }
         return result;
     }
