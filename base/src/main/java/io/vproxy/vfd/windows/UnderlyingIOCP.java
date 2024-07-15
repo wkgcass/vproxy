@@ -121,7 +121,7 @@ public class UnderlyingIOCP {
                 Objects.requireNonNullElse(
                         winSocket.getListenSocket(),
                         winSocket)
-                    .notifications.add(notif);
+                    .postNotification(notif);
                 return;
             }
             iocp.postEvent(notif);

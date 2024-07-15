@@ -1,7 +1,6 @@
 package io.vproxy.vfd.windows;
 
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.*;
 import io.vproxy.vfd.posix.GeneralPosix;
 import io.vproxy.vfd.posix.Posix;
@@ -73,7 +72,7 @@ public class WindowsFDs implements FDs, FDsWithTap {
 
     @Override
     public long currentTimeMillis() {
-        return PosixNative.get().currentTimeMillis(VProxyThread.current().getEnv());
+        return posix.currentTimeMillis();
     }
 
     @Override

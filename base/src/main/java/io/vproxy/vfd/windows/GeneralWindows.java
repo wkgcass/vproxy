@@ -43,10 +43,7 @@ public class GeneralWindows implements Windows {
 
     @Override
     public void updateAcceptContext(WinSocket socket) throws IOException {
-        var listenSocket = socket.getListenSocket();
-        socket.clearListenSocket();
-        WindowsNative.get().updateAcceptContext(VProxyThread.current().getEnv(),
-            listenSocket.fd, socket.fd);
+        socket.updateAcceptContext();
     }
 
     private interface HandleSocketAddress {

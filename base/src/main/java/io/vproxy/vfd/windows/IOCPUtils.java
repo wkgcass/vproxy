@@ -12,6 +12,7 @@ import io.vproxy.pni.PooledAllocator;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.nio.ByteBuffer;
 
 public class IOCPUtils {
     private IOCPUtils() {
@@ -19,6 +20,14 @@ public class IOCPUtils {
 
     public static final int VPROXY_CTX_TYPE = 0xFF0A;
     public static SOCKET INVALID_HANDLE = new SOCKET(MemorySegment.ofAddress(-1));
+
+    public static int getContextType(Overlapped overlapped) {
+        return MemorySegment.ofAddress(overlapped.MEMORY.address() - 8) // struct { void* ud; OVERLAPPED overlapped; }
+            .reinterpret(8) // ud is pointer type
+            .get(ValueLayout.ADDRESS, 0) // get pointed address
+            .reinterpret(4) // int
+            .get(ValueLayout.JAVA_INT, 0); // get int
+    }
 
     public static VIOContext getIOContextOf(Overlapped overlapped) {
         return new VIOContext(MemorySegment.ofAddress(overlapped.MEMORY.address() - 8));
@@ -54,15 +63,13 @@ public class IOCPUtils {
         }
     }
 
-    public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, int dataLen) {
+    public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, ByteBuffer buf) {
         var allocator = PooledAllocator.ofUnsafePooled();
-        var data = allocator.allocate(dataLen);
-        return buildContextForSendingDatagramPacket(socket, allocator, data);
-    }
-
-    public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, MemorySegment data) {
-        var allocator = PooledAllocator.ofUnsafePooled();
-        return buildContextForSendingDatagramPacket(socket, allocator, data);
+        var len = buf.limit() - buf.position();
+        var seg = allocator.allocate(len);
+        seg.copyFrom(MemorySegment.ofBuffer(buf));
+        buf.position(buf.limit());
+        return buildContextForSendingDatagramPacket(socket, allocator, seg);
     }
 
     public static VIOContext buildContextForSendingDatagramPacket(WinSocket socket, Allocator allocator, MemorySegment data) {
@@ -80,10 +87,6 @@ public class IOCPUtils {
         ctx.setBufferCount(1);
 
         return ctx;
-    }
-
-    public static int getContextType(VIOContext ctx) {
-        return ctx.getPtr().reinterpret(4).get(ValueLayout.JAVA_INT_UNALIGNED, 0);
     }
 
     public static String convertNTStatusToString(long ntstatus) {

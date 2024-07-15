@@ -19,7 +19,7 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
     @SuppressWarnings("rawtypes")
     private final Map<SocketOption, Object> opts = new HashMap<>();
 
-    public WindowsFD(Windows windows, Posix posix) {
+    protected WindowsFD(Windows windows, Posix posix) {
         this.windows = windows;
         this.posix = posix;
     }
@@ -136,15 +136,15 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
 
     protected void setReadable() {
         firingReadable = true;
-        setEventToSelector();
+        setEventsToSelector();
     }
 
     protected void setWritable() {
         firingWritable = true;
-        setEventToSelector();
+        setEventsToSelector();
     }
 
-    private void setEventToSelector() {
+    private void setEventsToSelector() {
         var selector = this.selector;
         if (selector != null) {
             selector.firedFds.add(this);
@@ -158,7 +158,7 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
         }
         firingReadable = false;
         if (!firingWritable) {
-            clearEventFromSelector();
+            clearEventsFromSelector();
         }
     }
 
@@ -168,11 +168,11 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
         }
         firingWritable = false;
         if (!firingReadable) {
-            clearEventFromSelector();
+            clearEventsFromSelector();
         }
     }
 
-    private void clearEventFromSelector() {
+    private void clearEventsFromSelector() {
         var selector = this.selector;
         if (selector != null) {
             selector.firedFds.remove(this);
@@ -180,4 +180,6 @@ public abstract class WindowsFD extends AbstractBaseFD implements FD {
     }
 
     abstract protected void ioComplete(VIOContext ctx, int nbytes);
+
+    abstract protected void ioError(VIOContext ctx, int ntstatus);
 }

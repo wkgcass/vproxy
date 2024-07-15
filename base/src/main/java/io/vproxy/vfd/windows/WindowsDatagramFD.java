@@ -1,14 +1,11 @@
 package io.vproxy.vfd.windows;
 
-import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.pni.PooledAllocator;
 import io.vproxy.vfd.*;
 import io.vproxy.vfd.posix.Posix;
 
 import java.io.IOException;
-import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 public class WindowsDatagramFD extends WindowsInetNetworkFD implements DatagramFD {
@@ -17,6 +14,7 @@ public class WindowsDatagramFD extends WindowsInetNetworkFD implements DatagramF
 
     protected WindowsDatagramFD(Windows windows, Posix posix) {
         super(windows, posix);
+        setWritable(); // datagram fds are always considered writable
     }
 
     @Override
@@ -82,13 +80,13 @@ public class WindowsDatagramFD extends WindowsInetNetworkFD implements DatagramF
         if (l4addr.getAddress() instanceof IPv4) {
             ipv4 = true;
 
-            int fd = posix.createIPv4UdpFD();
+            int fd = createIPv4FD();
             setSocket(WinSocket.ofDatagram(fd));
             finishConfigAfterFDCreated();
             int ipv4 = IP.ipv4Bytes2Int(l4addr.getAddress().getAddress());
             posix.bindIPv4(fd, ipv4, port);
         } else if (l4addr.getAddress() instanceof IPv6) {
-            int fd = posix.createIPv6UdpFD();
+            int fd = createIPv6FD();
             setSocket(WinSocket.ofDatagram(fd));
             finishConfigAfterFDCreated();
             String ipv6 = ((IPv6) l4addr.getAddress()).formatToIPStringWithoutBrackets();
@@ -109,14 +107,15 @@ public class WindowsDatagramFD extends WindowsInetNetworkFD implements DatagramF
         }
         checkNotClosed();
         if (socket == null) {
+            int fd;
             if (remote.getAddress() instanceof IPv4) {
                 ipv4 = true;
-                var fd = createIPv4FD();
-                socket = WinSocket.ofDatagram(fd);
+                fd = createIPv4FD();
             } else {
-                var fd = createIPv6FD();
-                socket = WinSocket.ofDatagram(fd);
+                fd = createIPv6FD();
             }
+            setSocket(WinSocket.ofDatagram(fd));
+            finishConfigAfterFDCreated();
         }
         if (ipv4) {
             if (!(remote.getAddress() instanceof IPv4)) {
@@ -130,8 +129,7 @@ public class WindowsDatagramFD extends WindowsInetNetworkFD implements DatagramF
 
         int len = buf.limit() - buf.position();
 
-        var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, len);
-        ByteArray.from(ctx.getBuffers().get(0).getBuf().reinterpret(len)).byteBufferGet(buf, 0, len);
+        var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, buf);
         windows.wsaSendTo(socket, ctx, remote);
 
         return len;

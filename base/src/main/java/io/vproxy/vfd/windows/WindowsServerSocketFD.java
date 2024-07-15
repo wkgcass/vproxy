@@ -81,6 +81,10 @@ public class WindowsServerSocketFD extends WindowsFD implements ServerSocketFD {
     }
 
     private void deliverAccept() {
+        // do not accept if closed
+        if (socket.isClosed()) {
+            return;
+        }
         int fd;
         try {
             if (ipv4) {
@@ -126,5 +130,10 @@ public class WindowsServerSocketFD extends WindowsFD implements ServerSocketFD {
         setReadable();
 
         deliverAccept();
+    }
+
+    @Override
+    protected void ioError(VIOContext ctx, int ntstatus) {
+        pushError(new IOException(IOCPUtils.convertNTStatusToString(ntstatus)));
     }
 }

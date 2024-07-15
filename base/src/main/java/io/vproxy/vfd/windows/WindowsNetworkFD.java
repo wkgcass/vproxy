@@ -1,6 +1,5 @@
 package io.vproxy.vfd.windows;
 
-import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.posix.Posix;
@@ -14,7 +13,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
     protected IOException exception = null;
     protected boolean remoteClosed = false;
 
-    public WindowsNetworkFD(Windows windows, Posix posix) {
+    protected WindowsNetworkFD(Windows windows, Posix posix) {
         super(windows, posix);
     }
 
@@ -63,17 +62,15 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             clearReadable();
         }
 
-        if (socket.isStreamSocket()) {
+        if ((socket.isStreamSocket() && freeBeforeRead == 0 && ret > 0)
             // ring buffer was full so the read operation was not delivered in ioComplete
             // need to deliver now
-            if (freeBeforeRead == 0 && ret > 0) {
-                deliverReadOperation();
-            }
-            return ret;
+            ||
+            socket.isDatagramSocket()
+            // deliver read operation for datagram socket
+        ) {
+            deliverReadOperation();
         }
-
-        // deliver read operation for datagram socket
-        deliverReadOperation();
 
         return ret;
     }
@@ -94,8 +91,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
 
         int ret;
         if (socket.isDatagramSocket()) {
-            var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, srcLen);
-            ByteArray.from(ctx.getBuffers().get(0).getBuf().reinterpret(srcLen)).byteBufferGet(src, 0, srcLen);
+            var ctx = IOCPUtils.buildContextForSendingDatagramPacket(socket, src);
             doSend(ctx);
             return srcLen;
         }
@@ -140,16 +136,16 @@ public abstract class WindowsNetworkFD extends WindowsFD {
 
     @Override
     protected void ioComplete(VIOContext ctx, int nbytes) {
-        var ntstatus = ctx.getOverlapped().getInternal();
-        if (ntstatus != 0) {
-            setException(new IOException(IOCPUtils.convertNTStatusToString(ntstatus)));
-            return;
-        }
         if (ctx.MEMORY.address() == socket.recvContext.MEMORY.address()) {
             recvComplete(ctx, nbytes);
         } else {
             sendComplete(ctx, nbytes);
         }
+    }
+
+    @Override
+    protected void ioError(VIOContext ctx, int ntstatus) {
+        setException(new IOException(IOCPUtils.convertNTStatusToString(ntstatus)));
     }
 
     protected void setException(IOException e) {
@@ -176,12 +172,11 @@ public abstract class WindowsNetworkFD extends WindowsFD {
             return;
         }
 
-        // datagram socket should only deliver read operation when user reads the packet
-        if (socket.isDatagramSocket()) {
-            return;
-        }
-        if (socket.recvRingBuffer.free() > 0) {
-            deliverReadOperation();
+        // datagram socket should only deliver read operation after user reads the packet
+        if (!socket.isDatagramSocket()) {
+            if (socket.recvRingBuffer.free() > 0) {
+                deliverReadOperation();
+            }
         }
     }
 
@@ -226,7 +221,7 @@ public abstract class WindowsNetworkFD extends WindowsFD {
 
         if (!eIsAfterS) {
             var buf = socket.recvContext.getBuffers().get(0);
-            buf.setBuf(socket.recvMemSeg);
+            buf.setBuf(socket.recvMemSeg.asSlice(epos));
             buf.setLen(spos - epos);
             socket.recvContext.setBufferCount(1);
         } else if (spos == 0) {

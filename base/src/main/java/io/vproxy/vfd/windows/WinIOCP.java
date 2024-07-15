@@ -48,7 +48,7 @@ public class WinIOCP {
         }
         boolean needNotify = false;
         Notification notif;
-        while ((notif = socket.notifications.poll()) != null) {
+        while ((notif = socket.pollNotification()) != null) {
             notifications.add(notif);
             needNotify = true;
         }
@@ -87,12 +87,7 @@ public class WinIOCP {
         while ((notif = notifications.poll()) != null) {
             var ctx = IOCPUtils.getIOContextOf(notif.overlapped);
             var socket = (WinSocket) ctx.getRef().getRef();
-            if (socket.isClosed()) {
-                Logger.warn(LogType.SOCKET_ERROR, socket + " and " + this + " are closed, while pending io operation is done");
-                socket.decrIORefCnt();
-            } else {
-                socket.notifications.add(notif);
-            }
+            socket.postNotification(notif);
         }
     }
 
@@ -131,11 +126,12 @@ public class WinIOCP {
 
         for (int i = 0; i < n; ++i) {
             var entry = entries.get(i);
-            var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());
-            if (IOCPUtils.VPROXY_CTX_TYPE != IOCPUtils.getContextType(ctx)) {
+            var type = IOCPUtils.getContextType(entry.getOverlapped());
+            if (IOCPUtils.VPROXY_CTX_TYPE != type) {
                 extraEvents.add(entry);
                 continue;
             }
+            var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());
             if (ctx.getIoType() == IOType.NOTIFY.code) {
                 SunUnsafe.freeMemory(ctx.MEMORY.address());
                 continue;

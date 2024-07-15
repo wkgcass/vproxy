@@ -183,7 +183,11 @@ public class Switch {
             sock = FDProvider.get().openDatagramFD();
             try {
                 sock.configureBlocking(false);
-                sock.bind(vxlanBindingAddress);
+                if (vxlanBindingAddress.getAddress().isBroadcast()) {
+                    sock.ensureDummyFD();
+                } else {
+                    sock.bind(vxlanBindingAddress);
+                }
             } catch (IOException e) {
                 releaseSock();
                 throw e;

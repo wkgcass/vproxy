@@ -106,7 +106,12 @@ public class IOCPSelector implements FDSelector {
             }
 
             var winfd = (WindowsFD) socket.ud;
-            winfd.ioComplete(ctx, nbytes);
+            var ntstatus = overlapped.getInternal();
+            if (ntstatus != 0) {
+                winfd.ioError(ctx, (int) (ntstatus & 0xffffffffL));
+            } else {
+                winfd.ioComplete(ctx, nbytes);
+            }
         }
         for (int i = 0; i < extraEvents.size(); i++) {
             var e = extraEvents.get(i);

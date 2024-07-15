@@ -31,6 +31,7 @@ public class WinSocket {
     public final SOCKET fd;
     private WinSocket listenSocket; // optional
     private final boolean datagram;
+    private final boolean isListenSocket;
     public Object ud = null;
 
     public final MemorySegment recvMemSeg;
@@ -44,7 +45,7 @@ public class WinSocket {
     private final AtomicInteger refCnt = new AtomicInteger(1); // decr when close
 
     WinIOCP iocp;
-    final ConcurrentLinkedQueue<WinIOCP.Notification> notifications = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<WinIOCP.Notification> notifications = new ConcurrentLinkedQueue<>();
 
     public static WinSocket ofStream(int fd) {
         return new WinSocket(fd, null, false, false);
@@ -68,27 +69,31 @@ public class WinSocket {
         this.fd = new SOCKET(MemorySegment.ofAddress(fd));
         this.listenSocket = listenSocket;
         this.datagram = datagram;
+        this.isListenSocket = isListenSocket;
 
-        recvMemSeg = allocator.allocate(24576);
-        MemorySegment sendMemSeg = null;
-        if (!datagram) {
-            sendMemSeg = allocator.allocate(24576);
-        }
-        this.sendMemSeg = sendMemSeg;
-
-        if (datagram) {
+        if (isListenSocket) {
+            recvMemSeg = null;
+            recvRingBuffer = null;
+        } else if (datagram) {
+            recvMemSeg = allocator.allocate(65536); // max udp packet size is 65535
             recvRingBuffer = SimpleRingBuffer.wrap(recvMemSeg);
         } else {
+            recvMemSeg = allocator.allocate(24576);
             recvRingBuffer = SimpleRingBufferPreserveEPos.wrap(recvMemSeg);
         }
-        SimpleRingBuffer sendRingBuffer = null;
-        if (!datagram) {
+
+        if (datagram || isListenSocket) {
+            sendMemSeg = null;
+            sendRingBuffer = null;
+        } else {
+            sendMemSeg = allocator.allocate(24576);
             sendRingBuffer = SimpleRingBufferPreserveEPos.wrap(sendMemSeg);
         }
-        this.sendRingBuffer = sendRingBuffer;
 
-        recvContext = new VIOContext(allocator);
-        {
+        if (isListenSocket) {
+            recvContext = null;
+        } else {
+            recvContext = new VIOContext(allocator);
             recvContext.setSocket(this.fd);
             recvContext.setRef(ref);
             if (listenSocket == null) {
@@ -103,8 +108,9 @@ public class WinSocket {
             recvContext.setAddrLen((int) SockaddrStorage.LAYOUT.byteSize());
             IOCPUtils.setPointer(recvContext);
         }
-        VIOContext sendContext = null;
-        if (!datagram && !isListenSocket) {
+        if (datagram || isListenSocket) {
+            sendContext = null;
+        } else {
             sendContext = new VIOContext(allocator);
             sendContext.setSocket(this.fd);
             sendContext.setRef(ref);
@@ -113,11 +119,12 @@ public class WinSocket {
             } else {
                 sendContext.setIoType(IOType.WRITE.code);
             }
+            sendContext.getBuffers().get(0).setBuf(recvMemSeg);
+            sendContext.getBuffers().get(0).setLen(0);
             sendContext.setBufferCount(1);
             sendContext.setCtxType(IOCPUtils.VPROXY_CTX_TYPE);
             IOCPUtils.setPointer(sendContext);
         }
-        this.sendContext = sendContext;
 
         UnderlyingIOCP.get().associate(this.fd);
     }
@@ -126,7 +133,9 @@ public class WinSocket {
         return listenSocket;
     }
 
-    public void clearListenSocket() {
+    public void updateAcceptContext() throws IOException {
+        WindowsNative.get().updateAcceptContext(VProxyThread.current().getEnv(),
+            listenSocket.fd, fd);
         listenSocket = null;
     }
 
@@ -165,11 +174,11 @@ public class WinSocket {
         }
 
         try {
-            if (isStreamSocket()) {
-                WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), recvContext.getSocket());
-            } else {
-                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
+            if (isDatagramSocket() || isListenSocket()) {
+                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), fd);
                 fdClosed = true;
+            } else {
+                WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), fd);
             }
         } catch (IOException e) {
             assert Logger.lowLevelDebug("failed to disconnect " + this + ": " + Utils.formatErr(e));
@@ -194,7 +203,7 @@ public class WinSocket {
         assert Logger.lowLevelDebug("calling release on " + this);
         if (!fdClosed) {
             try {
-                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), recvContext.getSocket());
+                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), fd);
                 fdClosed = true;
             } catch (IOException e) {
                 Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this, e);
@@ -208,6 +217,10 @@ public class WinSocket {
         return datagram;
     }
 
+    public boolean isListenSocket() {
+        return isListenSocket;
+    }
+
     public boolean isStreamSocket() {
         return !datagram;
     }
@@ -215,7 +228,7 @@ public class WinSocket {
     @Override
     public String toString() {
         var sb = new StringBuilder();
-        sb.append("WinSocket(").append(recvContext.getSocket().MEMORY.address())
+        sb.append("WinSocket(").append(fd.MEMORY.address())
             .append("#").append(refCnt.get());
         if (localAddress != null || remoteAddress != null) {
             sb.append("#");
@@ -299,5 +312,18 @@ public class WinSocket {
             }
         }
         return remoteAddress;
+    }
+
+    WinIOCP.Notification pollNotification() {
+        return notifications.poll();
+    }
+
+    void postNotification(WinIOCP.Notification n) {
+        if (isClosed()) {
+            assert Logger.lowLevelDebug(this + " is closed, while pending io operation is done");
+            decrIORefCnt();
+        } else {
+            notifications.add(n);
+        }
     }
 }
