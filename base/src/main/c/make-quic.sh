@@ -33,8 +33,8 @@ then
 	include_platform_dir="darwin"
 	cflags="-DCX_PLATFORM_DARWIN=1"
 else
-	echo "unsupported platform $os"
-	exit 1
+	target="$target.dll"
+	include_platform_dir="win32"
 fi
 
 rm -f "$target"

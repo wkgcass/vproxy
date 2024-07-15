@@ -174,8 +174,13 @@ msquic-java: libpni
 	MSQUIC_INC=../../../../submodules/msquic/src/inc \
 	/usr/bin/env bash ./make-quic.sh
 .PHONY: msquic
+ifeq (,$(findstring MINGW,$(OS)))
 msquic:
 	cd ./submodules/msquic/ && make
+else
+msquic:
+	@exit 0
+endif
 
 .PHONY: fubuki
 fubuki: libpni
@@ -244,7 +249,11 @@ fubuki-linux:
 endif
 
 .PHONY: quic
+ifeq (,$(findstring MINGW,$(OS)))
 quic: vfdposix msquic msquic-java
+else
+quic: vfdwindows msquic msquic-java
+endif
 .PHONY: quic-linux
 quic-linux: vfdposix-linux msquic-linux msquic-java-linux
 .PHONY: _quic-all-linux
