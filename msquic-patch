@@ -1,0 +1,74 @@
+diff --git a/src/core/api.c b/src/core/api.c
+index 4b8a623..9f5866f 100644
+--- a/src/core/api.c
++++ b/src/core/api.c
+@@ -229,7 +229,7 @@ MsQuicConnectionShutdown(
+         (Connection->WorkerThreadID == CxPlatCurThreadID()) ||
+         !Connection->State.HandleClosed);
+ 
+-    CXPLAT_EVENT CompletionEvent;
++    CXPLAT_EVENT CompletionEvent = NULL; // suppress windows compilation error
+     Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
+     if (Oper == NULL) {
+         if (InterlockedCompareExchange16(
+@@ -966,7 +966,7 @@ MsQuicStreamShutdown(
+         goto Error;
+     }
+ 
+-    CXPLAT_EVENT CompletionEvent;
++    CXPLAT_EVENT CompletionEvent = NULL; // suppress windows compilation error
+     Oper = QuicOperationAlloc(Connection->Worker, QUIC_OPER_TYPE_API_CALL);
+     if (Oper == NULL) {
+         Status = QUIC_STATUS_OUT_OF_MEMORY;
+diff --git a/src/inc/quic_platform_winuser.h b/src/inc/quic_platform_winuser.h
+index 3882189..618704e 100644
+--- a/src/inc/quic_platform_winuser.h
++++ b/src/inc/quic_platform_winuser.h
+@@ -1108,6 +1108,17 @@ CXPLAT_THREAD_CALLBACK(CxPlatThreadCustomStart, CustomContext); // CXPLAT_THREAD
+ #endif // CXPLAT_USE_CUSTOM_THREAD_CONTEXT
+ 
+ #if QUIC_ENABLE_CUSTOM_EVENT_LOOP
++
++// same as which defined in msquic.h
++typedef
++QUIC_STATUS
++(QUIC_API * QUIC_EVENT_LOOP_THREAD_DISPATCH_FN)(
++    _In_ CXPLAT_THREAD_CONFIG* Config,
++    _In_ CXPLAT_EVENTQ* EventQ,
++    _Out_ CXPLAT_THREAD* Thread,
++    _In_ void* Context
++    );
++
+ QUIC_STATUS
+ QUIC_API
+ MsQuicGetEventLoopThreadDispatcher(
+diff --git a/src/platform/platform_worker.c b/src/platform/platform_worker.c
+index 58b50b9..730241f 100644
+--- a/src/platform/platform_worker.c
++++ b/src/platform/platform_worker.c
+@@ -463,8 +463,8 @@ struct CxPlatProcessEventsLocals_ {
+     CXPLAT_CQE              Cqes[CxPlatProcessCqesArraySize];
+ };
+ 
+-static void CxPlatProcessEventsPrePoll(struct CxPlatProcessEventsLocals_*);
+-static BOOLEAN CxPlatProcessEventsPostPoll(struct CxPlatProcessEventsLocals_*);
++static void CxPlatProcessEventsPrePoll(_Inout_ struct CxPlatProcessEventsLocals_*);
++static BOOLEAN CxPlatProcessEventsPostPoll(_Inout_ struct CxPlatProcessEventsLocals_*);
+ 
+ BOOLEAN
+ CxPlatProcessEvents(
+@@ -539,10 +539,10 @@ struct CxPlatWorkerThreadLocals_ {
+   CXPLAT_EXECUTION_STATE* State;
+ };
+ 
+-static void CxPlatWorkerThreadPreLoop(struct CxPlatWorkerThreadLocals_*);
+-static void CxPlatWorkerThreadPrePoll(struct CxPlatWorkerThreadLocals_*);
+-static void CxPlatWorkerThreadPostPoll(struct CxPlatWorkerThreadLocals_*);
+-static int CxPlatWorkerThreadPostLoop(struct CxPlatWorkerThreadLocals_*);
++static void CxPlatWorkerThreadPreLoop(_Inout_ struct CxPlatWorkerThreadLocals_*);
++static void CxPlatWorkerThreadPrePoll(_Inout_ struct CxPlatWorkerThreadLocals_*);
++static void CxPlatWorkerThreadPostPoll(_Inout_ struct CxPlatWorkerThreadLocals_*);
++static int CxPlatWorkerThreadPostLoop(_Inout_ struct CxPlatWorkerThreadLocals_*);
+ 
+ #if QUIC_ENABLE_CUSTOM_EVENT_LOOP
+ 
