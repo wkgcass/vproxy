@@ -29,6 +29,18 @@ interface PNIWindowsNative {
     @LinkerOption.Critical
     @Impl(
         c = """
+            BOOL ok = CancelIo(handle);
+            if (!ok) {
+                return throwIOExceptionBasedOnErrno(env);
+            }
+            return 0;
+            """
+    )
+    void cancelIo(@NativeType("HANDLE") PNISOCKET handle) throws IOException;
+
+    @LinkerOption.Critical
+    @Impl(
+        c = """
             int dummy;
             BOOL ok = AcceptEx(
                 listenSocket,

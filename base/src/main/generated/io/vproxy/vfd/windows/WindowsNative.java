@@ -68,6 +68,22 @@ public class WindowsNative {
         }
     }
 
+    private static final MethodHandle cancelIoMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_cancelIo", io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() /* handle */);
+
+    public void cancelIo(PNIEnv ENV, io.vproxy.vfd.windows.SOCKET handle) throws java.io.IOException {
+        ENV.reset();
+        int ERR;
+        try {
+            ERR = (int) cancelIoMH.invokeExact(ENV.MEMORY, (MemorySegment) (handle == null ? MemorySegment.NULL : handle.MEMORY));
+        } catch (Throwable THROWABLE) {
+            throw PanamaUtils.convertInvokeExactException(THROWABLE);
+        }
+        if (ERR != 0) {
+            ENV.throwIf(java.io.IOException.class);
+            ENV.throwLast();
+        }
+    }
+
     private static final MethodHandle acceptExMH = PanamaUtils.lookupPNIFunction(new PNILinkOptions().setCritical(true), "Java_io_vproxy_vfd_windows_WindowsNative_acceptEx", io.vproxy.vfd.windows.SOCKET.LAYOUT.getClass() /* listenSocket */, io.vproxy.vfd.windows.VIOContext.LAYOUT.getClass() /* socketContext */);
 
     public boolean acceptEx(PNIEnv ENV, io.vproxy.vfd.windows.SOCKET listenSocket, io.vproxy.vfd.windows.VIOContext socketContext) throws java.io.IOException {
@@ -253,4 +269,4 @@ public class WindowsNative {
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:ffa309b45eda2812b28ab2833f9a7a9b588c2757f7a6d0bba85fa011cff74396
+// sha256:6d7887aea70d8556da876276e0513196811036b3762c0735820601194c950709

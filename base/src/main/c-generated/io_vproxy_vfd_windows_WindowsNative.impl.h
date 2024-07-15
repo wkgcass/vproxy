@@ -12,6 +12,14 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_closeHandle(PNIEn
     return 0;
 }
 
+JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_cancelIo(PNIEnv_void * env, HANDLE handle) {
+    BOOL ok = CancelIo(handle);
+    if (!ok) {
+        return throwIOExceptionBasedOnErrno(env);
+    }
+    return 0;
+}
+
 JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_acceptEx(PNIEnv_bool * env, SOCKET listenSocket, VIOContext * socketContext) {
     int dummy;
     BOOL ok = AcceptEx(
@@ -235,4 +243,4 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_windows_WindowsNative_convertAddress(PN
 }
 #endif
 // metadata.generator-version: pni 22.0.0.17
-// sha256:25b7a54e644c9c13cd04cf5f4eabeffb06ca0c5711bfe3dafbe0ee804d0bebdc
+// sha256:de8dabb11987a65aae53ca0cc48dfa6284059ead90e2758f6d936655f82f311f

@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class WinSocket {
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private volatile boolean fdClosed = false;
     private final Allocator allocator;
     private final PNIRef<WinSocket> ref;
 
@@ -174,14 +173,9 @@ public class WinSocket {
         }
 
         try {
-            if (isDatagramSocket() || isListenSocket()) {
-                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), fd);
-                fdClosed = true;
-            } else {
-                WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), fd);
-            }
+            WindowsNative.get().cancelIo(VProxyThread.current().getEnv(), fd);
         } catch (IOException e) {
-            assert Logger.lowLevelDebug("failed to disconnect " + this + ": " + Utils.formatErr(e));
+            Logger.error(LogType.SYS_ERROR, "failed to cancelIo for " + this, e);
         }
 
         int refCntAfterDec = refCnt.decrementAndGet();
@@ -201,13 +195,17 @@ public class WinSocket {
 
     private void release() {
         assert Logger.lowLevelDebug("calling release on " + this);
-        if (!fdClosed) {
+        if (isStreamSocket() && listenSocket == null) {
             try {
-                WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), fd);
-                fdClosed = true;
+                WindowsNative.get().wsaSendDisconnect(VProxyThread.current().getEnv(), fd);
             } catch (IOException e) {
-                Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this, e);
+                assert Logger.lowLevelDebug("failed to disconnect: " + this + ": " + Utils.formatErr(e));
             }
+        }
+        try {
+            WindowsNative.get().closeHandle(VProxyThread.current().getEnv(), fd);
+        } catch (IOException e) {
+            Logger.error(LogType.SOCKET_ERROR, "failed to close win socket: " + this, e);
         }
         ref.close();
         allocator.close();
