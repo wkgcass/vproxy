@@ -7,9 +7,10 @@ import io.vproxy.vfd.posix.Posix;
 import io.vproxy.vfd.posix.PosixNative;
 
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.lang.reflect.Proxy;
 
-public class WindowsFDs implements FDs, FDsWithTap {
+public class WindowsFDs implements FDs, FDsWithTap, FDsWithOpts {
     private final Windows windows;
     private final Posix posix;
 
@@ -68,6 +69,14 @@ public class WindowsFDs implements FDs, FDsWithTap {
     @Override
     public FDSelector openSelector() throws IOException {
         return new IOCPSelector(new WinIOCP(1));
+    }
+
+    @Override
+    public FDSelector openSelector(Options opts) throws IOException {
+        if (opts.epfd() <= 0) {
+            return openSelector();
+        }
+        return new IOCPSelector(new WinIOCP(new HANDLE(MemorySegment.ofAddress(opts.epfd()))));
     }
 
     @Override

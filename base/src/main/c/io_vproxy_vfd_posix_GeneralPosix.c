@@ -178,8 +178,6 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_aeDeleteFileEvent
 #else
     aeEventLoop* ae = (aeEventLoop*) aex;
     aeDeleteFileEvent(ae, fd, 0xffffffff);
-
-    io_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0(aex, fd);
     return 0;
 #endif
 }
@@ -832,7 +830,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_currentTimeMillis
   (PNIEnv_long* env) {
     v_timeval tv;
     v_gettimeofday(&tv, NULL);
-    env->return_ = ((long)tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+    env->return_ = ((int64_t)tv.tv_sec) * 1000 + tv.tv_usec / 1000;
     return 0;
 }
 

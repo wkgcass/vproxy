@@ -6,6 +6,7 @@ import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.msquic.wrap.ApiExtraTables;
 import io.vproxy.pni.PNIRef;
 import io.vproxy.pni.PooledAllocator;
 
@@ -65,10 +66,10 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
         var block = new BlockCallback<Void, Throwable>();
         loop.runOnLoop(() -> {
             try {
-                MsQuicMod.get().CxPlatGetCurThread(thread);
-                MsQuicMod.get().MsQuicSetIsWorker(true);
-                MsQuicMod2.get().MsQuicCxPlatWorkerThreadInit(locals);
-                MsQuicMod2.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
+                ApiExtraTables.V2EXTRA.ThreadGetCur(thread);
+                ApiExtraTables.V2EXTRA.ThreadSetIsWorker(true);
+                MsQuicMod2.get().WorkerThreadInit(ApiExtraTables.V2EXTRA, locals);
+                MsQuicMod2.get().WorkerThreadBeforePoll(ApiExtraTables.V2EXTRA, locals);
             } catch (Throwable t) {
                 block.failed(t);
                 return;
@@ -82,12 +83,12 @@ public class MsQuicModUpcallImpl implements MsQuicModUpcall.Interface {
             return false;
         }
         loop.setBeforePoll(() -> {
-            MsQuicMod2.get().MsQuicCxPlatWorkerThreadBeforePoll(locals);
+            MsQuicMod2.get().WorkerThreadBeforePoll(ApiExtraTables.V2EXTRA, locals);
             return locals.getWaitTime();
         });
-        loop.setAfterPoll((n, events) -> MsQuicMod2.get().MsQuicCxPlatWorkerThreadAfterPoll(locals, n, events));
+        loop.setAfterPoll((n, events) -> MsQuicMod2.get().WorkerThreadAfterPoll(ApiExtraTables.V2EXTRA, locals, n, events));
         loop.setFinalizer(() -> {
-            MsQuicMod2.get().MsQuicCxPlatWorkerThreadFinalize(locals);
+            MsQuicMod2.get().WorkerThreadFinalize(ApiExtraTables.V2EXTRA, locals);
             unsafeAllocator.close();
         });
         return true;

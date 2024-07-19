@@ -11,20 +11,20 @@ interface PNIMsQuicMod2 {
     @Impl(
         // language="c"
         c = """
-            MsQuicCxPlatWorkerThreadInit(CxPlatWorkerThreadLocals);
+            api->WorkerThreadInit(CxPlatWorkerThreadLocals);
             """
     )
     @Style(Styles.critical)
-    void MsQuicCxPlatWorkerThreadInit(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
+    void WorkerThreadInit(PNIQuicExtraApiTable api, PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
 
     @Impl(
         // language="c"
         c = """
-            MsQuicCxPlatWorkerThreadBeforePoll(CxPlatProcessEventLocals);
+            api->WorkerThreadBeforePoll(CxPlatProcessEventLocals);
             """
     )
     @Style(Styles.critical)
-    void MsQuicCxPlatWorkerThreadBeforePoll(PNICxPlatProcessEventLocals CxPlatProcessEventLocals);
+    void WorkerThreadBeforePoll(PNIQuicExtraApiTable api, PNICxPlatProcessEventLocals CxPlatProcessEventLocals);
 
     @Impl(
         // language="c"
@@ -42,23 +42,24 @@ interface PNIMsQuicMod2 {
                 locals->Cqes[i].dwNumberOfBytesTransferred = events[i].mask;
             #endif
             }
-            int ret = MsQuicCxPlatWorkerThreadAfterPoll(locals);
+            int ret = api->WorkerThreadAfterPoll(locals);
             return ret;
             """
     )
     @Style(Styles.critical)
-    boolean MsQuicCxPlatWorkerThreadAfterPoll(PNICxPlatProcessEventLocals locals,
+    boolean WorkerThreadAfterPoll(PNIQuicExtraApiTable api,
+                                              PNICxPlatProcessEventLocals locals,
                                               int num,
                                               @Raw PNIAEFiredExtra[] events);
 
     @Impl(
         // language="c"
         c = """
-            return MsQuicCxPlatWorkerThreadFinalize(CxPlatWorkerThreadLocals);
+            return api->WorkerThreadFinalize(CxPlatWorkerThreadLocals);
             """
     )
     @Style(Styles.critical)
-    int MsQuicCxPlatWorkerThreadFinalize(PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
+    int WorkerThreadFinalize(PNIQuicExtraApiTable api, PNICxPlatProcessEventLocals CxPlatWorkerThreadLocals);
 }
 
 @Struct(skip = true, typedef = false)
