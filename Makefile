@@ -51,7 +51,7 @@ clean: clean-jar
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
 	rm -rf ./io
-	rm -rf ./submodules/msquic/build
+	cd submodules/msquic && make clean
 	rm -f ./*.so
 	rm -f ./*.dylib
 	rm -f ./*.dll
@@ -103,22 +103,25 @@ _add_linux_so_to_zip:
 		./io/vproxy/libpni-$(LINUX_ARCH).so
 	rm -r ./io
 
+.PHONY: native-no-docker
+native-no-docker: libpni vfdposix quic fubuki
+	cp ./submodules/msquic/build/bin/Release/libmsquic.2.2.4.dylib ./libmsquic.dylib
 .PHONY: native
 ifeq ($(OS),Linux)
 native: libpni vfdposix vpxdp quic-all fubuki
 else ifeq ($(OS),Darwin)
 native: libpni-linux libpni vfdposix-linux vfdposix vpxdp-linux quic-all fubuki-linux fubuki
 else
-native: libpni vfdwindows
+native: libpni vfdwindows quic fubuki
 endif
 
 .PHONY: jar-with-lib
 ifeq ($(OS),Linux)
 jar-with-lib: clean jar native _add_linux_so_to_zip
 else
-jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-no-docker
+jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-skip-native
 .PHONY: jar-with-lib-no-docker
-jar-with-lib-no-docker: clean jar native jar-with-lib-skip-native
+jar-with-lib-no-docker: clean jar native-no-docker jar-with-lib-skip-native
 .PHONY: jar-with-lib-skip-native
 jar-with-lib-skip-native: clean-jar jar
 	mkdir -p ./io/vproxy/

@@ -1,13 +1,15 @@
 #ifndef VFD_POSIX_H
     #define VFD_POSIX_H 1
+
+    #ifndef _WIN32
+        #include "ae.h"
+    #endif
+
     #include <inttypes.h>
     #if defined(__linux__) || defined(__APPLE__)
     #define byte int8_t
     #endif
 
-    #ifndef _WIN32
-        #include "ae.h"
-    #endif
     #ifdef __linux__
         #include <sys/eventfd.h>
     #endif
