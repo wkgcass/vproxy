@@ -22,7 +22,7 @@ public class QuicGatewayPoc {
         )));
 
         var ups = new Upstream("ups0");
-        var backend = new ServerGroup("sg0", eventLoopGroup, HealthCheckConfig.ofNone(), Method.wrr);
+        var backend = new ServerGroup("sg0", eventLoopGroup, HealthCheckConfig.ofTcpDefault(), Method.wrr);
         ups.add(backend, 10);
 
         backend.add("svr0", new IPPort("127.0.0.1:33445"), 10);

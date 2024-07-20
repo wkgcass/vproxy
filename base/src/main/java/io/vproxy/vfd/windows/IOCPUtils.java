@@ -43,11 +43,17 @@ public class IOCPUtils {
     public static void notify(WinIOCP iocp) {
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (iocp) {
-            if (!iocp.polling) {
-                iocp.notified = true;
-                return;
+            if (iocp.polling) {
+                if (iocp.notified) {
+                    return; // already notified
+                }
+                doNotify(iocp);
             }
+            iocp.notified = true;
         }
+    }
+
+    private static void doNotify(WinIOCP iocp) {
         var allocator = Allocator.ofAllocateAndForgetUnsafe();
         var ctx = new VIOContext(allocator);
         IOCPUtils.setPointer(ctx);

@@ -4,6 +4,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.vfd.posix.AEFiredExtra;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
@@ -98,7 +99,8 @@ public class WinIOCP {
 
     public void getQueuedCompletionStatusEx(OverlappedEntry.Array entries,
                                             List<OverlappedEntry> normalEvents,
-                                            List<OverlappedEntry> extraEvents,
+                                            AEFiredExtra.Array extraEvents,
+                                            int[] extranum,
                                             int count, int milliseconds, boolean alert) throws IOException {
         if (milliseconds != 0) {
             // need to poll directly because there are notifications
@@ -121,14 +123,19 @@ public class WinIOCP {
         var n = IOCP.get().getQueuedCompletionStatusEx(VProxyThread.current().getEnv(),
             handle, entries, count, milliseconds, alert);
 
-        notified = false;
-        polling = false;
+        synchronized (this) {
+            notified = false;
+            polling = false;
+        }
 
+        extranum[0] = 0;
         for (int i = 0; i < n; ++i) {
             var entry = entries.get(i);
             var type = IOCPUtils.getContextType(entry.getOverlapped());
             if (IOCPUtils.VPROXY_CTX_TYPE != type) {
-                extraEvents.add(entry);
+                var e = extraEvents.get(extranum[0]++);
+                e.setUd(entry.getOverlapped().MEMORY);
+                e.setMask(entry.getNumberOfBytesTransferred());
                 continue;
             }
             var ctx = IOCPUtils.getIOContextOf(entry.getOverlapped());

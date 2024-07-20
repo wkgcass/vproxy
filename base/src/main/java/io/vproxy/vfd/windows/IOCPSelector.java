@@ -21,7 +21,7 @@ public class IOCPSelector implements FDSelector {
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final OverlappedEntry.Array overlappedEntries = new OverlappedEntry.Array(allocator, ONE_POLL_LIMIT);
     private final List<OverlappedEntry> normalEvents = new ArrayList<>(ONE_POLL_LIMIT);
-    private final List<OverlappedEntry> extraEvents = new ArrayList<>(ONE_POLL_LIMIT);
+    private final int[] extraEventsNum = {0};
     private final AEFiredExtra.Array extraEventsNative = new AEFiredExtra.Array(allocator, ONE_POLL_LIMIT);
 
     private final SelectedEntryPrototypeObjectList selectedEntryList = new SelectedEntryPrototypeObjectList(ONE_POLL_LIMIT, SelectedEntry::new);
@@ -47,37 +47,37 @@ public class IOCPSelector implements FDSelector {
 
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        checkOpen();
-        normalEvents.clear();
-        extraEvents.clear();
-        int sleepMillis = -1;
-        if (hasEventsToAlert()) {
-            sleepMillis = 0;
-        }
-        iocp.getQueuedCompletionStatusEx(overlappedEntries, normalEvents, extraEvents, ONE_POLL_LIMIT, sleepMillis, false);
+        int sleepMillis = preSelect(-1);
+        iocp.getQueuedCompletionStatusEx(overlappedEntries, normalEvents, extraEventsNative, extraEventsNum, ONE_POLL_LIMIT, sleepMillis, false);
         return formatSelected();
     }
 
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
-        checkOpen();
-        normalEvents.clear();
-        extraEvents.clear();
-        iocp.getQueuedCompletionStatusEx(overlappedEntries, normalEvents, extraEvents, ONE_POLL_LIMIT, 0, false);
+        int sleepMillis = preSelect(0);
+        selectedEntryList.clear();
+        iocp.getQueuedCompletionStatusEx(overlappedEntries, normalEvents, extraEventsNative, extraEventsNum, ONE_POLL_LIMIT, sleepMillis, false);
         return formatSelected();
     }
 
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
+        int sleepMillis = preSelect(millis);
+        iocp.getQueuedCompletionStatusEx(overlappedEntries, normalEvents, extraEventsNative, extraEventsNum, ONE_POLL_LIMIT, sleepMillis, false);
+        return formatSelected();
+    }
+
+    private int preSelect(long sleepMillis) {
         checkOpen();
         normalEvents.clear();
-        extraEvents.clear();
-        int sleepMillis = (int) millis;
-        if (hasEventsToAlert()) {
-            sleepMillis = 0;
+        selectedEntryList.clear();
+        if (sleepMillis == 0) {
+            return 0;
         }
-        iocp.getQueuedCompletionStatusEx(overlappedEntries, normalEvents, extraEvents, ONE_POLL_LIMIT, sleepMillis, false);
-        return formatSelected();
+        if (hasEventsToAlert()) {
+            return 0;
+        }
+        return (int) sleepMillis;
     }
 
     private boolean hasEventsToAlert() {
@@ -93,7 +93,6 @@ public class IOCPSelector implements FDSelector {
     }
 
     private Collection<SelectedEntry> formatSelected() {
-        selectedEntryList.clear();
         for (var e : normalEvents) {
             var nbytes = e.getNumberOfBytesTransferred();
             var overlapped = e.getOverlapped();
@@ -112,11 +111,6 @@ public class IOCPSelector implements FDSelector {
             } else {
                 winfd.ioComplete(ctx, nbytes);
             }
-        }
-        for (int i = 0; i < extraEvents.size(); i++) {
-            var e = extraEvents.get(i);
-            extraEventsNative.get(i).setUd(e.getOverlapped().MEMORY);
-            extraEventsNative.get(i).setMask(e.getNumberOfBytesTransferred());
         }
         for (var iterator = firedFds.iterator(); iterator.hasNext(); ) {
             var fired = iterator.next();
@@ -263,7 +257,7 @@ public class IOCPSelector implements FDSelector {
 
     @Override
     public int getFiredExtraNum() {
-        return extraEvents.size();
+        return extraEventsNum[0];
     }
 
     @Override

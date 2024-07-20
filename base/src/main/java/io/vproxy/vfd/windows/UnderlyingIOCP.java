@@ -111,17 +111,22 @@ public class UnderlyingIOCP {
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (winSocket) {
             var iocp = winSocket.getIocp();
-            if (iocp == null) {
-                if (winSocket.getListenSocket() != null) {
+            if (ctx.getIoType() == IOType.ACCEPT.code) {
+                if (winSocket.getListenSocket() == null) {
+                    Logger.shouldNotHappen("underlying-iocp got ACCEPT event, but listen socket is not registered");
+                } else {
                     iocp = winSocket.getListenSocket().getIocp();
                 }
             }
             if (iocp == null) {
-                assert Logger.lowLevelDebug(winSocket + " is not associated with iocp, push notification to itself");
-                Objects.requireNonNullElse(
-                        winSocket.getListenSocket(),
-                        winSocket)
-                    .postNotification(notif);
+                assert Logger.lowLevelDebug(winSocket + " is not associated with iocp, push notification to the socket");
+                var pushSock = winSocket;
+                if (ctx.getIoType() == IOType.ACCEPT.code) {
+                    if (winSocket.getListenSocket() != null) {
+                        pushSock = winSocket.getListenSocket();
+                    } // else no need to log error because it's already logged
+                }
+                pushSock.postNotification(notif);
                 return;
             }
             iocp.postEvent(notif);
