@@ -599,15 +599,18 @@ public class Utils {
         }
         File file = File.createTempFile("script", OS.isWindows() ? ".bat" : ".sh");
         try {
-            Files.writeString(file.toPath(), script);
+            script = "@echo off\r\n" + script;
+            Files.writeString(file.toPath(), script, OS.shellCharset());
             if (!file.setExecutable(true)) {
-                throw new Exception("setting executable to script " + file.getAbsolutePath() + " failed");
+                throw new Exception("chmod +x " + file.getAbsolutePath() + " failed");
             }
+            var filePath = file.getAbsolutePath();
+            filePath = new String(filePath.getBytes(OS.shellCharset()), OS.shellCharset());
             ProcessBuilder pb;
             if (OS.isWindows()) {
-                pb = new ProcessBuilder("cmd.exe", "/c", file.getAbsolutePath());
+                pb = new ProcessBuilder("cmd.exe", "/c", filePath);
             } else {
-                pb = new ProcessBuilder(file.getAbsolutePath());
+                pb = new ProcessBuilder(filePath);
             }
             return execute(pb, timeout, getResult);
         } finally {

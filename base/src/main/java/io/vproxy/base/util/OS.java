@@ -1,5 +1,10 @@
 package io.vproxy.base.util;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+
 public class OS {
     private static final String osname;
     private static final String osversion;
@@ -78,5 +83,73 @@ public class OS {
 
     public static String arch() {
         return arch;
+    }
+
+    private static Charset SHELL_CHARSET = null;
+
+    public static Charset shellCharset() {
+        if (SHELL_CHARSET != null) {
+            return SHELL_CHARSET;
+        }
+        var charsets = new ArrayList<Charset>();
+        charsets.add(StandardCharsets.UTF_8);
+        try {
+            charsets.add(Charset.forName("GBK"));
+        } catch (Throwable ignore) {
+        }
+        //noinspection UnnecessaryUnicodeEscape
+        var testStr = "\u4F60\u597D\uFF0C\u4E16\u754C"; // 你好，世界
+        String cmd;
+        if (isWindows()) {
+            cmd = "echo " + testStr;
+        } else {
+            cmd = "echo \"" + testStr + "\"";
+        }
+        for (var c : charsets) {
+            var s = new String(cmd.getBytes(c), c);
+            ProcessBuilder pb;
+            if (isWindows()) {
+                pb = new ProcessBuilder("cmd.exe", "/c", s);
+            } else {
+                pb = new ProcessBuilder("/bin/sh", "-c", s);
+            }
+            int exitCode;
+            String stdout;
+            String stderr;
+            try {
+                var p = pb.start();
+                var ok = p.waitFor(500, TimeUnit.MILLISECONDS);
+                if (!ok) {
+                    Logger.warn(LogType.SYS_ERROR, "failed executing cmd: " + cmd + ", command didn't finish in 500ms");
+                    try {
+                        p.destroyForcibly();
+                    } catch (Throwable ignore) {
+                    }
+                    continue;
+                }
+                exitCode = p.exitValue();
+                stdout = new String(p.getInputStream().readAllBytes(), c);
+                stderr = new String(p.getErrorStream().readAllBytes(), c);
+            } catch (Exception e) {
+                Logger.warn(LogType.SYS_ERROR, "failed executing cmd: " + cmd, e);
+                continue;
+            }
+            if (exitCode != 0) {
+                Logger.warn(LogType.SYS_ERROR, "failed executing cmd: " + cmd + ", exitCode = " + exitCode +
+                    ", stdout = " + stdout + ", stderr = " + stderr);
+                continue;
+            }
+            stdout = stdout.trim();
+            if (testStr.equals(stdout)) {
+                Logger.alert("shell charset is determined: " + c + ", getting result: " + stdout);
+                SHELL_CHARSET = c;
+                return c;
+            } else {
+                Logger.warn(LogType.ALERT, "shell charset is not " + c + ", getting result: `" + stdout + "`");
+            }
+        }
+        Logger.warn(LogType.ALERT, "shell charset cannot be determined, using UTF-8 by default");
+        SHELL_CHARSET = StandardCharsets.UTF_8;
+        return SHELL_CHARSET;
     }
 }
