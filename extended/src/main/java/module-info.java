@@ -13,6 +13,7 @@ module io.vproxy.extended {
     exports io.vproxy.vproxyx.nexus.entity;
     exports io.vproxy.vproxyx.pktfiltergen;
     exports io.vproxy.vproxyx.pktfiltergen.flow;
+    exports io.vproxy.vproxyx.uot;
     exports io.vproxy.vproxyx.util;
     exports io.vproxy.vproxyx.websocks;
     exports io.vproxy.vproxyx.websocks.relay;

@@ -73,6 +73,8 @@ public class Connection implements NetFlowRecorder {
 
                 if (noQuickWrite) {
                     assert Logger.lowLevelDebug("quick write is disabled");
+                } else if (!channel.isConnected()) {
+                    assert Logger.lowLevelDebug("is not connected yet");
                 } else {
                     assert Logger.lowLevelDebug("out buffer is readable, do WRITE for channel " + channel);
                     // let's directly write the data if possible

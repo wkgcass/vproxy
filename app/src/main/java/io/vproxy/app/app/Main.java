@@ -136,6 +136,12 @@ public class Main {
                 case "proxynexus":
                     ProxyNexus.main0(args);
                     break;
+                case "UOTWrapper":
+                case "uot-wrapper":
+                case "uot":
+                case "uotwrapper":
+                    UOTWrapper.main0(args);
+                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     Utils.exit(1);
