@@ -1,9 +1,11 @@
 package io.vproxy.xdp;
 
+import io.vproxy.vpxdp.XDPConsts;
+
 public enum BPFMode {
-    SKB(1 << 1),
-    DRIVER(1 << 2),
-    HARDWARE(1 << 3),
+    SKB(XDPConsts.XDP_FLAGS_SKB_MODE),
+    DRIVER(XDPConsts.XDP_FLAGS_DRV_MODE),
+    HARDWARE(XDPConsts.XDP_FLAGS_HW_MODE),
     ;
     public final int mode;
 

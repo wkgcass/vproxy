@@ -8,9 +8,12 @@ import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.pni.Allocator;
+import io.vproxy.pni.array.PointerArray;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vpacket.AbstractPacket;
+import io.vproxy.vpxdp.ChunkInfo;
+import io.vproxy.vpxdp.XDPConsts;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.util.SwitchUtils;
@@ -19,8 +22,6 @@ import io.vproxy.xdp.*;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
-import java.util.List;
 
 public class XDPIface extends Iface {
     public final String nic;
@@ -41,10 +42,19 @@ public class XDPIface extends Iface {
     public final boolean offload;
     private SelectorEventLoop loop;
 
+    private final Allocator allocator;
+
     public XDPIface(String nic, BPFMap xskMap, BPFMap macMap, UMem umem,
                     int queue, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
                     int busyPollBudget, boolean rxGenChecksum,
                     int vni, BPFMapKeySelector keySelector, boolean offload) {
+        // check offload
+        if (offload) {
+            if (macMap == null) {
+                throw new IllegalArgumentException("offload is true, but macMap is not provided");
+            }
+        }
+
         this.nic = nic;
         this.xskMap = xskMap;
         this.macMap = macMap;
@@ -61,14 +71,8 @@ public class XDPIface extends Iface {
         this.keySelector = keySelector;
         this.offload = offload;
 
-        this.sendingChunkPointers = SunUnsafe.allocateMemory(ValueLayout.JAVA_LONG.byteSize() * txRingSize);
-
-        // check offload
-        if (offload) {
-            if (macMap == null) {
-                throw new IllegalArgumentException("offload is true, but macMap is not provided");
-            }
-        }
+        this.allocator = Allocator.ofUnsafe();
+        this.sendingChunkPointers = new PointerArray(allocator, txRingSize);
     }
 
     @Override
@@ -98,51 +102,39 @@ public class XDPIface extends Iface {
     }
 
     private int sendingChunkSize = 0;
-    private final MemorySegment /*long[]*/ sendingChunkPointers;
+    private final PointerArray sendingChunkPointers;
 
     @Override
     public void sendPacket(PacketBuffer pkb) {
         if (sendingChunkSize == txRingSize) {
-            assert Logger.lowLevelDebug("unable to send packets more than tx ring size");
-            return;
+            completeTx();
         }
 
-        if (pkb.fullbuf instanceof UMemChunkByteArray) {
-            Chunk chunk = ((UMemChunkByteArray) pkb.fullbuf).chunk;
-            if (chunk.umem() == umem.umem) {
+        if (pkb.fullbuf instanceof UMemChunkByteArray ub) {
+            var chunk = ub.chunk;
+            if (chunk.getUmem().MEMORY.address() == umem.umem.MEMORY.address()) {
                 assert Logger.lowLevelDebug("directly send packet without copying");
 
                 // modify chunk
-                int pktaddr = chunk.addr() + pkb.pktOff + Consts.XDP_HEADROOM_DRIVER_RESERVED;
+                long pktaddr = chunk.getAddr() + pkb.pktOff;
                 int pktlen = pkb.pktBuf.length();
-                if (pktaddr != chunk.pktaddr || pktlen != chunk.pktlen) {
-                    assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
-                    chunk.pktaddr = pktaddr;
-                    chunk.pktlen = pktlen;
-                    chunk.csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt);
-                    if (chunk.csumFlags != 0) {
-                        statistics.incrCsumSkip();
-                    }
-                    chunk.updateNative();
-                } else {
-                    assert Logger.lowLevelDebug("no modification on chunk packet addresses");
-                    var flags = SwitchUtils.checksumFlagsFor(pkb.pkt);
-                    if (flags != 0) {
-                        statistics.incrCsumSkip();
-                    }
-                    if (chunk.csumFlags != flags) {
-                        chunk.csumFlags = flags;
-                        chunk.updateNative();
-                    }
+
+                assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
+                chunk.setPktAddr(pktaddr);
+                chunk.setPktLen(pktlen);
+                chunk.setCsumFlags(SwitchUtils.checksumFlagsFor(pkb.pkt, umem.metaLen));
+                if (chunk.getCsumFlags() != 0) {
+                    statistics.incrCsumSkip();
                 }
-                chunk.referenceInNative(); // no need to increase ref in java, only required in native
+                ub.reference();
 
                 assert Logger.lowLevelDebug("directly write packet " + chunk + " without copying");
-                sendingChunkPointers.set(ValueLayout.JAVA_LONG, 8L * (sendingChunkSize++), chunk.chunk());
+                sendingChunkPointers.set(sendingChunkSize++, chunk.MEMORY);
 
                 statistics.incrTxPkts();
                 statistics.incrTxBytes(pktlen);
 
+                // stack generated packets won't have the opportunity to call completeTx
                 // ensure the packet is transmitted
                 if (!pkb.ifaceInput) {
                     completeTx();
@@ -151,38 +143,42 @@ public class XDPIface extends Iface {
             }
         }
         assert Logger.lowLevelDebug("fetch a new chunk to send the packet");
-        Chunk chunk = umem.fetchChunk();
+        var chunk = umem.umem.getChunks().fetch();
         if (chunk == null) {
             assert Logger.lowLevelDebug("packet dropped because there are no free chunks available");
+            statistics.incrTxErr();
             return;
         }
         ByteArray pktData = pkb.pkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
-        int availableSpace = chunk.endaddr() - chunk.addr() - Consts.XDP_HEADROOM_DRIVER_RESERVED;
+
+        long pktaddr = chunk.getAddr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
+        long availableSpace = chunk.getEndAddr() - chunk.getAddr() - Consts.XDP_HEADROOM_DRIVER_RESERVED;
+        var csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt, umem.metaLen);
+        if ((csumFlags & XDPConsts.VP_CSUM_XDP_OFFLOAD) != 0) {
+            pktaddr += umem.metaLen;
+            availableSpace -= umem.metaLen;
+        }
+
         if (pktData.length() > availableSpace) {
             Logger.warn(LogType.ALERT, "umem chunk too small for packet, pkt: " + pktData.length() + ", available: " + availableSpace);
-            chunk.releaseRef(umem);
+            umem.umem.getChunks().releaseChunk(chunk);
             return;
         }
-        chunk.pktaddr = chunk.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
-        chunk.pktlen = pktData.length();
-        chunk.csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt);
-        if (chunk.csumFlags != 0) {
+        chunk.setPktAddr(pktaddr);
+        chunk.setPktLen(pktData.length());
+        chunk.setCsumFlags(csumFlags);
+        if (chunk.getCsumFlags() != 0) {
             statistics.incrCsumSkip();
         }
-        var umemSeg = umem.getMemory();
-        var seg = chunk.makeSlice(umemSeg);
-        var segBuf = ByteArray.from(seg);
-        pktData.copyInto(segBuf, 0, 0, pktData.length());
+        var segBuf = MemorySegment.ofAddress(chunk.getUmem().getBuffer().address() + pktaddr).reinterpret(pktData.length());
+        pktData.copyInto(ByteArray.from(segBuf), 0, 0, pktData.length());
 
-        chunk.updateNative();
-        sendingChunkPointers.set(ValueLayout.JAVA_LONG, 8L * (sendingChunkSize++), chunk.chunk());
-
-        // the chunk is not used in java anymore
-        chunk.returnToPool();
+        sendingChunkPointers.set(sendingChunkSize++, chunk.MEMORY);
 
         statistics.incrTxPkts();
         statistics.incrTxBytes(pktData.length());
 
+        // stack generated packets won't have the opportunity to call completeTx
         // ensure the packet is transmitted
         if (!pkb.ifaceInput) {
             completeTx();
@@ -212,7 +208,7 @@ public class XDPIface extends Iface {
             } catch (Throwable ignore) {
             }
         });
-        SunUnsafe.freeMemory(sendingChunkPointers.address());
+        allocator.close();
     }
 
     public XDPSocket getXsk() {
@@ -232,19 +228,20 @@ public class XDPIface extends Iface {
     @Override
     public void completeTx() {
         if (sendingChunkSize > 0) {
-            int n = NativeXDP.get().writePackets(xsk.xsk, sendingChunkSize, sendingChunkPointers);
+            int n = xsk.writePackets(sendingChunkSize, sendingChunkPointers);
+            assert Logger.lowLevelDebug("write xdp packets " + sendingChunkSize + ", succeeded = " + n);
             if (n != sendingChunkSize) {
                 for (int i = n; i < sendingChunkSize; ++i) {
-                    long ptr = sendingChunkPointers.get(ValueLayout.JAVA_LONG, 8L * i);
-                    assert Logger.lowLevelDebug("writing chunk " + ptr + " failed, need to release them manually");
-                    NativeXDP.get().releaseChunk(umem.umem, ptr);
+                    var chunk = new ChunkInfo(sendingChunkPointers.get(i));
+                    assert Logger.lowLevelDebug("writing chunk " + chunk + " failed, need to release them manually");
+                    umem.umem.getChunks().releaseChunk(chunk);
                 }
                 statistics.incrTxErr(sendingChunkSize - n);
             }
             sendingChunkSize = 0; // reset
         }
         xsk.completeTx();
-        xsk.umem.fillUpFillRing();
+        xsk.umem.umem.fillRingFillup();
     }
 
     @Override
@@ -275,27 +272,29 @@ public class XDPIface extends Iface {
         public void readable(HandlerContext<XDPSocket> ctx) {
             VProxyThread.current().newUuidDebugInfo();
 
-            List<Chunk> ls = ctx.getChannel().fetchPackets();
+            var ls = ctx.getChannel().fetchPackets();
             if (ls.isEmpty()) {
                 Logger.shouldNotHappen("xdp readable " + xsk + " but received nothing");
             } else {
                 assert Logger.lowLevelDebug("xdp readable: " + xsk + ", chunks=" + ls.size());
             }
-            for (Chunk chunk : ls) {
+            for (var chunk : ls) {
                 var fullBuffer = new UMemChunkByteArray(xsk, chunk);
 
                 var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vni, fullBuffer,
-                    chunk.pktaddr - chunk.addr() - Consts.XDP_HEADROOM_DRIVER_RESERVED,
-                    chunk.endaddr() - chunk.pktaddr - chunk.pktlen);
+                    (int) (chunk.getPktAddr() - chunk.getAddr()),
+                    (int) (chunk.getEndAddr() - chunk.getPktAddr() - chunk.getPktLen()));
+
                 String err = pkb.init();
                 if (err != null) {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
-                    fullBuffer.releaseRef();
+                    fullBuffer.dereference();
+                    statistics.incrRxErr();
                     continue;
                 }
 
                 statistics.incrRxPkts();
-                statistics.incrRxBytes(chunk.pktlen);
+                statistics.incrRxBytes(chunk.getPktLen());
 
                 received(pkb);
             }

@@ -1,7 +1,16 @@
 package io.vproxy.xdp;
 
+import io.vproxy.base.util.objectpool.CursorList;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.pni.Allocator;
+import io.vproxy.pni.PNIString;
+import io.vproxy.pni.array.PointerArray;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.posix.PosixFD;
+import io.vproxy.vpxdp.ChunkInfo;
+import io.vproxy.vpxdp.XDP;
+import io.vproxy.vpxdp.XDPConsts;
+import io.vproxy.vpxdp.XskInfo;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -11,19 +20,17 @@ import java.util.List;
 public class XDPSocket extends PosixFD implements FD {
     public final String nic;
     public final int queueId;
-    public final long xsk;
+    public final XskInfo xsk;
     public final UMem umem;
-    private final ChunkPrototypeObjectList list;
     private boolean isClosed = false;
 
-    private XDPSocket(String nic, int queueId, long xsk, UMem umem, int fd, int rxRingSize) {
+    private XDPSocket(String nic, int queueId, XskInfo xsk, UMem umem) {
         super(null);
         this.nic = nic;
         this.queueId = queueId;
         this.xsk = xsk;
         this.umem = umem;
-        this.fd = fd;
-        this.list = new ChunkPrototypeObjectList(rxRingSize);
+        this.fd = xsk.getXsk().fd();
     }
 
     public static XDPSocket create(String nicName, int queueId, UMem umem,
@@ -34,44 +41,79 @@ public class XDPSocket extends PosixFD implements FD {
         if (!umem.isValid()) {
             throw new IOException("umem " + umem + " is not valid, create a new one instead");
         }
-        if (umem.isReferencedBySockets()) {
-            umem = SharedUMem.share(umem);
+        if (umem.isReferencedByXsk()) {
+            var shared = umem.umem.share();
+            umem = new UMem(umem.alias, shared, umem.chunksSize, umem.fillRingSize, umem.compRingSize, umem.frameSize, umem.headroom, umem.metaLen);
         }
-        long xsk = NativeXDP.get().createXSK(nicName, queueId, umem.umem, rxRingSize, txRingSize, mode.mode, zeroCopy, busyPollBudget, rxGenChecksum);
-        int fd = NativeXDP.get().getFDFromXSK(xsk);
-        XDPSocket sock = new XDPSocket(nicName, queueId, xsk, umem, fd, rxRingSize);
+        XskInfo xsk;
+        try (var allocator = Allocator.ofConfined()) {
+            int xdpFlags = mode.mode;
+            int bindFlags = 0;
+            int vpxdpFlags = 0;
+            if (zeroCopy) {
+                bindFlags |= XDPConsts.XDP_ZEROCOPY;
+            } else {
+                bindFlags |= XDPConsts.XDP_COPY;
+            }
+            if (rxGenChecksum) {
+                vpxdpFlags |= NativeXDP.VP_XSK_FLAG_RX_GEN_CSUM;
+            }
+            xsk = XDP.get().createXsk(new PNIString(allocator, nicName), queueId, umem.umem, rxRingSize, txRingSize,
+                xdpFlags, bindFlags, busyPollBudget, vpxdpFlags);
+        }
+        if (xsk == null) {
+            if (umem.isReferencedByXsk()) {
+                umem.release();
+            }
+            throw new IOException("failed to create XDP socket");
+        }
+        XDPSocket sock = new XDPSocket(nicName, queueId, xsk, umem);
         umem.reference(sock);
         return sock;
     }
 
-    public List<Chunk> fetchPackets() {
+    private final CursorList<ChunkInfo> packetsReusedList = new CursorList<>();
+
+    public List<ChunkInfo> fetchPackets() {
         if (isClosed) {
             return Collections.emptyList();
         }
-        NativeXDP.get().fetchPackets(xsk, list);
-        return list;
+        var idxPtr = VProxyThread.current().XDPIdxPtr;
+        var chunkPtr = VProxyThread.current().XDPChunkPtr;
+
+        packetsReusedList.clear();
+        idxPtr.set(0, -1);
+        var rcvd = xsk.fetchPacket(idxPtr, chunkPtr);
+        for (int i = 0; i < rcvd; ++i) {
+            xsk.fetchPacket(idxPtr, chunkPtr);
+            var chunk = new ChunkInfo(chunkPtr.get(0));
+            packetsReusedList.add(chunk);
+        }
+        return packetsReusedList;
     }
 
     public void rxRelease(int cnt) {
         if (isClosed) {
             return;
         }
-        NativeXDP.get().rxRelease(xsk, cnt);
+        xsk.rxRelease(cnt);
     }
 
-    public boolean writePacket(Chunk chunk) {
+    public int writePackets(int size, PointerArray chunkPtrs) {
         if (isClosed) {
-            return false;
+            return 0;
         }
-        chunk.updateNative();
-        return NativeXDP.get().writePacket(xsk, chunk.chunk());
+        if (size == 0) {
+            return 0;
+        }
+        return xsk.writePackets(size, chunkPtrs);
     }
 
     public void completeTx() {
         if (isClosed) {
             return;
         }
-        NativeXDP.get().completeTx(xsk);
+        xsk.completeTx();
     }
 
     @Override
@@ -96,7 +138,7 @@ public class XDPSocket extends PosixFD implements FD {
         }
         isClosed = true;
         umem.dereference(this);
-        NativeXDP.get().releaseXSK(xsk);
+        xsk.close();
     }
 
     @Override

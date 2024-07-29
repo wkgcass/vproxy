@@ -36,7 +36,7 @@ public class GraalFeature implements Feature {
             "vpfubuki",
             "msquic",
             "msquic-java",
-            "bpf",
+            "xdp",
             "vpxdp",
             "vfdposix",
             "vfdwindows"

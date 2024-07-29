@@ -5,9 +5,10 @@ public class IfaceStatistics {
     private long txPkts;
     private long rxBytes;
     private long txBytes;
+    private long rxErr;
     private long txErr;
 
-    private long csumSkip;
+    private long txCsumSkip;
 
     public void incrRxPkts() {
         incrRxPkts(1);
@@ -33,6 +34,14 @@ public class IfaceStatistics {
         this.txBytes += txBytes;
     }
 
+    public void incrRxErr() {
+        incrRxErr(1);
+    }
+
+    public void incrRxErr(long rxErr) {
+        this.rxErr += rxErr;
+    }
+
     public void incrTxErr() {
         incrTxErr(1);
     }
@@ -46,7 +55,7 @@ public class IfaceStatistics {
     }
 
     public void incrCsumSkip(long csumSkip) {
-        this.csumSkip += csumSkip;
+        this.txCsumSkip += csumSkip;
     }
 
     public long getRxPkts() {
@@ -65,22 +74,26 @@ public class IfaceStatistics {
         return txBytes;
     }
 
+    public long getRxErr() {
+        return rxErr;
+    }
+
     public long getTxErr() {
         return txErr;
     }
 
-    public long getCsumSkip() {
-        return csumSkip;
+    public long getTxCsumSkip() {
+        return txCsumSkip;
     }
 
     @Override
     public String toString() {
-        return "" +
-            "rx_pkts=" + rxPkts +
-            " tx_pkts=" + txPkts +
-            " rx_bytes=" + rxBytes +
-            " tx_bytes=" + txBytes +
-            " tx_err=" + txErr +
-            " csum_skip=" + csumSkip;
+        return "rx_pkts=" + rxPkts +
+               " tx_pkts=" + txPkts +
+               " rx_bytes=" + rxBytes +
+               " tx_bytes=" + txBytes +
+               " rx_err=" + rxErr +
+               " tx_err=" + txErr +
+               " csum_skip=" + txCsumSkip;
     }
 }

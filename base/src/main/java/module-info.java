@@ -102,6 +102,7 @@ module io.vproxy.base {
     exports io.vproxy.vpacket.dns.rdata;
     exports io.vproxy.vpacket.tuples;
     exports io.vproxy.xdp;
+    exports io.vproxy.vpxdp;
 
     uses io.vproxy.vfd.FDs;
     uses io.vproxy.base.processor.ProcessorRegistry;

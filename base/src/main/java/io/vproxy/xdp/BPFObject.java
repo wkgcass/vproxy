@@ -6,7 +6,11 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.net.Nic;
 import io.vproxy.commons.util.IOUtils;
+import io.vproxy.pni.Allocator;
+import io.vproxy.pni.PNIString;
 import io.vproxy.vfd.MacAddress;
+import io.vproxy.vpxdp.XDP;
+import io.vproxy.vpxdp.XDPConsts;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -23,10 +27,10 @@ public class BPFObject {
     public final String prog;
     public final BPFMode mode;
 
-    public final long bpfobj;
+    public final io.vproxy.vpxdp.BPFObject bpfobj;
     private final Map<String, BPFMap> maps = new ConcurrentHashMap<>();
 
-    private BPFObject(String nic, String filename, String prog, BPFMode mode, long bpfobj) {
+    private BPFObject(String nic, String filename, String prog, BPFMode mode, io.vproxy.vpxdp.BPFObject bpfobj) {
         this.nic = nic;
         this.filename = filename;
         this.prog = prog;
@@ -37,6 +41,8 @@ public class BPFObject {
 
     public static BPFObject loadAndAttachToNic(String filepath, String programName, String nicName,
                                                BPFMode mode, boolean forceAttach) throws IOException {
+        NativeXDP.load();
+
         String genfilename = filepath;
         if (filepath == null || filepath.equals(PREBUILT_SKIP_DST_MAC)) {
             genfilename = generateDefault(nicName);
@@ -45,7 +51,22 @@ public class BPFObject {
             genfilename = IOUtils.writeTemporaryFile("kern", "o", bytes);
         }
 
-        long bpfobj = NativeXDP.get().loadAndAttachBPFProgramToNic(genfilename, programName, nicName, mode.mode, forceAttach);
+        io.vproxy.vpxdp.BPFObject bpfobj;
+        try (var allocator = Allocator.ofConfined()) {
+            int attachFlags = mode.mode;
+            if (!forceAttach) {
+                attachFlags |= XDPConsts.XDP_FLAGS_UPDATE_IF_NOEXIST;
+            }
+            bpfobj = XDP.get().attachBPFObjectToIf(
+                new PNIString(allocator, genfilename),
+                new PNIString(allocator, programName),
+                new PNIString(allocator, nicName),
+                attachFlags
+            );
+        }
+        if (bpfobj == null) {
+            throw new IOException("attach bpfobj " + filepath + "(" + programName + ")" + " to nic " + nicName + " failed");
+        }
         return new BPFObject(nicName, filepath, programName, mode, bpfobj);
     }
 
@@ -81,7 +102,13 @@ public class BPFObject {
             if (maps.containsKey(name)) {
                 return maps.get(name);
             }
-            long map = NativeXDP.get().findMapByNameInBPF(bpfobj, name);
+            io.vproxy.vpxdp.BPFMap map;
+            try (var allocator = Allocator.ofConfined()) {
+                map = bpfobj.findMapByName(new PNIString(allocator, name));
+            }
+            if (map == null) {
+                throw new IOException("failed to retrieve map " + name + " from bpfobj " + filename);
+            }
             var m = new BPFMap(name, map, this);
             maps.put(name, m);
             return m;
@@ -89,12 +116,14 @@ public class BPFObject {
     }
 
     public void release(boolean detach) {
-        NativeXDP.get().releaseBPFObject(bpfobj);
+        bpfobj.release();
         if (detach) {
-            try {
-                NativeXDP.get().detachBPFProgramFromNic(nic);
-            } catch (IOException e) {
-                Logger.error(LogType.SYS_ERROR, "detaching bpf object from nic " + nic + " failed", e);
+            int res;
+            try (var allocator = Allocator.ofConfined()) {
+                res = XDP.get().detachBPFObjectFromIf(new PNIString(allocator, nic));
+            }
+            if (res != 0) {
+                Logger.error(LogType.SYS_ERROR, "detaching bpf object from nic " + nic + " failed");
             }
         }
     }

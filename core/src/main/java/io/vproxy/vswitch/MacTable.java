@@ -167,7 +167,7 @@ public class MacTable {
                 }
                 offloaded = true;
                 try {
-                    xdp.macMap.put(mac, xsk);
+                    xdp.macMap.put(mac, xdp.nic);
                     Logger.trace(LogType.ALERT, "mac entry offloaded into " + xdp.name() + ": " + mac + " -> " + xsk.nic);
                 } catch (IOException e) {
                     Logger.error(LogType.SYS_ERROR, "failed to record into " + xdp.name() + ": " + mac + " -> " + xsk.nic);

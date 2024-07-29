@@ -12,3 +12,8 @@
 	path = submodules/libae
 	url = https://github.com/vproxy-tools/libae-valkey.git
 	branch = vproxy
+
+[submodule "submodules/vpxdp"]
+	path = submodules/vpxdp
+	url = https://github.com/vproxy-tools/vpxdp
+	branch = master

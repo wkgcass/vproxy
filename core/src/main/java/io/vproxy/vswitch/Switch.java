@@ -32,6 +32,7 @@ import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.xdp.BPFMap;
 import io.vproxy.xdp.BPFMode;
+import io.vproxy.xdp.NativeXDP;
 import io.vproxy.xdp.UMem;
 
 import java.io.IOException;
@@ -626,12 +627,14 @@ public class Switch {
         return iface;
     }
 
-    public UMem addUMem(String alias, int chunksSize, int fillRingSize, int compRingSize,
+    public UMem addUMem(String alias, int chunksCount, int fillRingSize, int compRingSize,
                         int frameSize) throws AlreadyExistException, IOException {
         if (umems.containsKey(alias)) {
             throw new AlreadyExistException("umem", alias);
         }
-        var umem = UMem.create(alias, chunksSize, fillRingSize, compRingSize, frameSize, SwitchUtils.RCV_HEAD_PRESERVE_LEN);
+        var umem = UMem.create(alias, chunksCount, fillRingSize, compRingSize, frameSize,
+            Consts.XDP_HEADROOM_DRIVER_RESERVED + SwitchUtils.RCV_HEAD_PRESERVE_LEN,
+            NativeXDP.supportTxMetadata ? 16 : 0);
         umems.put(alias, umem);
         return umem;
     }
@@ -953,7 +956,7 @@ public class Switch {
     private void releaseUMemChunkIfPossible(ByteArray fullBuf) {
         if (fullBuf instanceof UMemChunkByteArray) {
             assert Logger.lowLevelDebug("releasing the umem chunk after packet handled or dropped or rewrote");
-            ((UMemChunkByteArray) fullBuf).releaseRef();
+            ((UMemChunkByteArray) fullBuf).dereference();
         }
     }
 

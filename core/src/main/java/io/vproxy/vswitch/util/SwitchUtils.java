@@ -9,6 +9,7 @@ import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.vpacket.conntrack.udp.UdpNat;
+import io.vproxy.vpxdp.XDPConsts;
 import io.vproxy.vswitch.IPMac;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
@@ -293,20 +294,24 @@ public class SwitchUtils {
         return FilterResult.PASS;
     }
 
-    public static int checksumFlagsFor(EthernetPacket pkt) {
-        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ")");
+    public static int checksumFlagsFor(EthernetPacket pkt, int metaLen) {
+        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ", " + metaLen + ")");
         if (!(pkt.getPacket() instanceof AbstractIpPacket)) {
             return 0;
         }
         var ip = (AbstractIpPacket) pkt.getPacket();
         int ret = 0;
         if (ip.isRequireUpdatingChecksum()) {
-            ret |= NativeXDP.VP_CSUM_IP;
+            ret |= XDPConsts.VP_CSUM_IP;
         }
         if (ip.getPacket().isRequireUpdatingChecksum()) {
-            ret |= NativeXDP.VP_CSUM_UP;
+            if (NativeXDP.supportTxMetadata && metaLen >= 16) {
+                ret |= XDPConsts.VP_CSUM_UP_PSEUDO | XDPConsts.VP_CSUM_XDP_OFFLOAD;
+            } else {
+                ret |= XDPConsts.VP_CSUM_UP;
+            }
         }
-        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ") return " + ret);
+        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ") return 0x" + Integer.toHexString(ret));
         return ret;
     }
 

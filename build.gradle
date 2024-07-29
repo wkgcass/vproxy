@@ -299,16 +299,21 @@ project(':pni-template') {
 project(':base') {
     def baseGenPath = 'src/main/generated'
     def msquicGenPath = project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/generated'
+    def vpxdpGenPath = project.rootProject.rootDir.getAbsolutePath() + '/submodules/vpxdp/vpxdp-java/core/src/main/generated'
     if (isNativeImage) {
         baseGenPath = 'src/main/generated-graal'
         msquicGenPath = project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/generated-graal'
+        vpxdpGenPath = project.rootProject.rootDir.getAbsolutePath() + '/submodules/vpxdp/vpxdp-java/core/src/main/generated-graal'
     }
     sourceSets {
         main {
             java {
                 srcDirs = ['src/main/java', baseGenPath,
                            project.rootProject.rootDir.getAbsolutePath() + '/submodules/msquic-java/core/src/main/java',
-                           msquicGenPath]
+                           msquicGenPath,
+                           project.rootProject.rootDir.getAbsolutePath() + '/submodules/vpxdp/vpxdp-java/core/src/main/java',
+                           vpxdpGenPath,
+                ]
             }
         }
     }
@@ -540,16 +545,12 @@ project(':test') {
         }
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
-        systemProperty("java.library.path", "/usr/lib/" + "uname -m".execute().text.trim() + "-linux-gnu:base/src/main/c:base/src/main/c/xdp/libbpf/src")
+        systemProperty("java.library.path", "/usr/lib/" + "uname -m".execute().text.trim() + "-linux-gnu:" +
+            "base/src/main/c:" +
+            "submodules/vpxdp:" +
+            "submodules/vpxdp/submodules/xdp-tools/lib/libxdp")
         systemProperty("vfd", "posix")
         main = "io.vproxy.poc.XDPPoc"
-        if (System.getProperty("ver") != null) {
-            main += System.getProperty("ver")
-        }
-
-        if (System.getProperty("ifname") != null) {
-            args = [System.getProperty("ifname")]
-        }
     }
 
     task QuicPoc(type: JavaExec) {

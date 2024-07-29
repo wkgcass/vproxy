@@ -1,32 +1,28 @@
 package io.vproxy.vswitch.util;
 
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.bytearray.MemorySegmentByteArray;
-import io.vproxy.xdp.Chunk;
+import io.vproxy.vpxdp.ChunkInfo;
 import io.vproxy.xdp.XDPSocket;
 
 public class UMemChunkByteArray extends MemorySegmentByteArray implements ByteArray {
     public final XDPSocket xsk;
-    public final Chunk chunk;
+    public final ChunkInfo chunk;
 
-    public UMemChunkByteArray(XDPSocket xsk, Chunk chunk) {
-        super(xsk.umem.getMemory().asSlice(
-            chunk.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED,
-            chunk.endaddr() - chunk.addr() - Consts.XDP_HEADROOM_DRIVER_RESERVED));
+    public UMemChunkByteArray(XDPSocket xsk, ChunkInfo chunk) {
+        super(xsk.umem.umem.getBuffer().reinterpret(Long.MAX_VALUE).asSlice(
+            chunk.getAddr(),
+            chunk.getEndAddr() - chunk.getAddr()));
 
         this.xsk = xsk;
         this.chunk = chunk;
     }
 
-    public void releaseRef() {
-        chunk.releaseRef(xsk.umem);
-        if (chunk.ref() == 0) {
-            chunk.returnToPool();
-        }
+    public void dereference() {
+        xsk.umem.umem.getChunks().releaseChunk(chunk);
     }
 
     public void reference() {
-        chunk.reference();
+        chunk.setRef((byte) (chunk.getRef() + 1));
     }
 }

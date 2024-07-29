@@ -41,7 +41,7 @@ clean: clean-jar
 	rm -f ./base/src/main/c/*.dylib
 	rm -f ./base/src/main/c/*.so
 	rm -f ./base/src/main/c/*.dll
-	cd ./base/src/main/c/xdp && make clean
+	cd ./submodules/vpxdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
 	rm -f ./docker/vproxy.jar
@@ -85,8 +85,8 @@ jar: generate-module-info
 _add_linux_so_to_zip:
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.so ./io/vproxy/libvfdposix-$(LINUX_ARCH).so
-	cp ./base/src/main/c/libvpxdp.so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so
-	cp ./base/src/main/c/xdp/libbpf/src/libbpf.so.0.6.0 ./io/vproxy/libbpf-$(LINUX_ARCH).so
+	cp ./submodules/vpxdp/libvpxdp.so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so
+	cp ./submodules/xdp-tools/lib/libxdp/libxdp.1.4.0 ./io/vproxy/libxdp-$(LINUX_ARCH).so
 	cp ./libmsquic.so ./io/vproxy/libmsquic-$(LINUX_ARCH).so
 	cp ./base/src/main/c/libmsquic-java.so ./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
 	cp ./submodules/fubuki/target/release/libfubukil.so ./io/vproxy/libfubuki-$(LINUX_ARCH).so
@@ -95,7 +95,7 @@ _add_linux_so_to_zip:
 	zip build/libs/vproxy.jar \
 		./io/vproxy/libvfdposix-$(LINUX_ARCH).so \
 		./io/vproxy/libvpxdp-$(LINUX_ARCH).so \
-		./io/vproxy/libbpf-$(LINUX_ARCH).so \
+		./io/vproxy/libxdp-$(LINUX_ARCH).so \
 		./io/vproxy/libmsquic-$(LINUX_ARCH).so \
 		./io/vproxy/libmsquic-java-$(LINUX_ARCH).so \
 		./io/vproxy/libfubuki-$(LINUX_ARCH).so \
@@ -170,12 +170,12 @@ vfdposix: libpni
 	cd ./base/src/main/c && /usr/bin/env bash ./make-general.sh
 
 .PHONY: vpxdp
+ifeq ($(OS),Linux)
 vpxdp: vfdposix
-	cd ./base/src/main/c && /usr/bin/env bash ./make-xdp.sh
-
-.PHONY: xdp-sample-kern
-xdp-sample-kern:
-	cd ./base/src/main/c/xdp && make kern
+	cd ./submodules/vpxdp && make so sample_kern
+else
+vpxdp: vpxdp-linux
+endif
 
 .PHONY: msquic-java
 ifeq (0,$(IS_WIN))

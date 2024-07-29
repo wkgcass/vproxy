@@ -1,30 +1,28 @@
 package io.vproxy.xdp;
 
 import io.vproxy.base.util.coll.ConcurrentHashSet;
-import io.vproxy.base.util.unsafe.SunUnsafe;
+import io.vproxy.vpxdp.UMemInfo;
+import io.vproxy.vpxdp.XDP;
 
 import java.io.IOException;
-import java.lang.foreign.MemorySegment;
 import java.util.Set;
 
 public class UMem {
     public final String alias;
-    public final long umem;
+    public final UMemInfo umem;
 
     public final int chunksSize;
     public final int fillRingSize;
     public final int compRingSize;
     public final int frameSize;
     public final int headroom;
-
-    private MemorySegment memory;
-    private long bufferAddress;
+    public final int metaLen;
 
     private boolean released = false;
-    private boolean referencedBySockets = false;
+    private boolean referencedByXsk = false;
     private final Set<XDPSocket> referencedSockets = new ConcurrentHashSet<>();
 
-    protected UMem(String alias, long umem, int chunksSize, int fillRingSize, int compRingSize, int frameSize, int headroom) {
+    UMem(String alias, UMemInfo umem, int chunksSize, int fillRingSize, int compRingSize, int frameSize, int headroom, int metaLen) {
         this.alias = alias;
         this.umem = umem;
         this.chunksSize = chunksSize;
@@ -32,41 +30,18 @@ public class UMem {
         this.compRingSize = compRingSize;
         this.frameSize = frameSize;
         this.headroom = headroom;
+        this.metaLen = metaLen;
     }
 
-    public static UMem create(String alias, int chunksSize, int fillRingSize, int compRingSize,
-                              int frameSize, int headroom) throws IOException {
-        long umem = NativeXDP.get().createUMem(chunksSize, fillRingSize, compRingSize, frameSize, headroom);
-        return new UMem(alias, umem, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
-    }
+    public static UMem create(String alias, int chunksCount, int fillRingSize, int compRingSize,
+                              int frameSize, int headroom, int metaLen) throws IOException {
+        NativeXDP.load();
 
-    public MemorySegment getMemory() {
-        if (memory != null) {
-            return memory;
+        var umem = XDP.get().createUMem(chunksCount, fillRingSize, compRingSize, frameSize, headroom, metaLen);
+        if (umem == null) {
+            throw new IOException("failed to create UMem");
         }
-        memory = NativeXDP.get().getBufferFromUMem(umem).reinterpret((long) chunksSize * (long) frameSize);
-        return memory;
-    }
-
-    public long getBufferAddress() {
-        if (bufferAddress == 0) {
-            bufferAddress = NativeXDP.get().getBufferAddressFromUMem(umem);
-        }
-        return bufferAddress;
-    }
-
-    public void fillUpFillRing() {
-        NativeXDP.get().fillUpFillRing(umem);
-    }
-
-    public Chunk fetchChunk() {
-        Chunk chunk = Chunk.fetch();
-        if (NativeXDP.get().fetchChunk(umem, chunk)) {
-            return chunk;
-        } else {
-            chunk.returnToPool();
-            return null;
-        }
+        return new UMem(alias, umem, chunksCount, fillRingSize, compRingSize, frameSize, headroom, metaLen);
     }
 
     public void release() {
@@ -76,30 +51,25 @@ public class UMem {
         if (!referencedSockets.isEmpty()) {
             throw new IllegalStateException("the umem is referenced by " + referencedSockets.size() + " xsks");
         }
-        released = true;
-        NativeXDP.get().releaseUMem(umem, memory == null);
-        releaseBuffer();
-        memory = null;
-    }
-
-    // note that this method is overridden by subclass to skip releasing
-    protected void releaseBuffer() {
-        if (memory != null) {
-            SunUnsafe.freeMemory(memory.address());
-            memory = null;
+        synchronized (this) {
+            if (released) {
+                return;
+            }
+            released = true;
         }
+        umem.close(true);
     }
 
-    public boolean isReferencedBySockets() {
-        return referencedBySockets;
+    public boolean isReferencedByXsk() {
+        return referencedByXsk;
     }
 
     public boolean isValid() {
-        return !released && (!referencedBySockets || !referencedSockets.isEmpty());
+        return !released && (!referencedByXsk || !referencedSockets.isEmpty());
     }
 
     void reference(XDPSocket xsk) {
-        referencedBySockets = true;
+        referencedByXsk = true;
         referencedSockets.add(xsk);
     }
 
@@ -114,6 +84,7 @@ public class UMem {
             + " comp-ring-size " + compRingSize
             + " frame-size " + frameSize
             + " headroom " + headroom
+            + " meta-len " + metaLen
             + " currently " + (isValid() ? "valid" : "invalid")
             + " current-refs " + referencedSockets;
     }

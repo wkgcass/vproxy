@@ -1,4 +1,0 @@
-.libbpf
-sample_kern.ll
-sample_kern.o
-sample_user
