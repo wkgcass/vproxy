@@ -4,7 +4,7 @@ error=0
 
 if [[ -z "$MSQUIC_INC" ]]; then
   echo "You must set MSQUIC_INC properly, where the msquic include files are located"
-	error=1
+  error=1
 fi
 
 if [[ -z "$MSQUIC_LD" ]]; then
@@ -48,7 +48,7 @@ fi
 
 if [ "Linux" == "$os" ]
 then
-	NO_AS_NEEDED="-Wl,--no-as-needed"
+	link="$link -Wl,--no-as-needed"
 fi
 if [ "_WIN32" == "$os" ]
 then
@@ -58,7 +58,7 @@ else
 fi
 if [ "Linux" == "$os" ]
 then
-	AS_NEEDED="-Wl,--as-needed"
+	link="$link -Wl,--as-needed"
 fi
 
 LIBAE="../../../../submodules/libae/src"
