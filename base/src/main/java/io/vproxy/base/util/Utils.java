@@ -765,7 +765,11 @@ public class Utils {
     }
 
     public static int calculateChecksum(ByteArray array, int limit) {
-        int sum = 0;
+        var intermediate = calculateChecksumIntermediate(0, array, limit);
+        return calculateChecksumDoFinal(intermediate);
+    }
+
+    public static int calculateChecksumIntermediate(int sum, ByteArray array, int limit) {
         for (int i = 0; i < limit / 2; ++i) {
             sum += array.uint16(i * 2);
             while (sum > 0xffff) {
@@ -778,6 +782,10 @@ public class Utils {
                 sum = (sum & 0xffff) + 1;
             }
         }
+        return sum;
+    }
+
+    public static int calculateChecksumDoFinal(int sum) {
         return 0xffff - sum;
     }
 

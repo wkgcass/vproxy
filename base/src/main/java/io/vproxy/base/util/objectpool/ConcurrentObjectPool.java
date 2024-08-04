@@ -86,23 +86,9 @@ public class ConcurrentObjectPool<E> {
         }
 
         public boolean add(E e) {
-            return add(e, 1);
-        }
-
-        private boolean add(E e, int retry) {
-            if (retry > 10) { // max retry for 10 times
-                return false; // too many retries
-            }
-
-            StorageArray<E> read = this.read.get();
             StorageArray<E> write = this.write;
 
-            // read and write may be the same when they are swapping
-            if (read == write) {
-                // is swapping, try again
-                return add(e, retry + 1);
-            }
-
+            // adding is always safe
             //noinspection RedundantIfStatement
             if (write.add(e)) {
                 return true;
@@ -123,12 +109,7 @@ public class ConcurrentObjectPool<E> {
             StorageArray<E> read = this.read.get();
             StorageArray<E> write = this.write;
 
-            // read and write may be the same when they are swapping
-            if (read == write) {
-                // is swapping, try again
-                return poll(retry + 1);
-            }
-
+            // polling is always safe
             E ret = read.poll();
             if (ret != null) {
                 return ret;
@@ -138,13 +119,12 @@ public class ConcurrentObjectPool<E> {
             // check whether we can swap (whether $write is full)
 
             int writeEnd = write.end.get();
-            int writeEndIndicator = write.endIndicator.get();
             if (writeEnd < write.capacity) {
                 return null; // capacity not reached, do not swap and return nothing
                 // no retry here because the write array will not change until something written into it
             }
             // also we should check whether there are no elements being stored
-            if (writeEnd != writeEndIndicator) { // element is being stored into the array
+            if (write.storing.get() != 0) { // element is being stored into the array
                 return poll(retry + 1); // try again
             }
             // now we can know that writing operations will not happen in this partition
@@ -168,9 +148,9 @@ public class ConcurrentObjectPool<E> {
     private static class StorageArray<E> {
         private final int capacity;
         private final AtomicReferenceArray<E> array;
-        private final AtomicInteger start = new AtomicInteger(0);
-        private final AtomicInteger endIndicator = new AtomicInteger(0);
-        private final AtomicInteger end = new AtomicInteger(0);
+        private final AtomicInteger start = new AtomicInteger(-1);
+        private final AtomicInteger end = new AtomicInteger(-1);
+        private final AtomicInteger storing = new AtomicInteger(0);
 
         private StorageArray(int capacity) {
             this.capacity = capacity;
@@ -178,46 +158,51 @@ public class ConcurrentObjectPool<E> {
         }
 
         boolean add(E e) {
-            if (end.get() >= capacity || endIndicator.get() >= capacity) {
+            storing.incrementAndGet();
+
+            if (end.get() >= capacity) {
+                storing.decrementAndGet();
                 return false; // exceeds capacity
             }
-            int index = endIndicator.getAndIncrement();
-            // it could still have concurrency between the capacity check and actual $end increment or $endIndicator increment
+            int index = end.incrementAndGet();
             if (index < capacity) {
                 // storing should succeed
                 array.set(index, e);
-                // increase $end after element actually stored
-                end.getAndIncrement();
+                storing.decrementAndGet();
                 return true;
             } else {
-                // storing should fail
-                // decrease the endIndicator
-                endIndicator.getAndDecrement();
+                // storing failed
+                storing.decrementAndGet();
                 return false;
             }
         }
 
         E poll() {
-            if (start.get() >= end.get()) {
-                return null; // no elements to retrieve
+            if (start.get() + 1 >= end.get() || start.get() + 1 >= capacity) {
+                return null;
             }
-            int idx = start.getAndIncrement();
-            if (idx >= end.get()) {
+            int idx = start.incrementAndGet();
+            if (idx >= end.get() || idx >= capacity) {
                 return null; // concurrent polling
             }
             return array.get(idx);
         }
 
         int size() {
-            int n = endIndicator.get() - start.get();
-            //noinspection ManualMinMaxCalculation
-            return n < 0 ? 0 : n;
+            int start = this.start.get() + 1;
+            if (start >= capacity) {
+                return 0;
+            }
+            int cap = end.get() + 1;
+            if (cap > capacity) {
+                cap = capacity;
+            }
+            return cap - start;
         }
 
         void reset() {
-            end.set(0);
-            endIndicator.set(0);
-            start.set(0);
+            end.set(-1);
+            start.set(-1);
         }
     }
 }

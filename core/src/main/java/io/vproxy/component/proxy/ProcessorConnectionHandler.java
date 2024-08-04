@@ -96,9 +96,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             } else {
                 assert Logger.lowLevelDebug("choose to run without zero copy");
 
-                targetConnection.runNoQuickWrite(() -> {
+                targetConnection.runNoQuickWrite(c -> {
                     int n = sourceConnection.getInBuffer()
-                        .writeTo(targetConnection.getOutBuffer(), flow.currentSegment.bytesToProxy);
+                        .writeTo(c.getOutBuffer(), flow.currentSegment.bytesToProxy);
                     flow.currentSegment.bytesToProxy -= n;
                     assert Logger.lowLevelDebug("proxied " + n + " bytes, still have " + flow.currentSegment.bytesToProxy + " left");
                 });
@@ -111,8 +111,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         } else {
             assert flow.currentSegment.chnl != null;
             assert Logger.lowLevelDebug("sending bytes, flow.chnl.used = " + flow.currentSegment.chnl.used());
-            targetConnection.runNoQuickWrite(() ->
-                targetConnection.getOutBuffer().storeBytesFrom(flow.currentSegment.chnl));
+            targetConnection.runNoQuickWrite(c ->
+                c.getOutBuffer().storeBytesFrom(flow.currentSegment.chnl));
             // check whether this batch sending is done
             assert Logger.lowLevelDebug("now flow.chnl.used == " + flow.currentSegment.chnl.used());
             if (flow.currentSegment.chnl.used() == 0) {

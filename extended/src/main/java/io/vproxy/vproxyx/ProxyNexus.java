@@ -16,7 +16,7 @@ import io.vproxy.pni.Allocator;
 import io.vproxy.pni.array.IntArray;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.nexus.*;
-import io.vproxy.vproxyx.nexus.entity.ConnectInfo;
+import io.vproxy.vproxyx.nexus.entity.PeerAddressInfo;
 import io.vproxy.vproxyx.uot.FromTcpToUdp;
 import io.vproxy.vproxyx.uot.FromUdpToTcp;
 
@@ -62,7 +62,7 @@ public class ProxyNexus {
         int serverPort = 0;
         String loadPath = null;
         var existingConnectTargets = new HashSet<IPPort>();
-        var connect = new ArrayList<ConnectInfo>();
+        var connect = new ArrayList<PeerAddressInfo>();
         var certificatePath = "";
         var privateKeyPath = "";
         var cacertPath = "";
@@ -103,22 +103,22 @@ public class ProxyNexus {
                     int uotPort = 0;
                     if (s.startsWith("uot:")) {
                         s = s.substring("uot:".length());
-                    }
-                    if (s.contains(":")) {
-                        var uotPortStr = s.substring(s.indexOf(":"));
-                        if (!Utils.isPortInteger(uotPortStr)) {
-                            throw new IllegalArgumentException(uotPortStr + " is not a valid port");
+                        if (s.contains(":")) {
+                            var uotPortStr = s.substring(0, s.indexOf(":"));
+                            if (!Utils.isPortInteger(uotPortStr)) {
+                                throw new IllegalArgumentException(uotPortStr + " is not a valid port");
+                            }
+                            uotPort = Integer.parseInt(uotPortStr);
+                            s = s.substring(s.indexOf(":") + 1);
+                        } else {
+                            throw new IllegalArgumentException("uot listening port must be specified by `uot:<port>:<...>`");
                         }
-                        uotPort = Integer.parseInt(uotPortStr);
-                        s = s.substring(s.indexOf(":") + 1);
-                    } else {
-                        throw new IllegalArgumentException("uot listening port must be specified by `uot:<port>:<...>`");
                     }
                     if (!IPPort.validL4AddrStr(s)) {
                         throw new IllegalArgumentException(s + " is not valid ipport in `connect`");
                     }
                     var ipport = new IPPort(s);
-                    var info = new ConnectInfo(ipport, uotPort);
+                    var info = new PeerAddressInfo(ipport, uotPort);
                     if (existingConnectTargets.contains(ipport)) {
                         throw new IllegalArgumentException(s + " is already specified in `connect`");
                     }
@@ -244,10 +244,9 @@ public class ProxyNexus {
                 new FromUdpToTcp(loop, uotIPPort, ipport).start();
                 Logger.alert("uot udp->tcp server listens on " + uotIPPort.formatToIPPortString() +
                              ", will redirect traffic to " + ipport.formatToIPPortString());
-                ipport = uotIPPort;
             }
 
-            var peer = NexusPeer.create(nctx, ipport);
+            var peer = NexusPeer.create(nctx, target);
             peer.start();
         }
 

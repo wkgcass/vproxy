@@ -29,6 +29,10 @@ public interface RingBuffer {
         }
     }
 
+    default int storeBytesFrom(ByteArray array) {
+        return storeBytesFrom(array.toFullChannel());
+    }
+
     int storeBytesFrom(ReadableByteStream channel) throws IOException;
 
     default int storeBytesFrom(ByteBuffer buf) {
@@ -48,6 +52,10 @@ public interface RingBuffer {
             // it's memory operation, should not raise error
             throw new RuntimeException(e);
         }
+    }
+
+    default int writeTo(ByteArray array) {
+        return writeTo(array.toEmptyChannel());
     }
 
     default int writeTo(WritableByteStream channel) throws IOException {

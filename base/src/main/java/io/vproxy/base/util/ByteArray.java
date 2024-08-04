@@ -40,9 +40,8 @@ public interface ByteArray extends ToByteArray {
         if (buf.hasArray()) {
             return from(buf.array()).sub(buf.position(), len);
         } else {
-            byte[] array = Utils.allocateByteArray(len);
-            buf.get(array);
-            return from(array);
+            var seg = MemorySegment.ofBuffer(buf);
+            return new MemorySegmentByteArray(seg);
         }
     }
 
@@ -130,6 +129,10 @@ public interface ByteArray extends ToByteArray {
 
     default ByteArrayChannel toFullChannel() {
         return ByteArrayChannel.fromFull(this);
+    }
+
+    default ByteArrayChannel toEmptyChannel() {
+        return ByteArrayChannel.fromEmpty(this);
     }
 
     default int uint24(int offset) {

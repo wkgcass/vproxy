@@ -6,17 +6,20 @@ import io.vproxy.base.selector.HandlerContext;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
-import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FromTcpToUdp {
     private final NetEventLoop loop;
     private final IPPort fromIPPort;
     private final IPPort toIPPort;
     private final ServerSock serverSock;
+    private final Map<Long, UDPHandler> connIdToDatagramFD = new HashMap<>();
 
     public FromTcpToUdp(NetEventLoop loop, IPPort fromIPPort, IPPort toIPPort) throws IOException {
         this.loop = loop;
@@ -38,45 +41,13 @@ public class FromTcpToUdp {
 
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
-            DatagramFD udp = null;
-            try {
-                udp = FDProvider.get().getProvided().openDatagramFD();
-                udp.connect(toIPPort);
-            } catch (IOException e) {
-                Logger.error(LogType.SOCKET_ERROR, "failed to open udp sock to " + toIPPort, e);
-                if (udp != null) {
-                    try {
-                        udp.close();
-                    } catch (IOException ignore) {
-                    }
-                }
-                connection.close();
-                return;
-            }
-            try {
-                loop.getSelectorEventLoop().add(udp, EventSet.read(), null, new UDPHandler(connection));
-            } catch (IOException e) {
-                Logger.error(LogType.SYS_ERROR, "failed to add udp sock to event loop", e);
-                connection.close();
-                try {
-                    udp.close();
-                } catch (IOException ignore) {
-                }
-                return;
-            }
             connection.setTimeout(60 * 1000);
             try {
-                loop.addConnection(connection, null, new TCPHandler(udp));
+                loop.addConnection(connection, null, new TCPHandler());
             } catch (IOException e) {
                 Logger.error(LogType.SYS_ERROR, "failed to add connection to event loop", e);
                 connection.close();
-                try {
-                    udp.close();
-                } catch (IOException ignore) {
-                }
-                return;
             }
-            Logger.access("received connection from " + connection.remote);
         }
 
         @Override
@@ -92,12 +63,16 @@ public class FromTcpToUdp {
     }
 
     private class UDPHandler implements Handler<DatagramFD> {
-        private final Connection conn;
-        private final ByteBufferEx _buf = DirectMemoryUtils.allocateDirectBuffer(65536);
+        final DatagramFD udp;
+        private final long connId;
+        private final ConnectionPair pair = new ConnectionPair();
+        private ByteBufferEx _buf = DirectMemoryUtils.allocateDirectBuffer(65536);
         private final ByteBuffer buf = _buf.realBuffer();
 
-        private UDPHandler(Connection connection) {
-            this.conn = connection;
+        private UDPHandler(DatagramFD udp, long connId, Connection initialConnection) {
+            this.udp = udp;
+            this.connId = connId;
+            this.pair.small = initialConnection;
         }
 
         @Override
@@ -112,11 +87,6 @@ public class FromTcpToUdp {
 
         @Override
         public void readable(HandlerContext<DatagramFD> ctx) {
-            if (conn.isClosed()) {
-                loop.getSelectorEventLoop().remove(ctx.getChannel());
-                return;
-            }
-
             buf.limit(buf.capacity()).position(0);
             int len;
             try {
@@ -128,18 +98,47 @@ public class FromTcpToUdp {
             }
             buf.flip();
 
-            if (conn.getOutBuffer().free() < TLVConsts.TL_LEN + len) {
-                Logger.warn(LogType.ALERT, "tcp buffer free size is " + conn.getOutBuffer().free() +
-                                           ", while receiving udp packet with length " + len + " from " + toIPPort.formatToIPPortString());
+            if (pair.small == null && pair.large == null) {
+                assert Logger.lowLevelDebug("both small and large connections are null");
                 return;
             }
 
-            var tl = ByteArray.allocate(TLVConsts.TL_LEN);
-            tl.set(0, (byte) TLVConsts.TYPE_PACKET);
-            tl.int16(1, len);
-            var chnl = ByteArrayChannel.fromFull(tl);
+            String connRef;
+            Connection conn;
+            if (len >= UOTUtils.LARGE_PACKET_LIMIT) {
+                conn = pair.large;
+                connRef = "large";
+            } else if (len < UOTUtils.SMALL_PACKET_LIMIT) {
+                conn = pair.small;
+                connRef = "small";
+            } else if (pair.small == null) {
+                conn = pair.large;
+                connRef = "large";
+            } else if (pair.large == null) {
+                conn = pair.small;
+                connRef = "small";
+            } else if (pair.large.getOutBuffer().free() > pair.small.getOutBuffer().free()) {
+                conn = pair.large;
+                connRef = "large";
+            } else {
+                conn = pair.small;
+                connRef = "small";
+            }
 
-            conn.getOutBuffer().storeBytesFrom(chnl);
+            if (conn == null) {
+                Logger.warn(LogType.INVALID_STATE, "required connection for " + connRef + " packet is not established yet, udp: " +
+                                                   getLocalAddress() + " -> " + getRemoteAddress());
+                return;
+            }
+
+            if (conn.getOutBuffer().free() < UOTUtils.HEADER_LEN + len) {
+                assert Logger.lowLevelDebug("tcp buffer free size is " + conn.getOutBuffer().free() +
+                                            ", while receiving udp packet with length " + len + " from " + toIPPort.formatToIPPortString());
+                return;
+            }
+
+            var tl = UOTUtils.buildHeader(UOTUtils.TYPE_PACKET, len);
+            conn.runNoQuickWrite(c -> c.getOutBuffer().storeBytesFrom(tl));
             conn.getOutBuffer().storeBytesFrom(buf);
         }
 
@@ -154,29 +153,73 @@ public class FromTcpToUdp {
                 ctx.getChannel().close();
             } catch (IOException ignore) {
             }
-            _buf.clean();
-            conn.close();
+            if (_buf != null) {
+                _buf.clean();
+                _buf = null;
+            }
+            if (pair.small != null) {
+                pair.small.close();
+                pair.small = null;
+            }
+            if (pair.large != null) {
+                pair.large.close();
+                pair.large = null;
+            }
+            connIdToDatagramFD.remove(connId);
+        }
+
+        private IPPort localAddress;
+
+        public String getLocalAddress() {
+            if (localAddress != null) {
+                return localAddress.formatToIPPortString();
+            }
+            try {
+                localAddress = udp.getLocalAddress();
+            } catch (IOException e) {
+                return null;
+            }
+            return localAddress.formatToIPPortString();
+        }
+
+        private IPPort remoteAddress;
+
+        public String getRemoteAddress() {
+            if (remoteAddress != null) {
+                return remoteAddress.formatToIPPortString();
+            }
+            try {
+                remoteAddress = udp.getRemoteAddress();
+            } catch (IOException e) {
+                return null;
+            }
+            return remoteAddress.formatToIPPortString();
         }
     }
 
     private class TCPHandler implements ConnectableConnectionHandler {
-        final DatagramFD udp;
-        private final TLVParser parser = new TLVParser();
+        UDPHandler udp;
+        private final UOTHeaderParser parser = new UOTHeaderParser();
 
-        private TCPHandler(DatagramFD udp) {
-            this.udp = udp;
+        private TCPHandler() {
         }
 
         @Override
         public void connected(ConnectableConnectionHandlerContext ctx) {
-            if (!udp.isOpen()) {
+            if (!udp.udp.isOpen()) {
                 closed(ctx);
             }
         }
 
         @Override
         public void readable(ConnectionHandlerContext ctx) {
-            if (!udp.isOpen()) {
+            while (ctx.connection.getInBuffer().used() > 0) {
+                doReadable(ctx);
+            }
+        }
+
+        private void doReadable(ConnectionHandlerContext ctx) {
+            if (udp != null && !udp.udp.isOpen()) {
                 closed(ctx);
                 return;
             }
@@ -185,22 +228,93 @@ public class FromTcpToUdp {
                 return;
             }
 
-            if (parser.type != TLVConsts.TYPE_PACKET) {
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "unknown type " + parser.type);
+            if (parser.type == UOTUtils.TYPE_CONN_ID) {
+                if (udp != null) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA,
+                        "received CONN_ID message from " + ctx.connection.remote + ", but the message is already received");
+                    return;
+                }
+                if (parser.len != 8) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA,
+                        "received CONN_ID message from " + ctx.connection.remote + ", but message len is not 8");
+                    return;
+                }
+                var connId = parser.buf.getLong();
+                initUDPSock(connId, ctx.connection);
+                return;
+            }
+            if (parser.type != UOTUtils.TYPE_PACKET) {
+                parser.logInvalidExternalData("unknown type " + parser.type);
+                return;
+            }
+            if (udp == null) {
+                Logger.warn(LogType.INVALID_STATE,
+                    "received PACKET message from " + ctx.connection.remote + ", but udp sock is not initialized yet");
                 return;
             }
 
-            parser.buf.position(0);
             try {
-                udp.write(parser.buf);
+                udp.udp.write(parser.buf);
             } catch (IOException e) {
                 Logger.error(LogType.SOCKET_ERROR, "failed to send udp packet to " + toIPPort, e);
             }
         }
 
+        private void initUDPSock(long connId, Connection connection) {
+            var udpHandler = connIdToDatagramFD.get(connId);
+            if (udpHandler != null) {
+                udp = udpHandler;
+                if (udpHandler.pair.small == null) {
+                    udpHandler.pair.small = connection;
+                    Logger.access("received connection for small packet: " + connection +
+                                  " -> " + udp.getLocalAddress() + " -> " + udp.getRemoteAddress());
+                } else if (udpHandler.pair.large == null) {
+                    udpHandler.pair.large = connection;
+                    Logger.access("received connection for large packet: " + connection +
+                                  " -> " + udp.getLocalAddress() + " -> " + udp.getRemoteAddress());
+                } else {
+                    Logger.access("received orphan connection: " + connection +
+                                  " -> " + udp.getLocalAddress() + " -> " + udp.getRemoteAddress());
+                }
+                return;
+            }
+            DatagramFD udp = null;
+            try {
+                udp = FDProvider.get().getProvided().openDatagramFD();
+                udp.configureBlocking(false);
+                udp.connect(toIPPort);
+            } catch (IOException e) {
+                Logger.error(LogType.SOCKET_ERROR, "failed to open udp sock to " + toIPPort, e);
+                if (udp != null) {
+                    try {
+                        udp.close();
+                    } catch (IOException ignore) {
+                    }
+                }
+                connection.close();
+                return;
+            }
+            udpHandler = new UDPHandler(udp, connId, connection);
+            try {
+                loop.getSelectorEventLoop().add(udp, EventSet.read(), null, udpHandler);
+            } catch (IOException e) {
+                Logger.error(LogType.SYS_ERROR, "failed to add udp sock to event loop", e);
+                connection.close();
+                try {
+                    udp.close();
+                } catch (IOException ignore) {
+                }
+                return;
+            }
+            this.udp = udpHandler;
+            Logger.access("received connection for small packet from " + connection.remote +
+                          " -> " + udpHandler.getLocalAddress() + " -> " + udpHandler.getRemoteAddress());
+            connIdToDatagramFD.put(connId, udpHandler);
+        }
+
         @Override
         public void writable(ConnectionHandlerContext ctx) {
-            if (!udp.isOpen()) {
+            if (!udp.udp.isOpen()) {
                 closed(ctx);
             }
         }
@@ -216,12 +330,31 @@ public class FromTcpToUdp {
             closed(ctx);
         }
 
+        private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
         @Override
         public void closed(ConnectionHandlerContext ctx) {
+            if (!isClosed.compareAndSet(false, true)) {
+                return;
+            }
+
             ctx.connection.close();
-            try {
-                udp.close();
-            } catch (IOException ignore) {
+            if (udp != null) {
+                if (udp.pair.small == ctx.connection) {
+                    udp.pair.small = null;
+                    Logger.warn(LogType.ACCESS, "connection for small packet is removed: " + ctx.connection +
+                                                " -> " + udp.getLocalAddress() + " -> " + udp.getRemoteAddress());
+                } else if (udp.pair.large == ctx.connection) {
+                    udp.pair.large = null;
+                    Logger.warn(LogType.ACCESS, "connection for large packet is removed: " + ctx.connection +
+                                                " -> " + udp.getLocalAddress() + " -> " + udp.getRemoteAddress());
+                } else {
+                    Logger.warn(LogType.ACCESS, "orphan connection is removed: " + ctx.connection +
+                                                " -> " + udp.getLocalAddress() + " -> " + udp.getRemoteAddress());
+                }
+                if (udp.pair.small == null && udp.pair.large == null) {
+                    loop.getSelectorEventLoop().remove(udp.udp);
+                }
             }
             parser.clean();
         }

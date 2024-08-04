@@ -13,6 +13,7 @@ import java.net.StandardSocketOptions;
 import java.nio.channels.CancelledKeyException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 public class Connection implements NetFlowRecorder {
     /**
@@ -495,10 +496,13 @@ public class Connection implements NetFlowRecorder {
         this.outBuffer = out;
     }
 
-    public void runNoQuickWrite(Runnable r) {
+    public void runNoQuickWrite(Consumer<Connection> r) {
         noQuickWrite = true;
-        r.run();
-        noQuickWrite = false;
+        try {
+            r.accept(this);
+        } finally {
+            noQuickWrite = false;
+        }
     }
 
     public static Connection wrap(SocketFD fd,

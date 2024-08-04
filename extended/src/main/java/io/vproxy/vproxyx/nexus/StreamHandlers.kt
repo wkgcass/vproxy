@@ -43,6 +43,7 @@ object StreamHandlers {
       val target: IPPort
       var nextNodeName = ""
       val req: Request?
+      var isControlStream = false
       try {
         req = httpconn.readRequest()
         if (req == null) {
@@ -52,6 +53,8 @@ object StreamHandlers {
         }
         if (req.method != "CONNECT") {
           defer { peer.terminate(fd.stream.opts.connection, "passive control stream") }
+          isControlStream = true
+          NexusUtils.setControlStreamPriority(fd.stream.streamQ)
           handleControlRequest(nctx, httpconn, req)
           handlePassiveControlStreamLoop(nctx, httpconn)
           return@launch
@@ -102,7 +105,11 @@ object StreamHandlers {
           Logger.access("proxy(" + traceId + "): client=$clientIP:$clientPort src=$srcNode next=$nextNodeName path=$pendingPath dst=$dstNode target=${target.formatToIPPortString()}")
         }
       } catch (e: Exception) {
-        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "failed to handle passive stream from ${peer.remoteAddress}", e)
+        if (isControlStream) {
+          Logger.warn(LogType.INVALID_EXTERNAL_DATA, "failed to handle passive control stream from ${peer.remoteAddress}", e)
+        } else {
+          Logger.warn(LogType.INVALID_EXTERNAL_DATA, "failed to handle passive stream from ${peer.remoteAddress}", e)
+        }
         conn.close()
         return@launch
       }
@@ -150,7 +157,7 @@ object StreamHandlers {
 
         val nextFD = QuicSocketFD.newStream(nctx.debug, quicConn)
         nextConn = ConnectableConnection.wrap(
-          nextFD, nextNode.peer.remoteAddress, ConnectionOpts().setTimeout(NexusContext.GENERAL_TIMEOUT),
+          nextFD, nextNode.peer.remoteAddress.target(), ConnectionOpts().setTimeout(NexusContext.GENERAL_TIMEOUT),
           RingBuffer.allocateDirect(4096), RingBuffer.allocateDirect(4096)
         )
         nextCosock = CoroutineConnection(nctx.loop, nextConn)
@@ -252,10 +259,12 @@ object StreamHandlers {
   }
 
   fun handleActiveControlStream(nctx: NexusContext, peer: NexusPeer, fd: QuicSocketFD, sendEstablishMsg: Boolean) {
+    NexusUtils.setControlStreamPriority(fd.stream.streamQ)
+
     val conn: ConnectableConnection
     try {
       conn = ConnectableConnection.wrap(
-        fd, peer.remoteAddress, ConnectionOpts().setTimeout(NexusContext.CONTROL_STREAM_TIMEOUT),
+        fd, peer.remoteAddress.target(), ConnectionOpts().setTimeout(NexusContext.CONTROL_STREAM_TIMEOUT),
         RingBuffer.allocateDirect(4096), RingBuffer.allocateDirect(4096)
       )
     } catch (e: IOException) {

@@ -1,5 +1,11 @@
 package io.vproxy.vproxyx.nexus;
 
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.msquic.QuicStream;
+import io.vproxy.pni.Allocator;
+import io.vproxy.pni.array.ShortArray;
+
 public class NexusUtils {
     private NexusUtils() {
     }
@@ -18,5 +24,17 @@ public class NexusUtils {
             return true;
         }
         return false;
+    }
+
+    public static void setControlStreamPriority(QuicStream stream) {
+        try (var allocator = Allocator.ofConfined()) {
+            short priority = (short) 0xffff;
+            var n = new ShortArray(allocator, 1);
+            n.set(0, priority);
+            int err = stream.setParam(0x08000003, 2, n.MEMORY);
+            if (err != 0) {
+                Logger.warn(LogType.SYS_ERROR, "setting priority to " + (priority & 0xffff) + " failed with errcode=" + err);
+            }
+        }
     }
 }

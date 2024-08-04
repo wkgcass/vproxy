@@ -13,13 +13,14 @@ import io.vproxy.msquic.wrap.Listener;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.array.IntArray;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vproxyx.nexus.entity.PeerAddressInfo;
 import io.vproxy.vproxyx.nexus.entity.LinkReq;
 
 import java.io.IOException;
 
 public class NexusPeer {
     public final NexusContext nctx;
-    public final IPPort remoteAddress;
+    public final PeerAddressInfo remoteAddress;
     private boolean isServer = false;
 
     private volatile boolean isInitialized = false; // controls whether quicConn is returned
@@ -29,18 +30,18 @@ public class NexusPeer {
 
     private final RingQueue<LinkReq> linkUpdateEvents = new RingQueue<>();
 
-    private NexusPeer(NexusContext nctx, IPPort remoteAddress) {
+    private NexusPeer(NexusContext nctx, PeerAddressInfo remoteAddress) {
         this.nctx = nctx;
         this.remoteAddress = remoteAddress;
     }
 
-    public static NexusPeer create(NexusContext nctx, IPPort connectTo) {
+    public static NexusPeer create(NexusContext nctx, PeerAddressInfo connectTo) {
         return new NexusPeer(nctx, connectTo);
     }
 
     public static int createAccepted(NexusContext nctx, IPPort remote,
                                      QuicConnection connQ, Listener listener, QuicListenerEventNewConnection data, Allocator allocator) {
-        var peer = new NexusPeer(nctx, remote);
+        var peer = new NexusPeer(nctx, new PeerAddressInfo(remote, 0));
         peer.isServer = true;
         ConnectionCallback cb = peer.new NexusNodeConnectionCallback();
         if (nctx.debug) {
@@ -101,14 +102,14 @@ public class NexusPeer {
         if (nctx.debug) {
             conn.enableTlsSecretDebug();
         }
-        int errcode = conn.start(nctx.clientConfiguration, remoteAddress);
+        int errcode = conn.start(nctx.clientConfiguration, remoteAddress.target());
         if (errcode != 0) {
             Logger.error(LogType.CONN_ERROR, "starting quic connection to " + remoteAddress + " failed, errcode=" + errcode);
             conn.close();
             return;
         }
         quicConn = conn;
-        Logger.warn(LogType.ALERT, "trying to connect to " + remoteAddress.formatToIPPortString() + " ...");
+        Logger.warn(LogType.ALERT, "trying to connect to " + remoteAddress + " ...");
     }
 
     public void linkUpdateEvent(LinkReq req) {
@@ -147,9 +148,9 @@ public class NexusPeer {
         }
         if (quicConn != null) {
             if (quicConn.isConnected()) {
-                Logger.warn(LogType.ALERT, "quic connection " + remoteAddress.formatToIPPortString() + " terminated: " + reason);
+                Logger.warn(LogType.ALERT, "quic connection " + remoteAddress + " terminated: " + reason);
             } else {
-                Logger.warn(LogType.ALERT, "quic connection " + remoteAddress.formatToIPPortString() + " terminated before connected");
+                Logger.warn(LogType.ALERT, "quic connection " + remoteAddress + " terminated before connected");
             }
             quicConn.close();
         }
@@ -180,7 +181,7 @@ public class NexusPeer {
         nctx.nexus.addNode(self, node, Integer.MAX_VALUE);
 
         isInitialized = true;
-        Logger.alert("connection " + remoteAddress.formatToIPPortString() + " is initialized");
+        Logger.alert("connection " + remoteAddress + " is initialized");
 
         if (isServer) {
             initializeServerActiveControlStream();
@@ -207,10 +208,10 @@ public class NexusPeer {
         @Override
         public int connected(Connection conn, QuicConnectionEventConnected data) {
             if (isServer) {
-                Logger.alert("connection from " + remoteAddress.formatToIPPortString() + " established");
+                Logger.alert("connection from " + remoteAddress + " established");
                 return 0;
             }
-            Logger.alert("connected to " + remoteAddress.formatToIPPortString());
+            Logger.alert("connected to " + remoteAddress);
             nctx.loop.getSelectorEventLoop().nextTick(() -> {
                 QuicSocketFD fd;
                 try {
