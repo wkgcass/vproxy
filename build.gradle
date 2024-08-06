@@ -513,7 +513,7 @@ project(':test') {
             }
             def testCase = c
             def m = System.getProperty("method")
-            if (m != null) {
+            if (m != null && !m.isEmpty()) {
                 testCase += '.' + m
             }
 

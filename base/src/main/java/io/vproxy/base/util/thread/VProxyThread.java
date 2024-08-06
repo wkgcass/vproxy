@@ -12,6 +12,7 @@ import vjson.parser.StringParser;
 import vjson.util.StringDictionary;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
 public interface VProxyThread {
@@ -51,7 +52,14 @@ public interface VProxyThread {
         thread().interrupt();
     }
 
+    default void join() throws InterruptedException {
+        thread().join();
+    }
+
     class VProxyThreadVariable {
+        private static final AtomicLong threadIdGenerator = new AtomicLong();
+
+        public final long threadId = threadIdGenerator.getAndIncrement();
         public SelectorEventLoop loop;
 
         public ArrayParser threadLocalArrayParser;

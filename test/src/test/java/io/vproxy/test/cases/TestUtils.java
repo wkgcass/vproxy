@@ -5,8 +5,10 @@ import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bytearray.RandomAccessFileByteArray;
 import io.vproxy.base.util.file.MappedByteBufferLogger;
 import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
 import io.vproxy.base.util.ringbuffer.SimpleRingBufferReaderCommitter;
+import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.commons.util.IOUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -20,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -491,6 +494,127 @@ public class TestUtils {
             arr.byteBufferGet(buf, 0, 11);
             str = Files.readString(p);
             assertEquals("abcdefghijk", str);
+        }
+    }
+
+    @Test
+    public void concurrentObjectPoolPoll() {
+        var pool = new ConcurrentObjectPool<Integer>(65536, 16, 0);
+        for (int i = 0; i < 65536; ++i) {
+            assertTrue("add(" + i + ")", pool.add(i));
+        }
+        // pool is full, adding should fail now
+        for (int i = 0; i < 10; ++i) {
+            assertFalse(pool.add(1234));
+        }
+        var results = new ArrayList<Integer>();
+        var pollCount = new ArrayList<Integer>();
+        var threads = new ArrayList<Thread>();
+        for (int i = 0; i < 16; ++i) {
+            threads.add(new Thread(() -> testConcurrentObjectPoolPoll(pool, results, pollCount)));
+        }
+        for (var t : threads) {
+            t.start();
+        }
+        for (var t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException ignore) {
+            }
+        }
+        assertEquals(65536, results.size());
+        assertEquals(65536, new HashSet<>(results).size());
+        results.sort(Integer::compareTo);
+        assertEquals(0, results.getFirst().intValue());
+        assertEquals(65535, results.getLast().intValue());
+        int sum = 0;
+        for (var n : pollCount) {
+            sum += n;
+        }
+        assertEquals(65536, sum);
+        for (int i = 0; i < 65536; ++i) {
+            assertTrue("check:add(" + i + ")", pool.add(i));
+        }
+    }
+
+    private void testConcurrentObjectPoolPoll(ConcurrentObjectPool<Integer> pool, List<Integer> results, List<Integer> pollCount) {
+        var resultsOfThisThread = new ArrayList<Integer>();
+        while (true) {
+            var e = pool.poll();
+            if (e == null) {
+                break;
+            }
+            resultsOfThisThread.add(e);
+            Thread.yield();
+        }
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (results) {
+            results.addAll(resultsOfThisThread);
+        }
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (pollCount) {
+            pollCount.add(resultsOfThisThread.size());
+        }
+    }
+
+    @Test
+    public void concurrentObjectPoolAdd() {
+        var pool = new ConcurrentObjectPool<Integer>(65536, 4, 0);
+
+        var added = new ArrayList<Integer>();
+        var addCount = new ArrayList<Integer>();
+        var threads = new ArrayList<VProxyThread>();
+        for (int i = 0; i < 64; ++i) {
+            threads.add(VProxyThread.create(() -> testConcurrentObjectPoolAdd(pool, added, addCount), "add:" + i));
+        }
+        for (var t : threads) {
+            t.start();
+        }
+        for (var t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException ignore) {
+            }
+        }
+        assertEquals(65536, added.size());
+        added.sort(Integer::compareTo);
+        var results = new ArrayList<Integer>();
+        for (int i = 0; i < 65536; ++i) {
+            var e = pool.poll();
+            assertNotNull("check:poll():" + i, e);
+            results.add(e);
+        }
+        // the pool is empty so nothing would be polled
+        for (int i = 0; i < 10; ++i) {
+            assertNull(pool.poll());
+        }
+        results.sort(Integer::compareTo);
+        assertEquals(added, results);
+
+        int cnt = 0;
+        for (var n : addCount) {
+            cnt += n;
+        }
+        assertEquals(65536, cnt);
+    }
+
+    private void testConcurrentObjectPoolAdd(ConcurrentObjectPool<Integer> pool, List<Integer> added, List<Integer> addCount) {
+        var addedOfThisThread = new ArrayList<Integer>();
+        while (true) {
+            var e = ThreadLocalRandom.current().nextInt();
+            if (!pool.add(e)) {
+                break;
+            }
+            addedOfThisThread.add(e);
+            Thread.yield();
+        }
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (added) {
+            added.addAll(addedOfThisThread);
+        }
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (addCount) {
+            addCount.add(addedOfThisThread.size());
         }
     }
 }

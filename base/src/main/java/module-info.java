@@ -66,6 +66,7 @@ module io.vproxy.base {
     exports io.vproxy.base.util.functional;
     exports io.vproxy.base.util.io;
     exports io.vproxy.base.util.kt;
+    exports io.vproxy.base.util.lock;
     exports io.vproxy.base.util.log;
     exports io.vproxy.base.util.misc;
     exports io.vproxy.base.util.net;
