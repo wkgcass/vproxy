@@ -437,7 +437,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         try {
             // when init, there should have not read any data yet
             // so we should safely replace the buffers
-            ctx.connection.UNSAFE_replaceBuffer(pair.left, pair.right, true);
+            ctx.connection.replaceBuffer(pair.left, pair.right, false, false);
         } catch (IOException e) {
             Logger.shouldNotHappen("got error when switching buffers", e);
             // raise error to let others handle the error

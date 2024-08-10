@@ -186,7 +186,7 @@ object StreamHandlers {
       conn.setTimeout(NexusContext.GENERAL_TIMEOUT)
       target.setTimeout(NexusContext.GENERAL_TIMEOUT)
 
-      target.UNSAFE_replaceBuffer(conn.outBuffer, conn.inBuffer, true)
+      target.replaceBuffer(conn.outBuffer, conn.inBuffer, true, true)
 
       val session = Session(conn, target)
       nctx.loop.addConnection(conn, null, Proxy.SessionConnectionHandler(session))

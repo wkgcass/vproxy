@@ -64,6 +64,10 @@ public interface RingBuffer {
 
     int writeTo(WritableByteStream channel, int maxBytesToWrite) throws IOException;
 
+    default int writeTo(RingBuffer buffer) {
+        return writeTo(buffer, Integer.MAX_VALUE);
+    }
+
     default int writeTo(RingBuffer buffer, int maxBytesToWrite) {
         // NOTE: the default implementation of this method is general but with low efficiency
         // ByteBufferRingBuffer has a fast implementation

@@ -118,7 +118,7 @@ public class SSLHelper {
         }
         SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, RingBuffer.allocate(24576), RingBuffer.allocate(24576), accepted.channel);
         try {
-            accepted.UNSAFE_replaceBuffer(pair.left, pair.right, false);
+            accepted.replaceBuffer(pair.left, pair.right, false, false);
         } catch (IOException e) {
             Logger.shouldNotHappen("replaceBuffers when they are empty, should not throw exception");
             throw new RuntimeException(e);

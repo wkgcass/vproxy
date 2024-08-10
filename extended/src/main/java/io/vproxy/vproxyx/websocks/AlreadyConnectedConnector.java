@@ -22,27 +22,46 @@ public class AlreadyConnectedConnector extends Connector {
 
     @Override
     public ConnectableConnection connect(Connection accepted, ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
-        RingBuffer oldI = conn.getInBuffer();
-        RingBuffer oldO = conn.getOutBuffer();
+        var connI = conn.getInBuffer();
+        var connO = conn.getOutBuffer();
 
-        if (oldI.used() == 0 && oldO.used() == 0) {
-            conn.UNSAFE_replaceBuffer(in, out, true);
-        } else if (accepted.getInBuffer().used() == 0 && accepted.getOutBuffer().used() == 0) {
-            // may try to replace the accepted connection buffers
-            accepted.UNSAFE_replaceBuffer(oldO, oldI, false);
-            if (!RingBuffer.haveRelationBetween(accepted.getInBuffer(), out)) {
-                out.clean();
-            }
-            if (!RingBuffer.haveRelationBetween(accepted.getOutBuffer(), in)) {
-                in.clean();
-            }
+        if (connI.used() == 0 && connO.used() == 0) {
+            replaceConnBuffers(in, out);
+        } else if (accepted != null && accepted.getInBuffer().used() == 0 && accepted.getOutBuffer().used() == 0) {
+            replaceAcceptedBuffers(accepted, connO, connI, in, out);
+        } else if (connO.used() == 0 && connI.used() <= in.free()) {
+            replaceConnBuffers(in, out);
+        } else if (accepted != null && accepted.getOutBuffer().used() == 0 && accepted.getInBuffer().used() <= connO.free()) {
+            replaceAcceptedBuffers(accepted, connO, connI, in, out);
         } else {
-            throw new IOException("cannot replace buffers because they are not empty");
+            // just try and let it throw an exception (or maybe it can handle the situation)
+            replaceConnBuffers(in, out);
         }
 
         return conn;
 
         // NOTE: the opts is ignored in this impl
+    }
+
+    private void replaceConnBuffers(RingBuffer in, RingBuffer out) throws IOException {
+        conn.replaceBuffer(in, out, true, true);
+    }
+
+    private void replaceAcceptedBuffers(Connection accepted,
+                                        RingBuffer connO, RingBuffer connI,
+                                        RingBuffer in, RingBuffer out) throws IOException {
+        var oldI = accepted.getInBuffer();
+        var oldO = accepted.getOutBuffer();
+
+        accepted.replaceBuffer(connO, connI, true, true);
+
+        // just in case the in/out buffers are not related to the accepted connection
+        if (oldI != out && oldO != out && !RingBuffer.haveRelationBetween(accepted.getInBuffer(), out)) {
+            out.clean();
+        }
+        if (oldI != in && oldO != in && !RingBuffer.haveRelationBetween(accepted.getOutBuffer(), in)) {
+            in.clean();
+        }
     }
 
     @Override

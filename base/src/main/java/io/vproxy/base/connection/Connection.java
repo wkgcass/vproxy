@@ -451,11 +451,24 @@ public class Connection implements NetFlowRecorder {
 
     // UNSAFE
 
-    public void UNSAFE_replaceBuffer(RingBuffer in, RingBuffer out, boolean cleanBuffersIfNecessary) throws IOException {
+    public void replaceBuffer(RingBuffer in, RingBuffer out,
+                              boolean flushInBuffer, boolean cleanBuffersIfNecessary) throws IOException {
         assert Logger.lowLevelDebug("UNSAFE_replaceBuffer()");
         // we should make sure that the buffers are empty
-        if (getInBuffer().used() != 0 || getOutBuffer().used() != 0) {
-            throw new IOException("cannot replace buffers when they are not empty");
+        if (getOutBuffer().used() != 0) {
+            throw new IOException("out buffer is not empty");
+        }
+        if (!flushInBuffer && getInBuffer().used() != 0) {
+            throw new IOException("in buffer is not empty");
+        }
+        if (flushInBuffer && getInBuffer().used() != 0) {
+            if (getInBuffer().used() > in.free()) {
+                throw new IOException("in buffer (" + getInBuffer().used() + ") cannot be flushed to new in buffer (" + in.free() + ")");
+            }
+            getInBuffer().writeTo(in);
+            if (getInBuffer().used() != 0) {
+                throw new IOException("in buffer is not empty after flushing to new in buffer");
+            }
         }
         try {
             in = inBuffer.switchBuffer(in);
