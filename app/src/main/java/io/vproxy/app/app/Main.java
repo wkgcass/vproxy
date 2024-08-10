@@ -2,7 +2,6 @@ package io.vproxy.app.app;
 
 import io.vproxy.app.controller.StdIOController;
 import io.vproxy.app.process.Shutdown;
-import io.vproxy.app.vproxyx.Daemon;
 import io.vproxy.app.vproxyx.DockerNetworkPluginControllerInit;
 import io.vproxy.app.vproxyx.GenerateCommandDoc;
 import io.vproxy.app.vproxyx.Simple;
@@ -110,10 +109,6 @@ public class Main {
                 case "simple":
                     Application.create();
                     Simple.main0(args);
-                    break;
-                case "Daemon":
-                case "daemon":
-                    Daemon.main0(args);
                     break;
                 case "HelloWorld":
                 case "helloworld":

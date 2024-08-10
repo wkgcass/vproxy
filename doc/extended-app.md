@@ -42,14 +42,6 @@ The vproxy simple loadbalancer. You can start a fully functional loadbalancer in
 
 See [how-to-use](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md) for more info.
 
-### Deploy=Daemon
-
-It's a daemon process specially designed for `Systemd`, used to launch, reload or auto-recover vproxy processes.
-
-#### Start arguments
-
-All accepted startup args are used to launch the vproxy subprocess.
-
 ### Deploy=WebSocksProxyServer
 
 A proxy server that can proxy raw tcp flow even when it's behind a websocket gateway.
