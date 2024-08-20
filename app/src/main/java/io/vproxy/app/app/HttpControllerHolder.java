@@ -19,10 +19,12 @@ public class HttpControllerHolder {
     }
 
     public HttpController add(String alias,
-                              IPPort address) throws AlreadyExistException, IOException {
+                              IPPort address,
+                              Boolean cors,
+                              String secret) throws AlreadyExistException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("http-controller", alias);
-        HttpController rc = new HttpController(alias, address);
+        HttpController rc = new HttpController(alias, address, cors, secret);
         map.put(alias, rc);
         return rc;
     }

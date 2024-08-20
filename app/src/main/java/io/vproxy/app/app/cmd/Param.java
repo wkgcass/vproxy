@@ -65,6 +65,11 @@ public enum Param {
     url("url"),
     cls("class"),
     args("arguments"),
+
+    /* http-controller */
+    cors("cors"),
+    secret("secret"),
+    /* http-controller */
     ;
     public final String fullname;
 

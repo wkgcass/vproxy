@@ -20,7 +20,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Suppress("DuplicatedCode")
-class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
+class HttpController(val alias: String,
+                     val address: io.vproxy.vfd.IPPort,
+                     val cors: Boolean,
+                     val secret: String?) {
   private val server: CoroutineHttp1Server
   private val classpathResourceHolder = io.vproxy.base.util.web.ClasspathResourceHolder("io/vproxy/app/controller/webroot")
 
@@ -33,6 +36,26 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
     val loop = io.vproxy.app.app.Application.get().controlEventLoop
     server = CoroutineHttp1Server(sock.coroutine(loop))
 
+    // cors
+    server.options("/*") { ctx ->
+      val origin = ctx.req.headers().get("Origin")
+      if (!cors || origin.isNullOrBlank()) {
+        ctx.conn.response(403).send()
+      } else {
+        val methods = ctx.req.headers().get("Access-Control-Request-Method")
+        val headers = ctx.req.headers().has("Access-Control-Request-Headers")
+        val rsp = ctx.conn.response(204)
+        rsp.header("Access-Control-Allow-Origin", origin)
+        if (null != methods) {
+          rsp.header("Access-Control-Allow-Methods", methods)
+        }
+        if (headers) {
+          // only Authorization header
+          rsp.header("Access-Control-Allow-Headers", "Authorization")
+        }
+        rsp.send()
+      }
+    }
     // hc
     server.get("/healthz") { ctx -> ctx.conn.response(200).send("OK") }
     // html

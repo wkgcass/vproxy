@@ -46,6 +46,14 @@ abstract class GeneralCoroutineHttpServer<CoroutineHttpServer : GeneralCoroutine
     return handle(HttpMethod.DELETE, route, handler)
   }
 
+  fun options(route: String, handler: RoutingHandlerFunc): CoroutineHttpServer {
+    return handle(HttpMethod.OPTIONS, route, handler)
+  }
+
+  fun options(route: String, handler: RoutingHandler): CoroutineHttpServer {
+    return handle(HttpMethod.OPTIONS, route, handler)
+  }
+
   fun all(route: String, handler: RoutingHandlerFunc): CoroutineHttpServer {
     return handle(HttpMethod.ALL_METHODS, SubPath.create(route), object : RoutingHandler {
       override suspend fun handle(rctx: RoutingContext) = handler(rctx)
