@@ -2,7 +2,9 @@ package io.vproxy.app.app.cmd.handle.resource;
 
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
 import io.vproxy.app.app.cmd.handle.param.AddrHandle;
+import io.vproxy.app.app.cmd.handle.param.BooleanHandle;
 import io.vproxy.app.controller.HttpController;
 import io.vproxy.vfd.IPPort;
 
@@ -15,7 +17,9 @@ public class HttpControllerHandle {
 
     public static void add(Command cmd) throws Exception {
         IPPort l4addr = AddrHandle.get(cmd);
-        Application.get().httpControllerHolder.add(cmd.resource.alias, l4addr);
+        Boolean cors = BooleanHandle.get(cmd);
+        String secret = cmd.args.get(Param.secret);
+        Application.get().httpControllerHolder.add(cmd.resource.alias, l4addr, cors, secret);
     }
 
     public static List<String> names() {
