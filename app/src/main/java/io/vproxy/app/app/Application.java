@@ -39,7 +39,6 @@ public class Application {
     public final SecurityGroupHolder securityGroupHolder;
     public final CertKeyHolder certKeyHolder;
     public final SwitchHolder switchHolder;
-    public final BPFObjectHolder bpfObjectHolder;
 
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
@@ -64,7 +63,6 @@ public class Application {
         this.dockerNetworkPluginControllerHolder = new DockerNetworkPluginControllerHolder();
         this.dnsServerHolder = new DNSServerHolder();
         this.switchHolder = new SwitchHolder();
-        this.bpfObjectHolder = new BPFObjectHolder();
         this.pluginHolder = new PluginHolder();
     }
 

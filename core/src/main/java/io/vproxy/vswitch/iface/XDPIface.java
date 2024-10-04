@@ -15,7 +15,6 @@ import io.vproxy.vpacket.AbstractPacket;
 import io.vproxy.vpxdp.ChunkInfo;
 import io.vproxy.vpxdp.XDPConsts;
 import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.xdp.*;
@@ -25,80 +24,72 @@ import java.lang.foreign.MemorySegment;
 
 public class XDPIface extends Iface {
     public final String nic;
-    public final BPFMap xskMap;
-    public final BPFMap macMap;
     public final UMem umem;
-    public final int rxRingSize;
-    public final int txRingSize;
-    public final BPFMode mode;
-    public final boolean zeroCopy;
-    public final int busyPollBudget;
-    public final boolean rxGenChecksum;
-    public final int queueId;
+    public final XDPParams params;
 
     private XDPSocket xsk;
     public final int vni;
-    public final BPFMapKeySelector keySelector;
-    public final boolean offload;
     private SelectorEventLoop loop;
 
     private final Allocator allocator;
 
-    public XDPIface(String nic, BPFMap xskMap, BPFMap macMap, UMem umem,
-                    int queue, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
-                    int busyPollBudget, boolean rxGenChecksum,
-                    int vni, BPFMapKeySelector keySelector, boolean offload) {
+    public record BPFInfo(
+        BPFObject bpfObject,
+        BPFMap xsk, BPFMap mac2port, BPFMap srcmac2count,
+        String mac2portSharedMapGroup) {
+
+        public BPFInfo(BPFObject bpfObject, BPFMap xsk) {
+            this(bpfObject, xsk, null, null, null);
+        }
+    }
+
+    public record XDPParams(int queueId, int rxRingSize, int txRingSize, BPFMode mode,
+                            boolean zeroCopy, int busyPollBudget, boolean rxGenChecksum, boolean offload,
+                            BPFInfo bpf) {
+    }
+
+    public XDPIface(String nic, int vni, UMem umem, XDPParams params) {
         // check offload
-        if (offload) {
-            if (macMap == null) {
+        if (params.offload) {
+            if (params.bpf.mac2port == null || params.bpf.srcmac2count == null) {
                 throw new IllegalArgumentException("offload is true, but macMap is not provided");
             }
         }
 
         this.nic = nic;
-        this.xskMap = xskMap;
-        this.macMap = macMap;
         this.umem = umem;
-        this.rxRingSize = rxRingSize;
-        this.txRingSize = txRingSize;
-        this.mode = mode;
-        this.zeroCopy = zeroCopy;
-        this.busyPollBudget = busyPollBudget;
-        this.rxGenChecksum = rxGenChecksum;
-        this.queueId = queue;
+        this.params = params;
 
         this.vni = vni;
-        this.keySelector = keySelector;
-        this.offload = offload;
 
         this.allocator = Allocator.ofUnsafe();
-        this.sendingChunkPointers = new PointerArray(allocator, txRingSize);
+        this.sendingChunkPointers = new PointerArray(allocator, params.txRingSize);
     }
 
     @Override
-    public void init(IfaceInitParams params) throws Exception {
-        super.init(params);
+    public void init(IfaceInitParams initParams) throws Exception {
+        super.init(initParams);
 
-        this.loop = params.loop;
+        this.loop = initParams.loop;
 
         XDPSocket xsk;
         try {
-            xsk = XDPSocket.create(nic, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum);
+            xsk = XDPSocket.create(nic, params.queueId, umem, params.rxRingSize, params.txRingSize,
+                params.mode, params.zeroCopy, params.busyPollBudget, params.rxGenChecksum);
         } catch (IOException e) {
-            Logger.error(LogType.SOCKET_ERROR, "creating xsk of " + nic + "#" + queueId + " failed", e);
+            Logger.error(LogType.SOCKET_ERROR, "creating xsk of " + nic + "#" + params.queueId + " failed", e);
             throw e;
         }
         this.xsk = xsk;
 
         try {
-            params.loop.add(xsk, EventSet.read(), null, new XDPHandler());
+            initParams.loop.add(xsk, EventSet.read(), null, new XDPHandler());
         } catch (IOException e) {
             Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add xsk into loop failed", e);
             throw e;
         }
 
-        int key = keySelector.select(xsk);
-        xskMap.put(key, xsk);
+        params.bpf.xsk.put(params.queueId, xsk);
     }
 
     private int sendingChunkSize = 0;
@@ -106,7 +97,7 @@ public class XDPIface extends Iface {
 
     @Override
     public void sendPacket(PacketBuffer pkb) {
-        if (sendingChunkSize == txRingSize) {
+        if (sendingChunkSize == params.txRingSize) {
             completeTx();
         }
 
@@ -192,23 +183,29 @@ public class XDPIface extends Iface {
         }
         super.destroy();
 
+        if (params.bpf.mac2portSharedMapGroup != null) {
+            SharedBPFMapHolder.getInstance().release(params.bpf.mac2portSharedMapGroup);
+        }
+        params.bpf.bpfObject.release(true);
+
         var xsk = this.xsk;
         if (xsk == null) {
+            allocator.close();
             return;
         }
-        try {
-            xsk.close();
-        } catch (IOException e) {
-            Logger.error(LogType.SOCKET_ERROR, "closing xsk failed", e);
-        }
+        this.xsk = null;
         loop.runOnLoop(() -> {
-            this.xsk = null;
             try {
                 loop.remove(xsk);
             } catch (Throwable ignore) {
             }
+            try {
+                xsk.close();
+            } catch (IOException e) {
+                Logger.error(LogType.SOCKET_ERROR, "closing xsk failed", e);
+            }
+            allocator.close();
         });
-        allocator.close();
     }
 
     public XDPSocket getXsk() {
@@ -251,7 +248,7 @@ public class XDPIface extends Iface {
 
     @Override
     protected String toStringExtra() {
-        return "#q=" + queueId + ",umem=" + umem.alias + ",vni:" + vni + (offload ? ",offload" : "");
+        return "#q=" + params.queueId + ",umem=" + umem.alias + ",vni:" + vni + (params.offload ? ",offload" : "");
     }
 
     private class XDPHandler implements Handler<XDPSocket> {
@@ -313,7 +310,7 @@ public class XDPIface extends Iface {
             if (xsk == null) {
                 return;
             }
-            Logger.warn(LogType.CONN_ERROR, "xdp(queue=" + queueId + ") removed from loop, it's not handled anymore, need to be closed");
+            Logger.warn(LogType.CONN_ERROR, "xdp(queue=" + params.queueId + ") removed from loop, it's not handled anymore, need to be closed");
             try {
                 xsk.close();
             } catch (IOException e) {

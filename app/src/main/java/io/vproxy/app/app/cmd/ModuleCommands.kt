@@ -912,8 +912,6 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.xskmap)
-          it + ResActParam(Param.macmap)
           it + ResActParam(Param.umem, required)
           it + ResActParam(Param.queue, required) { QueueHandle.check(it) }
           it + ResActParam(Param.rxringsize) { RingSizeHandle.check(it, Param.rxringsize) }
@@ -921,11 +919,11 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
           it + ResActParam(Param.busypoll) { BusyPollHandle.check(it) }
           it + ResActParam(Param.vni, required) { VniHandle.check(it) }
-          it + ResActParam(Param.xskmapkeyselector) { BPFMapKeySelectorHandle.check(it) }
-          it + ResActParam(Param.offload) { OffloadHandle.check(it) }
         },
         flags = {
           it + ResActFlag(Flag.zerocopy)
+          it + ResActFlag(Flag.rxgencsum)
+          it + ResActFlag(Flag.offload)
         },
         exec = execUpdate { XDPHandle.add(it) }
       )
@@ -1123,44 +1121,6 @@ class ModuleCommands private constructor() : Commands() {
         targetRelation = ResRelation(ResourceType.sw),
         // will check when executing: check = { UMemHandle.preRemoveCheck(it) },
         exec = execUpdate { UMemHandle.remove(it) }
-      )
-    }
-    it + Res(ResourceType.bpfobj) {
-      it + ResAct(
-        relation = ResourceType.bpfobj,
-        action = ActType.add,
-        params = {
-          it + ResActParam(Param.path)
-          it + ResActParam(Param.prog)
-          it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
-        },
-        flags = {
-          it + ResActFlag(Flag.force)
-        },
-        exec = execUpdate { BPFObjectHandle.add(it) }
-      )
-      it + ResAct(
-        relation = ResourceType.bpfobj,
-        action = ActType.list,
-        exec = {
-          val names = BPFObjectHandle.names()
-          CmdResult(names, names, utilJoinList(names))
-        }
-      )
-      it + ResAct(
-        relation = ResourceType.bpfobj,
-        action = ActType.listdetail,
-        exec = {
-          val objects = BPFObjectHandle.list()
-          val strLs = objects.stream().map { o -> o.toString() }.collect(Collectors.toList())
-          CmdResult(objects, strLs, utilJoinList(strLs))
-        }
-      )
-      it + ResAct(
-        relation = ResourceType.bpfobj,
-        action = ActType.remove,
-        check = { BPFObjectHandle.preRemoveCheck(it) },
-        exec = execUpdate { BPFObjectHandle.remove(it) }
       )
     }
   } // end init

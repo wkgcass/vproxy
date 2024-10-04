@@ -12,13 +12,10 @@ import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vfd.*;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
-import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import io.vproxy.vswitch.iface.XDPIface;
 import io.vproxy.vswitch.util.CSumRecalcType;
-import io.vproxy.xdp.BPFMode;
-import io.vproxy.xdp.BPFObject;
-import io.vproxy.xdp.NativeXDP;
-import io.vproxy.xdp.UMem;
+import io.vproxy.vswitch.util.SwitchUtils;
+import io.vproxy.xdp.*;
 
 import java.util.*;
 
@@ -371,23 +368,60 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
     }
 
+    private static final String SHARED_BPF_MAP_GROUP_NAME = "vproxy-docker-plugin";
+
     private XDPIface createXDPIface(Switch sw, UMem umem, VirtualNetwork net, String nicname) throws Exception {
         boolean isPodNic = nicname.startsWith(POD_VETH_PREFIX);
-        var bpfobj = Application.get().bpfObjectHolder.add(BPFObject.PREBUILT_HANDLE_ALL, BPFObject.DEFAULT_XDP_PROG_NAME, nicname, BPFMode.SKB, true);
-        XDPIface iface;
+
+        // load
+        SwitchUtils.GetSharedMapGroupResult reusedResult;
+        BPFObject bpfobj;
+        if (isPodNic) {
+            reusedResult = SwitchUtils.createBPFObjectWithReusedMaps(sw, net.vni, reusedMaps ->
+                BPFObject.loadAndAttachToNic(nicname, reusedMaps, BPFMode.SKB, true)
+            );
+            bpfobj = reusedResult.object();
+        } else {
+            reusedResult = null;
+            bpfobj = BPFObject.loadAndAttachToNic(nicname, BPFMode.SKB, true);
+        }
+
+        BPFMap mac2portMap;
         try {
-            iface = sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), bpfobj.getMap(BPFObject.DEFAULT_MAC_MAP_NAME), umem, 0,
-                32, 32, BPFMode.SKB, false, 0, false,
-                net != null ? net.vni : NETWORK_ENTRY_VNI,
-                BPFMapKeySelectors.useQueueId.keySelector.get(), isPodNic);
+            mac2portMap = bpfobj.getMap(Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME);
         } catch (Exception e) {
-            try {
-                Application.get().bpfObjectHolder.removeAndRelease(bpfobj.nic, true);
-            } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback bpf-object " + bpfobj.nic + " failed", e2);
+            Logger.error(LogType.SYS_ERROR, "failed to retrieve mac2port map", e);
+            if (isPodNic) {
+                reusedResult.release(true);
+            } else {
+                bpfobj.release(true);
             }
             throw e;
         }
+
+        XDPIface iface;
+        try {
+            iface = sw.addXDP(nicname, net != null ? net.vni : NETWORK_ENTRY_VNI, umem,
+                new XDPIface.XDPParams(0, 32, 32, BPFMode.SKB,
+                    false, 0, false, isPodNic,
+                    new XDPIface.BPFInfo(
+                        bpfobj,
+                        bpfobj.getMap(Prebuilt.DEFAULT_XSKS_MAP_NAME),
+                        isPodNic ? mac2portMap : null,
+                        isPodNic ? bpfobj.getMap(Prebuilt.DEFAULT_SRC_MAC_TO_COUNT_MAP_NAME) : null,
+                        isPodNic ? SHARED_BPF_MAP_GROUP_NAME : null
+                    )));
+        } catch (Exception e) {
+            Logger.error(LogType.SYS_ERROR, "failed to create xdp interface: " + nicname, e);
+            if (isPodNic) {
+                reusedResult.release(true);
+            } else {
+                bpfobj.release(true);
+            }
+            throw e;
+        }
+
+        // set iface parameters
         iface.getParams().setBaseMTU(-1);
         if (isPodNic) {
             iface.getParams().setCSumRecalc(CSumRecalcType.all);
@@ -602,10 +636,6 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private void deleteNic(Switch sw, UMem umem, String swNic) throws Exception {
-        try {
-            Application.get().bpfObjectHolder.removeAndRelease(swNic, true);
-        } catch (NotFoundException ignore) {
-        }
         try {
             sw.delIface("xdp:" + swNic);
         } catch (NotFoundException ignore) {

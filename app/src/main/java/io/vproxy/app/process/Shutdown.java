@@ -33,7 +33,6 @@ import io.vproxy.vswitch.RouteTable;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.iface.*;
-import io.vproxy.xdp.BPFObject;
 
 import java.net.URL;
 import java.util.*;
@@ -599,30 +598,6 @@ public class Shutdown {
             }
         }
         {
-            // create bpf
-            BPFObjectHolder bpfobjHolder = app.bpfObjectHolder;
-            List<String> names = bpfobjHolder.names();
-            for (String name : names) {
-                BPFObject bpfobj;
-                try {
-                    bpfobj = bpfobjHolder.get(name);
-                } catch (NotFoundException e) {
-                    assert Logger.lowLevelDebug("bpf-object not found " + name);
-                    assert Logger.printStackTrace(e);
-                    continue;
-                }
-
-                String cmd = "add bpf-object " + bpfobj.nic
-                    + (bpfobj.filename == null ? "" : (" path " + bpfobj.filename))
-                    + " program " + bpfobj.prog
-                    + " mode " + bpfobj.mode.name()
-                    + " force";
-                commands.add(cmd);
-
-                bpfobjectNames.add(bpfobj.nic);
-            }
-        }
-        {
             // create switch
             SwitchHolder swh = app.switchHolder;
             List<String> names = swh.names();
@@ -771,30 +746,25 @@ public class Shutdown {
                     if (!(iface instanceof XDPIface xdp)) {
                         continue;
                     }
-                    if (!bpfobjectNames.contains(xdp.xskMap.bpfObject.nic)) {
-                        Logger.warn(LogType.IMPROPER_USE, "the bpf-object " + xdp.xskMap.bpfObject.nic + " already removed");
-                        continue;
-                    }
                     if (!umemNames.contains(xdp.umem.alias)) {
                         Logger.warn(LogType.IMPROPER_USE, "the umem " + xdp.umem.alias + " already removed");
                         continue;
                     }
                     cmd = "add xdp " + xdp.nic + " to switch " + sw.alias
-                        + " xsk-map " + xdp.xskMap.name
-                        + (xdp.macMap == null ? "" : " mac-map " + xdp.macMap.name)
                         + " umem " + xdp.umem.alias
-                        + " queue " + xdp.queueId
-                        + " rx-ring-size " + xdp.rxRingSize
-                        + " tx-ring-size " + xdp.txRingSize
-                        + " mode " + xdp.mode.name()
-                        + " busy-poll " + xdp.busyPollBudget
-                        + " vni " + xdp.vni
-                        + " xsk-map-key " + xdp.keySelector.alias()
-                        + " offload " + (xdp.offload ? "true" : "false");
-                    if (xdp.zeroCopy) {
+                        + " queue " + xdp.params.queueId()
+                        + " rx-ring-size " + xdp.params.rxRingSize()
+                        + " tx-ring-size " + xdp.params.txRingSize()
+                        + " mode " + xdp.params.mode().name()
+                        + " busy-poll " + xdp.params.busyPollBudget()
+                        + " vni " + xdp.vni;
+                    if (xdp.params.offload()) {
+                        cmd += " offload";
+                    }
+                    if (xdp.params.zeroCopy()) {
                         cmd += " zerocopy";
                     }
-                    if (xdp.rxGenChecksum) {
+                    if (xdp.params.rxGenChecksum()) {
                         cmd += " rx-gen-csum";
                     }
                     commands.add(cmd);

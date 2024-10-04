@@ -48,22 +48,17 @@ public enum Param {
     csumrecalc("csum-recalc"),
     trace("trace"),
 
-    offload("offload"),
-
     prog("program"),
     mode("mode"),
     umem("umem"),
     nic("nic"),
     queue("queue"),
-    xskmap("xsk-map"),
-    macmap("mac-map"),
     rxringsize("rx-ring-size"),
     txringsize("tx-ring-size"),
     chunks("chunks"),
     fillringsize("fill-ring-size"),
     compringsize("comp-ring-size"),
     framesize("frame-size"),
-    xskmapkeyselector("xsk-map-key"),
     busypoll("busy-poll"),
 
     url("url"),

@@ -4,24 +4,24 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.*;
 import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.vpacket.conntrack.udp.UdpNat;
 import io.vproxy.vpxdp.XDPConsts;
-import io.vproxy.vswitch.IPMac;
-import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.PacketFilterHelper;
-import io.vproxy.vswitch.VirtualNetwork;
+import io.vproxy.vswitch.*;
 import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.vswitch.plugin.FilterResult;
 import io.vproxy.vswitch.plugin.PacketFilter;
-import io.vproxy.xdp.NativeXDP;
+import io.vproxy.xdp.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
@@ -612,5 +612,53 @@ public class SwitchUtils {
         ether.setPacket(ipv6);
 
         return ether;
+    }
+
+    public interface BPFObjectCreator {
+        BPFObject get(Map<String, BPFMap> reusedMaps) throws IOException;
+    }
+
+    public record GetSharedMapGroupResult(BPFObject object, BPFMap map, String groupName) {
+        public void release(boolean detach) {
+            object.release(detach);
+            SharedBPFMapHolder.getInstance().release(groupName);
+        }
+    }
+
+    public static GetSharedMapGroupResult createBPFObjectWithReusedMaps(Switch sw, int vni,
+                                                                        BPFObjectCreator fn) throws IOException {
+        var mapGroupName = "mac2port:" + sw.alias + ":" + vni;
+        var mapName = Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME;
+
+        var res = SharedBPFMapHolder.getInstance().getOrCreate(mapGroupName, () -> {
+            var obj = BPFObject.load(Prebuilt.DEFAULT_PROG);
+            BPFMap map;
+            try {
+                map = obj.getMap(mapName);
+            } catch (IOException e) {
+                obj.release(true);
+                throw e;
+            }
+            return new Tuple<>(obj, map);
+        });
+
+        var reuseMap = Map.of(mapName, res);
+
+        BPFObject obj;
+        try {
+            obj = fn.get(reuseMap);
+        } catch (IOException e) {
+            SharedBPFMapHolder.getInstance().release(mapGroupName);
+            throw e;
+        }
+        BPFMap map;
+        try {
+            map = obj.getMap(mapName);
+        } catch (IOException e) {
+            obj.release(true);
+            SharedBPFMapHolder.getInstance().release(mapGroupName);
+            throw e;
+        }
+        return new GetSharedMapGroupResult(obj, map, mapGroupName);
     }
 }

@@ -5,10 +5,8 @@ import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import io.vproxy.base.Config;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.component.secure.SecurityGroup;
-import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.xdp.BPFMode;
-import io.vproxy.xdp.BPFObject;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -414,7 +412,7 @@ public class HelpCommand {
         network("network", "net", "network: $network/$mask"),
         v4network("v4network", "v4net", "ipv4 network: $v4network/$mask"),
         v6network("v6network", "v6net", "ipv6 network: $v6network/$mask"),
-        protocol("protocol", null, "" +
+        protocol("protocol", null,
             "for tcp-lb: the application layer protocol, " +
             "for security-group: the transport layer protocol: tcp or udp"),
         annotations("annotations", "anno",
@@ -435,23 +433,18 @@ public class HelpCommand {
         flood("flood", null, "flooding traffic"),
         csumrecalc("csum-recalc", null, "recalculate checksum of the received packet"),
         trace("trace", null, "trace packets in the switch"),
-        offload("offload", null, "offload operations from java"),
         path("path", null, "file path"),
         program("program", "prog", "program name"),
         mode("mode", null, "mode"),
         umem("umem", null, "xdp umem"),
         nic("nic", null, "nic name"),
         queue("queue", null, "queue id"),
-        xskmap("xsk-map", null, "queueId to xsk bpf map extracted from a bpfobject"),
-        macmap("mac-map", null, "mac to ifindex bpf map extracted from a bpfobject"),
         rxringsize("rx-ring-size", null, "receiving ring size"),
         txringsize("tx-ring-size", null, "transmitting ring size"),
         chunks("chunks", null, "chunks"),
         fillringsize("fill-ring-size", null, "xdp umem fill ring size"),
         compringsize("comp-ring-size", null, "xdp umem comp ring size"),
         framesize("frame-size", null, "size of a frame"),
-        xskmapkeyselector("xsk-map-key", null, "the method of " +
-            "determining the key of the corresponding xsk when putting into a bpf map"),
         busypoll("busy-poll", null, "a number indicating whether to enable busy poll, " +
             "and may set the SO_BUSY_POLL_BUDGET as well"),
         ip("ip", null, "ip address or ip/mask"),
@@ -477,6 +470,7 @@ public class HelpCommand {
         force("force", null, "forcibly to do something"),
         zerocopy("zerocopy", null, "indicate to perform zerocopy operations"),
         rxgencsum("rx-gen-csum", null, "generate checksum before receiving the packet into vswitch"),
+        offload("offload", null, "offload operations from java"),
         enable("enable", null, "enable the resource"),
         disable("disable", null, "disable the resource"),
         ;
@@ -1371,30 +1365,25 @@ public class HelpCommand {
             )),
         xdp("xdp", null, "xdp socket, which is able to intercept packets from a net dev. " +
             "Note: 1) the name of the xdp iface is the nic name where this xdp handles, " +
-            "2) use list iface to see the xdp sockets/interfaces, " +
-            "3) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
-            "4) make sure your kernel supports xdp, recommend kernel version >= 5.10 (or at least 5.4). " +
-            "See also `umem`, `bpf-object`. Check doc for more info",
+            "2) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
+            "3) make sure your kernel supports xdp, recommend kernel version >= 5.10 (or at least 5.4). " +
+            "See also `umem`. Check doc for more info",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.xskmap, "name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP", BPFObject.DEFAULT_XSKS_MAP_NAME),
-                    new ResActParamMan(ParamMan.macmap, "name of the bpf map to put the mac -> ifindex into. The map should be defined in the maps section and must be a map of {char[6] => int}", "automatically tries " + BPFObject.DEFAULT_MAC_MAP_NAME + " or ignore if failed to retrieve the map"),
                     new ResActParamMan(ParamMan.umem, "umem for the xdp socket to use. See `umem` for more info"),
                     new ResActParamMan(ParamMan.queue, "the queue index to bind to"),
                     new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRIVER}, see doc for more info", "" + BPFMode.SKB),
                     new ResActParamMan(ParamMan.busypoll, "whether to enable busy poll, and set SO_BUSY_POLL_BUDGET. Set this option to 0 to disable busy poll", "0"),
-                    new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
-                    new ResActParamMan(ParamMan.xskmapkeyselector, "the method of " +
-                        "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name()),
-                    new ResActParamMan(ParamMan.offload, "offload mac switching to xdp program, which requires mac-map", "false")
+                    new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to")
                 ), Arrays.asList(
                     new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false),
-                    new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet", false)
+                    new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet in java", false),
+                    new ResActFlagMan(FlagMan.offload, "offload mac switching to xdp program", false)
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add xdp xdptut-4667 to switch sw0 xsk-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 xsk-map-key useQueueId zerocopy",
+                        "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 zerocopy",
                         "\"OK\""
                     ),
                     new Tuple<>(
@@ -1527,43 +1516,6 @@ public class HelpCommand {
                 new ResActMan(ActMan.removefrom, "remove a umem from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove umem umem0 from switch sw0",
-                        "\"OK\""
-                    )
-                ))
-            )),
-        bpfobj("bpf-object", "bpfobj", "the ebpf object attached to net dev. " +
-            "Note that the name of the bpf-object is the nic name where ebpf program will be attached to",
-            Arrays.asList(
-                new ResActMan(ActMan.add, "load and attach ebpf to a net dev", Arrays.asList(
-                    new ResActParamMan(ParamMan.path, "path to the ebpf program .o file"),
-                    new ResActParamMan(ParamMan.program, "name of the program inside the ebpf object to be attached to the net dev"),
-                    new ResActParamMan(ParamMan.mode, "attaching mode, enum: {SKB, DRIVER}", "" + BPFMode.SKB)
-                ), Collections.singletonList(
-                    new ResActFlagMan(FlagMan.force, "force to replace the old program attached to the dev", false)
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "add bpf-object enp0s6 path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o program xdp_sock mode SKB force",
-                        "\"OK\""
-                    )
-                )),
-                new ResActMan(ActMan.list, "show bpf-object names (attached nic names)", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "list bpf-object",
-                        "1) \"enp0s6\"\n" +
-                            "2) \"xdptut-4667\""
-                    )
-                )),
-                new ResActMan(ActMan.listdetail, "show bpf-object detailed info", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "list-detail bpf-object",
-                        "1) \"enp0s6 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB\"\n" +
-                            "2) \"xdptut-4667 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB\""
-                    )
-                )),
-                new ResActMan(ActMan.removefrom, "remove bpf-object. The loaded program will be detached from the nic.",
-                    Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "remove bpf-object enp0s6",
                         "\"OK\""
                     )
                 ))

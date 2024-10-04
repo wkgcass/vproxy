@@ -20,7 +20,6 @@ import io.vproxy.vmirror.Mirror;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv4Packet;
 import io.vproxy.vpacket.Ipv6Packet;
-import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.iface.*;
 import io.vproxy.vswitch.node.*;
 import io.vproxy.vswitch.plugin.FilterResult;
@@ -30,8 +29,6 @@ import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 import io.vproxy.vswitch.stack.conntrack.Fastpath;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
-import io.vproxy.xdp.BPFMap;
-import io.vproxy.xdp.BPFMode;
 import io.vproxy.xdp.NativeXDP;
 import io.vproxy.xdp.UMem;
 
@@ -549,10 +546,7 @@ public class Switch {
         return vif;
     }
 
-    public XDPIface addXDP(String nic, BPFMap map, BPFMap macMap, UMem umem,
-                           int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
-                           int busyPollBudget, boolean rxGenChecksum,
-                           int vni, BPFMapKeySelector keySelector, boolean offload) throws XException, AlreadyExistException {
+    public XDPIface addXDP(String nic, int vni, UMem umem, XDPIface.XDPParams params) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + this.alias + " is not bond to any event loop, cannot add xdp");
@@ -564,10 +558,9 @@ public class Switch {
         }
 
         for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof XDPIface)) {
+            if (!(i instanceof XDPIface xdpiface)) {
                 continue;
             }
-            XDPIface xdpiface = (XDPIface) i;
             if (nic.equals(xdpiface.nic)) {
                 throw new AlreadyExistException("xdp", alias);
             }
@@ -575,10 +568,7 @@ public class Switch {
 
         var blockingCallback = new BlockCallback<XDPIface, XException>();
         loop.runOnLoop(() -> {
-            var iface = new XDPIface(nic, map, macMap, umem,
-                queueId, rxRingSize, txRingSize, mode, zeroCopy,
-                busyPollBudget, rxGenChecksum,
-                vni, keySelector, offload);
+            var iface = new XDPIface(nic, vni, umem, params);
             try {
                 initIface(iface);
             } catch (Exception e) {

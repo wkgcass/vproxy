@@ -7,8 +7,8 @@ import io.vproxy.base.util.Timer;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.vswitch.iface.XDPIface;
-import io.vproxy.xdp.XDPSocket;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -116,6 +116,7 @@ public class MacTable {
         public final MacAddress mac;
         public final Iface iface;
         private boolean offloaded = false;
+        private int offloadedCount = 0;
 
         MacEntry(MacAddress mac, Iface iface, boolean persist) {
             super(MacTable.this.loop, persist ? -1 : timeout);
@@ -141,47 +142,55 @@ public class MacTable {
             set.add(this);
             resetTimer();
 
-            tryRecordMacMap();
+            tryOffload();
 
             Logger.trace(LogType.ALERT, "mac entry " + iface.name() + " -> " + mac + " recorded");
         }
 
-        private void tryRecordMacMap() {
-            if (!(iface instanceof XDPIface) || !((XDPIface) iface).offload) {
+        private void tryOffload() {
+            if (!(iface instanceof XDPIface xdpIface) || !xdpIface.params.offload()) {
                 return;
             }
-            XDPSocket xsk = ((XDPIface) iface).getXsk();
-            if (xsk == null) {
+            if (xdpIface.params.bpf().mac2port() == null) {
                 return;
             }
-            for (Iface iface : swCtx.getIfaces()) {
-                if (iface.getLocalSideVni(net.vni) != net.vni) {
-                    continue;
-                }
-                if (!(iface instanceof XDPIface)) {
-                    continue;
-                }
-                XDPIface xdp = (XDPIface) iface;
-                if (xdp.macMap == null) {
-                    continue;
-                }
-                offloaded = true;
-                try {
-                    xdp.macMap.put(mac, xdp.nic);
-                    Logger.trace(LogType.ALERT, "mac entry offloaded into " + xdp.name() + ": " + mac + " -> " + xsk.nic);
-                } catch (IOException e) {
-                    Logger.error(LogType.SYS_ERROR, "failed to record into " + xdp.name() + ": " + mac + " -> " + xsk.nic);
-                }
+            if (xdpIface.params.bpf().srcmac2count() == null) {
+                return;
             }
 
-            if (offloaded) { // make timeout longer
-                setTimeout(Math.max(3600_000, timeout));
+            try {
+                offloadedCount = xdpIface.params.bpf().srcmac2count().getInt(mac);
+            } catch (FileNotFoundException e) {
+                offloadedCount = 0;
+            } catch (IOException e) {
+                Logger.error(LogType.SYS_ERROR, "failed to get srcmac2countMap[" + mac + "] for " + xdpIface.name(), e);
+                return;
             }
+
+            var mac2portMap = xdpIface.params.bpf().mac2port();
+            if (mac2portMap == null) {
+                return;
+            }
+            try {
+                mac2portMap.putNetif(mac, xdpIface.nic);
+                Logger.trace(LogType.ALERT, "mac entry " + iface.name() + " -> " + mac + " recorded into xdp offload mac map");
+            } catch (IOException e) {
+                Logger.warn(LogType.SYS_ERROR, "failed to put " + iface.name() + " -> " + mac + " into xdp offload mac map", e);
+                return;
+            }
+            offloaded = true;
         }
 
         @Override
         public void cancel() {
             super.cancel();
+
+            if (offloaded) {
+                if (hasOffloadedPacketPassed()) {
+                    start();
+                    return;
+                }
+            }
 
             Logger.trace(LogType.ALERT, "mac entry " + iface.name() + " -> " + mac + " removed");
 
@@ -195,27 +204,46 @@ public class MacTable {
                 }
             }
 
-            tryRemoveMacMap();
+            clearOffload();
         }
 
-        private void tryRemoveMacMap() {
+        private boolean hasOffloadedPacketPassed() {
+            assert iface instanceof XDPIface;
+            assert ((XDPIface) iface).params.bpf().srcmac2count() != null;
+
+            try {
+                int n = ((XDPIface) iface).params.bpf().srcmac2count().getInt(mac);
+                assert Logger.lowLevelDebug("fetched packet count from xdp offload map: " + n + ", last recorded: " + offloadedCount);
+                if (n != offloadedCount) {
+                    offloadedCount = n;
+                    return true;
+                }
+            } catch (FileNotFoundException ignore) {
+                assert Logger.lowLevelDebug("packet count from xdp offload map is missing");
+                // fallthrough
+            } catch (IOException e) {
+                Logger.error(LogType.SYS_ERROR, "failed to get packet count from xdp offload map: " + iface.name() + " -> " + mac, e);
+                // fallthrough
+            }
+            return false;
+        }
+
+        private void clearOffload() {
             if (!offloaded) {
                 return;
             }
-            for (Iface iface : swCtx.getIfaces()) {
-                if (!(iface instanceof XDPIface)) {
-                    continue;
-                }
-                XDPIface xdp = (XDPIface) iface;
-                if (xdp.macMap == null) {
-                    continue;
-                }
-                try {
-                    xdp.macMap.remove(mac);
-                    Logger.trace(LogType.ALERT, "mac entry removed from " + xdp.name() + ": " + mac);
-                } catch (IOException e) {
-                    Logger.error(LogType.SYS_ERROR, "failed to removed from " + xdp.name() + ": " + mac);
-                }
+            if (!(iface instanceof XDPIface xdpIface)) {
+                return;
+            }
+            if (xdpIface.params.bpf().mac2port() == null) {
+                return;
+            }
+            var mac2portMap = xdpIface.params.bpf().mac2port();
+            try {
+                mac2portMap.remove(mac);
+                Logger.trace(LogType.ALERT, "mac entry removed from xdp offload mac map: " + iface.name() + " -> " + mac);
+            } catch (IOException e) {
+                Logger.error(LogType.SYS_ERROR, "failed to removed mac from xdp offload mac map: " + iface.name() + " -> " + mac);
             }
         }
 

@@ -37,7 +37,6 @@ public enum ResourceType {
     fubukietherip("fubuki-etherip"),
     vlan("vlan-adaptor"),
 
-    bpfobj("bpf-object"),
     umem("umem"),
     xdp("xdp"),
 

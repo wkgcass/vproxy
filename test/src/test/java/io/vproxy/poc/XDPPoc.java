@@ -11,11 +11,8 @@ import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
-import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
-import io.vproxy.xdp.BPFMap;
-import io.vproxy.xdp.BPFMode;
-import io.vproxy.xdp.BPFObject;
-import io.vproxy.xdp.UMem;
+import io.vproxy.vswitch.iface.XDPIface;
+import io.vproxy.xdp.*;
 
 public class XDPPoc {
     public static void main(String[] args) throws Exception {
@@ -26,12 +23,10 @@ public class XDPPoc {
         String ifname = args[0];
 
         BPFObject bpfobj = BPFObject.loadAndAttachToNic(
-            "./submodules/vpxdp/sample_kern.o",
-            "xdp_sock",
             ifname,
             BPFMode.SKB,
             true);
-        BPFMap bpfMap = bpfobj.getMap("xsks_map");
+        BPFMap xskMap = bpfobj.getMap(Prebuilt.DEFAULT_XSKS_MAP_NAME);
 
         EventLoopGroup elg = new EventLoopGroup("elg");
         elg.add("el");
@@ -49,8 +44,10 @@ public class XDPPoc {
             new Annotations());
 
         UMem umem = sw.addUMem("poc-umem", 64, 32, 32, 4096);
-        sw.addXDP(
-            ifname, bpfMap, null, umem, 0, 32, 32, BPFMode.SKB, false, 0, false,
-            1, BPFMapKeySelectors.useQueueId.keySelector.get(), false);
+        sw.addXDP(ifname, 1, umem, new XDPIface.XDPParams(
+            0, 32, 32, BPFMode.SKB,
+            false, 0, false, false,
+            new XDPIface.BPFInfo(bpfobj, xskMap)
+        ));
     }
 }
