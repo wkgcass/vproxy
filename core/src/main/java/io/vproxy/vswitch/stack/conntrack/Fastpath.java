@@ -10,13 +10,13 @@ import io.vproxy.vswitch.iface.Iface;
 
 public class Fastpath {
     public final Iface output;
-    public final int vni;
+    public final int vrf;
     public final MacAddress local;
     public final MacAddress remote;
 
-    public Fastpath(Iface output, int vni, MacAddress local, MacAddress remote) {
+    public Fastpath(Iface output, int vrf, MacAddress local, MacAddress remote) {
         this.output = output;
-        this.vni = vni;
+        this.vrf = vrf;
         this.local = local;
         this.remote = remote;
     }
@@ -25,13 +25,13 @@ public class Fastpath {
         if (output.isDestroyed()) {
             return false;
         }
-        if (vni != pkb.vni) {
-            var net = sw.getNetwork(pkb.vni);
+        if (vrf != pkb.vrf) {
+            var net = sw.getNetwork(pkb.vrf);
             if (net == null) {
                 return false;
             }
             pkb.network = net;
-            pkb.vni = net.vni;
+            pkb.vrf = net.vrf;
         }
         EthernetPacket ether = new EthernetPacket();
         ether.setDst(remote);
@@ -49,10 +49,10 @@ public class Fastpath {
     @Override
     public String toString() {
         return "Fastpath{" +
-            "output=" + (output == null ? "null" : output.name()) +
-            ", vni=" + vni +
-            ", local=" + local +
-            ", remote=" + remote +
-            '}';
+               "output=" + (output == null ? "null" : output.name()) +
+               ", vrf=" + vrf +
+               ", local=" + local +
+               ", remote=" + remote +
+               '}';
     }
 }

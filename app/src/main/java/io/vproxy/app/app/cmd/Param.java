@@ -36,7 +36,7 @@ public enum Param {
     mactabletimeout("mac-table-timeout"),
     arptabletimeout("arp-table-timeout"),
     mac("mac"),
-    vni("vni"),
+    vrf("vrf"),
     iface("iface"),
     postscript("post-script"),
     routing("routing"),

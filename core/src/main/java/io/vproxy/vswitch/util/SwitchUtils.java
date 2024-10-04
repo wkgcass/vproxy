@@ -36,7 +36,7 @@ public class SwitchUtils {
     public static VXLanPacket getOrMakeVXLanPacket(PacketBuffer pkb) {
         if (pkb.vxlan == null) {
             var p = new VXLanPacket();
-            p.setVni(pkb.vni);
+            p.setVni(pkb.vrf);
             p.setPacket(pkb.pkt);
             pkb.vxlan = p;
         }
@@ -94,14 +94,14 @@ public class SwitchUtils {
         }
     }
 
-    public static void executeDevPostScript(String switchAlias, String dev, int vni, String postScript) throws Exception {
+    public static void executeDevPostScript(String switchAlias, String dev, int vrf, String postScript) throws Exception {
         if (postScript == null || postScript.isBlank()) {
             return;
         }
         ProcessBuilder pb = new ProcessBuilder().command(postScript);
         var env = pb.environment();
         env.put("DEV", dev);
-        env.put("VNI", "" + vni);
+        env.put("VRF", "" + vrf);
         env.put("SWITCH", switchAlias);
         Utils.execute(pb, 10 * 1000);
     }
@@ -625,9 +625,9 @@ public class SwitchUtils {
         }
     }
 
-    public static GetSharedMapGroupResult createBPFObjectWithReusedMaps(Switch sw, int vni,
+    public static GetSharedMapGroupResult createBPFObjectWithReusedMaps(Switch sw, int vrf,
                                                                         BPFObjectCreator fn) throws IOException {
-        var mapGroupName = "mac2port:" + sw.alias + ":" + vni;
+        var mapGroupName = "mac2port:" + sw.alias + ":" + vrf;
         var mapName = Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME;
 
         var res = SharedBPFMapHolder.getInstance().getOrCreate(mapGroupName, () -> {

@@ -101,10 +101,10 @@ public class IPInputRoute extends AbstractNeighborResolve {
         }
         assert Logger.lowLevelDebug("route rule found: " + rule);
 
-        int vni = rule.toVni;
-        if (vni == pkb.vni) {
+        int vrf = rule.toVrf;
+        if (vrf == pkb.vrf) {
             // direct route
-            assert Logger.lowLevelDebug("in the same vpc");
+            assert Logger.lowLevelDebug("in the same vrf");
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.line(d -> d.append("direct route"));
             }
@@ -131,16 +131,16 @@ public class IPInputRoute extends AbstractNeighborResolve {
             pkb.pkt.setSrc(srcMac);
             pkb.pkt.setDst(dstMac);
             return _returnnext(pkb, ethernetOutput);
-        } else if (vni != 0) {
+        } else if (vrf != 0) {
             // route to another network
-            assert Logger.lowLevelDebug("routing to another vpc: " + vni);
+            assert Logger.lowLevelDebug("routing to another vrf: " + vrf);
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.line(d -> d.append("route to another network"));
             }
 
-            VirtualNetwork n = sw.getNetwork(vni);
+            VirtualNetwork n = sw.getNetwork(vrf);
             if (n == null) { // cannot handle if the network does no exist
-                assert Logger.lowLevelDebug("target network " + vni + " is not found");
+                assert Logger.lowLevelDebug("target network " + vrf + " is not found");
                 if (pkb.debugger.isDebugOn()) {
                     pkb.debugger.line(d -> d.append("target network not found"));
                 }
@@ -159,7 +159,7 @@ public class IPInputRoute extends AbstractNeighborResolve {
             }
 
             var targetRule = n.routeTable.lookup(dst);
-            if (targetRule != null && !targetRule.isLocalDirect(n.vni)) {
+            if (targetRule != null && !targetRule.isLocalDirect(n.vrf)) {
                 assert Logger.lowLevelDebug("still require routing after switching the network");
                 if (pkb.debugger.isDebugOn()) {
                     pkb.debugger.line(d -> d.append("still need routing after switching the network"));

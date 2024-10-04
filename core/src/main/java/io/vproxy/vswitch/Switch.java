@@ -294,30 +294,30 @@ public class Switch {
         return networks;
     }
 
-    public VirtualNetwork getNetwork(int vni) throws NotFoundException {
-        VirtualNetwork t = networks.get(vni);
+    public VirtualNetwork getNetwork(int vrf) throws NotFoundException {
+        VirtualNetwork t = networks.get(vrf);
         if (t == null) {
-            throw new NotFoundException("vni", "" + vni);
+            throw new NotFoundException("vrf", "" + vrf);
         }
         return t;
     }
 
-    public VirtualNetwork addNetwork(int vni, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
-        if (networks.containsKey(vni)) {
-            throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
+    public VirtualNetwork addNetwork(int vrf, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
+        if (networks.containsKey(vrf)) {
+            throw new AlreadyExistException("vrf " + vrf + " already exists in switch " + alias);
         }
         if (eventLoop == null) {
-            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
+            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vrf");
         }
-        VirtualNetwork t = new VirtualNetwork(sw, vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
-        networks.put(vni, t);
+        VirtualNetwork t = new VirtualNetwork(sw, vrf, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
+        networks.put(vrf, t);
         return t;
     }
 
-    public void delNetwork(int vni) throws NotFoundException {
-        VirtualNetwork t = networks.remove(vni);
+    public void delNetwork(int vrf) throws NotFoundException {
+        VirtualNetwork t = networks.remove(vrf);
         if (t == null) {
-            throw new NotFoundException("vni", "" + vni);
+            throw new NotFoundException("vrf", "" + vrf);
         }
         t.clearCache();
     }
@@ -326,7 +326,7 @@ public class Switch {
         return new ArrayList<>(ifaces.keySet());
     }
 
-    public TapIface addTap(String dev, int vni, String postScript) throws XException, IOException {
+    public TapIface addTap(String dev, int vrf, String postScript) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
@@ -337,7 +337,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tap is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TapIface iface = new TapIface(dev, vni, postScript);
+        TapIface iface = new TapIface(dev, vrf, postScript);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -405,7 +405,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public TunIface addTun(String dev, int vni, MacAddress mac, String postScript) throws XException, IOException {
+    public TunIface addTun(String dev, int vrf, MacAddress mac, String postScript) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tun device");
@@ -416,7 +416,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tun is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TunIface iface = new TunIface(dev, vni, mac, postScript);
+        TunIface iface = new TunIface(dev, vrf, mac, postScript);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -429,7 +429,7 @@ public class Switch {
     }
 
     public FubukiTunIface addFubuki(String nodeName, String password,
-                                    int vni, MacAddress mac,
+                                    int vrf, MacAddress mac,
                                     IPPort remoteAddr,
                                     IPMask localAddr) throws AlreadyExistException, XException {
         for (Iface i : ifaces.keySet()) {
@@ -441,7 +441,7 @@ public class Switch {
             }
         }
 
-        var iface = new FubukiTunIface(vni, mac, nodeName, remoteAddr, localAddr, password);
+        var iface = new FubukiTunIface(vrf, mac, nodeName, remoteAddr, localAddr, password);
 
         try {
             initIface(iface);
@@ -486,7 +486,7 @@ public class Switch {
         return iface;
     }
 
-    public VLanAdaptorIface addVLanAdaptor(String parentIfaceName, int vlan, int localVni) throws XException, AlreadyExistException, NotFoundException {
+    public VLanAdaptorIface addVLanAdaptor(String parentIfaceName, int vlan, int localVrf) throws XException, AlreadyExistException, NotFoundException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vlan adaptor");
@@ -503,7 +503,7 @@ public class Switch {
         if (parentIface == null) {
             throw new NotFoundException("iface", parentIfaceName);
         }
-        var vif = new VLanAdaptorIface(parentIface, vlan, localVni);
+        var vif = new VLanAdaptorIface(parentIface, vlan, localVrf);
         parentIface.addVLanAdaptor(vif);
 
         try {
@@ -519,7 +519,7 @@ public class Switch {
         return vif;
     }
 
-    public FubukiEtherIPIface addFubukiEtherIP(String parentIfaceName, int vni, IPv4 targetIP) throws XException, AlreadyExistException, NotFoundException, PreconditionUnsatisfiedException {
+    public FubukiEtherIPIface addFubukiEtherIP(String parentIfaceName, int vrf, IPv4 targetIP) throws XException, AlreadyExistException, NotFoundException, PreconditionUnsatisfiedException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vlan adaptor");
@@ -531,7 +531,7 @@ public class Switch {
             throw new NotFoundException("fubuki", parentIfaceName);
         }
         var iface = (FubukiTunIface) opt.get();
-        var vif = iface.addEtherIPSubIface(targetIP, vni);
+        var vif = iface.addEtherIPSubIface(targetIP, vrf);
 
         try {
             initIface(vif);
@@ -546,7 +546,7 @@ public class Switch {
         return vif;
     }
 
-    public XDPIface addXDP(String nic, int vni, UMem umem, XDPIface.XDPParams params) throws XException, AlreadyExistException {
+    public XDPIface addXDP(String nic, int vrf, UMem umem, XDPIface.XDPParams params) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + this.alias + " is not bond to any event loop, cannot add xdp");
@@ -568,7 +568,7 @@ public class Switch {
 
         var blockingCallback = new BlockCallback<XDPIface, XException>();
         loop.runOnLoop(() -> {
-            var iface = new XDPIface(nic, vni, umem, params);
+            var iface = new XDPIface(nic, vrf, umem, params);
             try {
                 initIface(iface);
             } catch (Exception e) {
@@ -585,7 +585,7 @@ public class Switch {
         return iface;
     }
 
-    public ProgramIface addProgramIface(String alias, int vni) throws XException, AlreadyExistException, NotFoundException {
+    public ProgramIface addProgramIface(String alias, int vrf) throws XException, AlreadyExistException, NotFoundException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + this.alias + " is not bond to any event loop, cannot add vlan adaptor");
@@ -600,9 +600,9 @@ public class Switch {
                 throw new AlreadyExistException("ProgramIface", alias);
             }
         }
-        var net = networks.get(vni);
+        var net = networks.get(vrf);
         if (net == null) {
-            throw new NotFoundException("vpc", "" + vni);
+            throw new NotFoundException("vrf", "" + vrf);
         }
 
         var iface = new ProgramIface(alias, net);
@@ -663,11 +663,11 @@ public class Switch {
             pkb.fastpath = false;
             if (pkb.tcp instanceof EnhancedTCPEntry) {
                 var tcp = (EnhancedTCPEntry) pkb.tcp;
-                tcp.fastpath = new Fastpath(iface, pkb.vni, pkb.pkt.getSrc(), pkb.pkt.getDst());
+                tcp.fastpath = new Fastpath(iface, pkb.vrf, pkb.pkt.getSrc(), pkb.pkt.getDst());
                 assert Logger.lowLevelDebug("recording tcp fastpath on output: " + tcp.fastpath);
             } else if (pkb.udp instanceof EnhancedUDPEntry) {
                 var udp = (EnhancedUDPEntry) pkb.udp;
-                udp.fastpath = new Fastpath(iface, pkb.vni, pkb.pkt.getSrc(), pkb.pkt.getDst());
+                udp.fastpath = new Fastpath(iface, pkb.vrf, pkb.pkt.getSrc(), pkb.pkt.getDst());
                 assert Logger.lowLevelDebug("recording udp fastpath on output: " + udp.fastpath);
             }
         } else {
@@ -859,11 +859,11 @@ public class Switch {
             }
         }
 
-        // init vpc network
-        int vni = pkb.vni;
-        VirtualNetwork network = sw.getNetwork(vni);
+        // init vrf network
+        int vrf = pkb.vrf;
+        VirtualNetwork network = sw.getNetwork(vrf);
         if (network == null) {
-            assert Logger.lowLevelDebug("vni not defined: " + vni);
+            assert Logger.lowLevelDebug("vrf not defined: " + vrf);
             return false;
         }
         pkb.network = network;
@@ -875,7 +875,7 @@ public class Switch {
                 return false; // drop
             }
             var route = network.routeTable.lookup(pkb.ipPkt.getDst());
-            if (route != null && route.isLocalDirect(network.vni)) {
+            if (route != null && route.isLocalDirect(network.vrf)) {
                 assert Logger.lowLevelDebug("packet from " + pkb.devin + " to " + pkb.ipPkt.getDst() + " requires no routing");
                 var mac = network.arpTable.lookup(pkb.ipPkt.getDst());
                 if (mac == null) {

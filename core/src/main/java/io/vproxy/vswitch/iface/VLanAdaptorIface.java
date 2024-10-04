@@ -6,13 +6,13 @@ import io.vproxy.vswitch.PacketBuffer;
 public class VLanAdaptorIface extends Iface implements SubIface {
     private final Iface parentIface;
     public final int remoteVLan;
-    public final int localVni;
+    public final int localVrf;
     private boolean ready = false;
 
-    public VLanAdaptorIface(Iface parentIface, int remoteVLan, int localVni) {
+    public VLanAdaptorIface(Iface parentIface, int remoteVLan, int localVrf) {
         this.parentIface = parentIface;
         this.remoteVLan = remoteVLan;
-        this.localVni = localVni;
+        this.localVrf = localVrf;
     }
 
     @Override
@@ -37,8 +37,8 @@ public class VLanAdaptorIface extends Iface implements SubIface {
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return localVni;
+    public int getLocalSideVrf(int hint) {
+        return localVrf;
     }
 
     @Override
@@ -58,7 +58,7 @@ public class VLanAdaptorIface extends Iface implements SubIface {
 
     @Override
     protected String toStringExtra() {
-        return ",vni:" + localVni;
+        return ",vrf:" + localVrf;
     }
 
     @Override
@@ -72,7 +72,7 @@ public class VLanAdaptorIface extends Iface implements SubIface {
     }
 
     public void handle(PacketBuffer pkb) {
-        pkb.vni = localVni;
+        pkb.vrf = localVrf;
         pkb.pkt.setVlan(EthernetPacket.PENDING_VLAN_CODE);
         pkb.devin = this;
     }

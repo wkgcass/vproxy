@@ -80,7 +80,7 @@ The SDN virtual switch is provided with the `switch` resource.
 
 #### VirtualNetwork
 
-A virtual network inside the switch. The name of the VPC is a number which usually represents the VLan or VNI of the network.
+A virtual network inside the switch. The name of the VRF is a number which usually represents the VLan or VNI of the network.
 
 Inside the network, you can configure ips, route tables. You can also handle packets programmatically or with the flow generator.
 

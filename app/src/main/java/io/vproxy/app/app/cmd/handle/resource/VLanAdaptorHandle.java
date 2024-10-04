@@ -3,7 +3,7 @@ package io.vproxy.app.app.cmd.handle.resource;
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Param;
-import io.vproxy.app.app.cmd.handle.param.VniHandle;
+import io.vproxy.app.app.cmd.handle.param.VrfParamHandle;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.exception.XException;
 import io.vproxy.vswitch.Switch;
@@ -28,13 +28,13 @@ public class VLanAdaptorHandle {
             throw new XException(vlan + " out of range: expecting [0, 4095]");
         }
 
-        int vni = vlan;
-        if (cmd.args.containsKey(Param.vni)) {
-            vni = VniHandle.get(cmd);
+        int vrf = vlan;
+        if (cmd.args.containsKey(Param.vrf)) {
+            vrf = VrfParamHandle.get(cmd);
         }
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
 
-        sw.addVLanAdaptor(parent, vlan, vni);
+        sw.addVLanAdaptor(parent, vlan, vrf);
     }
 }

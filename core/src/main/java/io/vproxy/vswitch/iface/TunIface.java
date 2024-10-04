@@ -26,7 +26,7 @@ public class TunIface extends Iface {
 
     public final String dev;
     private TapDatagramFD tun;
-    public final int localSideVni;
+    public final int localSideVrf;
     public final MacAddress mac;
     public final String postScript;
 
@@ -36,11 +36,11 @@ public class TunIface extends Iface {
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
     public TunIface(String dev,
-                    int localSideVni,
+                    int localSideVrf,
                     MacAddress mac,
                     String postScript) {
         this.dev = dev;
-        this.localSideVni = localSideVni;
+        this.localSideVrf = localSideVrf;
         this.mac = mac;
         this.postScript = postScript;
     }
@@ -69,7 +69,7 @@ public class TunIface extends Iface {
 
     @Override
     protected String toStringExtra() {
-        return ",vni:" + localSideVni + ",mac:" + mac;
+        return ",vrf:" + localSideVrf + ",mac:" + mac;
     }
 
     protected boolean customInitSteps() {
@@ -114,7 +114,7 @@ public class TunIface extends Iface {
         }
 
         try {
-            SwitchUtils.executeDevPostScript(params.sw.alias, tun.getTap().dev, localSideVni, postScript);
+            SwitchUtils.executeDevPostScript(params.sw.alias, tun.getTap().dev, localSideVrf, postScript);
         } catch (Exception e) {
             // executing script failed
             // close the fds
@@ -325,8 +325,8 @@ public class TunIface extends Iface {
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return localSideVni;
+    public int getLocalSideVrf(int hint) {
+        return localSideVrf;
     }
 
     @Override
@@ -370,7 +370,7 @@ public class TunIface extends Iface {
                 if (rcvBuf.position() == position) {
                     break; // nothing read, quit loop
                 }
-                PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
+                PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVrf, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
                 receivedPacket(pkb);
             }
         }

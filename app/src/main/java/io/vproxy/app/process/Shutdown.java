@@ -639,11 +639,11 @@ public class Shutdown {
                     commands.add(cmd);
                     umemNames.add(umem.alias);
                 }
-                // create vpc
+                // create vrf
                 for (var key : sw.getNetworks().keySet()) {
-                    int vpc = key;
-                    VirtualNetwork network = sw.getNetworks().get(vpc);
-                    cmd = "add vpc " + vpc + " to switch " + sw.alias + " v4network " + network.v4network;
+                    int vrf = key;
+                    VirtualNetwork network = sw.getNetworks().get(vrf);
+                    cmd = "add vrf " + vrf + " to switch " + sw.alias + " v4network " + network.v4network;
                     if (network.v6network != null) {
                         cmd += " v6network " + network.v6network;
                     }
@@ -658,7 +658,7 @@ public class Shutdown {
                         if (ipmac.annotations.nosave) {
                             continue;
                         }
-                        cmd = "add ip " + ipmac.ip.formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias
+                        cmd = "add ip " + ipmac.ip.formatToIPString() + " to vrf " + vrf + " in switch " + sw.alias
                             + " mac " + ipmac.mac
                             + " routing " + (ipmac.routing ? "on" : "off");
                         if (!ipmac.annotations.isEmpty()) {
@@ -678,20 +678,20 @@ public class Shutdown {
                         }
                     }
                     if (!hasDefaultV4) {
-                        cmd = "remove route " + RouteTable.defaultRuleName + " from vpc " + vpc + " in switch " + sw.alias;
+                        cmd = "remove route " + RouteTable.defaultRuleName + " from vrf " + vrf + " in switch " + sw.alias;
                         commands.add(cmd);
                     }
                     if (!hasDefaultV6 && network.v6network != null) {
-                        cmd = "remove route " + RouteTable.defaultRuleV6Name + " from vpc " + vpc + " in switch " + sw.alias;
+                        cmd = "remove route " + RouteTable.defaultRuleV6Name + " from vrf " + vrf + " in switch " + sw.alias;
                         commands.add(cmd);
                     }
                     for (var r : network.routeTable.getRules()) {
                         if (r.alias.equals(RouteTable.defaultRuleName) || r.alias.equals(RouteTable.defaultRuleV6Name)) {
                             continue;
                         }
-                        cmd = "add route " + r.alias + " to vpc " + vpc + " in switch " + sw.alias + " network " + r.rule;
+                        cmd = "add route " + r.alias + " to vrf " + vrf + " in switch " + sw.alias + " network " + r.rule;
                         if (r.ip == null) {
-                            cmd += " vni " + r.toVni;
+                            cmd += " vrf " + r.toVrf;
                         } else {
                             cmd += " via " + r.ip.formatToIPString();
                         }
@@ -714,7 +714,7 @@ public class Shutdown {
                     if (!(iface instanceof TapIface tap)) {
                         continue;
                     }
-                    cmd = "add tap " + tap.dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
+                    cmd = "add tap " + tap.dev + " to switch " + sw.alias + " vrf " + tap.localSideVrf;
                     if (tap.postScript != null && !tap.postScript.isBlank()) {
                         cmd += " post-script " + tap.postScript;
                     }
@@ -727,13 +727,13 @@ public class Shutdown {
                     }
                     if (iface instanceof FubukiTunIface f) {
                         cmd = "add fubuki " + f.nodeName + " to switch " + sw.alias
-                              + " password " + f.key + " vni " + f.localSideVni + " mac " + f.mac
+                              + " password " + f.key + " vrf " + f.localSideVrf + " mac " + f.mac
                               + " address " + f.serverIPPort.formatToIPPortString();
                         if (f.getLocalAddr() != null) {
                             cmd += " ip " + f.getLocalAddr().formatToIPMaskString();
                         }
                     } else {
-                        cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vni " + tun.localSideVni
+                        cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vrf " + tun.localSideVrf
                               + " mac " + tun.mac;
                         if (tun.postScript != null && !tun.postScript.isBlank()) {
                             cmd += " post-script " + tun.postScript;
@@ -757,7 +757,7 @@ public class Shutdown {
                         + " tx-ring-size " + xdp.params.txRingSize()
                         + " mode " + xdp.params.mode().name()
                         + " busy-poll " + xdp.params.busyPollBudget()
-                        + " vni " + xdp.vni;
+                        + " vrf " + xdp.vrf;
                     if (xdp.params.offload()) {
                         cmd += " offload";
                     }
@@ -775,7 +775,7 @@ public class Shutdown {
                         continue;
                     }
                     cmd = "add fubuki-etherip " + etherip.getParentIface().name().substring("fubuki:".length()) +
-                          " to switch " + sw.alias + " vni " + etherip.localSideVni + " ip " + etherip.targetIP.formatToIPString();
+                          " to switch " + sw.alias + " vrf " + etherip.localSideVrf + " ip " + etherip.targetIP.formatToIPString();
                     commands.add(cmd);
                 }
                 // create sub interfaces
@@ -786,7 +786,7 @@ public class Shutdown {
                     if (!switchInterfaceRequiresSaving(vif.getParentIface())) {
                         continue;
                     }
-                    cmd = "add vlan " + vif.remoteVLan + "@" + vif.getParentIface().name() + " to switch " + sw.alias + " vni " + vif.localVni;
+                    cmd = "add vlan " + vif.remoteVLan + "@" + vif.getParentIface().name() + " to switch " + sw.alias + " vrf " + vif.localVrf;
                     commands.add(cmd);
                 }
                 // set iface options
@@ -804,14 +804,14 @@ public class Shutdown {
                 }
                 // add persistent arp records
                 var networks = sw.getNetworks();
-                for (var vni : networks.keySet()) {
-                    var network = networks.get(vni);
+                for (var vrf : networks.keySet()) {
+                    var network = networks.get(vrf);
                     var macEntries = network.macTable.listEntries();
                     for (var mac : macEntries) {
                         if (mac.getTimeout() != -1) {
                             continue;
                         }
-                        cmd = "add arp " + mac.mac + " to vpc " + network.vni + " in sw " + sw.alias + " iface " + mac.iface.name();
+                        cmd = "add arp " + mac.mac + " to vrf " + network.vrf + " in sw " + sw.alias + " iface " + mac.iface.name();
                         commands.add(cmd);
                     }
                     var ipEntries = network.arpTable.listEntries();
@@ -819,7 +819,7 @@ public class Shutdown {
                         if (ip.getTimeout() != -1) {
                             continue;
                         }
-                        cmd = "add arp " + ip.mac + " to vpc " + network.vni + " in sw " + sw.alias + " ip " + ip.ip.formatToIPString();
+                        cmd = "add arp " + ip.mac + " to vrf " + network.vrf + " in sw " + sw.alias + " ip " + ip.ip.formatToIPString();
                         commands.add(cmd);
                     }
                 }

@@ -652,14 +652,14 @@ public class TestFlowGen {
     }
 
     @Test
-    public void vni() throws Exception {
-        fullname("io.vproxy.test.gen.packetfilters.Vni");
+    public void vrf() throws Exception {
+        fullname("io.vproxy.test.gen.packetfilters.Vrf");
         tables = genTable(0, "" +
-            "if (pkb.network != null && pkb.network.vni == 1) {\n" +
+            "if (pkb.network != null && pkb.network.vrf == 1) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
-        check("vni=1,action=normal");
+        check("vrf=1,action=normal");
     }
 
     @Test

@@ -61,8 +61,8 @@ public class ProgramIface extends Iface {
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return network.vni;
+    public int getLocalSideVrf(int hint) {
+        return network.vrf;
     }
 
     @Override

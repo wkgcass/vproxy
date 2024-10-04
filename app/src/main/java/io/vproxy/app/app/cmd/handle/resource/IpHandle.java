@@ -28,12 +28,12 @@ public class IpHandle {
     }
 
     public static Collection<IP> names(Resource parent) throws Exception {
-        VirtualNetwork net = VpcHandle.get(parent);
+        VirtualNetwork net = VrfHandle.get(parent);
         return net.ips.allIps();
     }
 
     public static Collection<IPMac> list(Resource parent) throws Exception {
-        VirtualNetwork net = VpcHandle.get(parent);
+        VirtualNetwork net = VrfHandle.get(parent);
         return net.ips.entries();
     }
 
@@ -54,7 +54,7 @@ public class IpHandle {
             anno = AnnotationsHandle.get(cmd);
         }
 
-        IPMac info = VpcHandle.get(cmd.prepositionResource).addIp(inet, macO, anno);
+        IPMac info = VrfHandle.get(cmd.prepositionResource).addIp(inet, macO, anno);
         if (cmd.args.containsKey(Param.routing)) {
             info.routing = RoutingHandle.get(cmd);
         } else {
@@ -64,7 +64,7 @@ public class IpHandle {
 
     public static void update(Command cmd) throws Exception {
         IP ip = IP.from(cmd.resource.alias);
-        VirtualNetwork net = VpcHandle.get(cmd.resource.parentResource);
+        VirtualNetwork net = VrfHandle.get(cmd.resource.parentResource);
         var opt = net.ips.entries().stream().filter(ipmac -> ipmac.ip.equals(ip)).findFirst();
         if (opt.isEmpty()) {
             throw new NotFoundException(ResourceType.ip.fullname, cmd.resource.alias);
@@ -84,6 +84,6 @@ public class IpHandle {
         }
         IP inet = IP.from(ipBytes);
 
-        VpcHandle.get(cmd.prepositionResource).ips.del(inet);
+        VrfHandle.get(cmd.prepositionResource).ips.del(inet);
     }
 }

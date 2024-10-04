@@ -18,12 +18,12 @@ public class RouteHandle {
     }
 
     public static List<String> names(Resource parent) throws Exception {
-        VirtualNetwork net = VpcHandle.get(parent);
+        VirtualNetwork net = VrfHandle.get(parent);
         return net.routeTable.getRules().stream().map(r -> r.alias).collect(Collectors.toList());
     }
 
     public static List<RouteTable.RouteRule> list(Resource parent) throws Exception {
-        VirtualNetwork net = VpcHandle.get(parent);
+        VirtualNetwork net = VrfHandle.get(parent);
         return net.routeTable.getRules();
     }
 
@@ -33,16 +33,16 @@ public class RouteHandle {
             throw new Exception("missing " + Param.net.fullname);
         }
         NetworkHandle.check(cmd);
-        String vni = cmd.args.get(Param.vni);
+        String vrf = cmd.args.get(Param.vrf);
         String ip = cmd.args.get(Param.via);
-        if (vni == null && ip == null) {
-            throw new Exception("missing " + Param.vni.fullname + " or " + Param.via.fullname);
+        if (vrf == null && ip == null) {
+            throw new Exception("missing " + Param.vrf.fullname + " or " + Param.via.fullname);
         }
-        if (vni != null && ip != null) {
-            throw new Exception("cannot specify " + Param.vni.fullname + " and " + Param.via.fullname + " at the same time");
+        if (vrf != null && ip != null) {
+            throw new Exception("cannot specify " + Param.vrf.fullname + " and " + Param.via.fullname + " at the same time");
         }
-        if (vni != null && !Utils.isInteger(vni)) {
-            throw new Exception("invalid argument for " + Param.vni + ": should be an integer");
+        if (vrf != null && !Utils.isInteger(vrf)) {
+            throw new Exception("invalid argument for " + Param.vrf + ": should be an integer");
         }
         if (ip != null && !IP.isIpLiteral(ip)) {
             throw new Exception("invalid argument for " + Param.via.fullname);
@@ -54,22 +54,22 @@ public class RouteHandle {
         Network net = NetworkHandle.get(cmd);
 
         RouteTable.RouteRule rule;
-        if (cmd.args.containsKey(Param.vni)) {
-            int vni = Integer.parseInt(cmd.args.get(Param.vni));
-            rule = new RouteTable.RouteRule(alias, net, vni);
+        if (cmd.args.containsKey(Param.vrf)) {
+            int vrf = Integer.parseInt(cmd.args.get(Param.vrf));
+            rule = new RouteTable.RouteRule(alias, net, vrf);
         } else {
             IP ip = IP.from(cmd.args.get(Param.via));
             rule = new RouteTable.RouteRule(alias, net, ip);
         }
 
-        VirtualNetwork vnet = VpcHandle.get(cmd.prepositionResource);
+        VirtualNetwork vnet = VrfHandle.get(cmd.prepositionResource);
         vnet.routeTable.addRule(rule);
     }
 
     public static void remove(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
 
-        VirtualNetwork net = VpcHandle.get(cmd.prepositionResource);
+        VirtualNetwork net = VrfHandle.get(cmd.prepositionResource);
         net.routeTable.delRule(alias);
     }
 }

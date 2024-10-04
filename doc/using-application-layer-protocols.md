@@ -5,7 +5,7 @@
 The layer 4 TCP loadbalancer transfers all data from one frontend connection to one backend. This will result in the following major problems:
 
 1. One backend load would be higher than others if the netflow of a single connection is very high but other connections are not busy.
-2. RPC is frequently used in the internal network (e.g. idc or vpc). Almost all impl of rpc protocols would create a connection with a few connnections, and won't be closed in normal cases. If using the L4 loadbalancing, the backend rpc services won't be able to scale out.
+2. RPC is frequently used in the internal network. Almost all impl of rpc protocols would create a connection with a few connnections, and won't be closed in normal cases. If using the L4 loadbalancing, the backend rpc services won't be able to scale out.
 
 So `vproxy` defines a set of interfaces which allow users to customize their own application level protocols, and to dispatch frames to different backend in one connection.
 

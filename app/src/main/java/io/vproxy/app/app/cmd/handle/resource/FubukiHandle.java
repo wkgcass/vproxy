@@ -16,7 +16,7 @@ public class FubukiHandle {
     public static void add(Command cmd) throws Exception {
         var node = cmd.resource.alias;
         var pass = cmd.args.get(Param.pass);
-        var vni = Integer.parseInt(cmd.args.get(Param.vni));
+        var vrf = Integer.parseInt(cmd.args.get(Param.vrf));
         var mac = MacHandle.get(cmd);
         var addr = AddrHandle.get(cmd);
         IPMask localAddr = null;
@@ -24,6 +24,6 @@ public class FubukiHandle {
             localAddr = IpParamHandle.getIPMask(cmd);
         }
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.addFubuki(node, pass, vni, mac, addr, localAddr);
+        sw.addFubuki(node, pass, vrf, mac, addr, localAddr);
     }
 }

@@ -61,22 +61,22 @@ public class IPOutputRoute extends AbstractNeighborResolve {
 
         assert Logger.lowLevelDebug("route rule found: " + routeRule);
 
-        if (routeRule.toVni == pkb.vni) {
+        if (routeRule.toVrf == pkb.vrf) {
             assert Logger.lowLevelDebug("direct route, no changes required");
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.line(d -> d.append("direct route"));
             }
             return determineDstMacAndReturn(pkb);
-        } else if (routeRule.toVni != 0) {
-            assert Logger.lowLevelDebug("route to another vpc");
+        } else if (routeRule.toVrf != 0) {
+            assert Logger.lowLevelDebug("route to another vrf");
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.line(d -> d.append("route to another network"));
             }
 
-            // search for any synthetic ip in the target vpc
-            VirtualNetwork targetNetwork = sw.getNetwork(routeRule.toVni);
+            // search for any synthetic ip in the target vrf
+            VirtualNetwork targetNetwork = sw.getNetwork(routeRule.toVrf);
             if (targetNetwork == null) {
-                assert Logger.lowLevelDebug("target vpc not found");
+                assert Logger.lowLevelDebug("target vrf not found");
                 if (pkb.debugger.isDebugOn()) {
                     pkb.debugger.line(d -> d.append("target network not found"));
                 }
@@ -84,7 +84,7 @@ public class IPOutputRoute extends AbstractNeighborResolve {
             }
             MacAddress targetMac = SwitchUtils.getRoutedSrcMac(targetNetwork, dst);
             if (targetMac == null) {
-                assert Logger.lowLevelDebug("cannot find src/dst mac for sending this packet to another vpc");
+                assert Logger.lowLevelDebug("cannot find src/dst mac for sending this packet to another vrf");
                 if (pkb.debugger.isDebugOn()) {
                     pkb.debugger.line(d -> d.append("no src/dst mac found for routing out the packet"));
                 }

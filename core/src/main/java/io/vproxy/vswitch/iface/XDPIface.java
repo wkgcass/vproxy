@@ -28,7 +28,7 @@ public class XDPIface extends Iface {
     public final XDPParams params;
 
     private XDPSocket xsk;
-    public final int vni;
+    public final int vrf;
     private SelectorEventLoop loop;
 
     private final Allocator allocator;
@@ -48,7 +48,7 @@ public class XDPIface extends Iface {
                             BPFInfo bpf) {
     }
 
-    public XDPIface(String nic, int vni, UMem umem, XDPParams params) {
+    public XDPIface(String nic, int vrf, UMem umem, XDPParams params) {
         // check offload
         if (params.offload) {
             if (params.bpf.mac2port == null || params.bpf.srcmac2count == null) {
@@ -60,7 +60,7 @@ public class XDPIface extends Iface {
         this.umem = umem;
         this.params = params;
 
-        this.vni = vni;
+        this.vrf = vrf;
 
         this.allocator = Allocator.ofUnsafe();
         this.sendingChunkPointers = new PointerArray(allocator, params.txRingSize);
@@ -213,8 +213,8 @@ public class XDPIface extends Iface {
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return this.vni;
+    public int getLocalSideVrf(int hint) {
+        return this.vrf;
     }
 
     @Override
@@ -248,7 +248,7 @@ public class XDPIface extends Iface {
 
     @Override
     protected String toStringExtra() {
-        return "#q=" + params.queueId + ",umem=" + umem.alias + ",vni:" + vni + (params.offload ? ",offload" : "");
+        return "#q=" + params.queueId + ",umem=" + umem.alias + ",vrf:" + vrf + (params.offload ? ",offload" : "");
     }
 
     private class XDPHandler implements Handler<XDPSocket> {
@@ -278,7 +278,7 @@ public class XDPIface extends Iface {
             for (var chunk : ls) {
                 var fullBuffer = new UMemChunkByteArray(xsk, chunk);
 
-                var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vni, fullBuffer,
+                var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vrf, fullBuffer,
                     (int) (chunk.getPktAddr() - chunk.getAddr()),
                     (int) (chunk.getEndAddr() - chunk.getPktAddr() - chunk.getPktLen()));
 

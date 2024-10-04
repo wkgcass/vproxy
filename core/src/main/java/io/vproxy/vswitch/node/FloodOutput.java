@@ -53,7 +53,7 @@ public class FloodOutput extends AbstractNeighborResolve {
             if (pkb.devin != null && iface == pkb.devin) {
                 continue;
             }
-            if (iface.getLocalSideVni(pkb.vni) != pkb.vni) {
+            if (iface.getLocalSideVrf(pkb.vrf) != pkb.vrf) {
                 continue;
             }
             if (!iface.getParams().isFloodAllowed()) {

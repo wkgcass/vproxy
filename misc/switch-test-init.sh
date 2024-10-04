@@ -282,145 +282,145 @@ echo "releasing files ..."
 cat > /vproxy/sw1 <<EOL
 add switch sw1 address 0.0.0.0:18472
 
-add vpc 1 to switch sw1 v4network 172.16.1.0/24 v6network fd00::100/120
-add vpc 2 to switch sw1 v4network 172.16.2.0/24 v6network fd00::200/120
-add vpc 3 to switch sw1 v4network 172.16.3.0/24 v6network fd00::300/120
+add vrf 1 to switch sw1 v4network 172.16.1.0/24 v6network fd00::100/120
+add vrf 2 to switch sw1 v4network 172.16.2.0/24 v6network fd00::200/120
+add vrf 3 to switch sw1 v4network 172.16.3.0/24 v6network fd00::300/120
 
 add switch sw2 to switch sw1 address 10.255.201.12:18472
 add switch sw3 to switch sw1 address 10.255.202.23:18472
 
-add user-client sw1x1 to switch sw1 address 10.255.203.39:18472 vni 1 password vproxy
-add user-client sw1x2 to switch sw1 address 10.255.203.39:18472 vni 2 password vproxy
+add user-client sw1x1 to switch sw1 address 10.255.203.39:18472 vrf 1 password vproxy
+add user-client sw1x2 to switch sw1 address 10.255.203.39:18472 vrf 2 password vproxy
 EOL
 
 cat > /vproxy/sw2 <<EOL
 add switch sw2 address 0.0.0.0:18472
 
-add vpc 1 to switch sw2 v4network 172.16.1.0/24 v6network fd00::100/120
-add vpc 2 to switch sw2 v4network 172.16.2.0/24 v6network fd00::200/120
-add vpc 3 to switch sw2 v4network 172.16.3.0/24 v6network fd00::300/120
+add vrf 1 to switch sw2 v4network 172.16.1.0/24 v6network fd00::100/120
+add vrf 2 to switch sw2 v4network 172.16.2.0/24 v6network fd00::200/120
+add vrf 3 to switch sw2 v4network 172.16.3.0/24 v6network fd00::300/120
 
 add switch sw1 to switch sw2 address 10.255.201.11:18472
 
-add ip 172.16.1.254 to vpc 1 in switch sw2 mac 04:00:00:00:12:54
-add ip fd00::1fe to vpc 1 in switch sw2 mac 06:00:00:00:12:54
+add ip 172.16.1.254 to vrf 1 in switch sw2 mac 04:00:00:00:12:54
+add ip fd00::1fe to vrf 1 in switch sw2 mac 06:00:00:00:12:54
 
-add route route-to-2 to vpc 1 in switch sw2 network 172.16.2.0/24 vni 2
-add route route-to-2-v6 to vpc 1 in switch sw2 network fd00::200/120 vni 2
-add route route-to-3 to vpc 1 in switch sw2 network 172.16.3.0/24 vni 3
-add route route-to-3-v6 to vpc 1 in switch sw2 network fd00::300/120 vni 3
-add route route-to-1 to vpc 2 in switch sw2 network 172.16.1.0/24 vni 1
-add route route-to-1-v6 to vpc 2 in switch sw2 network fd00::100/120 vni 1
-add route route-to-3 to vpc 2 in switch sw2 network 172.16.3.0/24 vni 3
-add route route-to-3-v6 to vpc 2 in switch sw2 network fd00::300/120 vni 3
-add route route-to-1 to vpc 3 in switch sw2 network 172.16.1.0/24 vni 1
-add route route-to-1-v6 to vpc 3 in switch sw2 network fd00::100/120 vni 1
-add route route-to-2 to vpc 3 in switch sw2 network 172.16.2.0/24 vni 2
-add route route-to-2-v6 to vpc 3 in switch sw2 network fd00::200/120 vni 2
+add route route-to-2 to vrf 1 in switch sw2 network 172.16.2.0/24 vrf 2
+add route route-to-2-v6 to vrf 1 in switch sw2 network fd00::200/120 vrf 2
+add route route-to-3 to vrf 1 in switch sw2 network 172.16.3.0/24 vrf 3
+add route route-to-3-v6 to vrf 1 in switch sw2 network fd00::300/120 vrf 3
+add route route-to-1 to vrf 2 in switch sw2 network 172.16.1.0/24 vrf 1
+add route route-to-1-v6 to vrf 2 in switch sw2 network fd00::100/120 vrf 1
+add route route-to-3 to vrf 2 in switch sw2 network 172.16.3.0/24 vrf 3
+add route route-to-3-v6 to vrf 2 in switch sw2 network fd00::300/120 vrf 3
+add route route-to-1 to vrf 3 in switch sw2 network 172.16.1.0/24 vrf 1
+add route route-to-1-v6 to vrf 3 in switch sw2 network fd00::100/120 vrf 1
+add route route-to-2 to vrf 3 in switch sw2 network 172.16.2.0/24 vrf 2
+add route route-to-2-v6 to vrf 3 in switch sw2 network fd00::200/120 vrf 2
 
-add ip 172.16.2.192 to vpc 2 in switch sw2 mac 04:00:00:00:21:92
-add ip fd00::2c0 to vpc 2 in switch sw2 mac 06:00:00:00:21:92
-add ip 172.16.3.192 to vpc 3 in switch sw2 mac 04:00:00:00:31:92
-add ip fd00::3c0 to vpc 3 in switch sw2 mac 06:00:00:00:31:92
+add ip 172.16.2.192 to vrf 2 in switch sw2 mac 04:00:00:00:21:92
+add ip fd00::2c0 to vrf 2 in switch sw2 mac 06:00:00:00:21:92
+add ip 172.16.3.192 to vrf 3 in switch sw2 mac 04:00:00:00:31:92
+add ip fd00::3c0 to vrf 3 in switch sw2 mac 06:00:00:00:31:92
 
-add route internet to vpc 1 in switch sw2 network 0.0.0.0/0 vni 3
-add route internet-v6 to vpc 1 in switch sw2 network ::/0 vni 3
+add route internet to vrf 1 in switch sw2 network 0.0.0.0/0 vrf 3
+add route internet-v6 to vrf 1 in switch sw2 network ::/0 vrf 3
 
-add route internet-forward to vpc 3 in switch sw2 network 0.0.0.0/0 via 172.16.3.254
-add route internet-forward-v6 to vpc 3 in switch sw2 network ::/0 via fd00::3fe
+add route internet-forward to vrf 3 in switch sw2 network 0.0.0.0/0 via 172.16.3.254
+add route internet-forward-v6 to vrf 3 in switch sw2 network ::/0 via fd00::3fe
 
-add tap tapns10 to switch sw2 vni 1 post-script /vproxy/tapns10.sh
-add tap tapns20 to switch sw2 vni 2 post-script /vproxy/tapns20.sh
+add tap tapns10 to switch sw2 vrf 1 post-script /vproxy/tapns10.sh
+add tap tapns20 to switch sw2 vrf 2 post-script /vproxy/tapns20.sh
 EOL
 
 cat > /vproxy/sw3 <<EOL
 add switch sw3 address 0.0.0.0:18472
 
-add vpc 1 to switch sw3 v4network 172.16.1.0/24 v6network fd00::100/120
-add vpc 2 to switch sw3 v4network 172.16.2.0/24 v6network fd00::200/120
-add vpc 3 to switch sw3 v4network 172.16.3.0/24 v6network fd00::300/120
+add vrf 1 to switch sw3 v4network 172.16.1.0/24 v6network fd00::100/120
+add vrf 2 to switch sw3 v4network 172.16.2.0/24 v6network fd00::200/120
+add vrf 3 to switch sw3 v4network 172.16.3.0/24 v6network fd00::300/120
 
 add switch sw1 to switch sw3 address 10.255.202.21:18472
 
-add ip 172.16.3.254 to vpc 3 in switch sw3 mac 04:00:00:00:32:54
-add ip fd00::3fe to vpc 3 in switch sw3 mac 06:00:00:00:32:54
+add ip 172.16.3.254 to vrf 3 in switch sw3 mac 04:00:00:00:32:54
+add ip fd00::3fe to vrf 3 in switch sw3 mac 06:00:00:00:32:54
 
-add route route-to-2 to vpc 1 in switch sw3 network 172.16.2.0/24 vni 2
-add route route-to-2-v6 to vpc 1 in switch sw3 network fd00::200/120 vni 2
-add route route-to-3 to vpc 1 in switch sw3 network 172.16.3.0/24 vni 3
-add route route-to-3-v6 to vpc 1 in switch sw3 network fd00::300/120 vni 3
-add route route-to-1 to vpc 2 in switch sw3 network 172.16.1.0/24 vni 1
-add route route-to-1-v6 to vpc 2 in switch sw3 network fd00::100/120 vni 1
-add route route-to-3 to vpc 2 in switch sw3 network 172.16.3.0/24 vni 3
-add route route-to-3-v6 to vpc 2 in switch sw3 network fd00::300/120 vni 3
-add route route-to-1 to vpc 3 in switch sw3 network 172.16.1.0/24 vni 1
-add route route-to-1-v6 to vpc 3 in switch sw3 network fd00::100/120 vni 1
-add route route-to-2 to vpc 3 in switch sw3 network 172.16.2.0/24 vni 2
-add route route-to-2-v6 to vpc 3 in switch sw3 network fd00::200/120 vni 2
+add route route-to-2 to vrf 1 in switch sw3 network 172.16.2.0/24 vrf 2
+add route route-to-2-v6 to vrf 1 in switch sw3 network fd00::200/120 vrf 2
+add route route-to-3 to vrf 1 in switch sw3 network 172.16.3.0/24 vrf 3
+add route route-to-3-v6 to vrf 1 in switch sw3 network fd00::300/120 vrf 3
+add route route-to-1 to vrf 2 in switch sw3 network 172.16.1.0/24 vrf 1
+add route route-to-1-v6 to vrf 2 in switch sw3 network fd00::100/120 vrf 1
+add route route-to-3 to vrf 2 in switch sw3 network 172.16.3.0/24 vrf 3
+add route route-to-3-v6 to vrf 2 in switch sw3 network fd00::300/120 vrf 3
+add route route-to-1 to vrf 3 in switch sw3 network 172.16.1.0/24 vrf 1
+add route route-to-1-v6 to vrf 3 in switch sw3 network fd00::100/120 vrf 1
+add route route-to-2 to vrf 3 in switch sw3 network 172.16.2.0/24 vrf 2
+add route route-to-2-v6 to vrf 3 in switch sw3 network fd00::200/120 vrf 2
 
-add ip 172.16.1.193 to vpc 1 in switch sw3 mac 04:00:00:00:11:93
-add ip fd00::1c1 to vpc 1 in switch sw3 mac 06:00:00:00:11:93
-add ip 172.16.2.193 to vpc 2 in switch sw3 mac 04:00:00:00:21:93
-add ip fd00::2c1 to vpc 2 in switch sw3 mac 06:00:00:00:21:93
+add ip 172.16.1.193 to vrf 1 in switch sw3 mac 04:00:00:00:11:93
+add ip fd00::1c1 to vrf 1 in switch sw3 mac 06:00:00:00:11:93
+add ip 172.16.2.193 to vrf 2 in switch sw3 mac 04:00:00:00:21:93
+add ip fd00::2c1 to vrf 2 in switch sw3 mac 06:00:00:00:21:93
 
-add route internet to vpc 3 in switch sw3 network 0.0.0.0/0 via 172.16.3.5
-add route internet-v6 to vpc 3 in switch sw3 network ::/0 via fd00::305
+add route internet to vrf 3 in switch sw3 network 0.0.0.0/0 via 172.16.3.5
+add route internet-v6 to vrf 3 in switch sw3 network ::/0 via fd00::305
 
-add tap tapns30 to switch sw3 vni 1 post-script /vproxy/tapns30.sh
-add tap tapns40 to switch sw3 vni 2 post-script /vproxy/tapns40.sh
-add tap tap5 to switch sw3 vni 3 post-script /vproxy/tap5.sh
+add tap tapns30 to switch sw3 vrf 1 post-script /vproxy/tapns30.sh
+add tap tapns40 to switch sw3 vrf 2 post-script /vproxy/tapns40.sh
+add tap tap5 to switch sw3 vrf 3 post-script /vproxy/tap5.sh
 EOL
 
 cat > /vproxy/sw-pub <<EOL
 add switch sw-pub address 0.0.0.0:18472
 
-add vpc 101 to switch sw-pub v4network 172.16.1.0/24 v6network fd00::100/120
-add vpc 102 to switch sw-pub v4network 172.16.2.0/24 v6network fd00::200/120
+add vrf 101 to switch sw-pub v4network 172.16.1.0/24 v6network fd00::100/120
+add vrf 102 to switch sw-pub v4network 172.16.2.0/24 v6network fd00::200/120
 
-add user sw1x1 to switch sw-pub vni 101 password vproxy
-add user sw1x2 to switch sw-pub vni 102 password vproxy
+add user sw1x1 to switch sw-pub vrf 101 password vproxy
+add user sw1x2 to switch sw-pub vrf 102 password vproxy
 
-add ip 172.16.2.254 to vpc 102 in switch sw-pub mac 04:00:00:00:22:54
-add ip fd00::2fe to vpc 102 in switch sw-pub mac 06:00:00:00:22:54
+add ip 172.16.2.254 to vrf 102 in switch sw-pub mac 04:00:00:00:22:54
+add ip fd00::2fe to vrf 102 in switch sw-pub mac 06:00:00:00:22:54
 
-add route route-to-1 to vpc 102 in switch sw-pub network 172.16.1.0/24 vni 101
-add route route-to-1-v6 to vpc 102 in switch sw-pub network fd00::100/120 vni 101
-add route route-to-2 to vpc 101 in switch sw-pub network 172.16.2.0/24 vni 102
-add route route-to-2-v6 to vpc 101 in switch sw-pub network fd00::200/120 vni 102
+add route route-to-1 to vrf 102 in switch sw-pub network 172.16.1.0/24 vrf 101
+add route route-to-1-v6 to vrf 102 in switch sw-pub network fd00::100/120 vrf 101
+add route route-to-2 to vrf 101 in switch sw-pub network 172.16.2.0/24 vrf 102
+add route route-to-2-v6 to vrf 101 in switch sw-pub network fd00::200/120 vrf 102
 
-add ip 172.16.1.190 to vpc 101 in switch sw-pub mac 04:00:00:00:11:90
-add ip fd00::1be to vpc 101 in switch sw-pub mac 06:00:00:00:11:90
+add ip 172.16.1.190 to vrf 101 in switch sw-pub mac 04:00:00:00:11:90
+add ip fd00::1be to vrf 101 in switch sw-pub mac 06:00:00:00:11:90
 
-add route route-to-3-1 to vpc 102 in switch sw-pub network 172.16.3.0/24 vni 101
-add route route-to-3 to vpc 101 in switch sw-pub network 172.16.3.0/24 via 172.16.1.254
-add route route-to-3-1-v6 to vpc 102 in switch sw-pub network fd00::300/120 vni 101
-add route route-to-3-v6 to vpc 101 in switch sw-pub network fd00::300/120 via fd00::1fe
+add route route-to-3-1 to vrf 102 in switch sw-pub network 172.16.3.0/24 vrf 101
+add route route-to-3 to vrf 101 in switch sw-pub network 172.16.3.0/24 via 172.16.1.254
+add route route-to-3-1-v6 to vrf 102 in switch sw-pub network fd00::300/120 vrf 101
+add route route-to-3-v6 to vrf 101 in switch sw-pub network fd00::300/120 via fd00::1fe
 
-add route route-to-internet-1 to vpc 102 in switch sw-pub network 0.0.0.0/0 vni 101
-add route route-to-internet to vpc 101 in switch sw-pub network 0.0.0.0/0 via 172.16.1.254
-add route route-to-internet-1-v6 to vpc 102 in switch sw-pub network ::/0 vni 101
-add route route-to-internet-v6 to vpc 101 in switch sw-pub network ::/0 via fd00::1fe
+add route route-to-internet-1 to vrf 102 in switch sw-pub network 0.0.0.0/0 vrf 101
+add route route-to-internet to vrf 101 in switch sw-pub network 0.0.0.0/0 via 172.16.1.254
+add route route-to-internet-1-v6 to vrf 102 in switch sw-pub network ::/0 vrf 101
+add route route-to-internet-v6 to vrf 101 in switch sw-pub network ::/0 via fd00::1fe
 
-add tap tap101 to switch sw-pub vni 101 post-script /vproxy/tap101.sh
+add tap tap101 to switch sw-pub vrf 101 post-script /vproxy/tap101.sh
 EOL
 
 cat > /vproxy/tapns10.sh <<EOL
-/usr/bin/env python \$NETNSUTIL add ns=ns1 sw=sw2 vni=1 addr=172.16.1.1/24 gate=172.16.1.254 v6addr=fd00::101/120 v6gate=fd00::1fe
+/usr/bin/env python \$NETNSUTIL add ns=ns1 sw=sw2 vrf=1 addr=172.16.1.1/24 gate=172.16.1.254 v6addr=fd00::101/120 v6gate=fd00::1fe
 EOL
 chmod +x /vproxy/tapns10.sh
 
 cat > /vproxy/tapns20.sh <<EOL
-/usr/bin/env python \$NETNSUTIL add ns=ns2 sw=sw2 vni=2 addr=172.16.2.2/24 gate=172.16.2.254 v6addr=fd00::202/120 v6gate=fd00::2fe
+/usr/bin/env python \$NETNSUTIL add ns=ns2 sw=sw2 vrf=2 addr=172.16.2.2/24 gate=172.16.2.254 v6addr=fd00::202/120 v6gate=fd00::2fe
 EOL
 chmod +x /vproxy/tapns20.sh
 
 cat > /vproxy/tapns30.sh <<EOL
-/usr/bin/env python \$NETNSUTIL add ns=ns3 sw=sw3 vni=1 addr=172.16.1.3/24 gate=172.16.1.254 v6addr=fd00::103/120 v6gate=fd00::1fe
+/usr/bin/env python \$NETNSUTIL add ns=ns3 sw=sw3 vrf=1 addr=172.16.1.3/24 gate=172.16.1.254 v6addr=fd00::103/120 v6gate=fd00::1fe
 EOL
 chmod +x /vproxy/tapns30.sh
 
 cat > /vproxy/tapns40.sh <<EOL
-/usr/bin/env python \$NETNSUTIL add ns=ns4 sw=sw3 vni=2 addr=172.16.2.4/24 gate=172.16.2.254 v6addr=fd00::204/120 v6gate=fd00::2fe
+/usr/bin/env python \$NETNSUTIL add ns=ns4 sw=sw3 vrf=2 addr=172.16.2.4/24 gate=172.16.2.254 v6addr=fd00::204/120 v6gate=fd00::2fe
 EOL
 chmod +x /vproxy/tapns40.sh
 

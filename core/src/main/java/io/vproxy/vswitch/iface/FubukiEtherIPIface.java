@@ -15,16 +15,16 @@ import java.lang.foreign.MemorySegment;
 public class FubukiEtherIPIface extends Iface implements SubIface {
     private final FubukiTunIface parent;
     public final IPv4 targetIP;
-    public final int localSideVni;
+    public final int localSideVrf;
 
-    public FubukiEtherIPIface(FubukiTunIface parent, IPv4 targetIP, int localSideVni) throws PreconditionUnsatisfiedException {
+    public FubukiEtherIPIface(FubukiTunIface parent, IPv4 targetIP, int localSideVrf) throws PreconditionUnsatisfiedException {
         if (parent.getLocalAddr() == null) {
             throw new PreconditionUnsatisfiedException("local addr of the fubuki iface " + parent.name() + " is not retrieved yet");
         }
 
         this.parent = parent;
         this.targetIP = targetIP.stripHostname();
-        this.localSideVni = localSideVni;
+        this.localSideVrf = localSideVrf;
     }
 
     @Override
@@ -51,8 +51,8 @@ public class FubukiEtherIPIface extends Iface implements SubIface {
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return localSideVni;
+    public int getLocalSideVrf(int hint) {
+        return localSideVrf;
     }
 
     @Override
@@ -67,7 +67,7 @@ public class FubukiEtherIPIface extends Iface implements SubIface {
 
     @Override
     protected String toStringExtra() {
-        return ",vni:" + localSideVni;
+        return ",vrf:" + localSideVrf;
     }
 
     @Override
@@ -98,7 +98,7 @@ public class FubukiEtherIPIface extends Iface implements SubIface {
     }
 
     void onPacket(ByteArray packet, int off, int pad) {
-        var pkb = PacketBuffer.fromEtherBytes(this, localSideVni, packet, off, pad);
+        var pkb = PacketBuffer.fromEtherBytes(this, localSideVrf, packet, off, pad);
         var err = pkb.init();
         if (err != null) {
             assert Logger.lowLevelDebug("got invalid packet: " + err);

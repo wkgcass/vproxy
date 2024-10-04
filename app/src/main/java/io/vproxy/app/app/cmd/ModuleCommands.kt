@@ -642,9 +642,9 @@ class ModuleCommands private constructor() : Commands() {
         exec = execUpdate { TraceHandle.remove(it) }
       )
     }
-    it + Res(ResourceType.vpc) {
+    it + Res(ResourceType.vrf) {
       it + ResAct(
-        relation = ResourceType.vpc,
+        relation = ResourceType.vrf,
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
@@ -664,33 +664,33 @@ class ModuleCommands private constructor() : Commands() {
           }
           it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        check = { VpcHandle.checkVpcName(it.resource) },
-        exec = execUpdate { VpcHandle.add(it) }
+        check = { VrfHandle.checkVrfName(it.resource) },
+        exec = execUpdate { VrfHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        relation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         action = ActType.list,
         exec = {
-          val vpcLs = VpcHandle.list(it.resource.parentResource)
-          val ls = vpcLs.stream().map { it.vpc }.collect(Collectors.toList())
-          CmdResult(vpcLs, ls, utilJoinList(ls))
+          val vrfLs = VrfHandle.list(it.resource.parentResource)
+          val ls = vrfLs.stream().map { it.vrf }.collect(Collectors.toList())
+          CmdResult(vrfLs, ls, utilJoinList(ls))
         }
       )
       it + ResAct(
-        relation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        relation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         action = ActType.listdetail,
         exec = {
-          val vpcLs = VpcHandle.list(it.resource.parentResource)
-          val ls = vpcLs.stream().map { it.toString() }.collect(Collectors.toList())
-          CmdResult(vpcLs, ls, utilJoinList(ls))
+          val vrfLs = VrfHandle.list(it.resource.parentResource)
+          val ls = vrfLs.stream().map { it.toString() }.collect(Collectors.toList())
+          CmdResult(vrfLs, ls, utilJoinList(ls))
         }
       )
       it + ResAct(
-        relation = ResourceType.vpc,
+        relation = ResourceType.vrf,
         action = ActType.removefrom,
         targetRelation = ResRelation(ResourceType.sw),
-        check = { VpcHandle.checkVpcName(it.resource) },
-        exec = execUpdate { VpcHandle.remove(it) }
+        check = { VrfHandle.checkVrfName(it.resource) },
+        exec = execUpdate { VrfHandle.remove(it) }
       )
     }
     it + Res(ResourceType.iface) {
@@ -746,7 +746,7 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResourceType.arp,
         action = ActType.addto,
-        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         params = {
           it + ResActParam(Param.ip) { IpParamHandle.check(it) }
           it + ResActParam(Param.iface)
@@ -756,7 +756,7 @@ class ModuleCommands private constructor() : Commands() {
           if (!it.args.containsKey(Param.ip) && !(it.args.containsKey(Param.iface))) {
             throw io.vproxy.base.util.exception.XException("at lease one of ip|iface should be specified")
           }
-          VpcHandle.checkVpcName(it.prepositionResource)
+          VrfHandle.checkVrfName(it.prepositionResource)
         },
         exec = {
           ArpHandle.add(it)
@@ -766,13 +766,13 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.arp, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.list,
-        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VrfHandle.checkVrfName(it.resource.parentResource) },
         exec = {
           val cnt = ArpHandle.count(it.resource.parentResource)
           CmdResult(cnt, cnt, "" + cnt)
@@ -781,13 +781,13 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.arp, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.listdetail,
-        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VrfHandle.checkVrfName(it.resource.parentResource) },
         exec = {
           val arpLs = ArpHandle.list(it.resource.parentResource)
           val ls = arpLs.stream().map { it.toString(arpLs) }.collect(Collectors.toList())
@@ -797,7 +797,7 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResourceType.arp,
         action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         check = { ArpHandle.checkMacName(it.resource) },
         exec = {
           ArpHandle.remove(it)
@@ -809,13 +809,13 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.conntrack, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.list,
-        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VrfHandle.checkVrfName(it.resource.parentResource) },
         exec = {
           val cnt = ConntrackHandle.count(it.resource.parentResource)
           CmdResult(cnt, cnt, "" + cnt)
@@ -824,13 +824,13 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.conntrack, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.listdetail,
-        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VrfHandle.checkVrfName(it.resource.parentResource) },
         exec = {
           val ctLs = ConntrackHandle.list(it.resource.parentResource)
           val tb = TableBuilder()
@@ -850,7 +850,7 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
           it + ResActParam(Param.postscript)
         },
         check = {
@@ -867,7 +867,7 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
           it + ResActParam(Param.mac, required) { MacHandle.check(it) }
           it + ResActParam(Param.postscript)
         },
@@ -886,7 +886,7 @@ class ModuleCommands private constructor() : Commands() {
         targetRelation = ResRelation(ResourceType.sw),
         params = {
           it + ResActParam(Param.pass, required)
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
           it + ResActParam(Param.mac, required) { MacHandle.check(it) }
           it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
           it + ResActParam(Param.ip) { IpParamHandle.check(it, true) }
@@ -900,7 +900,7 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
           it + ResActParam(Param.ip) { IpParamHandle.check(it) }
         },
         exec = execUpdate { FubukiEtherIPHandle.add(it) }
@@ -918,7 +918,7 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.txringsize) { RingSizeHandle.check(it, Param.txringsize) }
           it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
           it + ResActParam(Param.busypoll) { BusyPollHandle.check(it) }
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
         },
         flags = {
           it + ResActFlag(Flag.zerocopy)
@@ -934,7 +934,7 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
         },
         exec = execUpdate { VLanAdaptorHandle.add(it) }
       )
@@ -943,7 +943,7 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResourceType.ip,
         action = ActType.addto,
-        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         params = {
           it + ResActParam(Param.mac, required) { MacHandle.check(it) }
           it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
@@ -951,21 +951,21 @@ class ModuleCommands private constructor() : Commands() {
         },
         check = {
           IpHandle.checkIpName(it.resource)
-          VpcHandle.checkVpcName(it.prepositionResource)
+          VrfHandle.checkVrfName(it.prepositionResource)
         },
         exec = execUpdate { IpHandle.add(it) }
       )
       it + ResAct(
         relation = ResRelation(
           ResourceType.ip, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.list,
         check = {
-          VpcHandle.checkVpcName(it.resource.parentResource)
+          VrfHandle.checkVrfName(it.resource.parentResource)
         },
         exec = {
           val names = IpHandle.names(it.resource.parentResource)
@@ -976,14 +976,14 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.ip, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.listdetail,
         check = {
-          VpcHandle.checkVpcName(it.resource.parentResource)
+          VrfHandle.checkVrfName(it.resource.parentResource)
         },
         exec = {
           val tuples = IpHandle.list(it.resource.parentResource)
@@ -1001,7 +1001,7 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.ip, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
@@ -1012,7 +1012,7 @@ class ModuleCommands private constructor() : Commands() {
         },
         check = {
           IpHandle.checkIpName(it.resource)
-          VpcHandle.checkVpcName(it.resource.parentResource)
+          VrfHandle.checkVrfName(it.resource.parentResource)
         },
         exec = {
           IpHandle.update(it)
@@ -1022,10 +1022,10 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResourceType.ip,
         action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         check = {
           IpHandle.checkIpName(it.resource)
-          VpcHandle.checkVpcName(it.prepositionResource)
+          VrfHandle.checkVrfName(it.prepositionResource)
         },
         exec = execUpdate { IpHandle.remove(it) }
       )
@@ -1034,14 +1034,14 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResourceType.route,
         action = ActType.addto,
-        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
         params = {
           it + ResActParam(Param.net, required) { NetworkHandle.check(it) }
-          it + ResActParam(Param.vni) { NetworkHandle.check(it) }
+          it + ResActParam(Param.vrf) { NetworkHandle.check(it) }
           it + ResActParam(Param.via) { NetworkHandle.check(it) }
         },
         check = {
-          VpcHandle.checkVpcName(it.prepositionResource)
+          VrfHandle.checkVrfName(it.prepositionResource)
           RouteHandle.checkCreateRoute(it)
         },
         exec = execUpdate { RouteHandle.add(it) }
@@ -1049,13 +1049,13 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.route, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.list,
-        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VrfHandle.checkVrfName(it.resource.parentResource) },
         exec = {
           val names = RouteHandle.names(it.resource.parentResource)
           CmdResult(names, names, utilJoinList(names))
@@ -1064,13 +1064,13 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResRelation(
           ResourceType.route, ResRelation(
-            ResourceType.vpc, ResRelation(
+            ResourceType.vrf, ResRelation(
               ResourceType.sw
             )
           )
         ),
         action = ActType.listdetail,
-        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VrfHandle.checkVrfName(it.resource.parentResource) },
         exec = {
           val routes = RouteHandle.list(it.resource.parentResource)
           val strTuples = routes.stream().map { it.toString() }.collect(Collectors.toList())
@@ -1080,8 +1080,8 @@ class ModuleCommands private constructor() : Commands() {
       it + ResAct(
         relation = ResourceType.route,
         action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
-        check = { VpcHandle.checkVpcName(it.prepositionResource) },
+        targetRelation = ResRelation(ResourceType.vrf, ResRelation(ResourceType.sw)),
+        check = { VrfHandle.checkVrfName(it.prepositionResource) },
         exec = execUpdate { RouteHandle.remove(it) }
       )
     }

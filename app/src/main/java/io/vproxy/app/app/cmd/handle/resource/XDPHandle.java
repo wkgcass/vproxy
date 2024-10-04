@@ -29,13 +29,13 @@ public class XDPHandle {
             busyPollBudget = BusyPollHandle.get(cmd);
         }
         boolean rxGenChecksum = cmd.flags.contains(Flag.rxgencsum);
-        int vni = VniHandle.get(cmd);
+        int vrf = VrfParamHandle.get(cmd);
         boolean offload = cmd.flags.contains(Flag.offload);
 
         var nic = cmd.resource.alias;
         var mode = BPFModeHandle.get(cmd, BPFMode.SKB);
         var createResult = SwitchUtils.createBPFObjectWithReusedMaps(
-            sw, vni, (reuseMap) -> BPFObject.loadAndAttachToNic(nic, reuseMap, mode, true)
+            sw, vrf, (reuseMap) -> BPFObject.loadAndAttachToNic(nic, reuseMap, mode, true)
         );
         var bpfobj = createResult.object();
 
@@ -44,7 +44,7 @@ public class XDPHandle {
             var macMap = createResult.map();
             var srcmac2countMap = bpfobj.getMap(Prebuilt.DEFAULT_SRC_MAC_TO_COUNT_MAP_NAME);
 
-            sw.addXDP(nic, vni, umem, new XDPIface.XDPParams(
+            sw.addXDP(nic, vrf, umem, new XDPIface.XDPParams(
                 queueId, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum, offload,
                 new XDPIface.BPFInfo(bpfobj, xskMap, macMap, srcmac2countMap, createResult.groupName())));
         } catch (Exception e) {

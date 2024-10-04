@@ -45,7 +45,7 @@ def runVProxyCommand(swaddr, password, commandStr):
 def buildTapName(ns):
     return 'tap' + ns + '0'
 
-def add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate):
+def add(swaddr, password, sw, ns, vrf, addr, gate, v6addr, v6gate):
     # check for netns
     ret, out, err = runCommand(['ip', 'netns', 'show'])
     if ret != 0:
@@ -79,7 +79,7 @@ def add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate):
             if not exists:
                 print 'creating ' + nic + ' in main ns ...'
                 ret, out, err = runVProxyCommand(swaddr, password,
-                    'add tap ' + nic + ' to switch ' + sw + ' vni ' + vni)
+                    'add tap ' + nic + ' to switch ' + sw + ' vrf ' + vrf)
                 if ret != 0:
                     raise Exception('creating tap ' + nic + ' failed: ' + out + ', ' + err)
                 if out != nic:
@@ -207,14 +207,14 @@ def main(args):
     op = None
     sw = None
     ns = None
-    vni = None
+    vrf = None
     addr = None
     gate = None
     v6addr = None
     v6gate = None
 
     HELP_STR="""
-usage: add ns={} sw={} vni={} addr={} gate={} [v6addr={} v6gate={}]
+usage: add ns={} sw={} vrf={} addr={} gate={} [v6addr={} v6gate={}]
        del ns={} sw={}
 default:
        swaddr = 127.0.0.1:16309
@@ -224,7 +224,7 @@ arguments:
        pass   vproxy switch configuration password
        ns     name of the netns
        sw     name of the switch to connect to
-       vni    vni for the net interface to connect to
+       vrf    vrf for the net interface to connect to
        addr   ip address and mask of the net dev in x.x.x.x/x format
        gate   the gateway address
        v6addr ipv6 address and mask of the net dev [optional]
@@ -251,8 +251,8 @@ arguments:
                 sw = arg[len('sw='):]
             elif arg.startswith('ns='):
                 ns = arg[len('ns='):]
-            elif arg.startswith('vni='):
-                vni = arg[len('vni='):]
+            elif arg.startswith('vrf='):
+                vrf = arg[len('vrf='):]
             elif arg.startswith('addr='):
                 addr = arg[len('addr='):]
             elif arg.startswith('gate='):
@@ -284,8 +284,8 @@ arguments:
             raise Exception('missing argument sw={...}')
         if ns == None:
             raise Exception('missing argument ns={...}')
-        if vni == None:
-            raise Exception('missing argument vni={...}')
+        if vrf == None:
+            raise Exception('missing argument vrf={...}')
         if addr == None:
             raise Exception('missing argument addr={...}')
         if gate == None:
@@ -300,13 +300,13 @@ arguments:
         print 'password = ' + password
         print 'sw   = ' + sw
         print 'ns   = ' + ns
-        print 'vni  = ' + vni
+        print 'vrf  = ' + vrf
         print 'addr = ' + addr
         print 'gate = ' + gate
         print 'v6addr =', v6addr
         print 'v6gate =', v6gate
         print '=========================='
-        add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate)
+        add(swaddr, password, sw, ns, vrf, addr, gate, v6addr, v6gate)
     else:
         if sw == None:
             raise Exception('missing argument sw={...}')

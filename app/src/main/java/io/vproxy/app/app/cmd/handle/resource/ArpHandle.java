@@ -32,7 +32,7 @@ public class ArpHandle {
 
     public static void add(Command cmd) throws Exception {
         MacAddress mac = new MacAddress(cmd.resource.alias);
-        VirtualNetwork net = VpcHandle.get(cmd.prepositionResource);
+        VirtualNetwork net = VrfHandle.get(cmd.prepositionResource);
 
         IP ip = null;
         if (cmd.args.containsKey(Param.ip)) {
@@ -55,20 +55,20 @@ public class ArpHandle {
     }
 
     public static List<ArpEntry> list(Resource parent) throws Exception {
-        String vpcStr = parent.alias;
-        int vpc = Integer.parseInt(vpcStr);
+        String vrfStr = parent.alias;
+        int vrf = Integer.parseInt(vrfStr);
         Switch sw = Application.get().switchHolder.get(parent.parentResource.alias);
         var networks = sw.getNetworks().values();
 
         VirtualNetwork network = null;
         for (var net : networks) {
-            if (net.vni == vpc) {
+            if (net.vrf == vrf) {
                 network = net;
                 break;
             }
         }
         if (network == null) {
-            throw new NotFoundException("vpc", vpcStr);
+            throw new NotFoundException("vrf", vrfStr);
         }
 
         var macInArpEntries = new HashSet<MacAddress>();
@@ -139,7 +139,7 @@ public class ArpHandle {
 
     public static void remove(Command cmd) throws Exception {
         MacAddress mac = new MacAddress(cmd.resource.alias);
-        VirtualNetwork net = VpcHandle.get(cmd.prepositionResource);
+        VirtualNetwork net = VrfHandle.get(cmd.prepositionResource);
         net.macTable.remove(mac);
         net.arpTable.remove(mac);
     }

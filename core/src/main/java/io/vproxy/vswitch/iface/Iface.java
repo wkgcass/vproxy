@@ -55,7 +55,7 @@ public abstract class Iface implements WithUserData {
         return index;
     }
 
-    public abstract int getLocalSideVni(int hint);
+    public abstract int getLocalSideVrf(int hint);
 
     public abstract int getOverhead();
 

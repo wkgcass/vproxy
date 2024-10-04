@@ -183,9 +183,9 @@ public class TestFlowParser {
     }
 
     @Test
-    public void vni() throws Exception {
-        testFlow("vni=1,action=normal",
-            "table=0,priority=0,vni=1,actions=normal");
+    public void vrf() throws Exception {
+        testFlow("vrf=1,action=normal",
+            "table=0,priority=0,vrf=1,actions=normal");
     }
 
     @Test

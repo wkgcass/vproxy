@@ -4,26 +4,26 @@ import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Param;
 import io.vproxy.base.util.exception.XException;
 
-public class VniHandle {
-    private VniHandle() {
+public class VrfParamHandle {
+    private VrfParamHandle() {
     }
 
     public static int get(Command cmd) throws Exception {
-        String vniStr = cmd.args.get(Param.vni);
-        int vni;
+        String vrfStr = cmd.args.get(Param.vrf);
+        int vrf;
         try {
-            vni = Integer.parseInt(vniStr);
+            vrf = Integer.parseInt(vrfStr);
         } catch (NumberFormatException e) {
-            throw new Exception("vni not a valid integer");
+            throw new Exception("vrf not a valid integer");
         }
-        return vni;
+        return vrf;
     }
 
     public static void check(Command cmd) throws Exception {
         try {
             get(cmd);
         } catch (Exception e) {
-            throw new XException("invalid value for " + Param.vni.fullname + ": " + e.getMessage());
+            throw new XException("invalid value for " + Param.vrf.fullname + ": " + e.getMessage());
         }
     }
 }

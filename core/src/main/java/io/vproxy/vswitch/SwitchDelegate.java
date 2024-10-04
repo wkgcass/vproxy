@@ -66,13 +66,13 @@ public class SwitchDelegate {
     }
 
     public interface GetTable {
-        VirtualNetwork getTable(int vni);
+        VirtualNetwork getTable(int vrf);
     }
 
     private final GetTable getTableFunc;
 
-    public VirtualNetwork getNetwork(int vni) {
-        return getTableFunc.getTable(vni);
+    public VirtualNetwork getNetwork(int vrf) {
+        return getTableFunc.getTable(vrf);
     }
 
     public interface GetSelectorEventLoop {

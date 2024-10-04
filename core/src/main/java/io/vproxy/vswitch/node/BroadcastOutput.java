@@ -41,8 +41,8 @@ public class BroadcastOutput extends Node {
         var isFirst = true;
         HandleResult res = HandleResult.DROP;
         for (Iface f : sw.getIfaces()) {
-            // send if vni matches
-            if (f.getLocalSideVni(pkb.vni) != pkb.vni) {
+            // send if vrf matches
+            if (f.getLocalSideVrf(pkb.vrf) != pkb.vrf) {
                 continue;
             }
             // no duplicated sending

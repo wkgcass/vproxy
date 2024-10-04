@@ -427,7 +427,7 @@ public class HelpCommand {
         pass("password", "pass", "password"),
         mac("mac", null, "mac address"),
         routing("routing", null, "routing functions"),
-        vni("vni", null, "vni number"),
+        vrf("vrf", null, "vrf id number"),
         postscript("post-script", null, "the script to run after added"),
         mtu("mtu", null, "max transmission unit"),
         flood("flood", null, "flooding traffic"),
@@ -1172,33 +1172,33 @@ public class HelpCommand {
                     )
                 ))
             )),
-        vpc("vpc", null, "a private network",
+        vrf("vrf", null, "a private network",
             Arrays.asList(
-                new ResActMan(ActMan.addto, "create a vpc in a switch. the name should be vni of the vpc", Arrays.asList(
-                    new ResActParamMan(ParamMan.v4network, "the ipv4 network allowed in this vpc"),
-                    new ResActParamMan(ParamMan.v6network, "the ipv6 network allowed in this vpc", "not allowed"),
-                    new ResActParamMan(ParamMan.annotations, "annotations of the vpc", "{}")
+                new ResActMan(ActMan.addto, "create a vrf in a switch. the name should be a numeric id of the vrf", Arrays.asList(
+                    new ResActParamMan(ParamMan.v4network, "the ipv4 network allowed in this vrf"),
+                    new ResActParamMan(ParamMan.v6network, "the ipv6 network allowed in this vrf", "not allowed"),
+                    new ResActParamMan(ParamMan.annotations, "annotations of the vrf", "{}")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add vpc 1314 to switch sw0 v4network 172.16.0.0/16",
+                        "add vrf 1314 to switch sw0 v4network 172.16.0.0/16",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.list, "list existing vpcs in a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "list existing vrfs in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list vpc in switch sw0",
+                        "list vrf in switch sw0",
                         "1) (integer) 1314"
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "list detailed info about vpcs in a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "list detailed info about vrfs in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail vpc in switch sw0",
+                        "list-detail vrf in switch sw0",
                         "1) \"1314 -> v4network 172.16.0.0/16\""
                     )
                 )),
-                new ResActMan(ActMan.removefrom, "remove a vpc from a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a vrf from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "remote vpc 1314 from switch sw0",
+                        "remote vrf 1314 from switch sw0",
                         "\"OK\""
                     )
                 ))
@@ -1265,40 +1265,40 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.iface, "create mac entry with the specified iface", "")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add arp 11:22:33:44:55:66 to vpc 1 in switch sw0 iface xdp:b1 ip 9.8.7.6",
+                        "add arp 11:22:33:44:55:66 to vrf 1 in switch sw0 iface xdp:b1 ip 9.8.7.6",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.list, "count entries in a vpc", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "count entries in a vrf", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list arp in vpc 1314 in switch sw0",
+                        "list arp in vrf 1314 in switch sw0",
                         "(integer) 2"
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "list arp and mac table entries in a vpc", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "list arp and mac table entries in a vrf", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail arp in vpc 1314 in switch sw0",
+                        "list-detail arp in vrf 1314 in switch sw0",
                         "1) \"aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299\"\n" +
                             "2) \"fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299\""
                     )
                 )),
-                new ResActMan(ActMan.removefrom, "remove arp and mac table entries from a vpc", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove arp and mac table entries from a vrf", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "remove arp 11:22:33:44:55:66 from vpc 1 in switch sw0",
+                        "remove arp 11:22:33:44:55:66 from vrf 1 in switch sw0",
                         "\"OK\""
                     )
                 ))
             )),
         conntrack("conntrack", "ct", "connection tracking table entries", Arrays.asList(
-            new ResActMan(ActMan.list, "count entries in a vpc", Collections.emptyList(), Collections.singletonList(
+            new ResActMan(ActMan.list, "count entries in a vrf", Collections.emptyList(), Collections.singletonList(
                 new Tuple<>(
-                    "list conntrack in vpc 1314 in switch sw0",
+                    "list conntrack in vrf 1314 in switch sw0",
                     "(integer) 2"
                 )
             )),
-            new ResActMan(ActMan.listdetail, "list connection tracking table entries in a vpc", Collections.emptyList(), Collections.singletonList(
+            new ResActMan(ActMan.listdetail, "list connection tracking table entries in a vrf", Collections.emptyList(), Collections.singletonList(
                 new Tuple<>(
-                    "list-detail conntrack in vpc 1314 in switch sw0",
+                    "list-detail conntrack in vrf 1314 in switch sw0",
                     "1) \"TCP ESTABLISHED remote=10.100.0.2:80    local=10.100.0.1:50014      --nat-> local=123.123.123.123:1234  remote=10.100.0.1:50014 TTL:431993\"\n" +
                         "2) \"TCP ESTABLISHED remote=10.100.0.1:50014 local=123.123.123.123:1234  --nat-> local=10.100.0.1:50014      remote=10.100.0.2:80    TTL:43199\""
                 )
@@ -1308,11 +1308,11 @@ public class HelpCommand {
             "Note: should set -Dvfd=posix or -Dvfd=windows",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a tap to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
-                    new ResActParamMan(ParamMan.vni, "vni of the vpc which the tap device is attached to"),
-                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
+                    new ResActParamMan(ParamMan.vrf, "id of the vrf which the tap device is attached to"),
+                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VRF, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add tap tap0 to switch sw0 vni 1314",
+                        "add tap tap0 to switch sw0 vrf 1314",
                         "\"OK\""
                     )
                 ))
@@ -1321,16 +1321,16 @@ public class HelpCommand {
             "Note: should set -Dvfd=posix",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a tun to a switch. Note: the result string is the name of the tun device because might be generated", Arrays.asList(
-                    new ResActParamMan(ParamMan.vni, "vni of the vpc which the tun device is attached to"),
+                    new ResActParamMan(ParamMan.vrf, "id of the vrf which the tun device is attached to"),
                     new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
-                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
+                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VRF, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add tun tun0 to switch sw0 vni 1314 mac 00:11:22:33:44:55",
+                        "add tun tun0 to switch sw0 vrf 1314 mac 00:11:22:33:44:55",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add tun utun9 to switch sw0 vni 1314 mac 00:11:22:33:44:55",
+                        "add tun utun9 to switch sw0 vrf 1314 mac 00:11:22:33:44:55",
                         "\"OK\""
                     )
                 ))
@@ -1339,13 +1339,13 @@ public class HelpCommand {
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add fubuki netif to a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.pass, "password (key) for fubuki config"),
-                    new ResActParamMan(ParamMan.vni, "vni which the netif is assigned to"),
+                    new ResActParamMan(ParamMan.vrf, "vrf which the netif is assigned to"),
                     new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
                     new ResActParamMan(ParamMan.address, "server address to connect to"),
                     new ResActParamMan(ParamMan.ip, "use the specified ip/mask as tun ip")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add fubuki hello to switch sw0 password p@sSw0rD vni 1314 mac 00:11:22:33:44:55 address 192.168.77.1:18472",
+                        "add fubuki hello to switch sw0 password p@sSw0rD vrf 1314 mac 00:11:22:33:44:55 address 192.168.77.1:18472",
                         "\"OK\""
                     )
                 ))
@@ -1354,11 +1354,11 @@ public class HelpCommand {
             "Note: the ifname should be name of the fubuki netif to attach to.",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add fubuki-etherip sub-netif to a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.vni, "vni which the netif is assigned to"),
+                    new ResActParamMan(ParamMan.vrf, "vrf which the netif is assigned to"),
                     new ResActParamMan(ParamMan.ip, "the target ip to send the packet to")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add fubuki-etherip hello to switch sw0 vni 1314 ip 10.99.88.2",
+                        "add fubuki-etherip hello to switch sw0 vrf 1314 ip 10.99.88.2",
                         "\"OK\""
                     )
                 ))
@@ -1376,18 +1376,18 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRIVER}, see doc for more info", "" + BPFMode.SKB),
                     new ResActParamMan(ParamMan.busypoll, "whether to enable busy poll, and set SO_BUSY_POLL_BUDGET. Set this option to 0 to disable busy poll", "0"),
-                    new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to")
+                    new ResActParamMan(ParamMan.vrf, "vrf which the iface is assigned to")
                 ), Arrays.asList(
                     new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false),
                     new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet in java", false),
                     new ResActFlagMan(FlagMan.offload, "offload mac switching to xdp program", false)
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 zerocopy",
+                        "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vrf 1 zerocopy",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 vni 1",
+                        "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 vrf 1",
                         "\"OK\""
                     )
                 ))
@@ -1395,91 +1395,91 @@ public class HelpCommand {
         vlanadaptor("vlan-adaptor", "vlan", "vlan adaptor which adds or removes 802.1q tag",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add vlan adaptor into the switch", Collections.singletonList(
-                    new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to", "same as vlan id")
+                    new ResActParamMan(ParamMan.vrf, "vrf which the iface is assigned to", "same as vlan id")
                 ), Arrays.asList(
                     new Tuple<>(
                         "add vlan 101@xdp:veth0 to switch sw0",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add vlan 102@tap:tap1 to switch sw0 vni 202",
+                        "add vlan 102@tap:tap1 to switch sw0 vrf 202",
                         "\"OK\""
                     )
                 ))
             )),
-        ip("ip", null, "synthetic ip in a vpc of a switch",
+        ip("ip", null, "synthetic ip in a vrf of a switch",
             Arrays.asList(
-                new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Arrays.asList(
+                new ResActMan(ActMan.addto, "add a synthetic ip to a vrf of a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on"),
                     new ResActParamMan(ParamMan.routing, "enable or disable routing functions on this ip, set to on/off", "on")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22",
+                        "add ip 172.16.0.21 to vrf 1314 in switch sw0 mac e2:8b:11:00:00:22",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.list, "show synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "show synthetic ips in a vrf of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list ip in vpc 1314 in switch sw0",
+                        "list ip in vrf 1314 in switch sw0",
                         "1) \"172.16.0.21\"\n" +
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002]\""
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "show detailed info about synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "show detailed info about synthetic ips in a vrf of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail ip in vpc 1314 in switch sw0",
+                        "list-detail ip in vrf 1314 in switch sw0",
                         "1) \"172.16.0.21 -> mac e2:8b:11:00:00:22\"\n" +
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33\""
                     )
                 )),
-                new ResActMan(ActMan.update, "modify a synthetic ip in a vpc of a switch", List.of(
+                new ResActMan(ActMan.update, "modify a synthetic ip in a vrf of a switch", List.of(
                     new ResActParamMan(ParamMan.routing, "enable or disable routing functions on this ip, set to on/off", "not changed")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "update ip 172.16.0.21 in vpc 1314 in switch sw0 routing off",
+                        "update ip 172.16.0.21 in vrf 1314 in switch sw0 routing off",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.removefrom, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a synthetic ip from a vrf of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "remove ip 172.16.0.21 from vpc 1314 in switch sw0",
+                        "remove ip 172.16.0.21 from vrf 1314 in switch sw0",
                         "\"OK\""
                     )
                 ))
             )),
-        route("route", null, "route rules in a vpc of a switch",
+        route("route", null, "route rules in a vrf of a switch",
             Arrays.asList(
-                new ResActMan(ActMan.addto, "add a route to a vpc of a switch", Arrays.asList(
+                new ResActMan(ActMan.addto, "add a route to a vrf of a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.network, "network to be matched"),
-                    new ResActParamMan(ParamMan.vni, "the vni to send packet to. only one of vni|via can be used"),
-                    new ResActParamMan(ParamMan.via, "the address to forward the packet to. only one of via|vni can be used")
+                    new ResActParamMan(ParamMan.vrf, "the vrf to send packet to. only one of vrf|via can be used"),
+                    new ResActParamMan(ParamMan.via, "the address to forward the packet to. only one of via|vrf can be used")
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 vni 1315",
+                        "add route to172.17 to vrf 1314 in switch sw0 network 172.17.0.0/24 vrf 1315",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 via 172.16.0.1",
+                        "add route to172.17 to vrf 1314 in switch sw0 network 172.17.0.0/24 via 172.16.0.1",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.list, "show route rule names in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "show route rule names in a vrf of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list route in vpc 1314 in switch sw0",
+                        "list route in vrf 1314 in switch sw0",
                         "1) \"to172.17\"\n" +
                             "2) \"to2001:0db8:0000:f102\""
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "show detailed info about route rules in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "show detailed info about route rules in a vrf of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail route in vpc 1314 in switch sw0",
-                        "1) \"to172.17 -> network 172.17.0.0/24 vni 1315\"\n" +
-                            "2) \"to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315\""
+                        "list-detail route in vrf 1314 in switch sw0",
+                        "1) \"to172.17 -> network 172.17.0.0/24 vrf 1315\"\n" +
+                            "2) \"to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vrf 1315\""
                     )
                 )),
-                new ResActMan(ActMan.removefrom, "remove a route rule from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a route rule from a vrf of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "remove route to172.17 from vpc 1314 in switch sw0",
+                        "remove route to172.17 from vrf 1314 in switch sw0",
                         "\"OK\""
                     )
                 ))

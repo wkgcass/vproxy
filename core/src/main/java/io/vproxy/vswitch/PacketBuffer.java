@@ -30,12 +30,12 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
         return new PacketBuffer(devin, buf, pktOff, pad);
     }
 
-    public static PacketBuffer fromEtherBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
-        return new PacketBuffer(devin, vni, buf, pktOff, pad);
+    public static PacketBuffer fromEtherBytes(Iface devin, int vrf, ByteArray buf, int pktOff, int pad) {
+        return new PacketBuffer(devin, vrf, buf, pktOff, pad);
     }
 
-    public static PacketBuffer fromIpBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
-        return new PacketBuffer(devin, vni, buf, pktOff, pad, FLAG_IP);
+    public static PacketBuffer fromIpBytes(Iface devin, int vrf, ByteArray buf, int pktOff, int pad) {
+        return new PacketBuffer(devin, vrf, buf, pktOff, pad, FLAG_IP);
     }
 
     public static PacketBuffer fromPacket(VXLanPacket pkt) {
@@ -58,7 +58,7 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     // this will be set when tx dev is determined
     // this will be set before passing to packet filters, and cleared after it's handled
     public Iface devout;
-    public int vni; // vni or vlan number, must always be valid
+    public int vrf; // vrf number, must always be valid
     public VirtualNetwork network; // might be null
     public int flags;
 
@@ -106,18 +106,18 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     }
 
     // fromEtherBytes
-    private PacketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad) {
+    private PacketBuffer(Iface devin, int vrf, ByteArray fullbuf, int pktOff, int pad) {
         super(fullbuf, pktOff, pad);
         this.devin = devin;
-        this.vni = vni;
+        this.vrf = vrf;
         this.flags = 0;
     }
 
     // fromIpBytes
-    private PacketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad, int flags) {
+    private PacketBuffer(Iface devin, int vrf, ByteArray fullbuf, int pktOff, int pad, int flags) {
         super(fullbuf, pktOff, pad);
         this.devin = devin;
-        this.vni = vni;
+        this.vrf = vrf;
         this.flags = flags;
     }
 
@@ -125,7 +125,7 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     private PacketBuffer(VXLanPacket pkt) {
         super(null);
         this.devin = null;
-        this.vni = pkt.getVni();
+        this.vrf = pkt.getVni();
         this.flags = FLAG_VXLAN;
         this.vxlan = pkt;
         initPackets(true, false, false);
@@ -135,7 +135,7 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     private PacketBuffer(VirtualNetwork network, EthernetPacket pkt) {
         super(null);
         this.devin = null;
-        this.vni = network.vni;
+        this.vrf = network.vrf;
         this.network = network;
         this.flags = 0;
         this.pkt = pkt;
@@ -146,7 +146,7 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     private PacketBuffer(VirtualNetwork network, AbstractIpPacket pkt) {
         super(null);
         this.devin = null;
-        this.vni = network.vni;
+        this.vrf = network.vrf;
         this.network = network;
         this.flags = FLAG_IP;
         this.ipPkt = pkt;
@@ -182,7 +182,7 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
         }
         if ((flags & FLAG_VXLAN) == FLAG_VXLAN) {
             this.vxlan = (VXLanPacket) pkt;
-            this.vni = this.vxlan.getVni();
+            this.vrf = this.vxlan.getVni();
             initPackets(true, false, false);
         } else if ((flags & FLAG_IP) == FLAG_IP) {
             this.ipPkt = (AbstractIpPacket) pkt;
@@ -313,25 +313,25 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     }
 
     public void setNetwork(VirtualNetwork network) {
-        this.vni = network.vni;
+        this.vrf = network.vrf;
         this.network = network;
         if (vxlan != null) {
-            vxlan.setVni(network.vni);
+            vxlan.setVni(network.vrf);
         }
     }
 
-    public void executeWithVni(int vni, Runnable r) {
-        if (this.vni == vni) {
+    public void executeWithVrf(int vrf, Runnable r) {
+        if (this.vrf == vrf) {
             r.run();
             return;
         }
 
         VirtualNetwork networkBackup = this.network;
 
-        this.vni = vni;
+        this.vrf = vrf;
         this.network = null;
         if (this.vxlan != null) {
-            this.vxlan.setVni(vni);
+            this.vxlan.setVni(vrf);
         }
 
         r.run();
@@ -433,12 +433,12 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
             pkt = udpPkt;
         }
         return "PacketBuffer{" +
-            "in=" + devin +
-            ", out=" + devout +
-            ", vni=" + vni +
-            ", pktBuf=" + (pktBuf == null ? "" : pktBuf.toHexString()) +
-            ", pkt=" + (pkt == null ? "" : pkt.description()) +
-            "}@" + Utils.toHexString(super.hashCode());
+               "in=" + devin +
+               ", out=" + devout +
+               ", vrf=" + vrf +
+               ", pktBuf=" + (pktBuf == null ? "" : pktBuf.toHexString()) +
+               ", pkt=" + (pkt == null ? "" : pkt.description()) +
+               "}@" + Utils.toHexString(super.hashCode());
     }
 
     public String description() {
@@ -453,8 +453,8 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
             pkt = udpPkt;
         }
         return "in=" + (devin == null ? "null" : devin.name()) +
-            ",out=" + (devout == null ? "null" : devout.name()) +
-            ",vni=" + vni +
-            (pkt == null ? "" : "," + pkt.description());
+               ",out=" + (devout == null ? "null" : devout.name()) +
+               ",vrf=" + vrf +
+               (pkt == null ? "" : "," + pkt.description());
     }
 }

@@ -33,8 +33,8 @@ public class ServerSockHandle {
         } else if (parent.type == ResourceType.socks5) {
             return Socks5ServerHandle.get(parent).acceptorGroup.list().size();
         } else {
-            assert parent.type == ResourceType.vpc;
-            return VpcHandle.get(parent).conntrack.countTcpListenEntry();
+            assert parent.type == ResourceType.vrf;
+            return VrfHandle.get(parent).conntrack.countTcpListenEntry();
         }
     }
 
@@ -60,8 +60,8 @@ public class ServerSockHandle {
                 servers.add(new ServerSock2(e));
             }
         } else {
-            assert parent.type == ResourceType.vpc;
-            var ls = VpcHandle.get(parent).conntrack.listTcpListenEntries();
+            assert parent.type == ResourceType.vrf;
+            var ls = VrfHandle.get(parent).conntrack.listTcpListenEntries();
             servers = new ArrayList<>(ls.size());
             for (var e : ls) {
                 servers.add(new ServerSock2(e));

@@ -15,23 +15,23 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class VpcHandle {
-    private VpcHandle() {
+public class VrfHandle {
+    private VrfHandle() {
     }
 
-    public static void checkVpcName(Resource resource) throws Exception {
-        String vpc = resource.alias;
+    public static void checkVrfName(Resource resource) throws Exception {
+        String vrf = resource.alias;
         try {
-            Integer.parseInt(vpc);
+            Integer.parseInt(vrf);
         } catch (NumberFormatException e) {
-            throw new Exception("vpc name should be an integer representing the vni");
+            throw new Exception("vrf name should be an integer");
         }
     }
 
     public static VirtualNetwork get(Resource self) throws Exception {
-        int vpc = Integer.parseInt(self.alias);
+        int vrf = Integer.parseInt(self.alias);
         Switch sw = SwitchHandle.get(self.parentResource);
-        return sw.getNetwork(vpc);
+        return sw.getNetwork(vrf);
     }
 
     public static void add(Command cmd) throws Exception {
@@ -53,26 +53,26 @@ public class VpcHandle {
         sw.delNetwork(Integer.parseInt(cmd.resource.alias));
     }
 
-    public static List<VpcEntry> list(Resource parentResource) throws Exception {
+    public static List<VrfEntry> list(Resource parentResource) throws Exception {
         Switch sw = Application.get().switchHolder.get(parentResource.alias);
         var networks = sw.getNetworks().values();
 
-        List<VpcEntry> ls = new ArrayList<>();
+        List<VrfEntry> ls = new ArrayList<>();
         for (var net : networks) {
-            ls.add(new VpcEntry(net.vni, net.v4network, net.v6network, net.getAnnotations()));
+            ls.add(new VrfEntry(net.vrf, net.v4network, net.v6network, net.getAnnotations()));
         }
-        ls.sort(Comparator.comparingInt(a -> a.vpc));
+        ls.sort(Comparator.comparingInt(a -> a.vrf));
         return ls;
     }
 
-    public static class VpcEntry {
-        public final int vpc;
+    public static class VrfEntry {
+        public final int vrf;
         public final Network v4network;
         public final Network v6network;
         public final Annotations annotations;
 
-        public VpcEntry(int vpc, Network v4network, Network v6network, Annotations annotations) {
-            this.vpc = vpc;
+        public VrfEntry(int vrf, Network v4network, Network v6network, Annotations annotations) {
+            this.vrf = vrf;
             this.v4network = v4network;
             this.v6network = v6network;
             this.annotations = annotations;
@@ -80,9 +80,9 @@ public class VpcHandle {
 
         @Override
         public String toString() {
-            return vpc + " -> v4network " + v4network
-                + (v6network != null ? (" v6network " + v6network) : "")
-                + (!annotations.isEmpty() ? (" annotations " + annotations) : "");
+            return vrf + " -> v4network " + v4network
+                   + (v6network != null ? (" v6network " + v6network) : "")
+                   + (!annotations.isEmpty() ? (" annotations " + annotations) : "");
         }
     }
 }

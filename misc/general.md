@@ -55,7 +55,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
      session (sess) --+
 
           dns-cache --+-- /* state */
-                vni --+
+                vrf --+
                 arp --+
 
      bytes-in (bin) --+

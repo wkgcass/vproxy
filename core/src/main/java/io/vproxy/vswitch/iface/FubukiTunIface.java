@@ -27,11 +27,11 @@ public class FubukiTunIface extends TunIface {
     Fubuki fubuki;
     private Switch sw;
 
-    public FubukiTunIface(int localSideVni, MacAddress mac,
+    public FubukiTunIface(int localSideVrf, MacAddress mac,
                           String nodeName, IPPort serverIPPort,
                           IPMask localAddr,
                           String key) {
-        super("", localSideVni, mac, null);
+        super("", localSideVrf, mac, null);
         this.nodeName = nodeName;
         this.serverIPPort = serverIPPort;
         this.localAddr = localAddr;
@@ -103,12 +103,12 @@ public class FubukiTunIface extends TunIface {
 
     private final Map<IPv4, FubukiEtherIPIface> etheripSubIfaces = new HashMap<>();
 
-    public FubukiEtherIPIface addEtherIPSubIface(IPv4 ip, int vni) throws AlreadyExistException, PreconditionUnsatisfiedException {
+    public FubukiEtherIPIface addEtherIPSubIface(IPv4 ip, int vrf) throws AlreadyExistException, PreconditionUnsatisfiedException {
         ip = ip.stripHostname();
         if (etheripSubIfaces.containsKey(ip)) {
             throw new AlreadyExistException("fubuki-cable", ip.formatToIPString());
         }
-        var iface = new FubukiEtherIPIface(this, ip, vni);
+        var iface = new FubukiEtherIPIface(this, ip, vrf);
         etheripSubIfaces.put(ip, iface);
         return iface;
     }
@@ -125,7 +125,7 @@ public class FubukiTunIface extends TunIface {
         }
         VirtualNetwork net;
         try {
-            net = sw.getNetwork(localSideVni);
+            net = sw.getNetwork(localSideVrf);
         } catch (NotFoundException ignore) {
             return;
         }
@@ -147,7 +147,7 @@ public class FubukiTunIface extends TunIface {
             var p = PRE_PADDING.concat(packet).concat(POST_PADDING).copy().arrange();
             bondLoop.runOnLoop(() -> {
                 VProxyThread.current().newUuidDebugInfo();
-                var pkb = PacketBuffer.fromIpBytes(FubukiTunIface.this, localSideVni, p, PRE_PADDING.length(), POST_PADDING.length());
+                var pkb = PacketBuffer.fromIpBytes(FubukiTunIface.this, localSideVrf, p, PRE_PADDING.length(), POST_PADDING.length());
                 var initErr = pkb.init();
 
                 if (initErr == null) {
@@ -174,13 +174,13 @@ public class FubukiTunIface extends TunIface {
         @Override
         public void addAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
             bondLoop.runOnLoop(() -> {
-                Logger.warn(LogType.ALERT, "fubuki is trying to add ip " + ip + " to vpc " + localSideVni);
+                Logger.warn(LogType.ALERT, "fubuki is trying to add ip " + ip + " to vrf " + localSideVrf);
                 localAddr = new IPMask(ip, mask);
                 VirtualNetwork net;
                 try {
-                    net = sw.getNetwork(localSideVni);
+                    net = sw.getNetwork(localSideVrf);
                 } catch (NotFoundException ignore) {
-                    Logger.error(LogType.IMPROPER_USE, "network " + localSideVni + " does not exist, ip " + ip + " will not be added, you will have to add the ip manually");
+                    Logger.error(LogType.IMPROPER_USE, "network " + localSideVrf + " does not exist, ip " + ip + " will not be added, you will have to add the ip manually");
                     return;
                 }
                 try {
@@ -206,10 +206,10 @@ public class FubukiTunIface extends TunIface {
         @Override
         public void deleteAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
             bondLoop.runOnLoop(() -> {
-                Logger.warn(LogType.ALERT, "fubuki is trying to remove ip " + ip + " from vpc " + localSideVni);
+                Logger.warn(LogType.ALERT, "fubuki is trying to remove ip " + ip + " from vrf " + localSideVrf);
                 VirtualNetwork net;
                 try {
-                    net = sw.getNetwork(localSideVni);
+                    net = sw.getNetwork(localSideVrf);
                 } catch (NotFoundException ignore) {
                     return;
                 }

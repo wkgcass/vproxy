@@ -15,9 +15,9 @@ public class TapHandle {
         if (dev.contains("%")) {
             throw new XException("wildcard % in tap dev is forbidden");
         }
-        int vni = Integer.parseInt(cmd.args.get(Param.vni));
+        int vrf = Integer.parseInt(cmd.args.get(Param.vrf));
         String postScript = cmd.args.get(Param.postscript);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.addTap(dev, vni, postScript);
+        sw.addTap(dev, vrf, postScript);
     }
 }

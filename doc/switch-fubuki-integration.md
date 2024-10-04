@@ -12,11 +12,11 @@ We can combine them by converting fubuki tun interfaces into rx/tx APIs and hook
 After launching vproxy, we can get detailed into about the commands used in this article:
 
 * `man switch`
-* `man vpc`
+* `man vrf`
 * `man fubuki`
 * `man iface`
 * `man switch add`
-* `man vpc add-to`
+* `man vrf add-to`
 * `man fubuki add-to`
 * `man iface list-detail`
 * `man iface remove-from`
@@ -39,26 +39,26 @@ add switch sw0
 3. Creating virtual network
 
 ```
-add vpc 1 to switch sw0 v4network 10.99.88.0/24
+add vrf 1 to switch sw0 v4network 10.99.88.0/24
 ```
 
 Descriptions:
 
-* `add vpc 1` means creating vpc `1`, whose vni is 1
+* `add vrf 1` means creating vrf `1`, whose id is 1
 * `to switch sw0` means it's added into `sw0`
-* `v4network $.$.$.$/$` means the v4 network range limit of this vpc
+* `v4network $.$.$.$/$` means the v4 network range limit of this vrf
 
 4. Creating fubuki interface
 
 ```
-add fubuki fbk0 to switch sw0 vni 1 mac 00:11:22:33:44:55 ip 10.99.88.199/24 address $.$.$.$:$ password $
+add fubuki fbk0 to switch sw0 vrf 1 mac 00:11:22:33:44:55 ip 10.99.88.199/24 address $.$.$.$:$ password $
 ```
 
 Descriptions:
 
 * `add fubuki fbk0` means create a fubuki interface, named as `fbk0`
 * `to switch sw0` means it's added into `sw0`
-* `vni 1` means the interface by default belongs to the vpc whose vni is 1 (in other words, `vpc 1`)
+* `vrf 1` means the interface by default belongs to the vrf with id 1
 * `mac $:$:$:$:$:$` means the mac address allocated for the interface. Since fubuki runs in tun mode, the switch has to simulate the layer 2 frames
 * `ip $.$.$.$/$` means the ip address and mask for this interface to use. You may omit this option, in this case, fubuki will automatically allocate an ip instead
 * `address $.$.$.$:$` means the address and port of the remote fubuki server

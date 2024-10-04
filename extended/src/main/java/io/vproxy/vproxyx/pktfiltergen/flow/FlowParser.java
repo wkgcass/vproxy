@@ -173,8 +173,8 @@ public class FlowParser {
                 }
                 flow.matcher.ct_state = value;
                 return;
-            case "vni":
-                flow.matcher.vni = parsePositiveInt(value);
+            case "vrf":
+                flow.matcher.vrf = parsePositiveInt(value);
                 return;
             case "predicate":
                 assertValidMethodName(value);

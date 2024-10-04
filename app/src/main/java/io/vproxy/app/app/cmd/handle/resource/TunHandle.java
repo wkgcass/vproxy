@@ -17,10 +17,10 @@ public class TunHandle {
         if (dev.contains("%")) {
             throw new XException("wildcard % in tun dev is forbidden");
         }
-        int vni = Integer.parseInt(cmd.args.get(Param.vni));
+        int vrf = Integer.parseInt(cmd.args.get(Param.vrf));
         MacAddress mac = MacHandle.get(cmd);
         String postScript = cmd.args.get(Param.postscript);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.addTun(dev, vni, mac, postScript);
+        sw.addTun(dev, vrf, mac, postScript);
     }
 }

@@ -21,7 +21,7 @@ import java.util.Objects;
 public class TapIface extends Iface {
     public final String dev;
     private TapDatagramFD tap;
-    public final int localSideVni;
+    public final int localSideVrf;
     public final String postScript;
 
     private AbstractDatagramFD<?> operateTap;
@@ -30,10 +30,10 @@ public class TapIface extends Iface {
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
     public TapIface(String dev,
-                    int localSideVni,
+                    int localSideVrf,
                     String postScript) {
         this.dev = dev;
-        this.localSideVni = localSideVni;
+        this.localSideVrf = localSideVrf;
         this.postScript = postScript;
     }
 
@@ -61,7 +61,7 @@ public class TapIface extends Iface {
 
     @Override
     protected String toStringExtra() {
-        return ",vni:" + localSideVni;
+        return ",vrf:" + localSideVrf;
     }
 
     @Override
@@ -98,7 +98,7 @@ public class TapIface extends Iface {
         }
 
         try {
-            SwitchUtils.executeDevPostScript(params.sw.alias, tap.getTap().dev, localSideVni, postScript);
+            SwitchUtils.executeDevPostScript(params.sw.alias, tap.getTap().dev, localSideVrf, postScript);
         } catch (Exception e) {
             // executing script failed
             // close the fds
@@ -159,8 +159,8 @@ public class TapIface extends Iface {
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return localSideVni;
+    public int getLocalSideVrf(int hint) {
+        return localSideVrf;
     }
 
     @Override
@@ -203,7 +203,7 @@ public class TapIface extends Iface {
                 if (rcvBuf.position() == PRESERVED_LEN) {
                     break; // nothing read, quit loop
                 }
-                PacketBuffer pkb = PacketBuffer.fromEtherBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
+                PacketBuffer pkb = PacketBuffer.fromEtherBytes(iface, localSideVrf, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
                 String err = pkb.init();
                 if (err != null) {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);

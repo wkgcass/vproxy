@@ -36,21 +36,21 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String NETWORK_ENTRY_VETH_PREFIX = "vproxy";
     private static final String NETWORK_ENTRY_VETH_PEER_SUFFIX = "sw";
     private static final String POD_VETH_PREFIX = "veth";
-    private static final int NETWORK_ENTRY_VNI = 15999999;
-    private static final int VNI_MAX = 9999999;
+    private static final int NETWORK_ENTRY_VRF = 15999999;
+    private static final int VRF_MAX = 9999999;
 
     @Override
     public synchronized void createNetwork(CreateNetworkRequest req) throws Exception {
         // validate options
-        int optionVNI = 0;
-        if (req.optionsDockerNetworkGeneric.containsKey(VNI_OPTION)) {
-            String vniStr = req.optionsDockerNetworkGeneric.get(VNI_OPTION);
-            if (!Utils.isInteger(vniStr)) {
-                throw new Exception(VNI_OPTION + ": " + vniStr + " is not an integer");
+        int optionVRF = 0;
+        if (req.optionsDockerNetworkGeneric.containsKey(VRF_OPTION)) {
+            String vrfStr = req.optionsDockerNetworkGeneric.get(VRF_OPTION);
+            if (!Utils.isInteger(vrfStr)) {
+                throw new Exception(VRF_OPTION + ": " + vrfStr + " is not an integer");
             }
-            optionVNI = Integer.parseInt(vniStr);
-            if (optionVNI < 1 || optionVNI > VNI_MAX) { // nic name limit
-                throw new Exception(VNI_OPTION + ": " + vniStr + " is out of the plugin supported vni range: [1, " + VNI_MAX + "]");
+            optionVRF = Integer.parseInt(vrfStr);
+            if (optionVRF < 1 || optionVRF > VRF_MAX) { // nic name limit
+                throw new Exception(VRF_OPTION + ": " + vrfStr + " is out of the plugin supported vrf range: [1, " + VRF_MAX + "]");
             }
         }
         Network optionV4Net = null;
@@ -180,25 +180,25 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         // handle
         var sw = ensureSwitch();
         IntMap<VirtualNetwork> networks = sw.getNetworks();
-        int selectedVni = 0;
-        if (optionVNI == 0) {
+        int selectedVrf = 0;
+        if (optionVRF == 0) {
             for (int i : networks.keySet()) {
-                if (selectedVni < i) {
-                    selectedVni = i;
+                if (selectedVrf < i) {
+                    selectedVrf = i;
                 }
             }
-            selectedVni += 1; // greater than the biggest recorded vni
-            if (selectedVni > VNI_MAX) {
-                throw new Exception("cannot use auto selected vni " + selectedVni + ", out of range: [1," + VNI_MAX + "]");
+            selectedVrf += 1; // greater than the biggest recorded vrf
+            if (selectedVrf > VRF_MAX) {
+                throw new Exception("cannot use auto selected vrf " + selectedVrf + ", out of range: [1," + VRF_MAX + "]");
             }
         } else {
             try {
-                sw.getNetwork(optionVNI);
+                sw.getNetwork(optionVRF);
             } catch (NotFoundException ignore) {
-                selectedVni = optionVNI;
+                selectedVrf = optionVRF;
             }
-            if (selectedVni == 0) {
-                throw new Exception(VNI_OPTION + ": " + optionVNI + " already exists");
+            if (selectedVrf == 0) {
+                throw new Exception(VRF_OPTION + ": " + optionVRF + " already exists");
             }
         }
 
@@ -215,29 +215,29 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         } else {
             v6net = optionV6Net;
         }
-        sw.addNetwork(selectedVni, v4net, v6net, new Annotations(Collections.singletonMap(NETWORK_NETWORK_ID_ANNOTATION, req.networkId)));
-        Logger.alert("network added: vni=" + selectedVni + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
-        VirtualNetwork net = sw.getNetwork(selectedVni);
+        sw.addNetwork(selectedVrf, v4net, v6net, new Annotations(Collections.singletonMap(NETWORK_NETWORK_ID_ANNOTATION, req.networkId)));
+        Logger.alert("network added: vrf=" + selectedVrf + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
+        VirtualNetwork net = sw.getNetwork(selectedVrf);
         if (!req.networkId.equals(net.getAnnotations().other.get(NETWORK_NETWORK_ID_ANNOTATION))) {
             Logger.shouldNotHappen("adding network failed, maybe concurrent modification");
             try {
-                sw.delNetwork(selectedVni);
+                sw.delNetwork(selectedVrf);
             } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback network " + selectedVni + " failed", e2);
+                Logger.error(LogType.SYS_ERROR, "rollback network " + selectedVrf + " failed", e2);
             }
             throw new Exception("unexpected state");
         }
 
         // add entry veth
         try {
-            var umem = ensureUMem("" + selectedVni);
+            var umem = ensureUMem("" + selectedVrf);
             createNetworkEntryVeth(sw, umem, net);
         } catch (Exception e) {
-            Logger.error(LogType.SYS_ERROR, "creating network entry veth for network " + selectedVni + " failed", e);
+            Logger.error(LogType.SYS_ERROR, "creating network entry veth for network " + selectedVrf + " failed", e);
             try {
-                sw.delNetwork(selectedVni);
+                sw.delNetwork(selectedVrf);
             } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback network " + selectedVni + " failed", e2);
+                Logger.error(LogType.SYS_ERROR, "rollback network " + selectedVrf + " failed", e2);
             }
             throw e;
         }
@@ -250,7 +250,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE,
                 GATEWAY_SUBNET_ANNOTATION, data.pool
             )));
-            Logger.alert("ip added: vni=" + selectedVni + ", ip=" + gateway + ", mac=" + mac);
+            Logger.alert("ip added: vrf=" + selectedVrf + ", ip=" + gateway + ", mac=" + mac);
         }
 
         if (!req.ipv6Data.isEmpty()) {
@@ -262,7 +262,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                     GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE,
                     GATEWAY_SUBNET_ANNOTATION, data.pool
                 )));
-                Logger.alert("ip added: vni=" + selectedVni + ", ip=" + gateway + ", mac=" + mac);
+                Logger.alert("ip added: vrf=" + selectedVrf + ", ip=" + gateway + ", mac=" + mac);
             }
         }
 
@@ -346,7 +346,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private void createNetworkEntryVeth(Switch sw, UMem umem, VirtualNetwork net) throws Exception {
         int index = 0;
         if (net != null) {
-            index = net.vni;
+            index = net.vrf;
         }
 
         String hostNic = NETWORK_ENTRY_VETH_PREFIX + index;
@@ -377,7 +377,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         SwitchUtils.GetSharedMapGroupResult reusedResult;
         BPFObject bpfobj;
         if (isPodNic) {
-            reusedResult = SwitchUtils.createBPFObjectWithReusedMaps(sw, net.vni, reusedMaps ->
+            reusedResult = SwitchUtils.createBPFObjectWithReusedMaps(sw, net.vrf, reusedMaps ->
                 BPFObject.loadAndAttachToNic(nicname, reusedMaps, BPFMode.SKB, true)
             );
             bpfobj = reusedResult.object();
@@ -401,7 +401,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         XDPIface iface;
         try {
-            iface = sw.addXDP(nicname, net != null ? net.vni : NETWORK_ENTRY_VNI, umem,
+            iface = sw.addXDP(nicname, net != null ? net.vrf : NETWORK_ENTRY_VRF, umem,
                 new XDPIface.XDPParams(0, 32, 32, BPFMode.SKB,
                     false, 0, false, isPodNic,
                     new XDPIface.BPFInfo(
@@ -447,8 +447,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         deleteNetworkEntryVeth(sw, net);
 
-        sw.delNetwork(net.vni);
-        Logger.alert("network deleted: vni=" + net.vni + ", docker:networkId=" + networkId);
+        sw.delNetwork(net.vrf);
+        Logger.alert("network deleted: vrf=" + net.vrf + ", docker:networkId=" + networkId);
 
         persistConfig();
     }
@@ -514,8 +514,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private void deleteNetworkEntryVeth(Switch sw, VirtualNetwork net) throws Exception {
-        String swNic = NETWORK_ENTRY_VETH_PREFIX + net.vni + NETWORK_ENTRY_VETH_PEER_SUFFIX;
-        deleteNic(sw, getUMem("" + net.vni), swNic);
+        String swNic = NETWORK_ENTRY_VETH_PREFIX + net.vrf + NETWORK_ENTRY_VETH_PEER_SUFFIX;
+        deleteNic(sw, getUMem("" + net.vrf), swNic);
     }
 
     @Override
@@ -556,7 +556,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
             XDPIface xdpIface = createXDPIface(sw, umem, net, podNic);
             xdpIface.setAnnotations(new Annotations(anno));
-            Logger.alert("xdp added: " + xdpIface.nic + ", vni=" + net.vni
+            Logger.alert("xdp added: " + xdpIface.nic + ", vrf=" + net.vrf
                 + ", endpointId=" + req.endpointId
                 + ", ipv4=" + anno.get(VETH_ENDPOINT_IPv4_ANNOTATION)
                 + ", ipv6=" + anno.get(VETH_ENDPOINT_IPv6_ANNOTATION)

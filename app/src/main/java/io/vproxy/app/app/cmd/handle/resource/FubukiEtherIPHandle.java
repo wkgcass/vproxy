@@ -15,13 +15,13 @@ public class FubukiEtherIPHandle {
     public static void add(Command cmd) throws Exception {
         var name = cmd.resource.alias;
 
-        var vni = Integer.parseInt(cmd.args.get(Param.vni));
+        var vrf = Integer.parseInt(cmd.args.get(Param.vrf));
         var ip = IpParamHandle.get(cmd);
         if (!(ip instanceof IPv4)) {
             throw new XException(ip + " is not valid ipv4");
         }
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.addFubukiEtherIP(name, vni, (IPv4) ip);
+        sw.addFubukiEtherIP(name, vrf, (IPv4) ip);
     }
 }

@@ -132,13 +132,13 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
 
             if (iface instanceof BareVXLanIface biface) { // additional check
                 if (isNewIface) {
-                    biface.setLocalSideVni(pkb.vni);
+                    biface.setLocalSideVrf(pkb.vrf);
                 } else {
-                    int ifaceVni = biface.getLocalSideVni(pkb.vni);
-                    if (ifaceVni != pkb.vni) {
+                    int ifaceVrf = biface.getLocalSideVrf(pkb.vrf);
+                    if (ifaceVrf != pkb.vrf) {
                         Logger.warn(LogType.INVALID_EXTERNAL_DATA,
                             "received vxlan packet from " + remote + " " +
-                                "but originally vni is " + ifaceVni + ", currently " + pkb.vni);
+                                "but originally vrf is " + ifaceVrf + ", currently " + pkb.vrf);
                         return null;
                     }
                 }

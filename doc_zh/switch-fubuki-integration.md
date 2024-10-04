@@ -10,11 +10,11 @@
 可以在启动vproxy后，使用如下命令查看本文档用到的命令细节：
 
 * `man switch`
-* `man vpc`
+* `man vrf`
 * `man fubuki`
 * `man iface`
 * `man switch add`
-* `man vpc add-to`
+* `man vrf add-to`
 * `man fubuki add-to`
 * `man iface list-detail`
 * `man iface remove-from`
@@ -37,26 +37,26 @@ add switch sw0
 3. 创建虚拟网络
 
 ```
-add vpc 1 to switch sw0 v4network 10.99.88.0/24
+add vrf 1 to switch sw0 v4network 10.99.88.0/24
 ```
 
 命令解释：
 
-* `add vpc 1` 表示创建`1`号vpc，其vni即为1
+* `add vrf 1` 表示创建`1`号vrf
 * `to switch sw0` 表示加入`sw0`中
-* `v4network $.$.$.$/$` 表示该vpc的v4的网段限制
+* `v4network $.$.$.$/$` 表示该vrf的v4的网段限制
 
 4. 创建fubuki接口
 
 ```
-add fubuki fbk0 to switch sw0 vni 1 mac 00:11:22:33:44:55 ip 10.99.88.199/24 address $.$.$.$:$ password $
+add fubuki fbk0 to switch sw0 vrf 1 mac 00:11:22:33:44:55 ip 10.99.88.199/24 address $.$.$.$:$ password $
 ```
 
 命令解释：
 
 * `add fubuki fbk0` 表示创建一个fubuki网口，名为`fbk0`
 * `to switch sw0` 表示加入`sw0`中
-* `vni 1` 表示该网口默认属于vni为`1`的vpc，即`vpc 1`
+* `vrf 1` 表示该网口默认属于`vrf 1`
 * `mac $:$:$:$:$:$` 表示为该网口分配的mac地址。由于fubuki是tun模式，所以需要交换机为其模拟二层报文
 * `ip $.$.$.$/$` 表示该网口使用的ip和掩码，可以不指定，不指定则由fubuki为其分配一个ip
 * `address $.$.$.$:$` 表示远端fubuki地址和端口

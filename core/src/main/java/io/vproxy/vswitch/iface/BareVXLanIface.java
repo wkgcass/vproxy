@@ -5,9 +5,9 @@ import io.vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;
 
-public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements LocalSideVniGetterSetter {
+public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements LocalSideVrfGetterSetter {
     public final IPPort udpSockAddress; // remote vxlan address
-    private int localSideVni;
+    private int localSideVrf;
 
     public BareVXLanIface(IPPort udpSockAddress) {
         super(udpSockAddress);
@@ -47,8 +47,8 @@ public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Loc
     }
 
     @Override
-    public int getLocalSideVni(int hint) {
-        return localSideVni;
+    public int getLocalSideVrf(int hintVrf) {
+        return localSideVrf;
     }
 
     @Override
@@ -57,7 +57,7 @@ public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Loc
     }
 
     @Override
-    public void setLocalSideVni(int vni) {
-        this.localSideVni = vni;
+    public void setLocalSideVrf(int vrf) {
+        this.localSideVrf = vrf;
     }
 }

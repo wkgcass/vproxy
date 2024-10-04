@@ -40,8 +40,8 @@ public class FlowMatcher {
     // ct_state
     public String ct_state;
 
-    // vni
-    public int vni;
+    // vrf
+    public int vrf;
 
     // customized
     public String predicate;
@@ -107,8 +107,8 @@ public class FlowMatcher {
                 throw new UnsupportedOperationException("ct_state=" + ct_state);
             }
         }
-        if (vni != 0) {
-            appendAnd(sb).append("pkb.network != null && pkb.network.vni == ").append(vni);
+        if (vrf != 0) {
+            appendAnd(sb).append("pkb.network != null && pkb.network.vrf == ").append(vrf);
         }
         if (predicate != null) {
             ctx.registerPredicateMethod(predicate);
@@ -193,8 +193,8 @@ public class FlowMatcher {
         if (ct_state != null) {
             appendSplit(sb).append("ct_state=").append(ct_state);
         }
-        if (vni != 0) {
-            appendSplit(sb).append("vni=").append(vni);
+        if (vrf != 0) {
+            appendSplit(sb).append("vrf=").append(vrf);
         }
         if (predicate != null) {
             appendSplit(sb).append("predicate=").append(predicate);

@@ -50,9 +50,9 @@ public class ConnectionHandle {
             ServerGroup.ServerHandle h = ServerHandle.get(parent);
             return h.connectionCount();
 
-        } else if (parent.type == ResourceType.vpc) {
+        } else if (parent.type == ResourceType.vrf) {
 
-            VirtualNetwork t = VpcHandle.get(parent);
+            VirtualNetwork t = VrfHandle.get(parent);
             return t.conntrack.countTcpEntries();
 
         } else
@@ -96,10 +96,10 @@ public class ConnectionHandle {
                 connections.add(new Conn(c));
             }
 
-        } else if (parent.type == ResourceType.vpc) {
+        } else if (parent.type == ResourceType.vrf) {
 
             // try to get connections from switch-network
-            VirtualNetwork network = VpcHandle.get(parent);
+            VirtualNetwork network = VrfHandle.get(parent);
             Collection<TcpEntry> entries = network.conntrack.listTcpEntries();
             connections = new ArrayList<>(entries.size());
             for (var t : entries) {

@@ -27,10 +27,10 @@ public class RouteTable {
     }
 
     public RouteTable(VirtualNetwork n) {
-        this.defaultV4Rule = new RouteRule(defaultRuleName, n.v4network, n.vni);
+        this.defaultV4Rule = new RouteRule(defaultRuleName, n.v4network, n.vrf);
         RouteRule defaultV6Rule = null;
         if (n.v6network != null) {
-            defaultV6Rule = new RouteRule(defaultRuleV6Name, n.v6network, n.vni);
+            defaultV6Rule = new RouteRule(defaultRuleV6Name, n.v6network, n.vrf);
         }
         this.defaultV6Rule = defaultV6Rule;
 
@@ -101,31 +101,31 @@ public class RouteTable {
     public static class RouteRule implements Networks.Rule {
         public final String alias;
         public final Network rule;
-        public final int toVni;
+        public final int toVrf;
         public final IP ip;
 
-        public RouteRule(String alias, Network rule, int toVni) {
+        public RouteRule(String alias, Network rule, int toVrf) {
             this.alias = alias;
             this.rule = rule;
-            this.toVni = toVni;
+            this.toVrf = toVrf;
             this.ip = null;
         }
 
         public RouteRule(String alias, Network rule, IP ip) {
             this.alias = alias;
             this.rule = rule;
-            this.toVni = 0;
+            this.toVrf = 0;
             this.ip = ip;
         }
 
-        public boolean isLocalDirect(int currentVni) {
-            return ip == null && (toVni == 0 || toVni == currentVni);
+        public boolean isLocalDirect(int currentVrf) {
+            return ip == null && (toVrf == 0 || toVrf == currentVrf);
         }
 
         @Override
         public String toString() {
             return alias + " -> network " + rule + (
-                ip == null ? (" vni " + toVni) : (" via " + ip.formatToIPString())
+                ip == null ? (" vrf " + toVrf) : (" via " + ip.formatToIPString())
             );
         }
 
@@ -134,15 +134,15 @@ public class RouteTable {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             RouteRule routeRule = (RouteRule) o;
-            return toVni == routeRule.toVni &&
-                Objects.equals(alias, routeRule.alias) &&
-                Objects.equals(rule, routeRule.rule) &&
-                Objects.equals(ip, routeRule.ip);
+            return toVrf == routeRule.toVrf &&
+                   Objects.equals(alias, routeRule.alias) &&
+                   Objects.equals(rule, routeRule.rule) &&
+                   Objects.equals(ip, routeRule.ip);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(alias, rule, toVni, ip);
+            return Objects.hash(alias, rule, toVrf, ip);
         }
     }
 }

@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class VirtualNetwork implements WithUserData {
-    public final int vni;
+    public final int vrf;
     public final Network v4network;
     public final Network v6network;
     public final MacTable macTable;
@@ -35,11 +35,11 @@ public class VirtualNetwork implements WithUserData {
     private final FDs fds;
 
     public VirtualNetwork(SwitchDelegate swCtx,
-                          int vni, NetEventLoop loop,
+                          int vrf, NetEventLoop loop,
                           Network v4network, Network v6network,
                           int macTableTimeout, int arpTableTimeout,
                           Annotations annotations) {
-        this.vni = vni;
+        this.vrf = vrf;
         this.v4network = v4network;
         this.v6network = v6network;
         if (annotations == null) {
@@ -163,14 +163,14 @@ public class VirtualNetwork implements WithUserData {
     @Override
     public String toString() {
         return "VirtualNetwork{" +
-            "vni=" + vni +
-            ", v4network=" + v4network +
-            ", v6network=" + v6network +
-            ", macTable=" + macTable +
-            ", arpTable=" + arpTable +
-            ", ips=" + ips +
-            ", routeTable=" + routeTable +
-            '}';
+               "vrf=" + vrf +
+               ", v4network=" + v4network +
+               ", v6network=" + v6network +
+               ", macTable=" + macTable +
+               ", arpTable=" + arpTable +
+               ", ips=" + ips +
+               ", routeTable=" + routeTable +
+               '}';
     }
 
     private Map<Object, Object> userdata;

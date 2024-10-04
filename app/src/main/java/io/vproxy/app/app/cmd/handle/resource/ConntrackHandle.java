@@ -28,20 +28,20 @@ public class ConntrackHandle {
     }
 
     private static VirtualNetwork getNetwork(Resource parent) throws Exception {
-        String vpcStr = parent.alias;
-        int vpc = Integer.parseInt(vpcStr);
+        String vrfStr = parent.alias;
+        int vrf = Integer.parseInt(vrfStr);
         Switch sw = Application.get().switchHolder.get(parent.parentResource.alias);
         var networks = sw.getNetworks().values();
 
         VirtualNetwork network = null;
         for (var net : networks) {
-            if (net.vni == vpc) {
+            if (net.vrf == vrf) {
                 network = net;
                 break;
             }
         }
         if (network == null) {
-            throw new NotFoundException("vpc", vpcStr);
+            throw new NotFoundException("vrf", vrfStr);
         }
         return network;
     }
