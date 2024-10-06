@@ -1,6 +1,7 @@
 package io.vproxy.app.process;
 
 import io.vproxy.app.app.*;
+import io.vproxy.app.app.cmd.handle.param.OffloadHandle;
 import io.vproxy.app.app.util.SignalHook;
 import io.vproxy.app.controller.HttpController;
 import io.vproxy.app.controller.RESPController;
@@ -758,8 +759,14 @@ public class Shutdown {
                         + " mode " + xdp.params.mode().name()
                         + " busy-poll " + xdp.params.busyPollBudget()
                         + " vrf " + xdp.vrf;
-                    if (xdp.params.offload()) {
-                        cmd += " offload";
+                    if (xdp.params.pktswOffloaded() || xdp.params.csumOffloaded()) {
+                        cmd += " offload ";
+                        var ls = new ArrayList<String>();
+                        if (xdp.params.pktswOffloaded())
+                            ls.add(OffloadHandle.PACKET_SWITCHING);
+                        if (xdp.params.csumOffloaded())
+                            ls.add(OffloadHandle.CHECKSUM);
+                        cmd += String.join(",", ls);
                     }
                     if (xdp.params.zeroCopy()) {
                         cmd += " zerocopy";

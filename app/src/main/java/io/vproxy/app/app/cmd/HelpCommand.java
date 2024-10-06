@@ -1,6 +1,7 @@
 package io.vproxy.app.app.cmd;
 
 import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.handle.param.OffloadHandle;
 import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import io.vproxy.base.Config;
 import io.vproxy.base.util.coll.Tuple;
@@ -447,6 +448,7 @@ public class HelpCommand {
         framesize("frame-size", null, "size of a frame"),
         busypoll("busy-poll", null, "a number indicating whether to enable busy poll, " +
             "and may set the SO_BUSY_POLL_BUDGET as well"),
+        offload("offload", null, "specify offload operations"),
         ip("ip", null, "ip address or ip/mask"),
         iface("iface", null, "connected interface in switch"),
         ;
@@ -470,7 +472,6 @@ public class HelpCommand {
         force("force", null, "forcibly to do something"),
         zerocopy("zerocopy", null, "indicate to perform zerocopy operations"),
         rxgencsum("rx-gen-csum", null, "generate checksum before receiving the packet into vswitch"),
-        offload("offload", null, "offload operations from java"),
         enable("enable", null, "enable the resource"),
         disable("disable", null, "disable the resource"),
         ;
@@ -1372,15 +1373,17 @@ public class HelpCommand {
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
                     new ResActParamMan(ParamMan.umem, "umem for the xdp socket to use. See `umem` for more info"),
                     new ResActParamMan(ParamMan.queue, "the queue index to bind to"),
-                    new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
-                    new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.DEFAULT_RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.DEFAULT_RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRIVER}, see doc for more info", "" + BPFMode.SKB),
                     new ResActParamMan(ParamMan.busypoll, "whether to enable busy poll, and set SO_BUSY_POLL_BUDGET. Set this option to 0 to disable busy poll", "0"),
-                    new ResActParamMan(ParamMan.vrf, "vrf which the iface is assigned to")
+                    new ResActParamMan(ParamMan.vrf, "vrf which the iface is assigned to"),
+                    new ResActParamMan(ParamMan.offload, "support " + OffloadHandle.PACKET_SWITCHING + "," + OffloadHandle.CHECKSUM + ". " +
+                                                         "Note that checksum offloading requires kernel version >= 6.8 and not all drivers support this feature",
+                        "(none)")
                 ), Arrays.asList(
                     new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false),
-                    new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet in java", false),
-                    new ResActFlagMan(FlagMan.offload, "offload mac switching to xdp program", false)
+                    new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet in java", false)
                 ), Arrays.asList(
                     new Tuple<>(
                         "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vrf 1 zerocopy",
@@ -1487,9 +1490,9 @@ public class HelpCommand {
         umem("umem", null, "umem for xdp sockets to use",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add a umem to a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.chunks, "how many chunks are there in this umem", "" + (SwitchUtils.RX_TX_CHUNKS * 2)),
-                    new ResActParamMan(ParamMan.fillringsize, "size of the fill ring", "" + SwitchUtils.RX_TX_CHUNKS),
-                    new ResActParamMan(ParamMan.compringsize, "size of the comp ring", "" + SwitchUtils.RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.chunks, "how many chunks are there in this umem", "" + (SwitchUtils.DEFAULT_UMEM_CHUNKS)),
+                    new ResActParamMan(ParamMan.fillringsize, "size of the fill ring", "" + SwitchUtils.DEFAULT_RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.compringsize, "size of the comp ring", "" + SwitchUtils.DEFAULT_RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.framesize, "size of the frame, must be 2048 or 4096", "" + SwitchUtils.TOTAL_RCV_BUF_LEN / 2)
                 ), Arrays.asList(
                     new Tuple<>(

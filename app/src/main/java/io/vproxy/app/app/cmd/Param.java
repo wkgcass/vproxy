@@ -60,6 +60,7 @@ public enum Param {
     compringsize("comp-ring-size"),
     framesize("frame-size"),
     busypoll("busy-poll"),
+    offload("offload"),
 
     url("url"),
     cls("class"),

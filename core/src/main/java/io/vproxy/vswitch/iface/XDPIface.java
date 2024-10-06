@@ -4,7 +4,6 @@ import io.vproxy.base.selector.Handler;
 import io.vproxy.base.selector.HandlerContext;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
@@ -21,6 +20,7 @@ import io.vproxy.xdp.*;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
+import java.util.ArrayList;
 
 public class XDPIface extends Iface {
     public final String nic;
@@ -35,22 +35,23 @@ public class XDPIface extends Iface {
 
     public record BPFInfo(
         BPFObject bpfObject,
-        BPFMap xsk, BPFMap mac2port, BPFMap srcmac2count,
-        String mac2portSharedMapGroup) {
-
+        BPFMap xsk, BPFMap mac2port, BPFMap port2dev, BPFMap srcmac2count, BPFMap passmac,
+        String mac2portSharedMapGroup
+    ) {
         public BPFInfo(BPFObject bpfObject, BPFMap xsk) {
-            this(bpfObject, xsk, null, null, null);
+            this(bpfObject, xsk, null, null, null, null, null);
         }
     }
 
     public record XDPParams(int queueId, int rxRingSize, int txRingSize, BPFMode mode,
-                            boolean zeroCopy, int busyPollBudget, boolean rxGenChecksum, boolean offload,
+                            boolean zeroCopy, int busyPollBudget, boolean rxGenChecksum,
+                            boolean pktswOffloaded, boolean csumOffloaded,
                             BPFInfo bpf) {
     }
 
     public XDPIface(String nic, int vrf, UMem umem, XDPParams params) {
         // check offload
-        if (params.offload) {
+        if (params.pktswOffloaded) {
             if (params.bpf.mac2port == null || params.bpf.srcmac2count == null) {
                 throw new IllegalArgumentException("offload is true, but macMap is not provided");
             }
@@ -113,7 +114,7 @@ public class XDPIface extends Iface {
                 assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
                 chunk.setPktAddr(pktaddr);
                 chunk.setPktLen(pktlen);
-                chunk.setCsumFlags(SwitchUtils.checksumFlagsFor(pkb.pkt, umem.metaLen));
+                chunk.setCsumFlags(SwitchUtils.checksumFlagsFor(pkb.pkt, umem.metaLen, params.csumOffloaded));
                 if (chunk.getCsumFlags() != 0) {
                     statistics.incrCsumSkip();
                 }
@@ -142,9 +143,9 @@ public class XDPIface extends Iface {
         }
         ByteArray pktData = pkb.pkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
-        long pktaddr = chunk.getAddr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
-        long availableSpace = chunk.getEndAddr() - chunk.getAddr() - Consts.XDP_HEADROOM_DRIVER_RESERVED;
-        var csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt, umem.metaLen);
+        long pktaddr = chunk.getAddr() + umem.headroom;
+        long availableSpace = chunk.getEndAddr() - chunk.getAddr() - umem.headroom;
+        var csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt, umem.metaLen, params.csumOffloaded);
         if ((csumFlags & XDPConsts.VP_CSUM_XDP_OFFLOAD) != 0) {
             pktaddr += umem.metaLen;
             availableSpace -= umem.metaLen;
@@ -248,7 +249,19 @@ public class XDPIface extends Iface {
 
     @Override
     protected String toStringExtra() {
-        return "#q=" + params.queueId + ",umem=" + umem.alias + ",vrf:" + vrf + (params.offload ? ",offload" : "");
+        var off = "";
+        if (params.pktswOffloaded || params.csumOffloaded) {
+            off = ",offload=";
+            var ls = new ArrayList<String>();
+            if (params.pktswOffloaded) {
+                ls.add("pktsw");
+            }
+            if (params.csumOffloaded) {
+                ls.add("csum");
+            }
+            off += String.join(",", ls);
+        }
+        return "#q=" + params.queueId + ",umem=" + umem.alias + ",vrf:" + vrf + off;
     }
 
     private class XDPHandler implements Handler<XDPSocket> {
@@ -317,6 +330,85 @@ public class XDPIface extends Iface {
                 Logger.shouldNotHappen("closing xsk failed", e);
             }
             callback.alertDeviceDown(XDPIface.this);
+        }
+    }
+
+    public static class XDPParamsBuilder {
+        public XDPParamsBuilder$1 setQueueId(int queueId) {
+            return new XDPParamsBuilder$1(queueId);
+        }
+
+        public record XDPParamsBuilder$1(int queueId) {
+            public XDPParamsBuilder$2 setBPFInfo(BPFInfo bpf) {
+                return new XDPParamsBuilder$2(queueId, bpf);
+            }
+        }
+    }
+
+    public static class XDPParamsBuilder$2 {
+        private final int queueId;
+        private final BPFInfo bpf;
+
+        private int rxRingSize = SwitchUtils.DEFAULT_RX_TX_CHUNKS;
+        private int txRingSize = SwitchUtils.DEFAULT_RX_TX_CHUNKS;
+        private BPFMode mode = BPFMode.SKB;
+        private boolean zeroCopy = false;
+        private int busyPollBudget = 0;
+        private boolean rxGenChecksum = false;
+        private boolean pktswOffloaded = false;
+        private boolean csumOffloaded = false;
+
+        public XDPParamsBuilder$2(int queueId, BPFInfo bpf) {
+            this.queueId = queueId;
+            this.bpf = bpf;
+        }
+
+        public XDPParams build() {
+            return new XDPParams(
+                queueId, rxRingSize, txRingSize, mode,
+                zeroCopy, busyPollBudget, rxGenChecksum,
+                pktswOffloaded, csumOffloaded,
+                bpf);
+        }
+
+        public XDPParamsBuilder$2 setRxRingSize(int rxRingSize) {
+            this.rxRingSize = rxRingSize;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setTxRingSize(int txRingSize) {
+            this.txRingSize = txRingSize;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setMode(BPFMode mode) {
+            this.mode = mode;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setZeroCopy(boolean zeroCopy) {
+            this.zeroCopy = zeroCopy;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setBusyPollBudget(int busyPollBudget) {
+            this.busyPollBudget = busyPollBudget;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setRxGenChecksum(boolean rxGenChecksum) {
+            this.rxGenChecksum = rxGenChecksum;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setPktswOffloaded(boolean pktswOffloaded) {
+            this.pktswOffloaded = pktswOffloaded;
+            return this;
+        }
+
+        public XDPParamsBuilder$2 setCsumOffloaded(boolean csumOffloaded) {
+            this.csumOffloaded = csumOffloaded;
+            return this;
         }
     }
 }

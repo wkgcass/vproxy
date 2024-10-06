@@ -386,31 +386,41 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             bpfobj = BPFObject.loadAndAttachToNic(nicname, BPFMode.SKB, true);
         }
 
-        BPFMap mac2portMap;
+        BPFMap mac2portMap = null;
+        BPFMap port2devMap = null;
+        BPFMap srcmac2countMap = null;
         try {
-            mac2portMap = bpfobj.getMap(Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME);
+            if (isPodNic) {
+                mac2portMap = bpfobj.getMap(Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME);
+                port2devMap = bpfobj.getMap(Prebuilt.DEFAULT_PORT_TO_DEV_MAP_NAME);
+                srcmac2countMap = bpfobj.getMap(Prebuilt.DEFAULT_SRC_MAC_TO_COUNT_MAP_NAME);
+            }
         } catch (Exception e) {
             Logger.error(LogType.SYS_ERROR, "failed to retrieve mac2port map", e);
-            if (isPodNic) {
-                reusedResult.release(true);
-            } else {
-                bpfobj.release(true);
-            }
+            reusedResult.release(true);
             throw e;
         }
+
+        var bpfInfo = new XDPIface.BPFInfo(
+            bpfobj,
+            bpfobj.getMap(Prebuilt.DEFAULT_XSKS_MAP_NAME),
+            mac2portMap,
+            port2devMap,
+            srcmac2countMap,
+            null,
+            isPodNic ? SHARED_BPF_MAP_GROUP_NAME : null
+        );
 
         XDPIface iface;
         try {
             iface = sw.addXDP(nicname, net != null ? net.vrf : NETWORK_ENTRY_VRF, umem,
-                new XDPIface.XDPParams(0, 32, 32, BPFMode.SKB,
-                    false, 0, false, isPodNic,
-                    new XDPIface.BPFInfo(
-                        bpfobj,
-                        bpfobj.getMap(Prebuilt.DEFAULT_XSKS_MAP_NAME),
-                        isPodNic ? mac2portMap : null,
-                        isPodNic ? bpfobj.getMap(Prebuilt.DEFAULT_SRC_MAC_TO_COUNT_MAP_NAME) : null,
-                        isPodNic ? SHARED_BPF_MAP_GROUP_NAME : null
-                    )));
+                new XDPIface.XDPParamsBuilder()
+                    .setQueueId(0)
+                    .setBPFInfo(bpfInfo)
+                    .setRxGenChecksum(!NativeXDP.supportTxMetadata)
+                    .setPktswOffloaded(isPodNic)
+                    .setCsumOffloaded(true)
+                    .build());
         } catch (Exception e) {
             Logger.error(LogType.SYS_ERROR, "failed to create xdp interface: " + nicname, e);
             if (isPodNic) {

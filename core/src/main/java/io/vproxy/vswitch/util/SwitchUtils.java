@@ -4,7 +4,6 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.*;
 import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
@@ -26,7 +25,8 @@ import java.util.Map;
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
     public static final int RCV_HEAD_PRESERVE_LEN = 128;
-    public static final int RX_TX_CHUNKS = 2048;
+    public static final int DEFAULT_UMEM_CHUNKS = 4096;
+    public static final int DEFAULT_RX_TX_CHUNKS = 256;
     public static final MacAddress BROADCAST_MAC = new MacAddress("ff:ff:ff:ff:ff:ff");
     public static final MacAddress ZERO_MAC = new MacAddress("00:00:00:00:00:00");
 
@@ -49,7 +49,7 @@ public class SwitchUtils {
             return;
         }
         int maxMss = iface.getParams().getBaseMTU() - iface.getOverhead() - 20 /* tcp common */
-            - 20 /* possible options in normal tcp packets, and also ip headers/opts */;
+                     - 20 /* possible options in normal tcp packets, and also ip headers/opts */;
         if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket)) {
             return; // only tcp requires modification
         }
@@ -294,8 +294,8 @@ public class SwitchUtils {
         return FilterResult.PASS;
     }
 
-    public static int checksumFlagsFor(EthernetPacket pkt, int metaLen) {
-        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ", " + metaLen + ")");
+    public static int checksumFlagsFor(EthernetPacket pkt, int metaLen, boolean offloadEnabled) {
+        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ", " + metaLen + ", " + offloadEnabled + ")");
         if (!(pkt.getPacket() instanceof AbstractIpPacket)) {
             return 0;
         }
@@ -305,7 +305,7 @@ public class SwitchUtils {
             ret |= XDPConsts.VP_CSUM_IP;
         }
         if (ip.getPacket().isRequireUpdatingChecksum()) {
-            if (NativeXDP.supportTxMetadata && metaLen >= 16) {
+            if (offloadEnabled && NativeXDP.supportTxMetadata && metaLen >= 16) {
                 ret |= XDPConsts.VP_CSUM_UP_PSEUDO | XDPConsts.VP_CSUM_XDP_OFFLOAD;
             } else {
                 ret |= XDPConsts.VP_CSUM_UP;
@@ -319,7 +319,7 @@ public class SwitchUtils {
         assert Logger.lowLevelDebug("executeTcpNat(" + pkb + ", " + nat + ")");
         var pkt = pkb.tcpPkt;
         boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.remote.getAddress()) &&
-            pkb.tcpPkt.getSrcPort() == nat._2.remote.getPort();
+                             pkb.tcpPkt.getSrcPort() == nat._2.remote.getPort();
         assert Logger.lowLevelDebug("isBackhaul = " + isBackhaul);
 
         if (pkt.isRst()) {
@@ -358,7 +358,7 @@ public class SwitchUtils {
                                     handled = true;
                                 } else {
                                     assert Logger.lowLevelDebug("received unexpected packet, " +
-                                        "the proxy protocol header is not sent yet, but received !syn + ack packet from the passive side");
+                                                                "the proxy protocol header is not sent yet, but received !syn + ack packet from the passive side");
                                     return false; // drop
                                 }
                             }
@@ -504,7 +504,7 @@ public class SwitchUtils {
         assert Logger.lowLevelDebug("executeUdpNat(" + pkb + ", " + nat + ")");
         var pkt = pkb.udpPkt;
         boolean isBackhaul = pkb.ipPkt.getSrc().equals(nat._2.remote.getAddress()) &&
-            pkb.udpPkt.getSrcPort() == nat._2.remote.getPort();
+                             pkb.udpPkt.getSrcPort() == nat._2.remote.getPort();
         assert Logger.lowLevelDebug("isBackhaul = " + isBackhaul);
 
         nat.resetTimer();
@@ -618,7 +618,7 @@ public class SwitchUtils {
         BPFObject get(Map<String, BPFMap> reusedMaps) throws IOException;
     }
 
-    public record GetSharedMapGroupResult(BPFObject object, BPFMap map, String groupName) {
+    public record GetSharedMapGroupResult(BPFObject object, BPFMap mac2portMap, BPFMap port2devMap, String groupName) {
         public void release(boolean detach) {
             object.release(detach);
             SharedBPFMapHolder.getInstance().release(groupName);
@@ -628,21 +628,24 @@ public class SwitchUtils {
     public static GetSharedMapGroupResult createBPFObjectWithReusedMaps(Switch sw, int vrf,
                                                                         BPFObjectCreator fn) throws IOException {
         var mapGroupName = "mac2port:" + sw.alias + ":" + vrf;
-        var mapName = Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME;
+        var mac2portName = Prebuilt.DEFAULT_MAC_TO_PORT_MAP_NAME;
+        var devMapName = Prebuilt.DEFAULT_PORT_TO_DEV_MAP_NAME;
 
-        var res = SharedBPFMapHolder.getInstance().getOrCreate(mapGroupName, () -> {
+        var tup = SharedBPFMapHolder.getInstance().getOrCreate(mapGroupName, () -> {
             var obj = BPFObject.load(Prebuilt.DEFAULT_PROG);
-            BPFMap map;
+            BPFMap mac2portMap;
+            BPFMap port2devMap;
             try {
-                map = obj.getMap(mapName);
+                mac2portMap = obj.getMap(mac2portName);
+                port2devMap = obj.getMap(devMapName);
             } catch (IOException e) {
                 obj.release(true);
                 throw e;
             }
-            return new Tuple<>(obj, map);
+            return new SharedBPFMapHolder.BPFObjectAndMapProviderResultTuple(obj, mac2portMap, port2devMap);
         });
 
-        var reuseMap = Map.of(mapName, res);
+        var reuseMap = Map.of(mac2portName, tup.mac2portMap(), devMapName, tup.devMap());
 
         BPFObject obj;
         try {
@@ -651,14 +654,16 @@ public class SwitchUtils {
             SharedBPFMapHolder.getInstance().release(mapGroupName);
             throw e;
         }
-        BPFMap map;
+        BPFMap mac2portMap;
+        BPFMap port2devMap;
         try {
-            map = obj.getMap(mapName);
+            mac2portMap = obj.getMap(mac2portName);
+            port2devMap = obj.getMap(devMapName);
         } catch (IOException e) {
             obj.release(true);
             SharedBPFMapHolder.getInstance().release(mapGroupName);
             throw e;
         }
-        return new GetSharedMapGroupResult(obj, map, mapGroupName);
+        return new GetSharedMapGroupResult(obj, mac2portMap, port2devMap, mapGroupName);
     }
 }

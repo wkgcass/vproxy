@@ -21,8 +21,8 @@ public class XDPHandle {
         UMem umem = UMemHandle.get(cmd.args.get(Param.umem), sw.alias);
 
         int queueId = QueueHandle.get(cmd);
-        int rxRingSize = RingSizeHandle.get(cmd, Param.rxringsize, SwitchUtils.RX_TX_CHUNKS);
-        int txRingSize = RingSizeHandle.get(cmd, Param.txringsize, SwitchUtils.RX_TX_CHUNKS);
+        int rxRingSize = RingSizeHandle.get(cmd, Param.rxringsize, SwitchUtils.DEFAULT_RX_TX_CHUNKS);
+        int txRingSize = RingSizeHandle.get(cmd, Param.txringsize, SwitchUtils.DEFAULT_RX_TX_CHUNKS);
         boolean zeroCopy = cmd.flags.contains(Flag.zerocopy);
         int busyPollBudget = 0;
         if (cmd.args.containsKey(Param.busypoll)) {
@@ -30,7 +30,8 @@ public class XDPHandle {
         }
         boolean rxGenChecksum = cmd.flags.contains(Flag.rxgencsum);
         int vrf = VrfParamHandle.get(cmd);
-        boolean offload = cmd.flags.contains(Flag.offload);
+        boolean pktswOffloaded = OffloadHandle.isPacketSwitchingOffloaded(cmd);
+        boolean csumOffloaded = OffloadHandle.isChecksumOffloaded(cmd);
 
         var nic = cmd.resource.alias;
         var mode = BPFModeHandle.get(cmd, BPFMode.SKB);
@@ -41,12 +42,26 @@ public class XDPHandle {
 
         try {
             var xskMap = bpfobj.getMap(Prebuilt.DEFAULT_XSKS_MAP_NAME);
-            var macMap = createResult.map();
+            var mac2portMap = createResult.mac2portMap();
+            var port2devMap = createResult.port2devMap();
             var srcmac2countMap = bpfobj.getMap(Prebuilt.DEFAULT_SRC_MAC_TO_COUNT_MAP_NAME);
+            var passmacMap = bpfobj.getMap(Prebuilt.DEFAULT_PASS_MAC_MAP_NAME);
 
-            sw.addXDP(nic, vrf, umem, new XDPIface.XDPParams(
-                queueId, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum, offload,
-                new XDPIface.BPFInfo(bpfobj, xskMap, macMap, srcmac2countMap, createResult.groupName())));
+            var bpfInfo = new XDPIface.BPFInfo(bpfobj, xskMap, mac2portMap, port2devMap, srcmac2countMap, passmacMap, createResult.groupName());
+
+            sw.addXDP(nic, vrf, umem, new XDPIface.XDPParamsBuilder()
+                .setQueueId(queueId)
+                .setBPFInfo(bpfInfo)
+                .setRxRingSize(rxRingSize)
+                .setTxRingSize(txRingSize)
+                .setMode(mode)
+                .setZeroCopy(zeroCopy)
+                .setBusyPollBudget(busyPollBudget)
+                .setRxGenChecksum(rxGenChecksum)
+                .setPktswOffloaded(pktswOffloaded)
+                .setCsumOffloaded(csumOffloaded)
+                .build()
+            );
         } catch (Exception e) {
             Logger.error(LogType.SYS_ERROR, "failed to create xdp interface " + nic, e);
             createResult.release(true);

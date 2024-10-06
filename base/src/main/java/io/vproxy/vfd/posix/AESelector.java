@@ -18,7 +18,7 @@ public class AESelector implements FDSelector {
 
     private final Posix posix;
     private final long ae;
-    private final int[] pipefd; // null, or pipefd[read][write], might be the same if using linux eventfd
+    private final int[] pipefd; // pipefd[read][write], might be the same if using linux eventfd
     private final Att[] attachments;
     private final DirectByteBuffer bufferForPipeFD;
     private boolean closed = false;
@@ -62,19 +62,17 @@ public class AESelector implements FDSelector {
     }
 
     private void clearPipeFD() {
-        if (pipefd != null) {
-            while (true) {
-                int x;
-                try {
-                    x = posix.read(pipefd[0], bufferForPipeFD.realBuffer(), 0, 8);
-                } catch (IOException e) {
-                    Logger.shouldNotHappen("reading from read end of pipefd failed", e);
-                    break;
-                }
-                assert x == 0 || x == 8;
-                if (x == 0) {
-                    break;
-                }
+        while (true) {
+            int x;
+            try {
+                x = posix.read(pipefd[0], bufferForPipeFD.realBuffer(), 0, 8);
+            } catch (IOException e) {
+                Logger.shouldNotHappen("reading from read end of pipefd failed", e);
+                break;
+            }
+            assert x == 0 || x == 8;
+            if (x == 0) {
+                break;
             }
         }
     }
@@ -147,9 +145,6 @@ public class AESelector implements FDSelector {
 
     @Override
     public void wakeup() {
-        if (pipefd == null) {
-            throw new UnsupportedOperationException("does not support wakeup");
-        }
         checkOpen();
         bufferForPipeFD.getMemorySegment().set(ValueLayout.JAVA_LONG, 0, 1L);
         try {
@@ -273,18 +268,16 @@ public class AESelector implements FDSelector {
         if (bufferForPipeFD != null) {
             bufferForPipeFD.clean();
         }
-        if (pipefd != null) {
+        try {
+            posix.close(pipefd[0]);
+        } catch (IOException e) {
+            Logger.shouldNotHappen("closing read end of the pipefd failed", e);
+        }
+        if (pipefd[1] != pipefd[0]) {
             try {
-                posix.close(pipefd[0]);
+                posix.close(pipefd[1]);
             } catch (IOException e) {
-                Logger.shouldNotHappen("closing read end of the pipefd failed", e);
-            }
-            if (pipefd[1] != pipefd[0]) {
-                try {
-                    posix.close(pipefd[1]);
-                } catch (IOException e) {
-                    Logger.shouldNotHappen("closing write end of the pipefd failed", e);
-                }
+                Logger.shouldNotHappen("closing write end of the pipefd failed", e);
             }
         }
     }

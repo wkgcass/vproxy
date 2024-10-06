@@ -129,7 +129,7 @@ public class MacTable {
                 // the mac is already registered on another iface
                 // remove that iface
                 MacEntry entry = macMap.get(mac);
-                entry.cancel();
+                entry.cancel(false);
             }
             entries.add(this);
             macMap.put(mac, this);
@@ -148,10 +148,13 @@ public class MacTable {
         }
 
         private void tryOffload() {
-            if (!(iface instanceof XDPIface xdpIface) || !xdpIface.params.offload()) {
+            if (!(iface instanceof XDPIface xdpIface) || !xdpIface.params.pktswOffloaded()) {
                 return;
             }
             if (xdpIface.params.bpf().mac2port() == null) {
+                return;
+            }
+            if (xdpIface.params.bpf().port2dev() == null) {
                 return;
             }
             if (xdpIface.params.bpf().srcmac2count() == null) {
@@ -168,10 +171,10 @@ public class MacTable {
             }
 
             var mac2portMap = xdpIface.params.bpf().mac2port();
-            if (mac2portMap == null) {
-                return;
-            }
+            var port2devMap = xdpIface.params.bpf().port2dev();
             try {
+                port2devMap.putNetif(xdpIface.nic);
+                // first add port2dev map, then add mac2port map, so that the dev would be valid
                 mac2portMap.putNetif(mac, xdpIface.nic);
                 Logger.trace(LogType.ALERT, "mac entry " + iface.name() + " -> " + mac + " recorded into xdp offload mac map");
             } catch (IOException e) {
@@ -183,9 +186,13 @@ public class MacTable {
 
         @Override
         public void cancel() {
+            cancel(true);
+        }
+
+        public void cancel(boolean isTimeout) {
             super.cancel();
 
-            if (offloaded) {
+            if (isTimeout && offloaded) {
                 if (hasOffloadedPacketPassed()) {
                     start();
                     return;
@@ -208,13 +215,18 @@ public class MacTable {
         }
 
         private boolean hasOffloadedPacketPassed() {
-            assert iface instanceof XDPIface;
-            assert ((XDPIface) iface).params.bpf().srcmac2count() != null;
+            if (!(iface instanceof XDPIface xdpIface)) {
+                return false;
+            }
+            if (xdpIface.params.bpf().srcmac2count() == null) {
+                return false;
+            }
 
             try {
-                int n = ((XDPIface) iface).params.bpf().srcmac2count().getInt(mac);
+                int n = xdpIface.params.bpf().srcmac2count().getInt(mac);
                 assert Logger.lowLevelDebug("fetched packet count from xdp offload map: " + n + ", last recorded: " + offloadedCount);
                 if (n != offloadedCount) {
+                    assert Logger.lowLevelDebug("mac entry " + iface.name() + " -> " + mac + " has packets passed, old: " + offloadedCount + ", new: " + n);
                     offloadedCount = n;
                     return true;
                 }
@@ -243,7 +255,7 @@ public class MacTable {
                 mac2portMap.remove(mac);
                 Logger.trace(LogType.ALERT, "mac entry removed from xdp offload mac map: " + iface.name() + " -> " + mac);
             } catch (IOException e) {
-                Logger.error(LogType.SYS_ERROR, "failed to removed mac from xdp offload mac map: " + iface.name() + " -> " + mac);
+                Logger.error(LogType.SYS_ERROR, "failed to removed mac from xdp offload mac map: " + iface.name() + " -> " + mac, e);
             }
         }
 
@@ -252,6 +264,7 @@ public class MacTable {
             if (getTimeout() == -1) {
                 return;
             }
+            hasOffloadedPacketPassed(); // will update offloadedCount field
             super.resetTimer();
         }
 
@@ -259,13 +272,17 @@ public class MacTable {
             return offloaded;
         }
 
+        public int getOffloadedCount() {
+            return offloadedCount;
+        }
+
         @Override
         public String toString() {
             return "MacEntry{" +
-                "mac=" + mac +
-                ", iface=" + iface.name() +
-                ", offloaded=" + offloaded +
-                '}';
+                   "mac=" + mac +
+                   ", iface=" + iface.name() +
+                   ", offloaded=" + offloaded + "(" + offloadedCount + ")" +
+                   '}';
         }
     }
 

@@ -919,11 +919,11 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
           it + ResActParam(Param.busypoll) { BusyPollHandle.check(it) }
           it + ResActParam(Param.vrf, required) { VrfParamHandle.check(it) }
+          it + ResActParam(Param.offload) { OffloadHandle.check(it) }
         },
         flags = {
           it + ResActFlag(Flag.zerocopy)
           it + ResActFlag(Flag.rxgencsum)
-          it + ResActFlag(Flag.offload)
         },
         exec = execUpdate { XDPHandle.add(it) }
       )

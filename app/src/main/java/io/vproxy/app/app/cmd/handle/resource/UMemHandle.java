@@ -31,9 +31,9 @@ public class UMemHandle {
     }
 
     public static void add(Command cmd) throws Exception {
-        int chunksSize = RingSizeHandle.get(cmd, Param.chunks, SwitchUtils.RX_TX_CHUNKS * 2);
-        int fillRingSize = RingSizeHandle.get(cmd, Param.fillringsize, SwitchUtils.RX_TX_CHUNKS);
-        int compRingSize = RingSizeHandle.get(cmd, Param.compringsize, SwitchUtils.RX_TX_CHUNKS);
+        int chunksSize = RingSizeHandle.get(cmd, Param.chunks, SwitchUtils.DEFAULT_UMEM_CHUNKS);
+        int fillRingSize = RingSizeHandle.get(cmd, Param.fillringsize, SwitchUtils.DEFAULT_RX_TX_CHUNKS);
+        int compRingSize = RingSizeHandle.get(cmd, Param.compringsize, SwitchUtils.DEFAULT_RX_TX_CHUNKS);
         int frameSize = FrameSizeHandle.get(cmd, SwitchUtils.TOTAL_RCV_BUF_LEN / 2);
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);

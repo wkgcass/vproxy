@@ -551,6 +551,18 @@ project(':test') {
             "submodules/vpxdp/submodules/xdp-tools/lib/libxdp")
         systemProperty("vfd", "posix")
         main = "io.vproxy.poc.XDPPoc"
+        def ifname = System.getProperty("ifname")
+        def offload = System.getProperty("offload")
+        doLast {
+            if (ifname == null) {
+                throw new Exception("You must specify -Difname={...}")
+            }
+            var ls = [ifname]
+            if (offload != null) {
+                ls.add(offload)
+            }
+            args = ls
+        }
     }
 
     task QuicPoc(type: JavaExec) {

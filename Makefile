@@ -14,7 +14,7 @@ endif
 ifeq ($(OS),Linux)
 LINUX_ARCH = $(ARCH)
 else
-LINUX_ARCH = $(shell docker run --rm vproxyio/compile:latest uname -m)
+LINUX_ARCH := $(shell docker run --rm vproxyio/compile:latest uname -m)
 endif
 #
 ifeq ($(LINUX_ARCH),arm64)
@@ -86,7 +86,7 @@ _add_linux_so_to_zip:
 	mkdir -p ./io/vproxy/
 	cp ./base/src/main/c/libvfdposix.so ./io/vproxy/libvfdposix-$(LINUX_ARCH).so
 	cp ./submodules/vpxdp/libvpxdp.so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so
-	cp ./submodules/xdp-tools/lib/libxdp/libxdp.1.4.0 ./io/vproxy/libxdp-$(LINUX_ARCH).so
+	cp ./submodules/vpxdp/submodules/xdp-tools/lib/libxdp/libxdp.so.1.4.0 ./io/vproxy/libxdp-$(LINUX_ARCH).so
 	cp ./libmsquic.so ./io/vproxy/libmsquic-$(LINUX_ARCH).so
 	cp ./base/src/main/c/libmsquic-java.so ./io/vproxy/libmsquic-java-$(LINUX_ARCH).so
 	cp ./submodules/fubuki/target/release/libfubukil.so ./io/vproxy/libfubuki-$(LINUX_ARCH).so
@@ -118,6 +118,8 @@ endif
 .PHONY: jar-with-lib
 ifeq ($(OS),Linux)
 jar-with-lib: clean jar native _add_linux_so_to_zip
+.PHONY: jar-with-lib-skip-native
+jar-with-lib-skip-native: clean-jar jar _add_linux_so_to_zip
 else
 jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-skip-native
 .PHONY: jar-with-lib-no-docker

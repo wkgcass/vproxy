@@ -91,9 +91,10 @@ public class UdpOverTcpSetup {
 
         UMem umem = sw.addUMem("umem0", 256, 128, 128, 2048);
         XDPIface iface = sw.addXDP(nicname, 1, umem,
-            new XDPIface.XDPParams(0, 128, 128, BPFMode.SKB,
-                false, 0, false, false,
-                new XDPIface.BPFInfo(obj, xskMap)));
+            new XDPIface.XDPParamsBuilder()
+                .setQueueId(0)
+                .setBPFInfo(new XDPIface.BPFInfo(obj, xskMap))
+                .build());
 
         UdpOverTcpPacketFilter filter = new UdpOverTcpPacketFilter(client);
         iface.addIngressFilter(filter);

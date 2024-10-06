@@ -21,6 +21,23 @@ public class XDPPoc {
             return;
         }
         String ifname = args[0];
+        boolean csumOffloaded = false;
+        for (var i = 1; i < args.length; i++) {
+            var arg = args[i];
+            if (arg.startsWith("offload=")) {
+                var v = arg.substring("offload=".length());
+                var split = v.split(",");
+                for (var s : split) {
+                    s = s.trim();
+                    if (s.equals("csum")) {
+                        csumOffloaded = true;
+                    } else {
+                        Logger.error(LogType.ALERT, "unexpected argument " + arg);
+                        return;
+                    }
+                }
+            }
+        }
 
         BPFObject bpfobj = BPFObject.loadAndAttachToNic(
             ifname,
@@ -44,10 +61,10 @@ public class XDPPoc {
             new Annotations());
 
         UMem umem = sw.addUMem("poc-umem", 64, 32, 32, 4096);
-        sw.addXDP(ifname, 1, umem, new XDPIface.XDPParams(
-            0, 32, 32, BPFMode.SKB,
-            false, 0, false, false,
-            new XDPIface.BPFInfo(bpfobj, xskMap)
-        ));
+        sw.addXDP(ifname, 1, umem, new XDPIface.XDPParamsBuilder()
+            .setQueueId(0)
+            .setBPFInfo(new XDPIface.BPFInfo(bpfobj, xskMap))
+            .setCsumOffloaded(csumOffloaded)
+            .build());
     }
 }

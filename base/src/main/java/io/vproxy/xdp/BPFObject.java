@@ -13,6 +13,7 @@ import io.vproxy.vpxdp.XDPConsts;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.vproxy.xdp.Prebuilt.DEFAULT_PROG;
 
@@ -82,6 +83,9 @@ public class BPFObject {
         var filename = generateBpfObjectFile(bpfObjectBytes);
         try (var allocator = Allocator.ofConfined()) {
             var o = XDP.get().loadBPFObject(new PNIString(allocator, filename), null);
+            if (o == null) {
+                throw new IOException("loading bpfobj failed");
+            }
             obj = new BPFObject(o, null);
         }
         return obj;
@@ -113,7 +117,13 @@ public class BPFObject {
         }
     }
 
+    private final AtomicBoolean isReleased = new AtomicBoolean(false);
+
     public void release(boolean detach) {
+        if (!isReleased.compareAndSet(false, true)) {
+            return;
+        }
+
         bpfobj.release();
         if (detach) {
             int res;

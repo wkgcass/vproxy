@@ -83,18 +83,18 @@ public class ArpHandle {
             macInArpEntries.add(a.mac);
             var macEntry = macEntriesMap.get(a.mac);
             if (macEntry == null) {
-                result.add(new ArpEntry(a.mac, a.ip, null, a.getTTL(), -1, false));
+                result.add(new ArpEntry(a.mac, a.ip, null, a.getTTL(), -1, false, 0));
             } else {
                 var iface = macEntry.iface;
                 var ttl = macEntry.getTTL();
-                result.add(new ArpEntry(a.mac, a.ip, iface, a.getTTL(), ttl, macEntry.isOffloaded()));
+                result.add(new ArpEntry(a.mac, a.ip, iface, a.getTTL(), ttl, macEntry.isOffloaded(), macEntry.getOffloadedCount()));
             }
         }
         for (var m : macEntries) {
             if (macInArpEntries.contains(m.mac)) {
                 continue;
             }
-            result.add(new ArpEntry(m.mac, null, m.iface, -1, m.getTTL(), m.isOffloaded()));
+            result.add(new ArpEntry(m.mac, null, m.iface, -1, m.getTTL(), m.isOffloaded(), m.getOffloadedCount()));
         }
         result.sort((a, b) -> {
             // sort by mac
@@ -144,23 +144,9 @@ public class ArpHandle {
         net.arpTable.remove(mac);
     }
 
-    public static class ArpEntry {
-        public final MacAddress mac;
-        public final IP ip;
-        public final Iface iface;
-        public final long arpTTL;
-        public final long macTTL;
-        public final boolean offloaded;
-
-        public ArpEntry(MacAddress mac, IP ip, Iface iface, long arpTTL, long macTTL, boolean offloaded) {
-            this.mac = mac;
-            this.ip = ip;
-            this.iface = iface;
-            this.arpTTL = arpTTL;
-            this.macTTL = macTTL;
-            this.offloaded = offloaded;
-        }
-
+    public record ArpEntry(
+        MacAddress mac, IP ip, Iface iface, long arpTTL, long macTTL, boolean offloaded, int offloadedCount
+    ) {
         private String strForIp(ArpEntry e) {
             if (e.ip == null) return "";
             return e.ip.formatToIPString();
@@ -236,7 +222,7 @@ public class ArpHandle {
             String strMacTTL = strForMacTTL(this);
             sb.append(split).append("MAC-TTL:").append(strMacTTL);
             if (offloaded) {
-                sb.append("/offload");
+                sb.append("/offload(").append(offloadedCount).append(")");
             }
             return sb.toString();
         }
