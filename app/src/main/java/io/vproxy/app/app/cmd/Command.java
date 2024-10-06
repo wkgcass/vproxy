@@ -4,6 +4,10 @@ import io.vproxy.app.app.Application;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.Callback;
+import vjson.CharStream;
+import vjson.parser.ParserMode;
+import vjson.parser.ParserOptions;
+import vjson.parser.ParserUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -22,18 +26,78 @@ public class Command {
     }
 
     public static Command parseStrCmd(String line) throws Exception {
-        List<String> cmd = Arrays.asList(line.trim().split(" "));
-        return parseStrCmd(cmd);
+        var args = new ArrayList<String>();
+
+        var cs = CharStream.from(line);
+        var lastStr = "";
+        out:
+        while (true) {
+            cs.skipBlank();
+            if (!cs.hasNext()) {
+                break;
+            }
+
+            char c = cs.peekNext();
+            if (c == '"' || c == '\'') {
+                var s = (String) ParserUtils.buildJavaObject(cs,
+                    new ParserOptions().setEnd(false).setStringSingleQuotes(true).setMode(ParserMode.JAVA_OBJECT));
+                assert s != null;
+                if (!cs.hasNext() || cs.peekNext() == ' ') {
+                    args.add(lastStr + s);
+                    lastStr = "";
+                } else {
+                    //noinspection StringConcatenationInLoop
+                    lastStr += s;
+                }
+            } else if (c == '{') {
+                if (!lastStr.isEmpty()) {
+                    throw new Exception("there should be a space between strings and objects");
+                }
+                var j = ParserUtils.buildFrom(cs,
+                    ParserOptions.allFeatures().setEnd(false));
+                args.add(j.stringify());
+                if (cs.hasNext() && cs.peekNext() != ' ') {
+                    c = cs.peekNext();
+                    if (c == '{') {
+                        throw new Exception("there should be a space between objects and objects");
+                    } else {
+                        throw new Exception("there should be a space between objects and strings");
+                    }
+                }
+            } else {
+                var sb = new StringBuilder();
+                sb.append(cs.moveNextAndGet());
+                while (cs.hasNext()) {
+                    c = cs.peekNext();
+                    if (c == ' ') {
+                        cs.moveNextAndGet();
+                        break;
+                    }
+                    if (c == '"' || c == '\'') {
+                        //noinspection StringConcatenationInLoop
+                        lastStr += sb.toString();
+                        continue out;
+                    }
+                    sb.append(cs.moveNextAndGet());
+                }
+                args.add(lastStr + sb);
+                lastStr = "";
+            }
+        }
+
+        return parseStrCmd(args);
     }
 
     public static Command parseStrCmd(List<String> _cmd) throws Exception {
-        // this string builder is only used for log, not the parsing process
-        StringBuilder sb = new StringBuilder();
-        for (String c : _cmd) {
-            sb.append(c);
-            sb.append(" "); // the last space is not visible, print it any way
+        {
+            // this string builder is only used for log, not the parsing process
+            StringBuilder sb = new StringBuilder();
+            for (String c : _cmd) {
+                sb.append(c);
+                sb.append(" "); // the last space is not visible, print it any way
+            }
+            assert Logger.lowLevelDebug(LogType.ALERT + " - " + sb);
         }
-        assert Logger.lowLevelDebug(LogType.ALERT + " - " + sb);
 
         Command cmd = statm(_cmd);
         assert Logger.lowLevelDebug(LogType.ALERT + " - " + cmd);
@@ -42,7 +106,7 @@ public class Command {
     }
 
     @SuppressWarnings("DuplicateBranchesInSwitch")
-    public static Command statm(List<String> _cmd) throws Exception {
+    private static Command statm(List<String> _cmd) throws Exception {
         _cmd = _cmd.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         Command cmd = new Command();
 
@@ -191,7 +255,8 @@ public class Command {
                     notEnd(next);
                     break;
                 case 9:
-                    String v = validName(c);
+                    //noinspection UnnecessaryLocalVariable
+                    String v = c;
                     cmd.args.put(lastParam, v);
                     if (next == null) {
                         break loop;

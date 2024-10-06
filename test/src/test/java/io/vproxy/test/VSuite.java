@@ -36,6 +36,7 @@ import org.junit.runners.Suite;
     TestFlowGen.class,
     TestVPWSAgentConfig.class,
     TestUtils.class,
+    TestCommand.class,
     TestIssues.class,
 
     AfterAll.class

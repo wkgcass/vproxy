@@ -150,7 +150,7 @@ public class SystemCommand {
         // run standard format commands
         Command command;
         try {
-            command = Command.statm(Arrays.asList(cmd.split(" ")));
+            command = Command.parseStrCmd(cmd);
         } catch (Exception e) {
             cb.failed(e);
             return;

@@ -34,8 +34,8 @@ import io.vproxy.vswitch.RouteTable;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.iface.*;
+import vjson.simple.SimpleString;
 
-import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -253,6 +253,10 @@ public class Shutdown {
         IOUtils.writeFileWithBackup(filepath, currentConfig());
     }
 
+    private static String jsonstr(String s) {
+        return new SimpleString(s).stringify();
+    }
+
     public static String currentConfig() {
         List<String> commands = new LinkedList<>();
 
@@ -302,11 +306,11 @@ public class Shutdown {
                 certKeyNames.add(ck.alias);
 
                 StringBuilder cmd = new StringBuilder();
-                cmd.append("add cert-key ").append(ck.alias).append(" cert ").append(ck.certPaths[0]);
+                cmd.append("add cert-key ").append(jsonstr(ck.alias)).append(" cert ").append(jsonstr(ck.certPaths[0]));
                 for (int i = 1; i < ck.certPaths.length; ++i) {
-                    cmd.append(",").append(ck.certPaths[i]);
+                    cmd.append(",").append(jsonstr(ck.certPaths[i]));
                 }
-                cmd.append(" ").append("key ").append(ck.keyPath);
+                cmd.append(" ").append("key ").append(jsonstr(ck.keyPath));
                 commands.add(cmd.toString());
             }
         }
@@ -331,7 +335,7 @@ public class Shutdown {
                     continue;
                 }
 
-                String cmd = "add event-loop-group " + elg.alias;
+                String cmd = "add event-loop-group " + jsonstr(elg.alias);
                 if (!elg.annotations.isEmpty()) {
                     cmd += " annotations " + elg.annotations;
                 }
@@ -356,7 +360,7 @@ public class Shutdown {
                         continue;
                     }
 
-                    String cmd = "add event-loop " + eventLoopWrapper.alias + " to event-loop-group " + elg.alias;
+                    String cmd = "add event-loop " + jsonstr(eventLoopWrapper.alias) + " to event-loop-group " + jsonstr(elg.alias);
                     if (!eventLoopWrapper.annotations.isEmpty()) {
                         cmd += " annotations " + eventLoopWrapper.annotations;
                     }
@@ -383,9 +387,9 @@ public class Shutdown {
                 }
                 HealthCheckConfig c = sg.getHealthCheckConfig();
 
-                String cmd = "add server-group " + sg.alias +
+                String cmd = "add server-group " + jsonstr(sg.alias) +
                     " timeout " + c.timeout + " period " + c.period + " up " + c.up + " down " + c.down + " protocol " + c.checkProtocol.name() +
-                    " method " + sg.getMethod() + " event-loop-group " + sg.eventLoopGroup.alias;
+                    " method " + sg.getMethod() + " event-loop-group " + jsonstr(sg.eventLoopGroup.alias);
                 var anno = sg.getAnnotations();
                 if (!anno.isEmpty()) {
                     cmd += " annotations " + anno;
@@ -409,7 +413,7 @@ public class Shutdown {
                     continue;
                 }
 
-                String cmd = "add upstream " + ups.alias;
+                String cmd = "add upstream " + jsonstr(ups.alias);
                 commands.add(cmd);
                 upstreams.add(ups);
                 upstreamNames.add(name);
@@ -423,7 +427,7 @@ public class Shutdown {
                         Logger.warn(LogType.IMPROPER_USE, "the sg " + sg.alias + " already removed");
                         continue;
                     }
-                    String cmd = "add server-group " + sg.alias + " to upstream " + ups.alias + " weight " + sg.getWeight();
+                    String cmd = "add server-group " + jsonstr(sg.alias) + " to upstream " + jsonstr(ups.alias) + " weight " + sg.getWeight();
                     if (!sg.getAnnotations().isEmpty()) {
                         cmd += " annotations " + sg.getAnnotations();
                     }
@@ -445,7 +449,7 @@ public class Shutdown {
                 }
                 securityGroupNames.add(securityGroup.alias);
                 securityGroups.add(securityGroup);
-                commands.add("add security-group " + securityGroup.alias +
+                commands.add("add security-group " + jsonstr(securityGroup.alias) +
                     " default " + (securityGroup.defaultAllow ? "allow" : "deny"));
             }
         }
@@ -453,7 +457,7 @@ public class Shutdown {
             // create security group rule
             for (SecurityGroup g : securityGroups) {
                 for (SecurityGroupRule r : g.getRules()) {
-                    commands.add("add security-group-rule " + r.alias + " to security-group " + g.alias +
+                    commands.add("add security-group-rule " + jsonstr(r.alias) + " to security-group " + jsonstr(g.alias) +
                         " network " + r.network +
                         " protocol " + r.protocol +
                         " port-range " + r.minPort + "," + r.maxPort +
@@ -499,19 +503,19 @@ public class Shutdown {
                         }
                     }
                 }
-                StringBuilder cmd = new StringBuilder("add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
-                    " event-loop-group " + tl.workerGroup.alias +
-                    " address " + tl.bindAddress.formatToIPPortString() + " upstream " + tl.backend.alias +
+                StringBuilder cmd = new StringBuilder("add tcp-lb " + jsonstr(tl.alias) + " acceptor-elg " + jsonstr(tl.acceptorGroup.alias) +
+                    " event-loop-group " + jsonstr(tl.workerGroup.alias) +
+                    " address " + tl.bindAddress.formatToIPPortString() + " upstream " + jsonstr(tl.backend.alias) +
                     " timeout " + tl.getTimeout() +
                     " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
                     " protocol " + tl.protocol);
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
-                    cmd.append(" security-group ").append(tl.securityGroup.alias);
+                    cmd.append(" security-group ").append(jsonstr(tl.securityGroup.alias));
                 }
                 if (tl.getCertKeys() != null) {
-                    cmd.append(" cert-key ").append(tl.getCertKeys()[0].alias);
+                    cmd.append(" cert-key ").append(jsonstr(tl.getCertKeys()[0].alias));
                     for (int i = 1; i < tl.getCertKeys().length; ++i) {
-                        cmd.append(",").append(tl.getCertKeys()[i].alias);
+                        cmd.append(",").append(jsonstr(tl.getCertKeys()[i].alias));
                     }
                 }
                 commands.add(cmd.toString());
@@ -546,14 +550,14 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the secg " + socks5.securityGroup.alias + " already removed");
                     continue;
                 }
-                String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
-                    " event-loop-group " + socks5.workerGroup.alias +
-                    " address " + socks5.bindAddress.formatToIPPortString() + " upstream " + socks5.backend.alias +
+                String cmd = "add socks5-server " + jsonstr(socks5.alias) + " acceptor-elg " + jsonstr(socks5.acceptorGroup.alias) +
+                    " event-loop-group " + jsonstr(socks5.workerGroup.alias) +
+                    " address " + socks5.bindAddress.formatToIPPortString() + " upstream " + jsonstr(socks5.backend.alias) +
                     " timeout " + socks5.getTimeout() +
                     " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize() +
                     " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
                 if (!socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
-                    cmd += " security-group " + socks5.securityGroup.alias;
+                    cmd += " security-group " + jsonstr(socks5.securityGroup.alias);
                 }
                 commands.add(cmd);
             }
@@ -579,9 +583,9 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the ups " + dns.rrsets.alias + " already removed");
                     continue;
                 }
-                String cmd = "add dns-server " + dns.alias +
-                    " event-loop-group " + dns.eventLoopGroup.alias +
-                    " address " + dns.bindAddress.formatToIPPortString() + " upstream " + dns.rrsets.alias;
+                String cmd = "add dns-server " + jsonstr(dns.alias) +
+                    " event-loop-group " + jsonstr(dns.eventLoopGroup.alias) +
+                    " address " + dns.bindAddress.formatToIPPortString() + " upstream " + jsonstr(dns.rrsets.alias);
                 commands.add(cmd);
             }
         }
@@ -591,7 +595,7 @@ public class Shutdown {
                 for (ServerGroup.ServerHandle sh : sg.getServerHandles()) {
                     if (sh.isLogicDelete()) // ignore logic deleted servers
                         continue;
-                    String cmd = "add server " + sh.alias + " to server-group " + sg.alias +
+                    String cmd = "add server " + jsonstr(sh.alias) + " to server-group " + jsonstr(sg.alias) +
                         " address " + sh.formatToIPPortString()
                         + " weight " + sh.getWeight();
                     commands.add(cmd);
@@ -618,21 +622,21 @@ public class Shutdown {
                     continue;
                 }
 
-                String cmd = "add switch " + sw.alias
+                String cmd = "add switch " + jsonstr(sw.alias)
                     + " address " + sw.vxlanBindingAddress.formatToIPPortString()
                     + " mac-table-timeout " + sw.getMacTableTimeout()
                     + " arp-table-timeout " + sw.getArpTableTimeout()
-                    + " event-loop-group " + sw.eventLoopGroup.alias
+                    + " event-loop-group " + jsonstr(sw.eventLoopGroup.alias)
                     + " " + sw.defaultIfaceParams.toCommand();
                 if (!sw.bareVXLanAccess.alias.equals(SecurityGroup.defaultName)) {
-                    cmd += " security-group " + sw.bareVXLanAccess.alias;
+                    cmd += " security-group " + jsonstr(sw.bareVXLanAccess.alias);
                 }
                 commands.add(cmd);
 
                 Set<String> umemNames = new HashSet<>();
                 // create umem
                 for (var umem : sw.getUMems()) {
-                    cmd = "add umem " + umem.alias + " to switch " + sw.alias
+                    cmd = "add umem " + jsonstr(umem.alias) + " to switch " + jsonstr(sw.alias)
                         + " chunks " + umem.chunksSize
                         + " fill-ring-size " + umem.fillRingSize
                         + " comp-ring-size " + umem.compRingSize
@@ -644,7 +648,7 @@ public class Shutdown {
                 for (var key : sw.getNetworks().keySet()) {
                     int vrf = key;
                     VirtualNetwork network = sw.getNetworks().get(vrf);
-                    cmd = "add vrf " + vrf + " to switch " + sw.alias + " v4network " + network.v4network;
+                    cmd = "add vrf " + vrf + " to switch " + jsonstr(sw.alias) + " v4network " + network.v4network;
                     if (network.v6network != null) {
                         cmd += " v6network " + network.v6network;
                     }
@@ -659,7 +663,7 @@ public class Shutdown {
                         if (ipmac.annotations.nosave) {
                             continue;
                         }
-                        cmd = "add ip " + ipmac.ip.formatToIPString() + " to vrf " + vrf + " in switch " + sw.alias
+                        cmd = "add ip " + ipmac.ip.formatToIPString() + " to vrf " + vrf + " in switch " + jsonstr(sw.alias)
                             + " mac " + ipmac.mac
                             + " routing " + (ipmac.routing ? "on" : "off");
                         if (!ipmac.annotations.isEmpty()) {
@@ -679,18 +683,18 @@ public class Shutdown {
                         }
                     }
                     if (!hasDefaultV4) {
-                        cmd = "remove route " + RouteTable.defaultRuleName + " from vrf " + vrf + " in switch " + sw.alias;
+                        cmd = "remove route " + RouteTable.defaultRuleName + " from vrf " + vrf + " in switch " + jsonstr(sw.alias);
                         commands.add(cmd);
                     }
                     if (!hasDefaultV6 && network.v6network != null) {
-                        cmd = "remove route " + RouteTable.defaultRuleV6Name + " from vrf " + vrf + " in switch " + sw.alias;
+                        cmd = "remove route " + RouteTable.defaultRuleV6Name + " from vrf " + vrf + " in switch " + jsonstr(sw.alias);
                         commands.add(cmd);
                     }
                     for (var r : network.routeTable.getRules()) {
                         if (r.alias.equals(RouteTable.defaultRuleName) || r.alias.equals(RouteTable.defaultRuleV6Name)) {
                             continue;
                         }
-                        cmd = "add route " + r.alias + " to vrf " + vrf + " in switch " + sw.alias + " network " + r.rule;
+                        cmd = "add route " + jsonstr(r.alias) + " to vrf " + vrf + " in switch " + jsonstr(sw.alias) + " network " + r.rule;
                         if (r.ip == null) {
                             cmd += " vrf " + r.toVrf;
                         } else {
@@ -704,7 +708,7 @@ public class Shutdown {
                     if (!(iface instanceof RemoteSwitchIface rsi)) {
                         continue;
                     }
-                    cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + rsi.udpSockAddress.formatToIPPortString();
+                    cmd = "add switch " + jsonstr(rsi.alias) + " to switch " + jsonstr(sw.alias) + " address " + rsi.udpSockAddress.formatToIPPortString();
                     if (!rsi.addSwitchFlag) {
                         cmd += " no-switch-flag";
                     }
@@ -715,9 +719,9 @@ public class Shutdown {
                     if (!(iface instanceof TapIface tap)) {
                         continue;
                     }
-                    cmd = "add tap " + tap.dev + " to switch " + sw.alias + " vrf " + tap.localSideVrf;
+                    cmd = "add tap " + jsonstr(tap.dev) + " to switch " + jsonstr(sw.alias) + " vrf " + tap.localSideVrf;
                     if (tap.postScript != null && !tap.postScript.isBlank()) {
-                        cmd += " post-script " + tap.postScript;
+                        cmd += " post-script " + jsonstr(tap.postScript);
                     }
                     commands.add(cmd);
                 }
@@ -727,17 +731,17 @@ public class Shutdown {
                         continue;
                     }
                     if (iface instanceof FubukiTunIface f) {
-                        cmd = "add fubuki " + f.nodeName + " to switch " + sw.alias
-                              + " password " + f.key + " vrf " + f.localSideVrf + " mac " + f.mac
+                        cmd = "add fubuki " + jsonstr(f.nodeName) + " to switch " + jsonstr(sw.alias)
+                              + " password " + jsonstr(f.key) + " vrf " + f.localSideVrf + " mac " + f.mac
                               + " address " + f.serverIPPort.formatToIPPortString();
                         if (f.getLocalAddr() != null) {
                             cmd += " ip " + f.getLocalAddr().formatToIPMaskString();
                         }
                     } else {
-                        cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vrf " + tun.localSideVrf
+                        cmd = "add tun " + jsonstr(tun.dev) + " to switch " + jsonstr(sw.alias) + " vrf " + tun.localSideVrf
                               + " mac " + tun.mac;
                         if (tun.postScript != null && !tun.postScript.isBlank()) {
-                            cmd += " post-script " + tun.postScript;
+                            cmd += " post-script " + jsonstr(tun.postScript);
                         }
                     }
                     commands.add(cmd);
@@ -751,8 +755,8 @@ public class Shutdown {
                         Logger.warn(LogType.IMPROPER_USE, "the umem " + xdp.umem.alias + " already removed");
                         continue;
                     }
-                    cmd = "add xdp " + xdp.nic + " to switch " + sw.alias
-                        + " umem " + xdp.umem.alias
+                    cmd = "add xdp " + jsonstr(xdp.nic) + " to switch " + jsonstr(sw.alias)
+                        + " umem " + jsonstr(xdp.umem.alias)
                         + " queue " + xdp.params.queueId()
                         + " rx-ring-size " + xdp.params.rxRingSize()
                         + " tx-ring-size " + xdp.params.txRingSize()
@@ -766,7 +770,7 @@ public class Shutdown {
                             ls.add(OffloadHandle.PACKET_SWITCHING);
                         if (xdp.params.csumOffloaded())
                             ls.add(OffloadHandle.CHECKSUM);
-                        cmd += String.join(",", ls);
+                        cmd += jsonstr(String.join(",", ls));
                     }
                     if (xdp.params.zeroCopy()) {
                         cmd += " zerocopy";
@@ -781,8 +785,8 @@ public class Shutdown {
                     if (!(iface instanceof FubukiEtherIPIface etherip)) {
                         continue;
                     }
-                    cmd = "add fubuki-etherip " + etherip.getParentIface().name().substring("fubuki:".length()) +
-                          " to switch " + sw.alias + " vrf " + etherip.localSideVrf + " ip " + etherip.targetIP.formatToIPString();
+                    cmd = "add fubuki-etherip " + jsonstr(etherip.getParentIface().name().substring("fubuki:".length())) +
+                          " to switch " + jsonstr(sw.alias) + " vrf " + etherip.localSideVrf + " ip " + etherip.targetIP.formatToIPString();
                     commands.add(cmd);
                 }
                 // create sub interfaces
@@ -793,7 +797,7 @@ public class Shutdown {
                     if (!switchInterfaceRequiresSaving(vif.getParentIface())) {
                         continue;
                     }
-                    cmd = "add vlan " + vif.remoteVLan + "@" + vif.getParentIface().name() + " to switch " + sw.alias + " vrf " + vif.localVrf;
+                    cmd = "add vlan " + vif.remoteVLan + "@" + jsonstr(vif.getParentIface().name()) + " to switch " + jsonstr(sw.alias) + " vrf " + vif.localVrf;
                     commands.add(cmd);
                 }
                 // set iface options
@@ -801,7 +805,7 @@ public class Shutdown {
                     if (!switchInterfaceRequiresSaving(iface)) {
                         continue;
                     }
-                    cmd = "update iface " + iface.name() + " in switch " + sw.alias
+                    cmd = "update iface " + jsonstr(iface.name()) + " in switch " + jsonstr(sw.alias)
                         + " " + iface.getParams().toCommand()
                         + " " + (iface.isDisabled() ? "disable" : "enable");
                     if (!iface.getAnnotations().isEmpty()) {
@@ -818,7 +822,7 @@ public class Shutdown {
                         if (mac.getTimeout() != -1) {
                             continue;
                         }
-                        cmd = "add arp " + mac.mac + " to vrf " + network.vrf + " in sw " + sw.alias + " iface " + mac.iface.name();
+                        cmd = "add arp " + mac.mac + " to vrf " + network.vrf + " in sw " + jsonstr(sw.alias) + " iface " + jsonstr(mac.iface.name());
                         commands.add(cmd);
                     }
                     var ipEntries = network.arpTable.listEntries();
@@ -826,7 +830,7 @@ public class Shutdown {
                         if (ip.getTimeout() != -1) {
                             continue;
                         }
-                        cmd = "add arp " + ip.mac + " to vrf " + network.vrf + " in sw " + sw.alias + " ip " + ip.ip.formatToIPString();
+                        cmd = "add arp " + ip.mac + " to vrf " + network.vrf + " in sw " + jsonstr(sw.alias) + " ip " + ip.ip.formatToIPString();
                         commands.add(cmd);
                     }
                 }
@@ -844,7 +848,8 @@ public class Shutdown {
                     assert Logger.printStackTrace(e);
                     continue;
                 }
-                cmd = "System: add resp-controller " + resp.alias + " address " + resp.server.bind.formatToIPPortString() + " password " + new String(resp.password);
+                cmd = "System: add resp-controller " + jsonstr(resp.alias) +
+                      " address " + resp.server.bind.formatToIPPortString() + " password " + jsonstr(new String(resp.password));
                 commands.add(cmd);
             }
             for (var name : app.httpControllerHolder.names()) {
@@ -856,7 +861,7 @@ public class Shutdown {
                     assert Logger.printStackTrace(e);
                     continue;
                 }
-                cmd = "System: add http-controller " + http.getAlias() + " address " + http.getAddress().formatToIPPortString();
+                cmd = "System: add http-controller " + jsonstr(http.getAlias()) + " address " + http.getAddress().formatToIPPortString();
                 commands.add(cmd);
             }
             for (var name : app.pluginHolder.names()) {
@@ -868,15 +873,15 @@ public class Shutdown {
                     assert Logger.printStackTrace(e);
                     continue;
                 }
-                cmd = "System: add plugin " + plugin.alias
-                    + " url " + Arrays.stream(plugin.urls).map(URL::toString).collect(Collectors.joining(","))
-                    + " class " + plugin.plugin.getClass().getName();
+                cmd = "System: add plugin " + jsonstr(plugin.alias)
+                      + " url " + Arrays.stream(plugin.urls).map(url -> jsonstr(url.toString())).collect(Collectors.joining(","))
+                      + " class " + jsonstr(plugin.plugin.getClass().getName());
                 if (plugin.args.length > 0) {
-                    cmd += " arguments " + Utils.formatArrayToStringCompact(plugin.args);
+                    cmd += " arguments " + jsonstr(Utils.formatArrayToStringCompact(plugin.args));
                 }
                 commands.add(cmd);
                 if (plugin.isEnabled()) {
-                    cmd = "System: update plugin " + plugin.alias + " enable";
+                    cmd = "System: update plugin " + jsonstr(plugin.alias) + " enable";
                     commands.add(cmd);
                 }
             }
