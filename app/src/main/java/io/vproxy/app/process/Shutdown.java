@@ -861,7 +861,10 @@ public class Shutdown {
                     assert Logger.printStackTrace(e);
                     continue;
                 }
-                cmd = "System: add http-controller " + jsonstr(http.getAlias()) + " address " + http.getAddress().formatToIPPortString();
+                cmd = "System: add http-controller " + jsonstr(http.getAlias()) + " address " + http.getAddress().formatToIPPortString() + " cors " + http.getCors();
+                if (null != http.getSecret() && !http.getSecret().isBlank()) {
+                    cmd += " secret " + http.getSecret();
+                }
                 commands.add(cmd);
             }
             for (var name : app.pluginHolder.names()) {
