@@ -14,6 +14,7 @@ interface HttpServerConnection {
 
 interface HttpHeaders {
   fun get(name: String): String?
+  fun has(name: String): Boolean
 }
 
 interface HttpServerRequest {

@@ -152,5 +152,10 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       }
       return null
     }
+
+    override fun has(name: String): Boolean {
+      val nameLower = name.lowercase()
+      return cache.containsKey(nameLower)
+    }
   }
 }

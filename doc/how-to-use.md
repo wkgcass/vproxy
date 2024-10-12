@@ -214,8 +214,16 @@ java vproxy.app.app.Main
 To create a HTTPController, you can type in:
 
 ```
-> System: add http-controller ${name} address ${host:port}
+> System: add http-controller ${name} address ${host:port} cors ${cors} secret ${secret}
 ```
+
+parameters:
+
+| name    | description             | opt | default |
+|---------|-------------------------|:---:|---------|
+| address | host:port.              |     |         |
+| cors    | Enable or disable cors. |  Y  | false   |
+| secret  | Not implemented yet.    |  Y  |         |
 
 To list existing HTTPController, you can type in:
 

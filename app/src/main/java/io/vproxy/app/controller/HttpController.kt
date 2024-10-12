@@ -20,7 +20,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Suppress("DuplicatedCode")
-class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
+class HttpController(val alias: String,
+                     val address: io.vproxy.vfd.IPPort,
+                     val cors: Boolean,
+                     val secret: String?) {
   private val server: CoroutineHttp1Server
   private val classpathResourceHolder = io.vproxy.base.util.web.ClasspathResourceHolder("io/vproxy/app/controller/webroot")
 
