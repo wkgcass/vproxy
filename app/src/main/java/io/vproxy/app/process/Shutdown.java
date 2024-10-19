@@ -233,14 +233,15 @@ public class Shutdown {
 
     @Blocking
     public static void autoSave() throws Exception {
+        if (Config.configSavingDisabled) {
+            Logger.warn(LogType.ALERT, "auto saving is disabled");
+            return;
+        }
         save(Config.autoSaveFilePath);
     }
 
     @Blocking // writing file is blocking
     public static synchronized void save(String filepath) throws Exception {
-        if (Config.configSavingDisabled) {
-            throw new UnsupportedOperationException("saving is disabled");
-        }
         if (Config.willStop) {
             Logger.warn(LogType.ALERT, "the current program is going to stop, saving is disabled");
             return;
