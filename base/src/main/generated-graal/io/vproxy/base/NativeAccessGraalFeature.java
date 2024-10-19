@@ -121,6 +121,12 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
         /* JavaCritical_io_vproxy_msquic_QuicApiTable_openRegistration */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(MemoryLayout.class /* io.vproxy.msquic.QuicRegistration.LAYOUT.getClass() */, MemorySegment.class /* self */, MemoryLayout.class /* io.vproxy.msquic.QuicRegistrationConfig.LAYOUT.getClass() */ /* Config */, MemorySegment.class /* returnStatus */, MemorySegment.class /* return */));
 
+        /* JavaCritical_io_vproxy_msquic_QuicApiTable_setParam */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, int.class /* Param */, int.class /* BufferLength */, MemorySegment.class /* Buffer */));
+
+        /* JavaCritical_io_vproxy_msquic_QuicApiTable_getParam */
+        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, int.class /* Param */, MemorySegment.class /* BufferLength */, MemorySegment.class /* Buffer */));
+
         /* JavaCritical_io_vproxy_msquic_QuicConfiguration_close */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemorySegment.class /* self */));
 
@@ -153,9 +159,6 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
 
         /* JavaCritical_io_vproxy_msquic_QuicConnection_certificateValidationComplete */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, boolean.class /* Result */, int.class /* TlsAlert */));
-
-        /* JavaCritical_io_vproxy_msquic_QuicExtraApiTable_ThreadCountLimitSet */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(void.class, MemorySegment.class /* self */, int.class /* limit */));
 
         /* JavaCritical_io_vproxy_msquic_QuicExtraApiTable_EventLoopThreadDispatcherSet */
         RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildCriticalFunctionDescriptor(int.class, MemorySegment.class /* self */, MemorySegment.class /* dispatcher */));
@@ -679,114 +682,7 @@ public class NativeAccessGraalFeature implements org.graalvm.nativeimage.hosted.
         for (var CONS : java.io.IOException.class.getConstructors()) {
             RuntimeReflection.register(CONS);
         }
-
-        /* Java_io_vproxy_xdp_XDPNative_loadAndAttachBPFProgramToNic */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(String.class /* filepath */, String.class /* programName */, String.class /* nicName */, int.class /* mode */, boolean.class /* forceAttach */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_detachBPFProgramFromNic */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(String.class /* nicName */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_findMapByNameInBPF */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* bpfobj */, String.class /* mapName */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_createUMem */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(int.class /* chunksSize */, int.class /* fillRingSize */, int.class /* compRingSize */, int.class /* frameSize */, int.class /* headroom */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_shareUMem */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umem */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_getBufferFromUMem */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umem */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_getBufferAddressFromUMem */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umem */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_createXSK */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(String.class /* nicName */, int.class /* queueId */, long.class /* umem */, int.class /* rxRingSize */, int.class /* txRingSize */, int.class /* mode */, boolean.class /* zeroCopy */, int.class /* busyPollBudget */, boolean.class /* rxGenChecksum */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_addXSKIntoMap */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* map */, int.class /* key */, long.class /* xsk */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_addMacIntoMap */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* map */, MemorySegment.class /* mac */, long.class /* xsk */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_removeMacFromMap */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* map */, MemorySegment.class /* mac */), PanamaHack.getCriticalOption());
-        RuntimeReflection.registerAllConstructors(java.io.IOException.class);
-        for (var CONS : java.io.IOException.class.getConstructors()) {
-            RuntimeReflection.register(CONS);
-        }
-
-        /* Java_io_vproxy_xdp_XDPNative_getFDFromXSK */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_fillUpFillRing */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umem */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_fetchPackets0 */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */, int.class /* capacity */, MemorySegment.class /* umem */, MemorySegment.class /* chunk */, MemorySegment.class /* ref */, MemorySegment.class /* addr */, MemorySegment.class /* endaddr */, MemorySegment.class /* pktaddr */, MemorySegment.class /* pktlen */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_rxRelease */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */, int.class /* cnt */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_writePacket */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */, long.class /* chunk */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_writePackets */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */, int.class /* size */, MemorySegment.class /* chunkPtrs */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_completeTx */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_fetchChunk0 */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umemPtr */, MemorySegment.class /* umem */, MemorySegment.class /* chunk */, MemorySegment.class /* ref */, MemorySegment.class /* addr */, MemorySegment.class /* endaddr */, MemorySegment.class /* pktaddr */, MemorySegment.class /* pktlen */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_setChunk */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* chunk */, int.class /* pktaddr */, int.class /* pktlen */, int.class /* csumFlags */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_releaseChunk */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umem */, long.class /* chunk */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_addChunkRefCnt */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* chunk */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_releaseXSK */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* xsk */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_releaseUMem */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* umem */, boolean.class /* releaseBuffer */), PanamaHack.getCriticalOption());
-
-        /* Java_io_vproxy_xdp_XDPNative_releaseBPFObject */
-        RuntimeForeignAccess.registerForDowncall(PanamaUtils.buildFunctionDescriptor(long.class /* bpfobj */), PanamaHack.getCriticalOption());
     }
 }
 // metadata.generator-version: pni 22.0.0.20
-// sha256:38a120bc4306f368794637a078c0c9afb54d1618acdba5a8e1f86295204ec27f
+// sha256:a3f45507001a8b424ea5961244d78065cd208ed0d5b6b86a0a429d79f4809e02

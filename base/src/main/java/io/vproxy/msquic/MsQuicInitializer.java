@@ -4,8 +4,12 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.msquic.wrap.ApiExtraTables;
+import io.vproxy.msquic.wrap.ApiTables;
+import io.vproxy.pni.Allocator;
 
 import java.util.NoSuchElementException;
+
+import static io.vproxy.msquic.MsQuicConsts.QUIC_PARAM_GLOBAL_EXECUTION_CONFIG;
 
 public class MsQuicInitializer {
     private static boolean initialized = false;
@@ -25,10 +29,18 @@ public class MsQuicInitializer {
             return false;
         }
 
-        ApiExtraTables.V2EXTRA.ThreadCountLimitSet(1); // FIXME: need to implement event loop migration
         MsQuicUpcall.setImpl(MsQuicUpcallImpl.get());
         MsQuicModUpcall.setImpl(MsQuicModUpcallImpl.get());
         ApiExtraTables.V2EXTRA.EventLoopThreadDispatcherSet(MsQuicModUpcall.dispatch);
+
+        // FIXME: need to implement event loop migration
+        try (var allocator = Allocator.ofConfined()) {
+            int cpucnt = 1;
+            var config = new QuicExecutionConfig(allocator.allocate(QuicExecutionConfig.LAYOUT.byteSize()));
+            config.setProcessorCount(cpucnt);
+            config.getProcessorList().set(0, (short) 0);
+            ApiTables.V2.opts.apiTableQ.setParam(QUIC_PARAM_GLOBAL_EXECUTION_CONFIG, (int) config.MEMORY.byteSize(), config.MEMORY);
+        }
 
         supported = true;
         initialized = true;
