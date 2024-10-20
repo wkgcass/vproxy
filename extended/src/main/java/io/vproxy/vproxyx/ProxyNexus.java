@@ -17,8 +17,6 @@ import io.vproxy.pni.array.IntArray;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.nexus.*;
 import io.vproxy.vproxyx.nexus.entity.PeerAddressInfo;
-import io.vproxy.vproxyx.uot.FromTcpToUdp;
-import io.vproxy.vproxyx.uot.FromUdpToTcp;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,7 +34,7 @@ public class ProxyNexus {
                    listen=<adminPort>                      Admin listening port
         [optional] load=<path>                             Load configuration from a local file
         [optional] server=<serverPort>                     Node listening port
-        [optional] connect=[uot:<port>:]<host:port>[,[uot:<port>:]<host2:port2>]
+        [optional] connect=<host:port>[,<host2:port2>]
                                                            Network addresses of nodes to connect to
                    certificate=<cert-pem-path>             Certificate used by the QUIC
                    privatekey=<key-pem-path>               Private key used by the QUIC
@@ -100,25 +98,11 @@ public class ProxyNexus {
                 var value = arg.substring("connect=".length()).trim();
                 var connectSplit = value.split(",");
                 for (var s : connectSplit) {
-                    int uotPort = 0;
-                    if (s.startsWith("uot:")) {
-                        s = s.substring("uot:".length());
-                        if (s.contains(":")) {
-                            var uotPortStr = s.substring(0, s.indexOf(":"));
-                            if (!Utils.isPortInteger(uotPortStr)) {
-                                throw new IllegalArgumentException(uotPortStr + " is not a valid port");
-                            }
-                            uotPort = Integer.parseInt(uotPortStr);
-                            s = s.substring(s.indexOf(":") + 1);
-                        } else {
-                            throw new IllegalArgumentException("uot listening port must be specified by `uot:<port>:<...>`");
-                        }
-                    }
                     if (!IPPort.validL4AddrStr(s)) {
                         throw new IllegalArgumentException(s + " is not valid ipport in `connect`");
                     }
                     var ipport = new IPPort(s);
-                    var info = new PeerAddressInfo(ipport, uotPort);
+                    var info = new PeerAddressInfo(ipport);
                     if (existingConnectTargets.contains(ipport)) {
                         throw new IllegalArgumentException(s + " is already specified in `connect`");
                     }
@@ -237,15 +221,6 @@ public class ProxyNexus {
         var self = new NexusNode(nodeName, null);
         nexus.setSelfNode(self);
         for (var target : connect) {
-            var ipport = target.ipport();
-            var uotPort = target.uotPort();
-            if (uotPort != 0) {
-                var uotIPPort = new IPPort("127.0.0.1", uotPort);
-                new FromUdpToTcp(loop, uotIPPort, ipport).start();
-                Logger.alert("uot udp->tcp server listens on " + uotIPPort.formatToIPPortString() +
-                             ", will redirect traffic to " + ipport.formatToIPPortString());
-            }
-
             var peer = NexusPeer.create(nctx, target);
             peer.start();
         }
@@ -268,9 +243,6 @@ public class ProxyNexus {
                 throw new Exception("failed to start quic listener, error code: " + err);
             }
             Logger.alert("quic server listens on port " + serverPort);
-            new FromTcpToUdp(loop, new IPPort("0.0.0.0", serverPort), new IPPort("127.0.0.1", serverPort))
-                .start();
-            Logger.alert("uot tcp->udp server listens on port " + serverPort);
         }
 
         tmpAllocator.close();

@@ -41,7 +41,7 @@ public class NexusPeer {
 
     public static int createAccepted(NexusContext nctx, IPPort remote,
                                      QuicConnection connQ, Listener listener, QuicListenerEventNewConnection data, Allocator allocator) {
-        var peer = new NexusPeer(nctx, new PeerAddressInfo(remote, 0));
+        var peer = new NexusPeer(nctx, new PeerAddressInfo(remote));
         peer.isServer = true;
         ConnectionCallback cb = peer.new NexusNodeConnectionCallback();
         if (nctx.debug) {
