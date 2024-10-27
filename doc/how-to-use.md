@@ -219,17 +219,17 @@ To create a HTTPController, you can type in:
 
 parameters:
 
-| name    | description             | opt | default |
-|---------|-------------------------|:---:|---------|
-| address | host:port.              |     |         |
-| cors    | Enable or disable cors. |  Y  | false   |
-| secret  | Not implemented yet.    |  Y  |         |
+| name    | description                             | opt | default |
+|---------|-----------------------------------------|:---:|---------|
+| address | host:port.                              |     |         |
+| cors    | Enable or disable cors.                 |  Y  | false   |
+| secret  | Enable or disable basic authentication. |  Y  |         |
 
 To list existing HTTPController, you can type in:
 
 ```
 > System: list-detail http-controller
-http-controller	0.0.0.0:18776              ---- this is response
+http-controller -> 0.0.0.0:18776              ---- this is response
 >
 ```
 

@@ -1907,7 +1907,15 @@ class HttpController(val alias: String,
   }
 
   override fun toString(): String {
-    return alias + " -> " + address.formatToIPPortString()
+    val sb = StringBuilder()
+    sb.append(alias).append(" -> ").append(address.formatToIPPortString())
+    if (cors) {
+      sb.append(" cors")
+    }
+    if (!secret.isNullOrBlank()) {
+      sb.append(" secret")
+    }
+    return sb.toString()
   }
 }
 
