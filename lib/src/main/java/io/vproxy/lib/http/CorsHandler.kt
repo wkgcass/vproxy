@@ -7,13 +7,13 @@ class CorsHandler(private val enable: Boolean) : RoutingHandler {
 
   override suspend fun handle(rctx: RoutingContext) {
     val req = rctx.req
-    val origin = rctx.req.headers().get("Origin")
+    val origin = req.headers().get("Origin")
     if (req.method().equals("OPTIONS", true)) {
       if (!enable || origin.isNullOrBlank()) {
         rctx.conn.response(403).send()
       } else {
-        val methods = rctx.req.headers().get("Access-Control-Request-Method")
-        val headers = rctx.req.headers().get("Access-Control-Request-Headers")
+        val methods = req.headers().get("Access-Control-Request-Method")
+        val headers = req.headers().get("Access-Control-Request-Headers")
         val rsp = rctx.conn.response(204)
         rsp.header("Access-Control-Allow-Origin", origin)
         if (null != methods) {
