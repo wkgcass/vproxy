@@ -18,6 +18,11 @@ object Tool {
     return bodyJsonHandlerInstance
   }
 
+  @JvmStatic
+  fun corsHandler(enable: Boolean): RoutingHandler {
+    return CorsHandler(enable)
+  }
+
   private suspend fun handleBodyJson(ctx: RoutingContext) {
     val body = ctx.req.body()
     if (body.length() != 0) {
