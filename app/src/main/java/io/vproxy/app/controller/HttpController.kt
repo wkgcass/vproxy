@@ -36,10 +36,10 @@ class HttpController(val alias: String,
     val loop = io.vproxy.app.app.Application.get().controlEventLoop
     server = CoroutineHttp1Server(sock.coroutine(loop))
 
-    // secret
-    server.all("/*", Tool.basicAuthHandler(secret))
     // cors
     server.all("/*", Tool.corsHandler(cors))
+    // secret
+    server.all("/*", Tool.basicAuthHandler(secret))
     // hc
     server.get("/healthz") { ctx -> ctx.conn.response(200).send("OK") }
     // html

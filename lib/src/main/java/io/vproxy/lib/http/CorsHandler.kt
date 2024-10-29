@@ -28,7 +28,7 @@ class CorsHandler(private val enable: Boolean) : RoutingHandler {
       if (enable && null != origin) {
         rctx.onResponse {
           it.header("Access-Control-Allow-Origin", origin)
-          it.header("Vary", "origin")
+          it.header("Vary", "Origin")
         }
       }
       rctx.allowNext()
