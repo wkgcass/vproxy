@@ -34,7 +34,7 @@ public class ProxyNexus {
                    listen=<adminPort>                      Admin listening port
         [optional] load=<path>                             Load configuration from a local file
         [optional] server=<serverPort>                     Node listening port
-        [optional] connect=<host:port>[,<host2:port2>]
+        [optional] connect=<host:port[@local_port]>[,<host2:port2[@local_port]>]
                                                            Network addresses of nodes to connect to
                    certificate=<cert-pem-path>             Certificate used by the QUIC
                    privatekey=<key-pem-path>               Private key used by the QUIC
@@ -98,11 +98,24 @@ public class ProxyNexus {
                 var value = arg.substring("connect=".length()).trim();
                 var connectSplit = value.split(",");
                 for (var s : connectSplit) {
+                    var localPort = 0;
+                    if (s.contains("@")) {
+                        var localPortStr = s.substring(s.indexOf("@") + 1);
+                        try {
+                            localPort = Integer.parseInt(localPortStr);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("local port inside " + s + " is not a valid number");
+                        }
+                        if (localPort < 1 || localPort > 65535) {
+                            throw new IllegalArgumentException("local port inside " + s + " is out of range");
+                        }
+                        s = s.substring(0, s.indexOf("@"));
+                    }
                     if (!IPPort.validL4AddrStr(s)) {
                         throw new IllegalArgumentException(s + " is not valid ipport in `connect`");
                     }
                     var ipport = new IPPort(s);
-                    var info = new PeerAddressInfo(ipport);
+                    var info = new PeerAddressInfo(ipport, localPort);
                     if (existingConnectTargets.contains(ipport)) {
                         throw new IllegalArgumentException(s + " is already specified in `connect`");
                     }

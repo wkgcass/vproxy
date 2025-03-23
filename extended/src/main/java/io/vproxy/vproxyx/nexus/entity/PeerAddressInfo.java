@@ -2,13 +2,16 @@ package io.vproxy.vproxyx.nexus.entity;
 
 import io.vproxy.vfd.IPPort;
 
-public record PeerAddressInfo(IPPort ipport) {
+public record PeerAddressInfo(IPPort ipport, int localPort) {
     public IPPort target() {
         return ipport;
     }
 
     @Override
     public String toString() {
-        return ipport.formatToIPPortString();
+        if (localPort == 0) {
+            return ipport.formatToIPPortString();
+        }
+        return ipport.formatToIPPortString() + "@" + localPort;
     }
 }

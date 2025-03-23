@@ -41,7 +41,7 @@ public class NexusPeer {
 
     public static int createAccepted(NexusContext nctx, IPPort remote,
                                      QuicConnection connQ, Listener listener, QuicListenerEventNewConnection data, Allocator allocator) {
-        var peer = new NexusPeer(nctx, new PeerAddressInfo(remote));
+        var peer = new NexusPeer(nctx, new PeerAddressInfo(remote, 0));
         peer.isServer = true;
         ConnectionCallback cb = peer.new NexusNodeConnectionCallback();
         if (nctx.debug) {
@@ -97,6 +97,15 @@ public class NexusPeer {
                 Logger.error(LogType.CONN_ERROR, "creating quic connection failed, errcode=" + returnStatus.get(0));
                 conn.close();
                 return;
+            }
+            if (remoteAddress.localPort() != 0) {
+                var addr = MsQuicUtils.convertIPPortToQuicAddr(new IPPort("0.0.0.0", remoteAddress.localPort()), allocator);
+                int err = conn.connectionQ.setParam(MsQuicConsts.QUIC_PARAM_CONN_LOCAL_ADDRESS, (int) addr.MEMORY.byteSize(), addr.MEMORY);
+                if (err != 0) {
+                    Logger.error(LogType.CONN_ERROR, "failed to set local address, errcode=" + err);
+                    conn.close();
+                    return;
+                }
             }
         }
         if (nctx.debug) {
