@@ -105,7 +105,7 @@ _add_linux_so_to_zip:
 
 .PHONY: native-no-docker
 native-no-docker: libpni vfdposix quic fubuki
-	cp ./submodules/msquic/build/bin/Release/libmsquic.2.2.4.dylib ./libmsquic.dylib
+	cp ./submodules/msquic/build/bin/Release/libmsquic.dylib ./libmsquic.dylib
 .PHONY: native
 ifeq ($(OS),Linux)
 native: libpni vfdposix vpxdp quic-all fubuki
@@ -275,7 +275,7 @@ quic-linux: vfdposix-linux msquic-linux msquic-java-linux
 _quic-all-linux:
 	rm -rf ./submodules/msquic/build
 	make quic-linux
-	cp ./submodules/msquic/build/bin/Release/libmsquic.so.2.2.4 ./libmsquic.so
+	cp ./submodules/msquic/build/bin/Release/libmsquic.so ./libmsquic.so
 .PHONY: quic-all
 ifeq ($(OS),Linux)
 quic-all: _quic-all-linux
@@ -283,7 +283,7 @@ else
 quic-all: _quic-all-linux
 	rm -rf ./submodules/msquic/build
 	make quic
-	cp ./submodules/msquic/build/bin/Release/libmsquic.2.2.4.dylib ./libmsquic.dylib
+	cp ./submodules/msquic/build/bin/Release/libmsquic.dylib ./libmsquic.dylib
 endif
 
 .PHONY: vfdwindows
