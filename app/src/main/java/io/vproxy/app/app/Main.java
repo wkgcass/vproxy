@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class Main {
-    static final String _HELP_STR_ = "" +
+    static final String _HELP_STR_ =
         "vproxy: usage java " + Main.class.getName() + " \\" +
         "\n\t\thelp                                         Show this message" +
         "\n" +
@@ -130,6 +130,11 @@ public class Main {
                 case "proxy-nexus":
                 case "proxynexus":
                     ProxyNexus.main0(args);
+                    break;
+                case "AiMix":
+                case "ai-mix":
+                case "aimix":
+                    AiMix.main0(args);
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);

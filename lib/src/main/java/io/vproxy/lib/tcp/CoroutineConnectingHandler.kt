@@ -7,12 +7,21 @@ import kotlin.coroutines.resumeWithException
 
 class CoroutineConnectingHandler(
   private val cont: CancellableContinuation<Unit>,
+  private val resumeOnNextTick: Boolean,
 ) : io.vproxy.base.connection.ConnectableConnectionHandler {
   private var willBeDetached = false
   override fun connected(ctx: io.vproxy.base.connection.ConnectableConnectionHandlerContext) {
     willBeDetached = true
     ctx.eventLoop.removeConnection(ctx.connection)
-    cont.resume(Unit)
+    if (resumeOnNextTick) {
+      // we may see canceled key exception later if only using one 'nextTick' call
+      // nextTick { nextTick { ... } } ensures select() is called at least once
+      ctx.eventLoop.selectorEventLoop.nextTick {
+        ctx.eventLoop.selectorEventLoop.nextTick { cont.resume(Unit) }
+      }
+    } else {
+      cont.resume(Unit)
+    }
   }
 
   override fun readable(ctx: io.vproxy.base.connection.ConnectionHandlerContext?) {

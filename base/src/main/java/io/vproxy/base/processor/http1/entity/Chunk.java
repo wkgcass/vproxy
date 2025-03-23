@@ -21,6 +21,9 @@ public class Chunk {
         if (extension != null && !extension.isBlank()) {
             ext = ";" + extension;
         }
+        if (size == 0 && content != null) {
+            size = content.length();
+        }
         ByteArray ret = ByteArray.from((Integer.toHexString(size) + ext + "\r\n").getBytes());
         if (size == 0) {
             return ret;

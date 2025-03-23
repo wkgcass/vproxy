@@ -22,6 +22,7 @@ import io.vproxy.vfd.IP
 import io.vproxy.vfd.IPPort
 import kotlinx.coroutines.suspendCancellableCoroutine
 import vjson.JSON
+import vjson.JSONObject
 import java.io.EOFException
 import java.io.IOException
 import java.net.UnknownHostException
@@ -60,6 +61,11 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       return this
     }
 
+    fun addHostHeader(): CoroutineHttp1Request {
+      val host = conn.conn.remote.formatToIPPortString()
+      return header("Host", host)
+    }
+
     suspend fun send() {
       send(null)
     }
@@ -71,6 +77,8 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
     suspend fun send(json: JSON.Instance<*>) {
       send(json.stringify())
     }
+
+    suspend fun send(json: JSONObject) = send(json.toJson())
 
     @Suppress("DuplicatedCode")
     suspend fun send(body: ByteArray?) {

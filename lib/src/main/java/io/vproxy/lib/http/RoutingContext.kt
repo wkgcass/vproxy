@@ -1,13 +1,16 @@
 package io.vproxy.lib.http
 
-import vjson.JSON
 import io.vproxy.lib.http.route.SubPath
 import io.vproxy.lib.http.route.WildcardSubPath
+import io.vproxy.lib.tcp.CoroutineConnection
+import vjson.JSON
+import vjson.JSONObject
 
 @Suppress("unused")
 interface StorageKey<T>
 
 interface HttpServerConnection {
+  fun coconn(): CoroutineConnection
   fun base(): io.vproxy.base.connection.Connection
   fun response(status: Int): HttpServerResponse
 }
@@ -27,7 +30,7 @@ interface HttpServerRequest {
 interface HttpServerResponse {
   fun header(key: String, value: String): HttpServerResponse
   suspend fun send(body: io.vproxy.base.util.ByteArray?)
-  fun isHeadersSent():Boolean
+  fun isHeadersSent(): Boolean
   suspend fun sendHeadersBeforeChunks()
   suspend fun sendChunk(payload: io.vproxy.base.util.ByteArray): HttpServerResponse
   suspend fun endChunks(trailers: List<io.vproxy.base.processor.http1.entity.Header>)
@@ -35,8 +38,10 @@ interface HttpServerResponse {
   suspend fun send() = send(null)
   suspend fun send(body: String) = send(io.vproxy.base.util.ByteArray.from(body))
   suspend fun send(json: JSON.Instance<*>) = send(io.vproxy.base.util.ByteArray.from(json.stringify()))
+  suspend fun send(json: JSONObject) = send(json.toJson())
   suspend fun sendChunk(payload: String): HttpServerResponse = sendChunk(io.vproxy.base.util.ByteArray.from(payload))
   suspend fun sendChunk(json: JSON.Instance<*>): HttpServerResponse = sendChunk(io.vproxy.base.util.ByteArray.from(json.stringify()))
+  suspend fun sendChunk(json: JSONObject): HttpServerResponse = sendChunk(json.toJson())
 }
 
 class RoutingContext(

@@ -28,7 +28,14 @@ class CoroutineConnection(
     return conn
   }
 
-  suspend fun connect() {
+  /**
+   * @param resumeOnNextTick default to true, otherwise the CancelledKeyException might be thrown
+   * if it's registered back into the same loop in the resume callback.
+   *
+   * The exception throws from `HandlerForConnectableConnection.connected` when trying to add
+   * OP_READ to the connection.
+   */
+  suspend fun connect(resumeOnNextTick: Boolean = true) {
     val conn: io.vproxy.base.connection.ConnectableConnection
     if (!connected && this.conn is io.vproxy.base.connection.ConnectableConnection) {
       conn = this.conn
@@ -36,7 +43,7 @@ class CoroutineConnection(
       return // already connected
     }
     suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
-      loop.addConnectableConnection(conn, null, CoroutineConnectingHandler(cont))
+      loop.addConnectableConnection(conn, null, CoroutineConnectingHandler(cont, resumeOnNextTick))
     }
     connected = true
   }
@@ -70,6 +77,9 @@ class CoroutineConnection(
 
     if (conn.inBuffer.used() != 0) {
       return conn.inBuffer
+    }
+    if (handler.eof) {
+      return null
     }
 
     reading = true
@@ -201,12 +211,12 @@ class CoroutineConnection(
       ensureHandler()
       val chnl = io.vproxy.base.util.nio.ByteArrayChannel.from(buf, 0, buf.length(), 0)
       return@run suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
-        recursivelyWrite(cont, chnl)
+        recursivelyWrite(1, cont, chnl)
       }
     }
   }
 
-  private fun recursivelyWrite(cont: CancellableContinuation<Unit>, chnl: io.vproxy.base.util.nio.ByteArrayChannel) {
+  private fun recursivelyWrite(stackDepth: Int, cont: CancellableContinuation<Unit>, chnl: io.vproxy.base.util.nio.ByteArrayChannel) {
     if (chnl.used() == 0) {
       cont.resume(Unit)
       return
@@ -215,7 +225,11 @@ class CoroutineConnection(
       if (err != null) {
         cont.resumeWithException(err)
       } else {
-        recursivelyWrite(cont, chnl)
+        if (stackDepth < 32) {
+          recursivelyWrite(stackDepth + 1, cont, chnl)
+        } else {
+          loop.selectorEventLoop.nextTick { recursivelyWrite(1, cont, chnl) }
+        }
       }
     }
     conn.outBuffer.storeBytesFrom(chnl) // write after callback set

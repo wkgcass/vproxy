@@ -5,6 +5,10 @@ import io.vproxy.lib.http.HttpServerResponse
 import io.vproxy.lib.tcp.CoroutineConnection
 
 class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServerConnection, AutoCloseable {
+  override fun coconn(): CoroutineConnection {
+    return conn
+  }
+
   override fun base(): io.vproxy.base.connection.Connection {
     return conn.conn
   }
