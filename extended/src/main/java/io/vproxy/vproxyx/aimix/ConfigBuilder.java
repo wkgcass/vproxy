@@ -95,6 +95,16 @@ public class ConfigBuilder {
                 model.endReasoningTag = endReasoningTag;
             return model;
         }
+
+        @Override
+        public String toString() {
+            return "Model{" +
+                   "name=" + (name == null ? "null" : ("'" + name + "'")) +
+                   ", servers=" + servers +
+                   ", reasoningTag=" + (reasoningTag == null ? "null" : ("'" + reasoningTag + "'")) +
+                   ", endReasoningTag=" + (endReasoningTag == null ? "null" : ("'" + endReasoningTag + "'")) +
+                   '}';
+        }
     }
 
     public static class ModelServer {
@@ -130,6 +140,16 @@ public class ConfigBuilder {
                 sh.data = new ModelServerMetadata(ModelServerType.OLLAMA, nonStopping, ollamaOptions);
             }
         }
+
+        @Override
+        public String toString() {
+            return "ModelServer{" +
+                   "type=" + (type == null ? "null" : ("'" + type + "'")) +
+                   ", address=" + (address == null ? "null" : ("'" + address + "'")) +
+                   ", nonStopping=" + nonStopping +
+                   ", ollamaOptions=" + ollamaOptions +
+                   '}';
+        }
     }
 
     public static class Prompt {
@@ -142,6 +162,7 @@ public class ConfigBuilder {
         public String imageDescriptionHeadResponseTemplate;
         public String titleGenerationMatching;
         public String tagsGenerationMatching;
+        public Boolean keepReasoningInPrompt;
 
         public static final Rule<Prompt> rule = new ObjectRule<>(Prompt::new)
             .put("image_description_start_tag", (o, v) -> o.imageDescriptionStartTag = v, StringRule.get())
@@ -152,7 +173,8 @@ public class ConfigBuilder {
             .put("image_additional_response", (o, v) -> o.imageAdditionalResponse = v, StringRule.get())
             .put("image_description_head_response_template", (o, v) -> o.imageDescriptionHeadResponseTemplate = v, StringRule.get())
             .put("title_generation_matching", (o, v) -> o.titleGenerationMatching = v, StringRule.get())
-            .put("tags_generation_matching", (o, v) -> o.tagsGenerationMatching = v, StringRule.get());
+            .put("tags_generation_matching", (o, v) -> o.tagsGenerationMatching = v, StringRule.get())
+            .put("keep_reasoning_in_prompt", (o, v) -> o.keepReasoningInPrompt = v, BoolRule.get());
 
         public void build(Config c) {
             if (imageDescriptionStartTag != null)
@@ -173,6 +195,24 @@ public class ConfigBuilder {
                 c.titleGenerationMatching = titleGenerationMatching;
             if (tagsGenerationMatching != null)
                 c.tagsGenerationMatching = tagsGenerationMatching;
+            if (keepReasoningInPrompt != null)
+                c.keepReasoningInPrompt = keepReasoningInPrompt;
+        }
+
+        @Override
+        public String toString() {
+            return "Prompt{" +
+                   "imageDescriptionStartTag=" + (imageDescriptionStartTag == null ? "null" : ("'" + imageDescriptionStartTag + "'")) +
+                   ", imageDescriptionStopTag=" + (imageDescriptionStopTag == null ? "null" : ("'" + imageDescriptionStopTag + "'")) +
+                   ", imagePromptStartTag=" + (imagePromptStartTag == null ? "null" : ("'" + imagePromptStartTag + "'")) +
+                   ", imagePromptStopTag=" + (imagePromptStopTag == null ? "null" : ("'" + imagePromptStopTag + "'")) +
+                   ", imageToDescPrompt=" + (imageToDescPrompt == null ? "null" : ("'" + imageToDescPrompt + "'")) +
+                   ", imageAdditionalResponse=" + (imageAdditionalResponse == null ? "null" : ("'" + imageAdditionalResponse + "'")) +
+                   ", imageDescriptionHeadResponseTemplate=" + (imageDescriptionHeadResponseTemplate == null ? "null" : ("'" + imageDescriptionHeadResponseTemplate + "'")) +
+                   ", titleGenerationMatching=" + (titleGenerationMatching == null ? "null" : ("'" + titleGenerationMatching + "'")) +
+                   ", tagsGenerationMatching=" + (tagsGenerationMatching == null ? "null" : ("'" + tagsGenerationMatching + "'")) +
+                   ", keepReasoningInPrompt=" + keepReasoningInPrompt +
+                   '}';
         }
     }
 
@@ -202,6 +242,17 @@ public class ConfigBuilder {
             if (generateTitleOrTagsPromptLengthThreshold != null)
                 c.generateTitleOrTagsPromptLengthThreshold = generateTitleOrTagsPromptLengthThreshold;
         }
+
+        @Override
+        public String toString() {
+            return "Sys{" +
+                   "printReceivedPrompt=" + printReceivedPrompt +
+                   ", printOutputResponse=" + printOutputResponse +
+                   ", printPromptSymbol=" + (printPromptSymbol == null ? "null" : ("'" + printPromptSymbol + "'")) +
+                   ", printResponseSymbol=" + (printResponseSymbol == null ? "null" : ("'" + printResponseSymbol + "'")) +
+                   ", generateTitleOrTagsPromptLengthThreshold=" + generateTitleOrTagsPromptLengthThreshold +
+                   '}';
+        }
     }
 
     public Config build(EventLoopGroup elg) throws Exception {
@@ -223,5 +274,18 @@ public class ConfigBuilder {
             sys.build(config);
         }
         return config;
+    }
+
+    @Override
+    public String toString() {
+        return "ConfigBuilder{" +
+               "listen=" + listen +
+               ", name=" + (name == null ? "null" : ("'" + name + "'")) +
+               ", multimodal=" + multimodal +
+               ", reasoning=" + reasoning +
+               ", text=" + text +
+               ", prompt=" + prompt +
+               ", sys=" + sys +
+               '}';
     }
 }

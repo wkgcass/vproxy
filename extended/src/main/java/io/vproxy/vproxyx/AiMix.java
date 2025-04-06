@@ -1,6 +1,7 @@
 package io.vproxy.vproxyx;
 
 import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.util.Logger;
 import io.vproxy.vproxyx.aimix.AiMixServer;
 import io.vproxy.vproxyx.aimix.ConfigBuilder;
 import vjson.CharStream;
@@ -87,6 +88,7 @@ public class AiMix {
         }
         var configBuilder = JSON.deserialize(CharStream.from(content), ConfigBuilder.rule, ParserOptions.allFeatures());
         configBuilder.validate();
+        Logger.alert("config = " + configBuilder);
 
         var el = new EventLoopGroup("ai-mix");
         el.add("ai-mix-" + 0);

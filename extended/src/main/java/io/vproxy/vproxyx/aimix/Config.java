@@ -21,6 +21,7 @@ public class Config {
     public String imageDescriptionHeadResponseTemplate = DEFAULT_IMAGE_DESCRIPTION_HEAD_RESPONSE_TEMPLATE;
     public String titleGenerationMatching = DEFAULT_TITLE_GENERATION_MATCHING;
     public String tagsGenerationMatching = DEFAULT_TAGS_GENERATION_MATCHING;
+    public boolean keepReasoningInPrompt = false;
 
     public boolean printReceivedPrompt = true;
     public boolean printOutputResponse = true;

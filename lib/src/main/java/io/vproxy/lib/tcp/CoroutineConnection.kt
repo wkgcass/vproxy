@@ -168,12 +168,12 @@ class CoroutineConnection(
     return ret
   }
 
-  suspend fun <T> read(parser: AbstractParser<T>): T? {
+  suspend fun <T> read(parser: AbstractParser<T>, alwaysRaiseEOF: Boolean = false): T? {
     var isFirst = true
     while (true) {
       val ring = read()
       if (ring == null) {
-        if (isFirst) {
+        if (isFirst && !alwaysRaiseEOF) {
           return null
         }
         throw EOFException("EOF when parser.state == ${parser.state}")

@@ -119,21 +119,38 @@ class AiMixServer(
   }
 
   private fun convertReqTokens(c: OpenAiApi.ChatCompletion) {
-    for (msg in c.messages) {
+    for ((idx, msg) in c.messages.withIndex()) {
       if (msg.simpleContent != null) {
-        msg.simpleContent = convertReqTokens(msg.simpleContent)
+        msg.simpleContent = convertReqTokens(msg.simpleContent, msg.role, idx == c.messages.size - 1)
       } else {
         for (cc in msg.content) {
           if (cc.type == OpenAiApi.ChatCompletionContentType.text) {
-            cc.text = convertReqTokens(cc.text)
+            cc.text = convertReqTokens(cc.text, msg.role, idx == c.messages.size - 1)
           }
         }
       }
     }
   }
 
-  private fun convertReqTokens(c: String): String {
+  private fun convertReqTokens(c: String, role: Role, isLast: Boolean): String {
+    if (role == Role.assistant) {
+      return convertReqTokensAssistant(c)
+    } else {
+      return convertReqTokensSystemOrUser(c, isLast)
+    }
+  }
+
+  private fun convertReqTokensSystemOrUser(c: String, isLast: Boolean): String {
+    if (isLast) {
+      // the last image prompt will be used to query multimodal models, so do not remove it for now
+      return c
+    }
+    return removeImagePrompt(c)
+  }
+
+  private fun convertReqTokensAssistant(c: String): String {
     var isReasoning = false
+    var isImageDescription = false
     var modified = false
     val lines = c.split("\n")
     val newLines = ArrayList<String>(lines.size)
@@ -145,9 +162,33 @@ class AiMixServer(
           newLines.removeLast()
         } else if (line.startsWith("> ")) {
           newLines.removeLast()
-          newLines.add(line.substring("> ".length))
+          val withoutPrefix = line.substring("> ".length)
+
+          if (config.keepReasoningInPrompt) {
+            newLines.add(withoutPrefix)
+            continue
+          }
+          // do not keep reasoning in prompt, so we need to extract image description tags
+          if (isImageDescription) {
+            newLines.add(withoutPrefix)
+            if (withoutPrefix == config.imageDescriptionStopTag) {
+              isImageDescription = false
+            }
+          } else {
+            if (withoutPrefix == config.imageDescriptionStartTag) {
+              isImageDescription = true
+              newLines.add(withoutPrefix)
+            }
+          }
         } else if (line == "</details>") {
           isReasoning = false
+          if (isImageDescription) {
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "image description is not ended properly, but reasoning is stopped")
+            isImageDescription = false
+          }
+          if (!config.keepReasoningInPrompt) {
+            newLines.removeLast()
+          }
         } else {
           Logger.warn(LogType.INVALID_EXTERNAL_DATA, "unexpected line for reasoning: should start with `> `, but got: $line")
         }
@@ -156,7 +197,9 @@ class AiMixServer(
           isReasoning = true
           modified = true
           newLines.removeLast()
-          newLines.add("<details type=\"reasoning\">")
+          if (config.keepReasoningInPrompt) {
+            newLines.add("<details type=\"reasoning\">")
+          }
         }
       }
     }
@@ -168,9 +211,56 @@ class AiMixServer(
     return newLines.joinToString("\n")
   }
 
+  private fun removeLastImagePrompt(c: OpenAiApi.ChatCompletion) {
+    val last = c.messages.last()
+    if (last.role != Role.assistant) {
+      removeImagePrompt(last)
+    }
+  }
+
+  private fun removeImagePrompt(c: OpenAiApi.ChatCompletionMessage) {
+    if (c.simpleContent != null) {
+      c.simpleContent = removeImagePrompt(c.simpleContent)
+    } else {
+      for (cc in c.content) {
+        if (cc.type == OpenAiApi.ChatCompletionContentType.text) {
+          cc.text = removeImagePrompt(cc.text)
+        }
+      }
+    }
+  }
+
+  private fun removeImagePrompt(msg: String): String {
+    var c = msg
+    val sb = StringBuilder()
+    while (true) {
+      var idx = c.indexOf(config.imagePromptStartTag)
+      if (idx == -1) {
+        sb.append(c)
+        break
+      }
+      sb.append(c.substring(0, idx))
+      c = c.substring(idx + config.imagePromptStartTag.length)
+      idx = c.indexOf(config.imagePromptStopTag)
+      if (idx == -1) {
+        Logger.error(LogType.INVALID_EXTERNAL_DATA, "got only image prompt start tag, but no stop tag: $msg")
+        break
+      }
+      c = c.substring(idx + config.imagePromptStopTag.length)
+    }
+    return sb.toString()
+  }
+
   private fun convertRespTokens(c: OpenAiApi.CompletionResponse) {
     for (ch in c.choices) {
       val msg = if (ch.message == null) ch.delta else ch.message
+      if (msg == null) {
+        // both message and delta are null
+        continue
+      }
+      if (msg.content == null) {
+        continue
+      }
       msg.content = convertRespTokens(msg.content)
     }
   }
@@ -244,13 +334,13 @@ class AiMixServer(
       if (c.stream) {
         val resp = sendStreamingResponse(ctx)
         var content: String
+        var result = ""
 
         content = config.reasoningTag + "\n" + config.imageDescriptionStartTag + "\n"
         // do not add reasoning tag to result
+        result += config.imageDescriptionStartTag + "\n"
         respondStreamChunk(ctx, content)
         ctx.get(ReqContext.KEY)!!.reasoningTagResponded = true
-
-        var result = ""
 
         for ((i, img) in images.withIndex()) {
           if (i > 0) {
@@ -330,6 +420,7 @@ class AiMixServer(
 
   private fun buildNoImageChatCompletion(c: OpenAiApi.ChatCompletion): OpenAiApi.ChatCompletion {
     @Suppress("NAME_SHADOWING") val c = c.copy()
+    removeLastImagePrompt(c)
     val ls = ArrayList<OpenAiApi.ChatCompletionMessage>()
     for (msg in c.messages) {
       if (msg.simpleContent != null) {
@@ -461,6 +552,7 @@ class AiMixServer(
 
     val conn = connector.connect(ConnectionOpts.getDefault(), RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384))
     val coconn = CoroutineConnection(el, conn)
+    var isDone = false
     try {
       coconn.connect()
 
@@ -471,7 +563,7 @@ class AiMixServer(
       val parser = HttpRespParser(HttpRespParser.Params().setSegmentedParsing(true))
       var isFirstResponse = true
       while (true) {
-        coconn.read(parser)
+        coconn.read(parser, alwaysRaiseEOF = true)
         val res = parser.builder
         when (parser.state) {
           HttpParserHelper.STATE_END_ALL_HEADERS -> {
@@ -508,7 +600,7 @@ class AiMixServer(
               chunk.content = ByteArray.from("data: " + r.toJson().stringify() + "\r\n")
               ctx.conn.coconn().write(chunk.toByteArray())
 
-              if (r.choices.isNotEmpty() && config.printOutputResponse) {
+              if (r.choices.isNotEmpty() && config.printOutputResponse && r.choices[0].delta.content != null) {
                 print(r.choices[0].delta.content)
               }
             } else {
@@ -523,12 +615,16 @@ class AiMixServer(
 
           HttpParserHelper.STATE_END_ALL_TRAILERS -> {
             resp!!.endChunks(listOf())
+            isDone = true
             break
           }
         }
       }
+    } catch (t: Throwable) {
+      Logger.error(LogType.ALERT, "failed to handle request", t)
+      throw t
     } finally {
-      if (meta.nonStopping) {
+      if (!isDone && meta.nonStopping) {
         val id = UUID.randomUUID().toString()
         println()
         Logger.warn(LogType.ALERT, "${coconn.remote()} ${meta.type} is still responding tokens, tracking_id=${id}")
@@ -586,6 +682,7 @@ class AiMixServer(
 
     val conn = connector.connect(ConnectionOpts.getDefault(), RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384))
     val coconn = CoroutineConnection(el, conn)
+    var isDone = false
     try {
       coconn.connect()
 
@@ -598,7 +695,7 @@ class AiMixServer(
       var result = ""
       var isFirstResponse = true
       while (true) {
-        coconn.read(parser)
+        coconn.read(parser, alwaysRaiseEOF = true)
         val res = parser.builder
         when (parser.state) {
           HttpParserHelper.STATE_END_ALL_HEADERS -> {
@@ -634,7 +731,7 @@ class AiMixServer(
             chunk.content = ByteArray.from("data: " + r.toJson().stringify() + "\r\n")
             ctx.conn.coconn().write(chunk.toByteArray())
 
-            if (config.printOutputResponse) {
+            if (config.printOutputResponse && ollamaChunk.message.content != null) {
               print(ollamaChunk.message.content)
             }
           }
@@ -650,15 +747,20 @@ class AiMixServer(
                 println()
                 Logger.alert("${config.printResponseSymbol} END")
               }
+              isDone = true
               return null
             } else {
+              isDone = true
               return result
             }
           }
         }
       }
+    } catch (t: Throwable) {
+      Logger.error(LogType.ALERT, "failed to handle request", t)
+      throw t
     } finally {
-      if (meta.nonStopping) {
+      if (!isDone && meta.nonStopping) {
         val id = UUID.randomUUID().toString()
         println()
         Logger.warn(LogType.ALERT, "${coconn.remote()} ${meta.type} is still responding tokens, tracking_id=${id}")

@@ -111,6 +111,11 @@ public class OllamaApi {
                 }
             }
         }
+
+        @Override
+        public String toString() {
+            return toJson().stringify();
+        }
     }
 
     public static class OllamaChatResponse extends OllamaObject implements JSONObject {
