@@ -15,11 +15,14 @@ public class OpenAiApi {
 
     public static class Model implements JSONObject {
         public String id;
+        public String ownedBy = "vproxy";
 
         @Override
         public JSON.Object toJson() {
             return new ObjectBuilder()
                 .put("id", id)
+                .put("object", "model")
+                .put("owned_by", ownedBy)
                 .build();
         }
     }
@@ -30,6 +33,7 @@ public class OpenAiApi {
         @Override
         public JSON.Object toJson() {
             return new ObjectBuilder()
+                .put("object", "list")
                 .putArray("data", arr -> data.forEach(e -> arr.addInst(e.toJson())))
                 .build();
         }
@@ -240,6 +244,7 @@ public class OpenAiApi {
         public List<CompletionChoice> choices = new ArrayList<>();
         public long created;
         public String model;
+        public String object;
         public CompletionUsage usage;
 
         public static final Rule<CompletionResponse> rule = new ObjectRule<>(CompletionResponse::new)
@@ -248,6 +253,7 @@ public class OpenAiApi {
                 ArrayList::new, List::add, CompletionChoice.rule))
             .put("created", (o, v) -> o.created = v, LongRule.get())
             .put("model", (o, v) -> o.model = v, StringRule.get())
+            .put("object", (o, v) -> o.object = v, StringRule.get())
             .put("usage", (o, v) -> o.usage = v, new NullableRule<>(CompletionUsage.rule));
 
         @Override
@@ -256,10 +262,12 @@ public class OpenAiApi {
                 .put("id", id)
                 .putArray("choices", arr -> choices.forEach(e -> arr.addInst(e.toJson())))
                 .put("created", created)
-                .put("model", model);
+                .put("model", model)
+                .put("object", object);
             if (usage != null) {
                 ob.putInst("usage", usage.toJson());
             }
+            // ob.put("system_fingerprint", "fp_xxxxxxxxxx_prodxxxxfp8"); deepseek has this field
             return ob.build();
         }
 
@@ -271,6 +279,10 @@ public class OpenAiApi {
             }
             System.out.println();
             Logger.alert(config.printResponseSymbol + " END");
+        }
+
+        public boolean isEmpty() {
+            return !isNotEmpty();
         }
 
         public boolean isNotEmpty() {
@@ -307,6 +319,7 @@ public class OpenAiApi {
             var ob = new ObjectBuilder()
                 .put("finish_reason", finishReason)
                 .put("index", index);
+            // ob.put("logprobs", null); deepseek has this field
             if (message != null) {
                 ob.putInst("message", message.toJson());
             }
@@ -342,11 +355,17 @@ public class OpenAiApi {
         public int completionTokens;
         public int promptTokens;
         public int totalTokens;
+        public int promptCacheHitTokens;
+        public int promptCacheMissTokens;
+        public CompletionUsagePromptTokensDetails promptTokensDetails = new CompletionUsagePromptTokensDetails();
 
         public static final Rule<CompletionUsage> rule = new ObjectRule<>(CompletionUsage::new)
             .put("completion_tokens", (o, v) -> o.completionTokens = v, IntRule.get())
             .put("prompt_tokens", (o, v) -> o.promptTokens = v, IntRule.get())
-            .put("total_tokens", (o, v) -> o.totalTokens = v, IntRule.get());
+            .put("total_tokens", (o, v) -> o.totalTokens = v, IntRule.get())
+            .put("prompt_cache_hit_tokens", (o, v) -> o.promptCacheHitTokens = v, IntRule.get())
+            .put("prompt_cache_miss_tokens", (o, v) -> o.promptCacheMissTokens = v, IntRule.get())
+            .put("prompt_tokens_details", (o, v) -> o.promptTokensDetails = v, CompletionUsagePromptTokensDetails.rule);
 
         @Override
         public JSON.Object toJson() {
@@ -354,6 +373,23 @@ public class OpenAiApi {
                 .put("completion_tokens", completionTokens)
                 .put("prompt_tokens", promptTokens)
                 .put("total_tokens", totalTokens)
+                .put("prompt_cache_hit_tokens", promptCacheHitTokens)
+                .put("prompt_cache_miss_tokens", promptCacheMissTokens)
+                .putInst("prompt_tokens_details", promptTokensDetails.toJson())
+                .build();
+        }
+    }
+
+    public static class CompletionUsagePromptTokensDetails implements JSONObject {
+        public int cachedTokens;
+
+        public static final Rule<CompletionUsagePromptTokensDetails> rule = new ObjectRule<>(CompletionUsagePromptTokensDetails::new)
+            .put("cached_tokens", (o, v) -> o.cachedTokens = v, IntRule.get());
+
+        @Override
+        public JSON.Object toJson() {
+            return new ObjectBuilder()
+                .put("cached_tokens", cachedTokens)
                 .build();
         }
     }

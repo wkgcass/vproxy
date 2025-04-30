@@ -223,6 +223,8 @@ public class ConfigBuilder {
         public String printPromptSymbol;
         public String printResponseSymbol;
         public Integer generateTitleOrTagsPromptLengthThreshold;
+        public String modelOwner;
+        public String chunkTerminator;
 
         public static final Rule<Sys> rule = new ObjectRule<>(Sys::new)
             .put("remove_reasoning_content", (o, v) -> o.removeReasoningContent = v, BoolRule.get())
@@ -230,7 +232,9 @@ public class ConfigBuilder {
             .put("print_output_response", (o, v) -> o.printOutputResponse = v, BoolRule.get())
             .put("print_prompt_symbol", (o, v) -> o.printPromptSymbol = v, StringRule.get())
             .put("print_response_symbol", (o, v) -> o.printResponseSymbol = v, StringRule.get())
-            .put("generate_title_or_tags_prompt_length_threshold", (o, v) -> o.generateTitleOrTagsPromptLengthThreshold = v, IntRule.get());
+            .put("generate_title_or_tags_prompt_length_threshold", (o, v) -> o.generateTitleOrTagsPromptLengthThreshold = v, IntRule.get())
+            .put("model_owner", (o, v) -> o.modelOwner = v, StringRule.get())
+            .put("chunk_terminator", (o, v) -> o.chunkTerminator = v, StringRule.get());
 
         public void build(Config c) {
             if (removeReasoningContent != null)
@@ -245,6 +249,10 @@ public class ConfigBuilder {
                 c.printResponseSymbol = printResponseSymbol;
             if (generateTitleOrTagsPromptLengthThreshold != null)
                 c.generateTitleOrTagsPromptLengthThreshold = generateTitleOrTagsPromptLengthThreshold;
+            if (modelOwner != null)
+                c.modelOwner = modelOwner;
+            if (chunkTerminator != null)
+                c.chunkTerminator = chunkTerminator;
         }
 
         @Override
@@ -256,6 +264,7 @@ public class ConfigBuilder {
                    ", printPromptSymbol=" + (printPromptSymbol == null ? "null" : ("'" + printPromptSymbol + "'")) +
                    ", printResponseSymbol=" + (printResponseSymbol == null ? "null" : ("'" + printResponseSymbol + "'")) +
                    ", generateTitleOrTagsPromptLengthThreshold=" + generateTitleOrTagsPromptLengthThreshold +
+                   ", modelOwner=" + modelOwner +
                    '}';
         }
     }

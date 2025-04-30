@@ -22,7 +22,6 @@ import io.vproxy.lib.tcp.CoroutineConnection
 import io.vproxy.lib.tcp.CoroutineServerSock
 import io.vproxy.vfd.IPPort
 import vjson.JSON
-import vjson.simple.SimpleString
 import java.util.*
 
 class AiMixServer(
@@ -38,6 +37,8 @@ class AiMixServer(
 
     server.all("/*", Tool.bodyJsonHandler())
     server.all("/*", ::accessLog)
+    server.get("/models", ::getModels)
+    server.post("/chat/completions", ::chatCompletions)
     server.get("/v1/models", ::getModels)
     server.post("/v1/chat/completions", ::chatCompletions)
 
@@ -53,6 +54,9 @@ class AiMixServer(
     val getModelResp = OpenAiApi.GetModel()
     val model = OpenAiApi.Model()
     model.id = config.name
+    if (config.modelOwner != null) {
+      model.ownedBy = config.modelOwner
+    }
     getModelResp.data.add(model)
     ctx.conn.response(200).header("Content-Type", "application/json").send(getModelResp)
   }
@@ -102,7 +106,7 @@ class AiMixServer(
       }
     }
 
-    if (json.containsKey("stream_options")) {
+    if (json.containsKey("stream_options") && json["stream_options"] !is JSON.Null) {
       val streamOptions = json.getObject("stream_options")
       cc.streamOptions.includeUsage = streamOptions.getBool("include_usage")
     }
@@ -251,7 +255,26 @@ class AiMixServer(
     return sb.toString()
   }
 
-  private fun convertRespTokens(c: OpenAiApi.CompletionResponse, info: ReasoningContentInfo) {
+  private fun convertRespTokens(c: OpenAiApi.CompletionResponse, info: RespondingContextInfo, sendChunkIfEmpty: Boolean = false) {
+    if (info.id == null) {
+      if (c.id != null) {
+        info.id = c.id
+      } else {
+        // we may not be able to wait for the id to generate
+        info.id = UUID.randomUUID().toString()
+      }
+    }
+
+    val backupIsRoleSent = info.isRoleSent
+
+    c.id = info.id
+    c.model = config.name
+    c.created = System.currentTimeMillis() / 1000
+    if (info.isStream) {
+      c.`object` = "chat.completion.chunk"
+    } else {
+      c.`object` = "chat.completion"
+    }
     for (ch in c.choices) {
       val msg = if (ch.message == null) ch.delta else ch.message
       if (msg == null) {
@@ -262,10 +285,21 @@ class AiMixServer(
         continue
       }
       msg.content = convertRespTokens(msg.content, info)
+      if (info.isRoleSent) {
+        msg.role = null
+      } else {
+        info.isRoleSent = true
+        msg.role = Role.assistant
+      }
+    }
+
+    // empty response will not be sent, so rollback isRoleSent field
+    if (c.isEmpty && !sendChunkIfEmpty) {
+      info.isRoleSent = backupIsRoleSent
     }
   }
 
-  private fun convertRespTokens(c: String, info: ReasoningContentInfo): String {
+  private fun convertRespTokens(c: String, info: RespondingContextInfo): String {
     if (info.isFirstResponse) {
       info.isFirstResponse = false
       if (c.startsWith(config.reasoningTag)) {
@@ -378,25 +412,28 @@ class AiMixServer(
         val resp = sendStreamingResponse(ctx)
         var content: String
         var result = ""
+        val info = RespondingContextInfo(true)
+
+        respondStreamChunk(ctx, "", info)
 
         content = config.reasoningTag + "\n" + config.imageDescriptionStartTag + "\n"
         // do not add reasoning tag to result
         result += config.imageDescriptionStartTag + "\n"
-        respondStreamChunk(ctx, content)
+        respondStreamChunk(ctx, content, info)
         ctx.get(ReqContext.KEY)!!.reasoningTagResponded = true
 
         for ((i, img) in images.withIndex()) {
           if (i > 0) {
             content = "\n---\n\n"
             result += content
-            respondStreamChunk(ctx, content)
+            respondStreamChunk(ctx, content, info)
           }
 
           content = config.imageDescriptionHeadResponseTemplate
             .replace("{{ n }}", "${i + 1}")
             .replace("{{ total }}", "${images.size}") + "\n"
           result += content
-          respondStreamChunk(ctx, content)
+          respondStreamChunk(ctx, content, info)
 
           imageMsgTemplate.content.removeFirst()
           imageMsgTemplate.content.addFirst(img)
@@ -410,16 +447,16 @@ class AiMixServer(
           if (!proxyResult.endsWith("\n") && !proxyResult.endsWith("\r\n")) {
             content = "\n"
             result += content
-            respondStreamChunk(ctx, content)
+            respondStreamChunk(ctx, content, info)
           }
         }
         content = "\n---\n\n" + config.imageAdditionalResponse + "\n"
         result += content
-        respondStreamChunk(ctx, content)
+        respondStreamChunk(ctx, content, info)
 
         content = config.imageDescriptionStopTag + "\n"
         result += content
-        respondStreamChunk(ctx, content)
+        respondStreamChunk(ctx, content, info)
 
         content = config.endReasoningTag + "\n"
         // do not add endReasoning tag to result
@@ -428,7 +465,7 @@ class AiMixServer(
         }
         // if no reasoning model, the end reasoning tag would be responded
         // otherwise, the markdown separator would be responded
-        respondStreamChunk(ctx, content)
+        respondStreamChunk(ctx, content, info)
 
         val msg = OpenAiApi.ChatCompletionMessage()
         msg.role = Role.assistant
@@ -444,16 +481,17 @@ class AiMixServer(
     }
   }
 
-  private suspend fun respondStreamChunk(ctx: RoutingContext, content: String) {
+  private suspend fun respondStreamChunk(ctx: RoutingContext, content: String, info: RespondingContextInfo) {
+    val resp = OpenAiApi.CompletionResponse()
+    val choice = OpenAiApi.CompletionChoice()
+    choice.delta = OpenAiApi.CompletionChoiceMessage()
+    choice.delta.content = content
+    resp.choices = listOf(choice)
+    convertRespTokens(resp, info, true)
+
     val chunk = Chunk()
     chunk.content = ByteArray.from(
-      "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":${
-        SimpleString(content).stringify()
-      },\"role\":\"assistant\"}}],\"created\":${
-        System.currentTimeMillis() / 1000
-      },\"model\":${
-        SimpleString(config.name).stringify()
-      }}\r\n"
+      "data: " + resp.toJson().stringify() + config.chunkTerminator
     )
     ctx.conn.coconn().write(chunk.toByteArray())
     if (config.printOutputResponse) {
@@ -589,6 +627,24 @@ class AiMixServer(
     return false
   }
 
+  private suspend fun sendFinishChunk(ctx: RoutingContext, info: RespondingContextInfo) {
+    val stopChunk = OpenAiApi.CompletionResponse()
+    stopChunk.id = info.id
+    val choice = OpenAiApi.CompletionChoice()
+    choice.finishReason = "stop"
+    choice.index = 0
+    choice.delta = OpenAiApi.CompletionChoiceMessage()
+    choice.delta.content = ""
+    stopChunk.choices = listOf(choice)
+    stopChunk.created = System.currentTimeMillis() / 1000
+    stopChunk.model = config.name
+    stopChunk.`object` = "chat.completion.chunk"
+    stopChunk.usage = OpenAiApi.CompletionUsage()
+    val chunk = Chunk()
+    chunk.content = ByteArray.from("data: " + stopChunk.toJson().stringify() + config.chunkTerminator)
+    ctx.conn.coconn().write(chunk.toByteArray())
+  }
+
   private suspend fun proxyStreamRequestToOpenAI(
     ctx: RoutingContext,
     c: OpenAiApi.ChatCompletion, model: Config.Model, connector: SvrHandleConnector, meta: ModelServerMetadata,
@@ -607,7 +663,7 @@ class AiMixServer(
       httpconn.post("/v1/chat/completions").addHostHeader().header("Content-Type", "application/json").send(c)
 
       val parser = HttpRespParser(HttpRespParser.Params().setSegmentedParsing(true))
-      val reasoningContentInfo = ReasoningContentInfo()
+      val info = RespondingContextInfo(true)
       while (true) {
         coconn.read(parser, alwaysRaiseEOF = true)
         val res = parser.builder
@@ -636,17 +692,18 @@ class AiMixServer(
             s = s.substring("data:".length).trim()
             if (s != "[DONE]") {
               val r = JSON.deserialize(s, OpenAiApi.CompletionResponse.rule)
-              if (reasoningContentInfo.isFirstResponse) {
-                reasoningContentInfo.isFirstResponse = false
+              if (info.isFirstResponse) {
+                info.checkAndSetId(r.id)
+                respondStreamChunk(ctx, "", info)
                 if (stripReasoningTagIfRequired(ctx, r)) {
-                  reasoningContentInfo.isReasoningContent = true
+                  info.isReasoningContent = true
                 }
               }
-              convertRespTokens(r, reasoningContentInfo)
+              convertRespTokens(r, info)
               if (r.isNotEmpty) {
                 val chunk = res.chunk.build()
                 chunk.size = 0
-                chunk.content = ByteArray.from("data: " + r.toJson().stringify() + "\r\n")
+                chunk.content = ByteArray.from("data: " + r.toJson().stringify() + config.chunkTerminator)
                 ctx.conn.coconn().write(chunk.toByteArray())
 
                 if (r.choices.isNotEmpty() && config.printOutputResponse && r.choices[0].delta.content != null) {
@@ -654,6 +711,7 @@ class AiMixServer(
                 }
               }
             } else {
+              sendFinishChunk(ctx, info)
               ctx.conn.coconn().write(res.chunk.build().toByteArray())
 
               if (config.printOutputResponse) {
@@ -712,7 +770,7 @@ class AiMixServer(
       if (ctx == null) {
         return body
       } else {
-        convertRespTokens(body, ReasoningContentInfo())
+        convertRespTokens(body, RespondingContextInfo(false))
         ctx.conn.response(r.statusCode).header("Content-Type", "application/json").send(body)
 
         if (config.printOutputResponse) {
@@ -743,7 +801,7 @@ class AiMixServer(
 
       val parser = HttpRespParser(HttpRespParser.Params().setSegmentedParsing(true))
       var result = ""
-      val reasoningContentInfo = ReasoningContentInfo()
+      val info = RespondingContextInfo(true)
       while (true) {
         coconn.read(parser, alwaysRaiseEOF = true)
         val res = parser.builder
@@ -774,15 +832,16 @@ class AiMixServer(
             }
             val chunk = Chunk()
             val r = ollamaChunk.toOpenAICompletionResponse(true)
-            if (reasoningContentInfo.isFirstResponse) {
-              reasoningContentInfo.isFirstResponse = false
+            if (info.isFirstResponse) {
+              info.checkAndSetId(r.id)
+              respondStreamChunk(ctx, "", info)
               if (stripReasoningTagIfRequired(ctx, r)) {
-                reasoningContentInfo.isReasoningContent = true
+                info.isReasoningContent = true
               }
             }
-            convertRespTokens(r, reasoningContentInfo)
+            convertRespTokens(r, info)
             if (r.isNotEmpty) {
-              chunk.content = ByteArray.from("data: " + r.toJson().stringify() + "\r\n")
+              chunk.content = ByteArray.from("data: " + r.toJson().stringify() + config.chunkTerminator)
               ctx.conn.coconn().write(chunk.toByteArray())
 
               if (config.printOutputResponse && ollamaChunk.message.content != null) {
@@ -794,7 +853,7 @@ class AiMixServer(
           HttpParserHelper.STATE_END_ALL_TRAILERS -> {
             if (terminatesRequest) {
               val chunk = Chunk()
-              chunk.content = ByteArray.from("data: [DONE]\r\n")
+              chunk.content = ByteArray.from("data: [DONE]" + config.chunkTerminator)
               ctx.conn.coconn().write(chunk.toByteArray())
               resp!!.endChunks(listOf())
 
@@ -858,7 +917,7 @@ class AiMixServer(
       if (ctx == null) {
         return body
       } else {
-        convertRespTokens(body, ReasoningContentInfo())
+        convertRespTokens(body, RespondingContextInfo(false))
         ctx.conn.response(r.statusCode).header("Content-Type", "application/json").send(body)
 
         if (config.printOutputResponse) {

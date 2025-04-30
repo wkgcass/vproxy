@@ -29,6 +29,8 @@ public class Config {
     public String printPromptSymbol = DEFAULT_PRINT_PROMPT_SYMBOL;
     public String printResponseSymbol = DEFAULT_PRINT_RESPONSE_SYMBOL;
     public int generateTitleOrTagsPromptLengthThreshold = 8192;
+    public String modelOwner;
+    public String chunkTerminator = "\n\n";
 
     public Model getMultimodal() {
         return multimodal;
