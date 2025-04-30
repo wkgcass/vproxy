@@ -217,6 +217,7 @@ public class ConfigBuilder {
     }
 
     public static class Sys {
+        public Boolean removeReasoningContent;
         public Boolean printReceivedPrompt;
         public Boolean printOutputResponse;
         public String printPromptSymbol;
@@ -224,6 +225,7 @@ public class ConfigBuilder {
         public Integer generateTitleOrTagsPromptLengthThreshold;
 
         public static final Rule<Sys> rule = new ObjectRule<>(Sys::new)
+            .put("remove_reasoning_content", (o, v) -> o.removeReasoningContent = v, BoolRule.get())
             .put("print_received_prompt", (o, v) -> o.printReceivedPrompt = v, BoolRule.get())
             .put("print_output_response", (o, v) -> o.printOutputResponse = v, BoolRule.get())
             .put("print_prompt_symbol", (o, v) -> o.printPromptSymbol = v, StringRule.get())
@@ -231,6 +233,8 @@ public class ConfigBuilder {
             .put("generate_title_or_tags_prompt_length_threshold", (o, v) -> o.generateTitleOrTagsPromptLengthThreshold = v, IntRule.get());
 
         public void build(Config c) {
+            if (removeReasoningContent != null)
+                c.removeReasoningContent = removeReasoningContent;
             if (printReceivedPrompt != null)
                 c.printReceivedPrompt = printReceivedPrompt;
             if (printOutputResponse != null)
@@ -246,7 +250,8 @@ public class ConfigBuilder {
         @Override
         public String toString() {
             return "Sys{" +
-                   "printReceivedPrompt=" + printReceivedPrompt +
+                   "removeReasoningContent=" + removeReasoningContent +
+                   "  printReceivedPrompt=" + printReceivedPrompt +
                    ", printOutputResponse=" + printOutputResponse +
                    ", printPromptSymbol=" + (printPromptSymbol == null ? "null" : ("'" + printPromptSymbol + "'")) +
                    ", printResponseSymbol=" + (printResponseSymbol == null ? "null" : ("'" + printResponseSymbol + "'")) +

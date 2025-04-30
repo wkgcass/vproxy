@@ -272,6 +272,22 @@ public class OpenAiApi {
             System.out.println();
             Logger.alert(config.printResponseSymbol + " END");
         }
+
+        public boolean isNotEmpty() {
+            for (var c : choices) {
+                if (c.delta != null) {
+                    if (c.delta.content != null && !c.delta.content.isEmpty()) {
+                        return true;
+                    }
+                }
+                if (c.message != null) {
+                    if (c.message.content != null && !c.message.content.isEmpty()) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     }
 
     public static class CompletionChoice implements JSONObject {

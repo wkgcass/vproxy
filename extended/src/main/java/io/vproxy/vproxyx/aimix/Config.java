@@ -23,6 +23,7 @@ public class Config {
     public String tagsGenerationMatching = DEFAULT_TAGS_GENERATION_MATCHING;
     public boolean keepReasoningInPrompt = false;
 
+    public boolean removeReasoningContent = false;
     public boolean printReceivedPrompt = true;
     public boolean printOutputResponse = true;
     public String printPromptSymbol = DEFAULT_PRINT_PROMPT_SYMBOL;
