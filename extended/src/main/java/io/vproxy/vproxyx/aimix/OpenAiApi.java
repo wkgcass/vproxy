@@ -365,7 +365,7 @@ public class OpenAiApi {
             .put("total_tokens", (o, v) -> o.totalTokens = v, IntRule.get())
             .put("prompt_cache_hit_tokens", (o, v) -> o.promptCacheHitTokens = v, IntRule.get())
             .put("prompt_cache_miss_tokens", (o, v) -> o.promptCacheMissTokens = v, IntRule.get())
-            .put("prompt_tokens_details", (o, v) -> o.promptTokensDetails = v, CompletionUsagePromptTokensDetails.rule);
+            .put("prompt_tokens_details", (o, v) -> o.promptTokensDetails = v, new NullableRule<>(CompletionUsagePromptTokensDetails.rule));
 
         @Override
         public JSON.Object toJson() {
@@ -375,7 +375,7 @@ public class OpenAiApi {
                 .put("total_tokens", totalTokens)
                 .put("prompt_cache_hit_tokens", promptCacheHitTokens)
                 .put("prompt_cache_miss_tokens", promptCacheMissTokens)
-                .putInst("prompt_tokens_details", promptTokensDetails.toJson())
+                .putNullableInst("prompt_tokens_details", promptTokensDetails == null, () -> promptTokensDetails.toJson())
                 .build();
         }
     }
