@@ -4,7 +4,7 @@
 
 ## 简介
 
-VProxy是一个零依赖的负载均衡器和SDN虚拟交换机。本项目仅需要Java 21即可运行。
+VProxy是一个零依赖的负载均衡器和SDN虚拟交换机。本项目仅需要Java 22即可运行。
 
 1) clone，2) 编译，3) 运行！
 
@@ -41,7 +41,7 @@ VProxy是一个零依赖的负载均衡器和SDN虚拟交换机。本项目仅�
 
 #### For windows
 
-Java运行时可以从[这里](https://adoptium.net/releases.html?variant=openjdk17&jvmVariant=hotspot)下载。
+Java运行时可以从[这里](https://adoptium.net/releases.html?variant=openjdk22&jvmVariant=hotspot)下载。
 
 #### For musl
 
@@ -63,7 +63,7 @@ make init
 <br>
 
 ```
-./gradlew clean jar
+./gradlew clean shadowjar
 java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 

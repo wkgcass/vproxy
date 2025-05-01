@@ -6,7 +6,7 @@
 
 ## Intro
 
-VProxy is a zero-dependency loadbalancer and sdn virtual switch. The project only requires Java 21 to run.
+VProxy is a zero-dependency loadbalancer and sdn virtual switch. The project only requires Java 22 to run.
 
 Clone it, compile it, then everything is ready for running.
 
@@ -43,7 +43,7 @@ Use the latest `vproxy-macos` binary file in release page.
 
 #### For windows
 
-Java runtime can be found [here](https://adoptium.net/releases.html?variant=openjdk17&jvmVariant=hotspot).
+Java runtime can be found [here](https://adoptium.net/releases.html?variant=openjdk22&jvmVariant=hotspot).
 
 #### For musl
 
@@ -66,7 +66,7 @@ to initiate submodules and some other init work.
 <br>
 
 ```
-./gradlew clean jar
+./gradlew clean shadowjar
 java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
