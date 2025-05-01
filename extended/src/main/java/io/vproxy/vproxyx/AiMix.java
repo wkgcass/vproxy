@@ -56,6 +56,7 @@ public class AiMix {
         }
         sys {
             # ...... see class Sys in ConfigBuilder.java
+            #allowed_api_keys = [ 'sk-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' ]
         }
         }
         """;

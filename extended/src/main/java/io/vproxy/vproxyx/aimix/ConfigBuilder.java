@@ -11,7 +11,9 @@ import io.vproxy.vfd.IPPort;
 import vjson.deserializer.rule.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ConfigBuilder {
     public int listen;
@@ -217,26 +219,28 @@ public class ConfigBuilder {
     }
 
     public static class Sys {
-        public Boolean removeReasoningContent;
+        public Set<String> allowedApiKeys;
+        public RemoveReasoningContent removeReasoningContent;
         public Boolean printReceivedPrompt;
         public Boolean printOutputResponse;
         public String printPromptSymbol;
         public String printResponseSymbol;
         public Integer generateTitleOrTagsPromptLengthThreshold;
         public String modelOwner;
-        public String chunkTerminator;
 
         public static final Rule<Sys> rule = new ObjectRule<>(Sys::new)
-            .put("remove_reasoning_content", (o, v) -> o.removeReasoningContent = v, BoolRule.get())
+            .put("allowed_api_keys", (o, v) -> o.allowedApiKeys = v, new ArrayRule<Set<String>, String>(HashSet::new, Set::add, StringRule.get()))
+            .put("remove_reasoning_content", (o, v) -> o.removeReasoningContent = v, RemoveReasoningContent.rule)
             .put("print_received_prompt", (o, v) -> o.printReceivedPrompt = v, BoolRule.get())
             .put("print_output_response", (o, v) -> o.printOutputResponse = v, BoolRule.get())
             .put("print_prompt_symbol", (o, v) -> o.printPromptSymbol = v, StringRule.get())
             .put("print_response_symbol", (o, v) -> o.printResponseSymbol = v, StringRule.get())
             .put("generate_title_or_tags_prompt_length_threshold", (o, v) -> o.generateTitleOrTagsPromptLengthThreshold = v, IntRule.get())
-            .put("model_owner", (o, v) -> o.modelOwner = v, StringRule.get())
-            .put("chunk_terminator", (o, v) -> o.chunkTerminator = v, StringRule.get());
+            .put("model_owner", (o, v) -> o.modelOwner = v, StringRule.get());
 
         public void build(Config c) {
+            if (allowedApiKeys != null)
+                c.allowedApiKeys = allowedApiKeys;
             if (removeReasoningContent != null)
                 c.removeReasoningContent = removeReasoningContent;
             if (printReceivedPrompt != null)
@@ -251,20 +255,33 @@ public class ConfigBuilder {
                 c.generateTitleOrTagsPromptLengthThreshold = generateTitleOrTagsPromptLengthThreshold;
             if (modelOwner != null)
                 c.modelOwner = modelOwner;
-            if (chunkTerminator != null)
-                c.chunkTerminator = chunkTerminator;
         }
 
         @Override
         public String toString() {
             return "Sys{" +
-                   "removeReasoningContent=" + removeReasoningContent +
-                   "  printReceivedPrompt=" + printReceivedPrompt +
+                   "allowedApiKeys=" + allowedApiKeys +
+                   ", removeReasoningContent=" + removeReasoningContent +
+                   ", printReceivedPrompt=" + printReceivedPrompt +
                    ", printOutputResponse=" + printOutputResponse +
                    ", printPromptSymbol=" + (printPromptSymbol == null ? "null" : ("'" + printPromptSymbol + "'")) +
                    ", printResponseSymbol=" + (printResponseSymbol == null ? "null" : ("'" + printResponseSymbol + "'")) +
                    ", generateTitleOrTagsPromptLengthThreshold=" + generateTitleOrTagsPromptLengthThreshold +
                    ", modelOwner=" + modelOwner +
+                   '}';
+        }
+    }
+
+    public static class RemoveReasoningContent {
+        public Set<String> apiKeys = new HashSet<>();
+
+        public static final Rule<RemoveReasoningContent> rule = new ObjectRule<>(RemoveReasoningContent::new)
+            .put("api_keys", (o, v) -> o.apiKeys = v, new ArrayRule<Set<String>, String>(HashSet::new, Set::add, StringRule.get()));
+
+        @Override
+        public String toString() {
+            return "RemoveReasoningContent{" +
+                   "apiKeys=" + apiKeys +
                    '}';
         }
     }

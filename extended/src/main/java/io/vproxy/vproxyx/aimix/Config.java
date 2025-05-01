@@ -3,6 +3,8 @@ package io.vproxy.vproxyx.aimix;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.connection.ServerSock;
 
+import java.util.Set;
+
 public class Config {
     public ServerSock listen;
     public String name = DEFAULT_EXPOSED_MODEL_NAME;
@@ -23,14 +25,14 @@ public class Config {
     public String tagsGenerationMatching = DEFAULT_TAGS_GENERATION_MATCHING;
     public boolean keepReasoningInPrompt = false;
 
-    public boolean removeReasoningContent = false;
+    public Set<String> allowedApiKeys;
+    public ConfigBuilder.RemoveReasoningContent removeReasoningContent = new ConfigBuilder.RemoveReasoningContent();
     public boolean printReceivedPrompt = true;
     public boolean printOutputResponse = true;
     public String printPromptSymbol = DEFAULT_PRINT_PROMPT_SYMBOL;
     public String printResponseSymbol = DEFAULT_PRINT_RESPONSE_SYMBOL;
     public int generateTitleOrTagsPromptLengthThreshold = 8192;
     public String modelOwner;
-    public String chunkTerminator = "\n\n";
 
     public Model getMultimodal() {
         return multimodal;
