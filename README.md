@@ -344,3 +344,10 @@ See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) a
 Currently only `I` myself is working on this project. I would be very happy if you want to join :)
 
 Thanks to those who had committed PR, see [CONTRIB](https://github.com/wkgcass/vproxy/blob/master/CONTRIB.md).
+
+## Sponsor
+
+[The CDN acceleration and security protection of this project are sponsored by Tencent EdgeOne.](https://edgeone.ai/zh?from=github)  
+[本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助](https://edgeone.ai/zh?from=github)
+
+[![edgeone](https://raw.githubusercontent.com/wkgcass/vproxy/refs/heads/dev/doc/edgeone.png)](https://edgeone.ai/zh?from=github)

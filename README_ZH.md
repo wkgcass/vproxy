@@ -339,3 +339,9 @@ java -Deploy=Simple -jar vproxy.jar \
 目前只有`我`自己在维护这个项目。希望能有更多人加入 :)
 
 感谢曾经提交过PR的贡献者，见[CONTRIB](https://github.com/wkgcass/vproxy/blob/master/CONTRIB.md)。
+
+## 赞助商
+
+[本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助](https://edgeone.ai/zh?from=github)
+
+[![edgeone](https://raw.githubusercontent.com/wkgcass/vproxy/refs/heads/dev/doc/edgeone.png)](https://edgeone.ai/zh?from=github)
