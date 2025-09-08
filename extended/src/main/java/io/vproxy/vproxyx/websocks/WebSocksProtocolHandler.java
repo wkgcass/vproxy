@@ -1,6 +1,7 @@
 package io.vproxy.vproxyx.websocks;
 
 import io.vproxy.base.connection.ConnectableConnection;
+import io.vproxy.base.connection.Connection;
 import io.vproxy.base.connection.ConnectionOpts;
 import io.vproxy.base.connection.Connector;
 import io.vproxy.base.dns.Resolver;
@@ -14,6 +15,7 @@ import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
 import io.vproxy.base.protocol.SubProtocolHandlerContext;
 import io.vproxy.base.selector.wrap.file.FileFD;
+import io.vproxy.base.socks.AddressType;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.coll.Tuple;
@@ -35,6 +37,7 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> {
@@ -409,16 +412,36 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         }
     }
 
-    private final Socks5ProxyProtocolHandler socks5Handler = new Socks5ProxyProtocolHandler(
-        (accepted, type, address, port, providedCallback) ->
-            CoreUtils.directConnect(type, address, port, providedCallback));
+    private final Socks5ProxyProtocolHandler socks5Handler = new Socks5ProxyProtocolHandler(this::handleSocks5Connection);
+
+    private void handleSocks5Connection(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
+        boolean pass = false;
+        if (targetLimits == null) {
+            pass = true;
+        } else {
+            for (var t : targetLimits) {
+                if (t.needProxy(address, port)) {
+                    pass = true;
+                    break;
+                }
+            }
+        }
+        if (!pass) {
+            providedCallback.accept(null);
+            return;
+        }
+        CoreUtils.directConnect(type, address, port, providedCallback);
+    }
 
     private final Map<String, String> auth;
+    private final List<DomainChecker> targetLimits;
     private final Supplier<SSLEngine> engineSupplier;
     private final PageProvider pageProvider;
 
-    public WebSocksProtocolHandler(Map<String, String> auth, Supplier<SSLEngine> engineSupplier, PageProvider pageProvider) {
+    public WebSocksProtocolHandler(Map<String, String> auth, List<DomainChecker> targetLimits,
+                                   Supplier<SSLEngine> engineSupplier, PageProvider pageProvider) {
         this.auth = auth;
+        this.targetLimits = targetLimits;
         this.engineSupplier = engineSupplier;
         this.pageProvider = pageProvider;
     }

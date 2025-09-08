@@ -545,7 +545,7 @@ public class ConfigLoader {
         return failReasons;
     }
 
-    private DomainChecker formatDomainChecker(String line) throws Exception {
+    public static DomainChecker formatDomainChecker(String line) throws Exception {
         if (line.startsWith(":")) {
             String portStr = line.substring(1);
             int port;
@@ -590,6 +590,8 @@ public class ConfigLoader {
             ABP abp = new ABP(abpfile, false);
             abp.addBase64(content);
             return new DomainChecker.ABPDomainChecker(abp);
+        } else if (Network.validNetworkStr(line)) {
+            return new DomainChecker.NetworkChecker(Network.from(line));
         } else {
             return new DomainChecker.SuffixDomainChecker(line);
         }

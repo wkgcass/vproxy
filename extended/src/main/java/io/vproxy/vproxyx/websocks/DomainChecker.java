@@ -1,5 +1,8 @@
 package io.vproxy.vproxyx.websocks;
 
+import io.vproxy.base.util.Network;
+import io.vproxy.vfd.IP;
+
 import java.util.regex.Pattern;
 
 public interface DomainChecker {
@@ -79,4 +82,28 @@ public interface DomainChecker {
         }
     }
 
+    class NetworkChecker implements DomainChecker {
+        public final Network network;
+
+        NetworkChecker(Network network) {
+            this.network = network;
+        }
+
+        @Override
+        public boolean needProxy(String domain, int port) {
+            IP ip;
+            try {
+                ip = IP.from(domain);
+            } catch (IllegalArgumentException e) {
+                // is not ip
+                return false;
+            }
+            return network.contains(ip);
+        }
+
+        @Override
+        public String serialize() {
+            return network.toString();
+        }
+    }
 }

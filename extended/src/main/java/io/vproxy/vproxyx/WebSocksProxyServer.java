@@ -46,13 +46,13 @@ public class WebSocksProxyServer {
                   [quic certpem {} keypem {} [quic-listen]] \\
                   [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\
                   [redirectport {}] [kcp [uot.port {} [uot.nic {eth0}]]] \\
-                  [webroot {}]
+                  [webroot {}] [target-limit {}]
         examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80
                   listen 443 auth alice:pasSw0rD ssl \\
                           certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\
                           keypem /etc/letsencrypt/live/example.com/privkey.pem \\
                           domain example.com redirectport 80
-         [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd""";
+         [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd target-limit 10.1.0.0/16,www.example.com""";
 
     public static void main0(String[] args) throws Exception {
         Map<String, String> auth = new HashMap<>();
@@ -70,6 +70,7 @@ public class WebSocksProxyServer {
         int udpOverTcpPort = -1;
         String udpOverTcpNic = "eth0";
         String webroot = null;
+        List<DomainChecker> targetLimits = null;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
@@ -188,6 +189,20 @@ public class WebSocksProxyServer {
                 }
                 webroot = next;
                 ++i;
+            } else if (arg.equals("target-limit")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`target-limit` should be followed with domain checker expressions");
+                }
+                targetLimits = new ArrayList<>();
+                var split = next.split(",");
+                for (var s : split) {
+                    s = s.trim();
+                    if (s.isEmpty())
+                        continue;
+                    var domainChecker = ConfigLoader.formatDomainChecker(s);
+                    targetLimits.add(domainChecker);
+                }
+                ++i;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" + HELP_STR);
         }
@@ -269,6 +284,7 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("uot.port: " + udpOverTcpPort);
         assert Logger.lowLevelDebug("uot.nic: " + udpOverTcpNic);
         assert Logger.lowLevelDebug("webroot: " + webroot);
+        assert Logger.lowLevelDebug("target-limits: " + targetLimits);
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -413,11 +429,11 @@ public class WebSocksProxyServer {
         }
         // init the proxy server
         RedirectBaseInfo redirectBaseInfo = new RedirectBaseInfo(ssl ? "https" : "http", domain, port);
-        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
+        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, targetLimits, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
         ConnectorGen<WebSocksProxyContext> connGen = new WebSocksConnGen(webSocksProtocolHandler);
         ConnectorGen<WebSocksProxyContext> noSSLConnGen;
         if (ssl) {
-            var noSSLWebSocksProtocolHandler = new WebSocksProtocolHandler(auth, null, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
+            var noSSLWebSocksProtocolHandler = new WebSocksProtocolHandler(auth, targetLimits, null, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
             noSSLConnGen = new WebSocksConnGen(noSSLWebSocksProtocolHandler);
         } else {
             noSSLConnGen = connGen;
