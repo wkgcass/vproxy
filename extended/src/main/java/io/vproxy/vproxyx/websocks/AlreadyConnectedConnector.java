@@ -38,6 +38,7 @@ public class AlreadyConnectedConnector extends Connector {
             replaceConnBuffers(in, out);
         }
 
+        conn.setTimeout(opts.getTimeout());
         return conn;
 
         // NOTE: the opts is ignored in this impl

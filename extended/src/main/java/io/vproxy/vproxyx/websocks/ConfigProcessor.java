@@ -152,6 +152,10 @@ public class ConfigProcessor {
         return configLoader.getPacServerPort();
     }
 
+    public int getAgentTimeout() {
+        return configLoader.getAgentTimeout();
+    }
+
     private ServerGroup getGroup(String alias) throws Exception {
         if (alias == null) {
             alias = "DEFAULT";

@@ -262,6 +262,7 @@ public class WebSocksProxyAgent {
                     .setOutBufferSize(24576)
                     .setHandleLoopProvider(worker::next)
                     .setServer(server)
+                    .setTimeout(configLoader.getAgentTimeout())
                     .setConnGen(connGen),
                 _ -> {
                     // close corresponding server

@@ -48,6 +48,8 @@ data class AgentConfig(
   var uot: UOTConfig = UOTConfig(),
   // quic
   var quic: QuicConfig = QuicConfig(),
+  // timeout
+  var timeout: Int = 60 * 1000,
 ) {
   companion object {
     val rule: Rule<AgentConfig> = ObjectRule { AgentConfig() }
@@ -67,6 +69,7 @@ data class AgentConfig(
       .put("pool", IntRule) { pool = it }
       .put("uot", UOTConfig.rule) { uot = it }
       .put("quic", QuicConfig.rule) { quic = it }
+      .put("timeout", IntRule) { timeout = it }
   }
 }
 

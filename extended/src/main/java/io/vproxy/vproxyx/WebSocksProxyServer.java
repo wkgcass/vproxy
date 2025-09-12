@@ -46,7 +46,7 @@ public class WebSocksProxyServer {
                   [quic certpem {} keypem {} [quic-listen]] \\
                   [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\
                   [redirectport {}] [kcp [uot.port {} [uot.nic {eth0}]]] \\
-                  [webroot {}] [target-limit {}]
+                  [webroot {}] [target-limit {}] [timeout {secs}]
         examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80
                   listen 443 auth alice:pasSw0rD ssl \\
                           certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\
@@ -71,6 +71,7 @@ public class WebSocksProxyServer {
         String udpOverTcpNic = "eth0";
         String webroot = null;
         List<DomainChecker> targetLimits = null;
+        int timeout = 60 * 1000;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
@@ -203,6 +204,18 @@ public class WebSocksProxyServer {
                     targetLimits.add(domainChecker);
                 }
                 ++i;
+            } else if (arg.equals("timeout")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`timeout` should be followed with an integer");
+                }
+                if (!Utils.isInteger(next)) {
+                    throw new IllegalArgumentException("`timeout` should be an integer");
+                }
+                timeout = Integer.parseInt(next) * 1000;
+                if (timeout <= 0) {
+                    throw new IllegalArgumentException("`timeout` must be a positive integer");
+                }
+                ++i;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" + HELP_STR);
         }
@@ -285,6 +298,7 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("uot.nic: " + udpOverTcpNic);
         assert Logger.lowLevelDebug("webroot: " + webroot);
         assert Logger.lowLevelDebug("target-limits: " + targetLimits);
+        assert Logger.lowLevelDebug("timeout: " + timeout);
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -464,6 +478,7 @@ public class WebSocksProxyServer {
                     .setOutBufferSize(24576)
                     .setHandleLoopProvider(loopProvider)
                     .setServer(server)
+                    .setTimeout(timeout)
                     .setConnGen(isQuic ? noSSLConnGen : connGen),
                 s -> {
                     // do nothing, won't happen

@@ -5,7 +5,7 @@ import io.vproxy.vfd.FDProvider;
 import io.vproxy.vfd.FDs;
 
 public class ConnectionOpts {
-    int timeout = Config.tcpTimeout;
+    private int timeout = Config.tcpTimeout;
     private FDs fds;
 
     public static ConnectionOpts getDefault() {
@@ -23,6 +23,10 @@ public class ConnectionOpts {
     public ConnectionOpts setFDs(FDs fds) {
         this.fds = fds;
         return this;
+    }
+
+    public int getTimeout() {
+        return timeout;
     }
 
     public FDs getFds() {

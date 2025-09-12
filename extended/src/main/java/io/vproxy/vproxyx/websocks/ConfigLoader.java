@@ -38,6 +38,7 @@ public class ConfigLoader {
     private String udpOverTcpNic;
     private boolean quicEnabled;
     private String quicCacertsPath;
+    private int agentTimeout = 60 * 1000;
     private final Map<String, ServerList> servers = new HashMap<>();
     private final Map<String, List<DomainChecker>> domains = new HashMap<>();
     private final Map<String, List<DomainChecker>> proxyResolves = new HashMap<>();
@@ -207,6 +208,10 @@ public class ConfigLoader {
         return noHealthCheck;
     }
 
+    public int getAgentTimeout() {
+        return agentTimeout;
+    }
+
     private ServerList getGroup(String alias) {
         if (alias == null) {
             alias = "DEFAULT";
@@ -255,6 +260,7 @@ public class ConfigLoader {
         );
         var config = listener.get();
         { // indent for git diff
+            agentTimeout = config.getAgent().getTimeout() * 1000;
             { // indent for git diff
                 { // indent for git diff
                     socks5ListenPort = config.getAgent().getSocks5Listen();

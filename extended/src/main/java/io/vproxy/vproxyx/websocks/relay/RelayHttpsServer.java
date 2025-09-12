@@ -36,6 +36,7 @@ public class RelayHttpsServer {
     private final WebSocksProxyAgentConnectorProvider connectorProvider;
     private final List<DomainChecker> httpsSniErasureDomains;
     private final List<DomainChecker> proxyDomains;
+    private final int agentTimeout;
 
     public RelayHttpsServer(WebSocksProxyAgentConnectorProvider connectorProvider, ConfigProcessor config) {
         this.connectorProvider = connectorProvider;
@@ -44,6 +45,7 @@ public class RelayHttpsServer {
         for (List<DomainChecker> domains : config.getDomains().values()) {
             proxyDomains.addAll(domains);
         }
+        agentTimeout = config.getAgentTimeout();
     }
 
     public Proxy launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
@@ -204,7 +206,7 @@ public class RelayHttpsServer {
                         remote);
                     ConnectableConnection conn;
                     try {
-                        conn = ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(60_000),
+                        conn = ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(agentTimeout),
                             pair.left, pair.right);
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "connecting to " + finalHostname + "(" + value + "):443 failed");

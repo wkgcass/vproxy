@@ -187,7 +187,7 @@ public class Connection implements NetFlowRecorder {
         }
 
         this.channel = channel;
-        this.timeout = opts.timeout;
+        this.timeout = opts.getTimeout();
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
         this.remote = remote;
