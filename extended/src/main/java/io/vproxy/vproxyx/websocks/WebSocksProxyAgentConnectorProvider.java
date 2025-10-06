@@ -30,19 +30,23 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.function.Consumer;
 
+import static io.vproxy.vproxyx.websocks.ServerList.Server.SVR_ENCRYPTED;
+
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
     class WebSocksPoolHandler implements ConnectionPoolHandler {
         class WebSocksClientHandshakeHandler implements ConnectableConnectionHandler {
             private final String domainOfProxy;
+            private final boolean isEncrypted;
             private final HttpRespParser httpRespParser = new HttpRespParser(new HttpRespParser.Params().setHeadersOnly(true));
 
-            WebSocksClientHandshakeHandler(String domainOfProxy) {
+            WebSocksClientHandshakeHandler(String domainOfProxy, boolean isEncrypted) {
                 this.domainOfProxy = domainOfProxy;
+                this.isEncrypted = isEncrypted;
             }
 
             @Override
             public void connected(ConnectableConnectionHandlerContext ctx) {
-                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
+                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass, isEncrypted);
             }
 
             @Override
@@ -121,7 +125,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
 
             try {
-                loop.addConnectableConnection(conn, null, new WebSocksClientHandshakeHandler(connector.getHostName()));
+                loop.addConnectableConnection(conn, null, new WebSocksClientHandshakeHandler(
+                    connector.getHostName(), (shared.svr.flags & SVR_ENCRYPTED) != 0
+                ));
             } catch (IOException e) {
                 conn.close();
                 return null;
@@ -155,6 +161,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         private final Consumer<Connector> providedCallback;
 
         private final boolean usePooledConnection;
+        private final boolean isEncrypted;
 
         // 0: init,
         // 1: expecting http resp,
@@ -175,7 +182,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                                           String domain,
                                           int port,
                                           Consumer<Connector> providedCallback,
-                                          boolean usePooledConnection) {
+                                          boolean usePooledConnection,
+                                          boolean isEncrypted) {
             this.domainOfProxy = domainOfProxy;
             this.addressType = addressType;
             this.domain = domain;
@@ -183,6 +191,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             this.providedCallback = providedCallback;
 
             this.usePooledConnection = usePooledConnection;
+            this.isEncrypted = isEncrypted;
         }
 
         private void utilAlertFail(ConnectionHandlerContext ctx) {
@@ -194,7 +203,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         public void connected(ConnectableConnectionHandlerContext ctx) {
             if (!usePooledConnection) {
                 // start handshaking if the connection is not pooled
-                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
+                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass, isEncrypted);
 
                 step = 1;
                 httpRespParser = new HttpRespParser(new HttpRespParser.Params().setHeadersOnly(true));
@@ -580,7 +589,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
         }
 
-        static void sendUpgrade(ConnectableConnectionHandlerContext ctx, String domainOfProxy, String user, String pass) {
+        static void sendUpgrade(ConnectableConnectionHandlerContext ctx, String domainOfProxy, String user, String pass, boolean useClearTextPass) {
+            var password = pass;
+            if (!useClearTextPass) {
+                password = WebSocksUtils.calcPass(pass, Utils.currentMinute());
+            }
+
             // send http upgrade on connection
             byte[] bytes = ("" +
                 "GET / HTTP/1.1\r\n" +
@@ -591,7 +605,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 "Sec-WebSocket-Version: 13\r\n" +
                 "Sec-WebSocket-Protocol: socks5\r\n" + // for now, we support socks5 only
                 "Authorization: Basic " +
-                Base64.getEncoder().encodeToString((user + ":" + WebSocksUtils.calcPass(pass, Utils.currentMinute())).getBytes()) +
+                Base64.getEncoder().encodeToString((user + ":" + password).getBytes()) +
                 "\r\n" +
                 "\r\n"
             ).getBytes();
@@ -726,6 +740,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         // try to fetch an existing connection from pool
         pool.get(serverAlias).get(loop.getSelectorEventLoop()).get(loop.getSelectorEventLoop(), conn -> {
             boolean isPooledConn = conn != null;
+            boolean isEncrypted = false; // would be reset only when `isPooledConn` is false
             if (conn == null) {
                 // retrieve a remote connection
                 SvrHandleConnector connector = servers.get(serverAlias).next(null/*we ignore the source because it's wrr*/);
@@ -745,6 +760,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     } else {
                         conn = CommonProcess.makeRawConnection(loop.getSelectorEventLoop(), connector, sharedData);
                     }
+                    isEncrypted = (sharedData.svr.flags & SVR_ENCRYPTED) != 0;
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "connect to " + connector + " failed", e);
                     providedCallback.accept(null);
@@ -756,7 +772,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             try {
                 loop.addConnectableConnection(conn, null, new AgentConnectableConnectionHandler(
                     hostname, type, address, port,
-                    providedCallback, isPooledConn));
+                    providedCallback, isPooledConn, isEncrypted));
             } catch (IOException e) {
                 Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add " + conn + " to loop failed", e);
                 providedCallback.accept(null);

@@ -245,7 +245,13 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         // 1. base64str(base64str(sha256(password)) + str(current_minute_dec_digital)))
         // 2. base64str(base64str(sha256(password)) + str(current_minute_dec_digital - 1)))
         // 3. base64str(base64str(sha256(password)) + str(current_minute_dec_digital + 1)))
+        // for encrypted connections, also allow clear text password
         private boolean checkPass(String pass, String expected) {
+            if (isEncrypted) {
+                if (pass.equals(expected)) {
+                    return true;
+                }
+            }
             long m = Utils.currentMinute();
             long mInc = m + 60_000;
             long mDec = m - 60_000;
@@ -433,16 +439,22 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         CoreUtils.directConnect(type, address, port, providedCallback);
     }
 
+    private final boolean isEncrypted;
     private final Map<String, String> auth;
     private final List<DomainChecker> targetLimits;
     private final Supplier<SSLEngine> engineSupplier;
     private final PageProvider pageProvider;
 
     public WebSocksProtocolHandler(Map<String, String> auth, List<DomainChecker> targetLimits,
-                                   Supplier<SSLEngine> engineSupplier, PageProvider pageProvider) {
+                                   boolean isEncrypted, Supplier<SSLEngine> engineSupplier,
+                                   PageProvider pageProvider) {
         this.auth = auth;
         this.targetLimits = targetLimits;
+
+        this.isEncrypted = isEncrypted;
+        // we support QUIC, so we cannot infer `isEncrypted` from `engineSupplier`
         this.engineSupplier = engineSupplier;
+
         this.pageProvider = pageProvider;
     }
 

@@ -18,6 +18,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.functional.BooleanFunction;
 import io.vproxy.component.proxy.ConnectorGen;
 import io.vproxy.component.proxy.NetEventLoopProvider;
 import io.vproxy.component.proxy.Proxy;
@@ -443,12 +444,15 @@ public class WebSocksProxyServer {
         }
         // init the proxy server
         RedirectBaseInfo redirectBaseInfo = new RedirectBaseInfo(ssl ? "https" : "http", domain, port);
-        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, targetLimits, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
-        ConnectorGen<WebSocksProxyContext> connGen = new WebSocksConnGen(webSocksProtocolHandler);
-        ConnectorGen<WebSocksProxyContext> noSSLConnGen;
+        final var ftargetLimits = targetLimits;
+        final var fwebroot = webroot;
+        final var fengineSupplier = engineSupplier;
+        BooleanFunction<WebSocksProtocolHandler > webSocksProtocolHandler = isEncrypted -> new WebSocksProtocolHandler(auth, ftargetLimits, isEncrypted, fengineSupplier, fwebroot == null ? null : new WebRootPageProvider(fwebroot, redirectBaseInfo));
+        BooleanFunction<ConnectorGen<WebSocksProxyContext>> connGen = isEncrypted -> new WebSocksConnGen(webSocksProtocolHandler.apply(isEncrypted));
+        BooleanFunction<ConnectorGen<WebSocksProxyContext>> noSSLConnGen;
         if (ssl) {
-            var noSSLWebSocksProtocolHandler = new WebSocksProtocolHandler(auth, targetLimits, null, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
-            noSSLConnGen = new WebSocksConnGen(noSSLWebSocksProtocolHandler);
+            BooleanFunction<WebSocksProtocolHandler> noSSLWebSocksProtocolHandler = isEncrypted -> new WebSocksProtocolHandler(auth, ftargetLimits, isEncrypted, null, fwebroot == null ? null : new WebRootPageProvider(fwebroot, redirectBaseInfo));
+            noSSLConnGen = isEncrypted -> new WebSocksConnGen(noSSLWebSocksProtocolHandler.apply(isEncrypted));
         } else {
             noSSLConnGen = connGen;
         }
@@ -479,7 +483,7 @@ public class WebSocksProxyServer {
                     .setHandleLoopProvider(loopProvider)
                     .setServer(server)
                     .setTimeout(timeout)
-                    .setConnGen(isQuic ? noSSLConnGen : connGen),
+                    .setConnGen(isQuic ? noSSLConnGen.apply(true) : connGen.apply(ssl)),
                 s -> {
                     // do nothing, won't happen
                     // when terminating, user should simply kill this process and won't close server

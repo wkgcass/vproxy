@@ -11,6 +11,8 @@ public class ServerList {
         public static final int USE_UOT = 0x4;
         public static final int USE_QUIC = 0x8;
 
+        public static final int SVR_ENCRYPTED = USE_SSL | USE_QUIC;
+
         public final int flags;
         public final String host;
         public final int port;
