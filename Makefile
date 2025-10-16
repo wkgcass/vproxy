@@ -200,7 +200,7 @@ msquic:
 .PHONY: fubuki
 fubuki: libpni
 	cd ./base/src/main/c && ./make-vpfubuki.sh
-	cd ./submodules/fubuki/ && cargo +nightly build --release
+	cd ./submodules/fubuki/ && cargo +nightly build --release --features ffi-export
 
 .PHONY: libpni-linux
 .PHONY: vfdposix-linux
