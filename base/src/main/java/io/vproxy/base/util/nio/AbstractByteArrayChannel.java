@@ -53,8 +53,6 @@ public abstract class AbstractByteArrayChannel implements ByteArrayChannel {
         tmp.flip();
         write(tmp);
 
-        writeOff += writeBytes;
-        writeLen -= writeBytes;
         return writeBytes;
     }
 
