@@ -39,7 +39,7 @@ public class FloodOutput extends AbstractNeighborResolve {
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
         if (pkb.pkt.getPacket() instanceof PacketBytes) {
             assert Logger.lowLevelDebug("do not flood packet with unknown ether type, maybe it's randomly generated: "
-                + pkb.pkt.description());
+                                        + pkb.pkt.description());
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.line(d -> d.append("unknown ether type"));
             }
@@ -78,13 +78,17 @@ public class FloodOutput extends AbstractNeighborResolve {
         }
 
         // also, send arp/ndp request for these addresses if they are ip packet
-        if (pkb.pkt.getPacket() instanceof AbstractIpPacket) {
-            AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
-
+        if (pkb.pkt.getPacket() instanceof AbstractIpPacket ip) {
             if (pkb.network.v4network.contains(ip.getDst()) || (pkb.network.v6network != null && pkb.network.v6network.contains(ip.getDst()))) {
                 assert Logger.lowLevelDebug("try to resolve " + ip.getDst() + " when flooding");
                 if (pkb.debugger.isDebugOn()) {
                     pkb.debugger.line(d -> d.append("try to resolve ip ").append(ip.getDst()));
+                }
+                if (pkb.ensurePartialPacketParsed()) {
+                    if (pkb.debugger.isDebugOn()) {
+                        pkb.debugger.line(d -> d.append("invalid packet"));
+                    }
+                    return _returndropSkipErrorDrop();
                 }
                 var copied = pkb.copy();
                 if (resolve(pkb.network, ip.getDst(), null, copied) != HandleResult.DROP) {
