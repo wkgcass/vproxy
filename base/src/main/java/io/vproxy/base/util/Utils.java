@@ -409,7 +409,7 @@ public class Utils {
     }
 
     private static byte parseHexChar(char c) {
-        if ((c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z')) {
+        if ((c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F')) {
             throw new IllegalArgumentException("char `" + c + "' cannot be hex");
         }
         //noinspection ConstantConditions
@@ -417,7 +417,7 @@ public class Utils {
             return (byte) (c - '0');
         }
         //noinspection ConstantConditions
-        if ('a' <= c && c <= 'z') {
+        if ('a' <= c && c <= 'f') {
             return (byte) (c - 'a' + 10);
         }
         return (byte) (c - 'A' + 10);
