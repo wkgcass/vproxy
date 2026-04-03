@@ -15,7 +15,6 @@ import io.vproxy.vfd.ServerSocketFD;
 import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private final ArqUDPBasedFDs fds;
@@ -26,14 +25,14 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private boolean ready = false;
     private StreamedFDHandler currentHandler;
     private PeriodicEvent keepaliveEvent;
-    private final Supplier<StreamedFDHandler> handlerSupplier;
+    private final StreamedFDHandlerFactory handlerFactory;
 
     public StreamedArqUDPClientFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, IPPort remote,
-                                   Supplier<StreamedFDHandler> handlerSupplier) throws IOException {
+                                   StreamedFDHandlerFactory handlerFactory) throws IOException {
         this.fds = fds;
         this.loop = loop;
         this.remote = remote;
-        this.handlerSupplier = handlerSupplier;
+        this.handlerFactory = handlerFactory;
 
         init();
     }
@@ -82,8 +81,18 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
         try {
             fd = fds.openSocketFD(loop);
             fd.connect(remote);
-            currentHandler = handlerSupplier.get();
-            currentHandler.init(fd, loop, this::ready, this::restart, null);
+            currentHandler = handlerFactory.create(true);
+            currentHandler.init(fd, loop, new StreamConnectionStateCallback() {
+                @Override
+                public void onReady(ArqUDPSocketFD fd) {
+                    ready(fd);
+                }
+
+                @Override
+                public void onInvalid(ArqUDPSocketFD fd) {
+                    restart(fd);
+                }
+            });
             loop.add(fd, EventSet.write(), null, currentHandler);
             failed = false;
         } finally {

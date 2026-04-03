@@ -24,8 +24,6 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 @SuppressWarnings("UnusedReturnValue")
 public abstract class StreamedFDHandler implements Handler<SocketFD> {
@@ -40,9 +38,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     private SelectorEventLoop loop;
     private final boolean client;
 
-    private Consumer<ArqUDPSocketFD> readyCallback;
-    private Consumer<ArqUDPSocketFD> invalidCallback;
-    private Predicate<StreamedFD> acceptCallback;
+    private StreamConnectionStateCallback streamConnectionStateCallback;
 
     private TimerEvent handshakeTimeout = null;
     private final Map<Integer, StreamedFD> fdMap = new HashMap<>();
@@ -53,32 +49,13 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         this.client = client;
     }
 
-    @SuppressWarnings("ReplaceNullCheck")
     @MethodForFDs
     final void init(ArqUDPSocketFD fd,
                     SelectorEventLoop loop,
-                    Consumer<ArqUDPSocketFD> readyCallback,
-                    Consumer<ArqUDPSocketFD> invalidCallback,
-                    Predicate<StreamedFD> acceptCallback) {
+                    StreamConnectionStateCallback streamConnectionStateCallback) {
         this.fd = fd;
         this.loop = loop;
-        if (readyCallback != null) {
-            this.readyCallback = readyCallback;
-        } else {
-            this.readyCallback = x -> {
-            };
-        }
-        if (invalidCallback != null) {
-            this.invalidCallback = invalidCallback;
-        } else {
-            this.invalidCallback = x -> {
-            };
-        }
-        if (acceptCallback != null) {
-            this.acceptCallback = acceptCallback;
-        } else {
-            this.acceptCallback = x -> false;
-        }
+        this.streamConnectionStateCallback = streamConnectionStateCallback;
         try {
             this.statisticsFdMapCount = GlobalInspection.getInstance().addMetric(streamed_fd_handler_fd_map_count_current,
                 Map.of("base_remote", fd.getRemoteAddress().formatToIPPortString(),
@@ -118,9 +95,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             state = -1; // update state to invalid state
             pushMessageToWrite(err);
             // wait for 1 second before alerting the upper level code
-            loop.delay(1_000, () -> invalidCallback.accept(fd));
+            loop.delay(1_000, () -> streamConnectionStateCallback.onInvalid(fd));
         } else {
-            invalidCallback.accept(fd);
+            streamConnectionStateCallback.onInvalid(fd);
         }
     }
 
@@ -276,7 +253,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     private void handshakeDone() {
         handshakeTimeout.cancel();
         state = 2;
-        readyCallback.accept(fd);
+        streamConnectionStateCallback.onReady(fd);
     }
 
     private void clientReadable(@SuppressWarnings("unused") HandlerContext<SocketFD> ctx) {
@@ -943,9 +920,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         var fd = fdMap.get(streamId);
         assert fd != null;
-        r = acceptCallback.test(fd);
+        r = streamConnectionStateCallback.onAccept(fd);
         if (!r) {
-            Logger.warn(LogType.IMPROPER_USE, "acceptCallback(" + fd + ") returns false");
+            Logger.warn(LogType.IMPROPER_USE, "connectionListener.onAccept(" + fd + ") returns false");
             return false;
         }
         return true;

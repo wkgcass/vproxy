@@ -20,7 +20,6 @@ import io.vproxy.vfd.SocketFD;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     private final ArqUDPBasedFDs fds;
@@ -30,16 +29,16 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     private ArqUDPServerSocketFD fd;
     private final Map<ArqUDPSocketFD, PeriodicEvent> keepaliveEvents = new HashMap<>();
     private final Map<ArqUDPSocketFD, StreamedFDHandler> currentHandlers = new HashMap<>();
-    private final Supplier<StreamedFDHandler> handlerSupplier;
+    private final StreamedFDHandlerFactory handlerFactory;
 
     private final StreamedServerSocketFD[] serverPtr = new StreamedServerSocketFD[1];
 
     protected StreamedArqUDPServerFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, IPPort local,
-                                      Supplier<StreamedFDHandler> handlerSupplier) throws IOException {
+                                      StreamedFDHandlerFactory handlerFactory) throws IOException {
         this.fds = fds;
         this.loop = loop;
         this.local = local;
-        this.handlerSupplier = handlerSupplier;
+        this.handlerFactory = handlerFactory;
 
         init();
     }
@@ -116,8 +115,23 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
                             // ignore if no sockets
                             return;
                         }
-                        StreamedFDHandler handler = handlerSupplier.get();
-                        handler.init(accepted, loop, this::ready, this::invalid, this::accepted);
+                        StreamedFDHandler handler = handlerFactory.create(false);
+                        handler.init(accepted, loop, new StreamConnectionStateCallback() {
+                            @Override
+                            public void onReady(ArqUDPSocketFD fd) {
+                                ready(fd);
+                            }
+
+                            @Override
+                            public void onInvalid(ArqUDPSocketFD fd) {
+                                invalid(fd);
+                            }
+
+                            @Override
+                            public boolean onAccept(StreamedFD fd) {
+                                return accepted(fd);
+                            }
+                        });
                         try {
                             loop.add(accepted, EventSet.read(), null, handler);
                         } catch (IOException e) {

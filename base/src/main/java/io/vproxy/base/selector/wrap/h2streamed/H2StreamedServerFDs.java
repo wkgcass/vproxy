@@ -9,6 +9,6 @@ import java.io.IOException;
 
 public class H2StreamedServerFDs extends StreamedArqUDPServerFDs {
     public H2StreamedServerFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, IPPort local) throws IOException {
-        super(fds, loop, local, () -> new H2StreamedFDHandler(false));
+        super(fds, loop, local, H2StreamedFDHandler::new);
     }
 }

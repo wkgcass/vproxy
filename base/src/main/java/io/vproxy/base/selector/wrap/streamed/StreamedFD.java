@@ -143,7 +143,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
     public void setState(State newState) {
         assert Logger.lowLevelDebug("state for " + this + " changes: old=" + state + ", new=" + newState);
         if (state == State.real_closed) {
-            // no need to set to other states it it's already closed
+            // no need to set to other states that it's already closed
             Logger.shouldNotHappen("should not set to another state when it's real-closed: " + this + ", new=" + newState, new Throwable());
             return;
         }
@@ -339,10 +339,11 @@ public class StreamedFD implements SocketFD, VirtualFD {
         if (state == State.real_closed) {
             return;
         }
+        var oldState = state;
         setState(State.real_closed);
-        if (state != State.dead && soLinger0) {
+        if (oldState != State.dead && soLinger0) {
             handler.sendRST(this);
-        } else if (state != State.fin_sent && state != State.dead) {
+        } else if (oldState != State.fin_sent && oldState != State.dead) {
             handler.sendFIN(this);
         }
         handler.removeStreamedFD(this);
