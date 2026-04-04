@@ -1,6 +1,5 @@
 package io.vproxy.base.util.ringbuffer;
 
-import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.ringbuffer.ssl.SSL;
 import io.vproxy.vfd.IPPort;
@@ -12,7 +11,6 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.function.Consumer;
 
 public class SSLUtils {
     private static SSLContext defaultClientSSLContext;
@@ -26,90 +24,45 @@ public class SSLUtils {
         }
     }
 
-    // use event loop as resumer
     // use remote address to mirror
     public static SSLBufferPair genbuf(SSLEngine engine,
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
-                                       SelectorEventLoop loop,
-                                       IPPort remote) {
-        return genbuf(engine, input, output, loop::runOnLoop, remote);
-    }
-
-    // use callback function as resumer
-    // use remtoe address to mirror
-    public static SSLBufferPair genbuf(SSLEngine engine,
-                                       ByteBufferRingBuffer input,
-                                       ByteBufferRingBuffer output,
-                                       Consumer<Runnable> resumer,
                                        IPPort remote) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, remote);
-        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, remote);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, wrap, remote);
         return new SSLBufferPair(unwrap, wrap);
     }
 
-    // use callback function as resumer
     // no mirror address info
     // DO NOT USE THIS EXCEPT FOR TESTING
     public static SSLBufferPair genbuf(SSLEngine engine,
                                        ByteBufferRingBuffer input,
-                                       ByteBufferRingBuffer output,
-                                       Consumer<Runnable> resumer) {
+                                       ByteBufferRingBuffer output) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, IPPort::bindAnyAddress, IPPort::bindAnyAddress);
-        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, IPPort::bindAnyAddress, IPPort::bindAnyAddress);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, wrap, IPPort::bindAnyAddress, IPPort::bindAnyAddress);
         return new SSLBufferPair(unwrap, wrap);
     }
 
-    // use callback function as resumer
     // use fd info to mirror
     public static SSLBufferPair genbuf(SSLEngine engine,
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
-                                       Consumer<Runnable> resumer,
                                        NetworkFD<IPPort> fd) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, fd);
-        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, fd);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, wrap, fd);
         return new SSLBufferPair(unwrap, wrap);
     }
 
     // server ssl info
-    // use callback function as resumer
     // use fd info to mirror
     public static SSLBufferPair genbufForServer(SSL ssl,
                                                 ByteBufferRingBuffer input,
                                                 ByteBufferRingBuffer output,
-                                                Consumer<Runnable> resumer,
                                                 NetworkFD<IPPort> fd) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, fd);
-        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, ssl, resumer, wrap, fd);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, ssl, wrap, fd);
         return new SSLBufferPair(unwrap, wrap);
-    }
-
-    // do not run resumer
-    // use remote address to mirror
-    public static SSLBufferPair genbuf(SSLEngine engine,
-                                       ByteBufferRingBuffer input,
-                                       ByteBufferRingBuffer output,
-                                       IPPort remote) {
-        return genbuf(engine, input, output, (Consumer<Runnable>) null, remote);
-    }
-
-    // do not run resumer
-    // use fd info to mirror
-    public static SSLBufferPair genbuf(SSLEngine engine,
-                                       ByteBufferRingBuffer input,
-                                       ByteBufferRingBuffer output,
-                                       NetworkFD<IPPort> fd) {
-        return genbuf(engine, input, output, (Consumer<Runnable>) null, fd);
-    }
-
-    // do not run resumer
-    // use fd into to mirror
-    public static SSLBufferPair genbufForServer(SSL ssl,
-                                                ByteBufferRingBuffer input,
-                                                ByteBufferRingBuffer output,
-                                                NetworkFD<IPPort> fd) {
-        return genbufForServer(ssl, input, output, null, fd);
     }
 
     public static SSLContext getDefaultClientSSLContext() {

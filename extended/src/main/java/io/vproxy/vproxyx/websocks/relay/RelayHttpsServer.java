@@ -202,7 +202,6 @@ public class RelayHttpsServer {
                         engine,
                         RingBuffer.allocate(24576),
                         RingBuffer.allocate(24576),
-                        loop.getSelectorEventLoop(),
                         remote);
                     ConnectableConnection conn;
                     try {

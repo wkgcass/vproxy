@@ -559,21 +559,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             engine.setSSLParameters(params);
 
             SSLUtils.SSLBufferPair pair;
-            if (loop == null) {
-                assert Logger.lowLevelDebug("event loop not specified, so we ignore the resumer for the ssl buffer pair");
-                pair = SSLUtils.genbuf(
-                    engine,
-                    RingBuffer.allocate(24576),
-                    RingBuffer.allocate(24576),
-                    connector.remote);
-            } else {
-                pair = SSLUtils.genbuf(
-                    engine,
-                    RingBuffer.allocate(24576),
-                    RingBuffer.allocate(24576),
-                    loop,
-                    connector.remote);
-            }
+            pair = SSLUtils.genbuf(
+                engine,
+                RingBuffer.allocate(24576),
+                RingBuffer.allocate(24576),
+                connector.remote);
             if (sharedData.svr.useKCP()) {
                 var fds = sharedData.fds.get(loop);
                 if (fds == null) {
@@ -798,7 +788,6 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     engine,
                     RingBuffer.allocate(24576),
                     RingBuffer.allocate(24576),
-                    loop.getSelectorEventLoop(),
                     remtoe);
                 ConnectableConnection conn;
                 try {

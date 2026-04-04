@@ -162,7 +162,6 @@ public class TestSSL {
             engine,
             RingBuffer.allocate(24576),
             RingBuffer.allocate(24576),
-            selectorEventLoop,
             remote
         );
         ConnectableConnection conn = ConnectableConnection.create(
@@ -320,11 +319,11 @@ public class TestSSL {
 
         // init buffers
 
-        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData, q::add);
+        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData);
         serverWrap = tuple.right;
         serverUnwrap = tuple.left;
 
-        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData, q::add);
+        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData);
         clientWrap = tuple.right;
         clientUnwrap = tuple.left;
 

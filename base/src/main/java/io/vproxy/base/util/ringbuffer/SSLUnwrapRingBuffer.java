@@ -1,11 +1,9 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.GlobalInspection;
-import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.ssl.SSL;
-import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.dep.tlschannel.impl.impl.TlsExplorer;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.NetworkFD;
@@ -15,7 +13,6 @@ import io.vproxy.vmirror.MirrorDataFactory;
 import javax.net.ssl.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -28,14 +25,10 @@ import java.util.function.Supplier;
 public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
     private SSLEngine engine;
     private final SSL ssl;
-    private final Consumer<Runnable> resumer;
     private String sni;
 
     // will call the pair's wrap/wrapHandshake when need to send data
     private final SSLWrapRingBuffer pair;
-
-    // only used when resume if resumer not specified
-    private SelectorEventLoop lastLoop = null;
 
     private final MirrorDataFactory plainMirrorDataFactory;
     private final MirrorDataFactory encryptedMirrorDataFactory;
@@ -43,10 +36,9 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // for client
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSLEngine engine,
-                        Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair,
                         NetworkFD<IPPort> fd) {
-        this(plainBufferForApp, engine, resumer, pair,
+        this(plainBufferForApp, engine, pair,
             () -> {
                 try {
                     return fd.getRemoteAddress();
@@ -67,22 +59,19 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // for client
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSLEngine engine,
-                        Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair,
                         IPPort remote) {
-        this(plainBufferForApp, engine, resumer, pair, () -> remote, IPPort::bindAnyAddress);
+        this(plainBufferForApp, engine, pair, () -> remote, IPPort::bindAnyAddress);
     }
 
     // for client
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSLEngine engine,
-                        Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair,
                         Supplier<IPPort> srcAddrSupplier,
                         Supplier<IPPort> dstAddrSupplier) {
         super(plainBufferForApp);
         this.engine = engine;
-        this.resumer = resumer;
         this.pair = pair;
 
         // these fields will not be used
@@ -106,10 +95,9 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // for server
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSL ssl,
-                        Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair,
                         NetworkFD<IPPort> fd) {
-        this(plainBufferForApp, ssl, resumer, pair,
+        this(plainBufferForApp, ssl, pair,
             () -> {
                 try {
                     return fd.getRemoteAddress();
@@ -130,13 +118,11 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // for server
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSL ssl,
-                        Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair,
                         Supplier<IPPort> srcAddrSupplier,
                         Supplier<IPPort> dstAddrSupplier) {
         super(plainBufferForApp);
         this.ssl = ssl;
-        this.resumer = resumer;
         this.pair = pair;
 
         // mirror
@@ -199,35 +185,6 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     public SSLEngine getEngine() {
         return engine;
     }
-
-    // -------------------
-    // helper functions BEGIN
-    // -------------------
-
-    private void doResume(Runnable r) {
-        if (resumer == null && lastLoop == null) {
-            Logger.fatal(LogType.IMPROPER_USE, "cannot get resumer or event loop to callback from the task");
-            return; // cannot continue if no loop
-        }
-        if (resumer != null) {
-            resumer.accept(r);
-        } else {
-            //noinspection ConstantConditions
-            assert lastLoop != null;
-            lastLoop.runOnLoop(r);
-        }
-    }
-
-    private void resumeGeneralUnwrap() {
-        doResume(this::generalUnwrap);
-    }
-
-    private void resumeGeneralWrap() {
-        doResume(pair::generalWrap);
-    }
-    // -------------------
-    // helper functions END
-    // -------------------
 
     private String mirrorMeta(SSLEngineResult result) {
         return "r.s=" + result.getStatus() +
@@ -347,41 +304,34 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         if (status == SSLEngineResult.HandshakeStatus.FINISHED) {
             assert Logger.lowLevelDebug("handshake finished");
             // should call the wrapper to send data (if any present)
-            resumeGeneralWrap();
+            pair.generalWrap();
             return;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_TASK) {
             assert Logger.lowLevelDebug("ssl engine returns NEED_TASK");
-            if (resumer == null) {
-                lastLoop = SelectorEventLoop.current();
-                assert Logger.lowLevelDebug("resumer not specified, so we use the current event loop: " + lastLoop);
+            Runnable r;
+            long begin = System.currentTimeMillis();
+            while ((r = engine.getDelegatedTask()) != null) {
+                r.run();
             }
-            VProxyThread.create(() -> {
-                assert Logger.lowLevelDebug("TASK begins");
-                Runnable r;
-                long begin = System.currentTimeMillis();
-                while ((r = engine.getDelegatedTask()) != null) {
-                    r.run();
-                }
-                long end = System.currentTimeMillis();
-                GlobalInspection.getInstance().sslUnwrapTask(end - begin);
+            long end = System.currentTimeMillis();
+            GlobalInspection.getInstance().sslUnwrapTask(end - begin);
 
-                assert Logger.lowLevelDebug("ssl engine returns " + engine.getHandshakeStatus() + " after task");
-                if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
-                    resumeGeneralWrap();
-                } else if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
-                    // when handshaking is finished
-                    resumeGeneralWrap(); // we try to send data
-                    resumeGeneralUnwrap(); // also, we try to read data
-                } else {
-                    resumeGeneralUnwrap();
-                }
-            }, "ssl-unwrap-task").start();
+            assert Logger.lowLevelDebug("ssl engine returns " + engine.getHandshakeStatus() + " after task");
+            if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
+                pair.generalWrap();
+            } else if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
+                // when handshaking is finished
+                pair.generalWrap(); // we try to send data
+                generalUnwrap(); // also, we try to read data
+            } else {
+                generalUnwrap();
+            }
             return;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
             // should call the pair to wrap
-            resumeGeneralWrap();
+            pair.generalWrap();
             return;
         }
         assert status == SSLEngineResult.HandshakeStatus.NEED_UNWRAP;

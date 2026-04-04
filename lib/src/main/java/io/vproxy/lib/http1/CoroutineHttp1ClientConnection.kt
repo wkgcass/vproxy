@@ -305,7 +305,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       engine.useClientMode = true
       val pair = SSLUtils.genbuf(
         engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576),
-        SelectorEventLoop.current(), ipport
+        ipport
       )
       val conn = unsafeIO {
         ConnectableConnection.create(
