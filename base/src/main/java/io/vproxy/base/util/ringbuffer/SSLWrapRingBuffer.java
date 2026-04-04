@@ -176,6 +176,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
     @Override
     protected void handlePlainBuffer(ByteBufferEx bufferPlain, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = bufferPlain.position();
+        final int limitBeforeHandling = bufferPlain.limit();
 
         ByteBuffer bufferEncrypted = getTemporaryBuffer(engine.getSession().getPacketBufferSize());
         SSLEngineResult result;
@@ -203,6 +204,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             return;
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             // reset the position first in case it's changed
+            bufferPlain.limit(limitBeforeHandling);
             bufferPlain.position(positionBeforeHandling);
 
             assert Logger.lowLevelDebug("buffer overflow, so make a bigger buffer and try again");
@@ -224,13 +226,13 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             }
 
             assert Logger.lowLevelDebug("wrap2: " + result);
+            if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+                Logger.error(LogType.SSL_ERROR, "still getting BUFFER_OVERFLOW after retry");
+                errored[0] = true;
+                return;
+            }
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
             assert Logger.lowLevelDebug("buffer underflow, waiting for more data");
-            return;
-        }
-        if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-            Logger.error(LogType.SSL_ERROR, "still getting BUFFER_OVERFLOW after retry");
-            errored[0] = true;
             return;
         }
         if (bufferEncrypted.position() != 0) {

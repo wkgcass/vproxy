@@ -111,6 +111,9 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
                 assert Logger.lowLevelDebug("generalWrap is not operating now");
                 setOperating(false);
             }
+            if (exceptionToThrow != null) {
+                return;
+            }
         } while (
             (plainBufferForApp.used() != 0 || !intermediateBuffers.isEmpty())
                 && encryptedBufferForOutput.used() == 0

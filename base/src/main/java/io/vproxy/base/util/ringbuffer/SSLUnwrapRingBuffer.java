@@ -267,6 +267,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     @Override
     protected void handleEncryptedBuffer(ByteBufferEx encryptedBuffer, boolean[] underflow, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = encryptedBuffer.position();
+        final int limitBeforeHandling = encryptedBuffer.limit();
 
         ByteBuffer plainBuffer = getTemporaryBuffer(engine.getSession().getApplicationBufferSize());
         SSLEngineResult result;
@@ -294,6 +295,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             return;
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             // reset the position in case it's modified
+            encryptedBuffer.limit(limitBeforeHandling);
             encryptedBuffer.position(positionBeforeHandling);
             Logger.shouldNotHappen("the unwrapping returned BUFFER_OVERFLOW, do retry");
             plainBuffer = Utils.allocateByteBuffer(engine.getSession().getApplicationBufferSize());
@@ -316,6 +318,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             assert Logger.lowLevelDebug("unwrap2: " + result);
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
             // manipulate the position back to the original one
+            encryptedBuffer.limit(limitBeforeHandling);
             encryptedBuffer.position(positionBeforeHandling);
             assert Logger.lowLevelDebug("got BUFFER_UNDERFLOW when unwrapping, expecting: " + engine.getSession().getPacketBufferSize() + ", the buffer has " + (encryptedBuffer.limit() - encryptedBuffer.position()));
             underflow[0] = true;
