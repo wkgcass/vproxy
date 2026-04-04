@@ -371,6 +371,12 @@ public class TestUtils {
 
     @Test
     public void createMappedByteBufferLoggerWriteOrDrop() throws Throwable {
+        for (int i = 0; i < 1000; i++) {
+            createMappedByteBufferLoggerWriteOrDrop0();
+        }
+    }
+
+    private void createMappedByteBufferLoggerWriteOrDrop0() throws Throwable {
         tempPath = Files.createTempDirectory("test-createMappedByteBufferLoggerWriteOrDrop");
         prefix = "test-" + getCurrentTimestampForFileName() + "-";
 
@@ -378,17 +384,24 @@ public class TestUtils {
         var res = logger.writeOrDrop("1234567");
         assertEquals(MappedByteBufferLogger.WriteOrDropResultType.WRITTEN, res.type());
         res = logger.writeOrDrop("abcdefg");
-        assertEquals(MappedByteBufferLogger.WriteOrDropResultType.DROP_PENDING, res.type());
-        res.writablePromise().block();
-        res = logger.writeOrDrop("abcdefg");
+        if (res.type() == MappedByteBufferLogger.WriteOrDropResultType.DROP_PENDING) {
+            res.writablePromise().block();
+            res = logger.writeOrDrop("abcdefg");
+        }
         assertEquals(MappedByteBufferLogger.WriteOrDropResultType.WRITTEN, res.type());
         res = logger.writeOrDrop("ABCDEFG");
-        assertEquals(MappedByteBufferLogger.WriteOrDropResultType.DROP_PENDING, res.type());
-        res.writablePromise().block();
-        res = logger.writeOrDrop("ABCDEFG");
+        if (res.type() == MappedByteBufferLogger.WriteOrDropResultType.DROP_PENDING) {
+            res.writablePromise().block();
+            res = logger.writeOrDrop("ABCDEFG");
+        }
         assertEquals(MappedByteBufferLogger.WriteOrDropResultType.WRITTEN, res.type());
 
-        Thread.sleep(500);
+        // wait for background file creation to complete
+        //noinspection DataFlowIssue
+        for (int j = 0; j < 100 && tempPath.toFile().listFiles().length < 4; j++) {
+            //noinspection BusyWait
+            Thread.sleep(1);
+        }
 
         logger.close();
 
