@@ -32,10 +32,7 @@ import io.vproxy.component.ssl.CertKey;
 import io.vproxy.component.svrgroup.Upstream;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
-import org.junit.AfterClass;
-import org.junit.AssumptionViolatedException;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -45,7 +42,6 @@ import java.net.UnknownHostException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.KeyStore;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.Assert.*;
 
@@ -273,7 +269,7 @@ public class TestSSL {
     private static final String keyStoreFile = "testkeys";
     private static final String trustStoreFile = "testkeys";
 
-    ConcurrentLinkedQueue<Runnable> q = new ConcurrentLinkedQueue<>();
+    SelectorEventLoop loop;
 
     SimpleRingBuffer serverOutputData = RingBuffer.allocate(16384);
     SimpleRingBuffer serverInputData = RingBuffer.allocate(16384);
@@ -290,6 +286,19 @@ public class TestSSL {
 
     int serverTotalData;
     int clientTotalData;
+
+    @Before
+    public void setUp() throws Exception {
+        loop = SelectorEventLoop.open();
+        loop.loop(r -> VProxyThread.create(r, "server"));
+        loop.period(1, () -> {
+        });
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        loop.close();
+    }
 
     @Test
     public void wrapThenUnwrap() throws Exception {
@@ -331,7 +340,7 @@ public class TestSSL {
         serverWrap.addHandler(new RingBufferETHandler() {
             @Override
             public void readableET() {
-                serverSendMessage();
+                loop.nextTick(() -> serverSendMessage());
             }
 
             @Override
@@ -342,7 +351,7 @@ public class TestSSL {
         clientWrap.addHandler(new RingBufferETHandler() {
             @Override
             public void readableET() {
-                clientSendMessage();
+                loop.nextTick(() -> clientSendMessage());
             }
 
             @Override
@@ -355,28 +364,29 @@ public class TestSSL {
 
         String serverMsg = "Hello Client, I'm Server";
         String clientMsg = "Hi Server, I'm Client";
-        serverOutputData.storeBytesFrom(ByteArrayChannel.fromFull(serverMsg.getBytes()));
-        clientOutputData.storeBytesFrom(ByteArrayChannel.fromFull(clientMsg.getBytes()));
-        serverTotalData = serverOutputData.used();
-        clientTotalData = clientOutputData.used();
 
-        // initial push
-        clientSendMessage();
+        var block = new BlockCallback<Void, Exception>();
+        loop.runOnLoop(() -> {
+            serverOutputData.storeBytesFrom(ByteArrayChannel.fromFull(serverMsg.getBytes()));
+            clientOutputData.storeBytesFrom(ByteArrayChannel.fromFull(clientMsg.getBytes()));
+            serverTotalData = serverOutputData.used();
+            clientTotalData = clientOutputData.used();
 
-        do {
-            Thread.sleep(1);
-            runQ();
-        } while (serverInputData.used() != clientTotalData || clientInputData.used() != serverTotalData);
+            // initial push
+            clientSendMessage();
+            do {
+                runQ();
+            } while (serverInputData.used() != clientTotalData || clientInputData.used() != serverTotalData);
+            block.succeeded();
+        });
+        block.block();
 
         assertEquals(clientMsg, serverInputData.toString());
         assertEquals(serverMsg, clientInputData.toString());
     }
 
     void runQ() {
-        Runnable r;
-        while ((r = q.poll()) != null) {
-            r.run();
-        }
+        loop.onePoll();
     }
 
     void serverSendMessage() {

@@ -1,6 +1,7 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.GlobalInspection;
+import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.*;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.ssl.SSL;
@@ -244,7 +245,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             mirrorPlain(plainBuffer, result);
         }
 
-        assert Logger.lowLevelDebug("unwrap: " + result);
+        assert Logger.lowLevelDebug("unwrap: " + result + ", self = " + this);
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
             assert Logger.lowLevelDebug("the unwrapping returned CLOSED");
             errored[0] = true;
@@ -317,15 +318,19 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             long end = System.currentTimeMillis();
             GlobalInspection.getInstance().sslUnwrapTask(end - begin);
 
+            // schedule next actions via nextTick to avoid re-entering the buffer
+            // that is currently inside operateOnByteBufferWriteOut/storeIn
+            //noinspection resource
+            var loop = SelectorEventLoop.current();
             assert Logger.lowLevelDebug("ssl engine returns " + engine.getHandshakeStatus() + " after task");
             if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
-                pair.generalWrap();
+                loop.nextTick(pair::generalWrap);
             } else if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
                 // when handshaking is finished
-                pair.generalWrap(); // we try to send data
-                generalUnwrap(); // also, we try to read data
+                loop.nextTick(pair::generalWrap); // we try to send data
+                loop.nextTick(this::generalUnwrap); // also, we try to read data
             } else {
-                generalUnwrap();
+                loop.nextTick(this::generalUnwrap);
             }
             return;
         }
