@@ -303,6 +303,7 @@ public class TcpStack extends Node {
             long seq = tcpPkt.getSeqNum();
             ByteArray data = tcpPkt.getData();
             pkb.tcp.receivingQueue.store(new Segment(seq, data));
+            _tcpAck(pkb.network, pkb.tcp);
         }
         if (tcpPkt.isFin()) {
             pkb.tcp.setState(TcpState.CLOSE_WAIT);
@@ -320,12 +321,19 @@ public class TcpStack extends Node {
         }
         var tcpPkt = pkb.tcpPkt;
         if (tcpPkt.isFin()) {
+            // ACK the peer's FIN
+            pkb.tcp.receivingQueue.incExpectingSeq();
             if (pkb.tcp.sendingQueue.ackOfFinReceived()) {
-                assert Logger.lowLevelDebug("transform to CLOSING");
-                pkb.tcp.setState(TcpState.CLOSING);
-                return _returnnext(pkb, tcpReset);
+                // our FIN is already acked, peer also sent FIN → TIME_WAIT
+                assert Logger.lowLevelDebug("simultaneous FIN acked, transform to TIME_WAIT");
+                _tcpAck(pkb.network, pkb.tcp);
+                pkb.tcp.setState(TcpState.TIME_WAIT);
+                scheduleTimeWaitClose(pkb);
             } else {
-                assert Logger.lowLevelDebug("received FIN but the previous sent FIN not acked");
+                // our FIN not yet acked, peer also sent FIN → CLOSING
+                assert Logger.lowLevelDebug("simultaneous close, transform to CLOSING");
+                _tcpAck(pkb.network, pkb.tcp);
+                pkb.tcp.setState(TcpState.CLOSING);
             }
         } else {
             if (pkb.tcp.sendingQueue.ackOfFinReceived()) {
@@ -343,9 +351,12 @@ public class TcpStack extends Node {
         }
         var tcpPkt = pkb.tcpPkt;
         if (tcpPkt.isFin()) {
-            assert Logger.lowLevelDebug("transform to CLOSING");
-            pkb.tcp.setState(TcpState.CLOSING);
-            return _returnnext(pkb, tcpReset);
+            assert Logger.lowLevelDebug("received FIN, transform to TIME_WAIT");
+            pkb.tcp.receivingQueue.incExpectingSeq();
+            _tcpAck(pkb.network, pkb.tcp);
+            pkb.tcp.setState(TcpState.TIME_WAIT);
+            scheduleTimeWaitClose(pkb);
+            return _return(HandleResult.STOLEN, pkb);
         }
         return _return(HandleResult.STOLEN, pkb);
     }
@@ -371,18 +382,53 @@ public class TcpStack extends Node {
         if (handleTcpGeneralReturnFalse(pkb)) {
             return _returndrop(pkb);
         }
-        assert Logger.lowLevelDebug("drop any packet when it's in CLOSING state");
+        if (pkb.tcp.sendingQueue.ackOfFinReceived()) {
+            assert Logger.lowLevelDebug("FIN acked in CLOSING, transform to TIME_WAIT");
+            pkb.tcp.setState(TcpState.TIME_WAIT);
+            scheduleTimeWaitClose(pkb);
+        }
         return _return(HandleResult.STOLEN, pkb);
     }
 
-    private HandleResult handleLastAck(@SuppressWarnings("unused") PacketBuffer pkb) {
-        Logger.shouldNotHappen("unsupported yet: last-ack state");
-        return _returndrop(pkb);
+    private HandleResult handleLastAck(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("handleLastAck");
+        if (handleTcpGeneralReturnFalse(pkb)) {
+            return _returndrop(pkb);
+        }
+        if (pkb.tcp.sendingQueue.ackOfFinReceived()) {
+            assert Logger.lowLevelDebug("FIN acked in LAST_ACK, connection fully closed");
+            pkb.tcp.setState(TcpState.CLOSED);
+            pkb.tcp.destroy();
+            pkb.network.conntrack.removeTcp(pkb.tcp.remote, pkb.tcp.local);
+        }
+        return _return(HandleResult.STOLEN, pkb);
     }
 
-    private HandleResult handleTimeWait(@SuppressWarnings("unused") PacketBuffer pkb) {
-        Logger.shouldNotHappen("unsupported yet: time-wait state");
-        return _returndrop(pkb);
+    private HandleResult handleTimeWait(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("handleTimeWait");
+        var tcpPkt = pkb.tcpPkt;
+        // retransmitted FIN — re-ACK it
+        if (tcpPkt.isFin()) {
+            _tcpAck(pkb.network, pkb.tcp);
+            return _return(HandleResult.STOLEN, pkb);
+        }
+        // drop everything else in TIME_WAIT
+        return _return(HandleResult.STOLEN, pkb);
+    }
+
+    private void scheduleTimeWaitClose(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("scheduleTimeWaitClose for " + pkb.tcp);
+        if (pkb.tcp.retransmissionTimer != null) {
+            pkb.tcp.retransmissionTimer.cancel();
+            pkb.tcp.retransmissionTimer = null;
+        }
+        final TcpEntry tcp = pkb.tcp;
+        final VirtualNetwork network = pkb.network;
+        tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(TcpEntry.TIME_WAIT_TIMEOUT_MS, () -> {
+            tcp.setState(TcpState.CLOSED);
+            tcp.destroy();
+            network.conntrack.removeTcp(tcp.remote, tcp.local);
+        });
     }
 
     private void _tcpAck(VirtualNetwork network, TcpEntry tcp) {
@@ -467,6 +513,18 @@ public class TcpStack extends Node {
     }
 
     private void transmitTcpPsh(VirtualNetwork network, TcpEntry tcp, long lastBeginSeq, int retransmissionCount) {
+        // handle retransmission congestion before fetching
+        if (retransmissionCount > 0) {
+            tcp.sendingQueue.onRetransmit();
+            if (retransmissionCount == 1) {
+                tcp.sendingQueue.onLoss();
+            }
+        } else if (tcp.sendingQueue.getAvailableSendWindow() <= 0) {
+            // check congestion window before fetching data (only for non-retransmissions)
+            assert Logger.lowLevelDebug("cwnd full, waiting for ACKs before sending more");
+            afterTransmission(network, tcp);
+            return;
+        }
         List<Segment> segments = tcp.sendingQueue.fetch();
         if (segments.isEmpty()) { // no data to send, check FIN
             if (tcp.sendingQueue.needToSendFin()) {
@@ -503,13 +561,14 @@ public class TcpStack extends Node {
     }
 
     private void setRetransmitTimer(VirtualNetwork network, TcpEntry tcp, long currentBeginSeq, int retransmissionCount) {
-        int delay = TcpEntry.RTO_MIN << retransmissionCount;
+        long delay = tcp.sendingQueue.getRto() << retransmissionCount;
         if (delay <= 0 || delay > TcpEntry.RTO_MAX) { // overflow or exceeds maximum
             delay = TcpEntry.RTO_MAX;
         }
         assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
+        final int finalDelay = (int) delay;
         final int finalRetransmissionCount = retransmissionCount;
-        tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(delay, () ->
+        tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(finalDelay, () ->
             transmitTcp(network, tcp, currentBeginSeq, finalRetransmissionCount + 1)
         );
     }

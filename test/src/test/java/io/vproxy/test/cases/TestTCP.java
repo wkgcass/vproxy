@@ -95,6 +95,7 @@ public class TestTCP {
         tcpEntry.sendingQueue.ack(s.seqEndExclusive, 65535);
         tcpEntry.sendingQueue.ack(s.seqEndExclusive, 65535);
         tcpEntry.sendingQueue.ack(s.seqEndExclusive, 65535); // one ack multiple times
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE); // bypass cwnd limit for test
 
         segments = tcpEntry.sendingQueue.fetch();
         for (var rr : segments) {
