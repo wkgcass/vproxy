@@ -206,6 +206,7 @@ public class TunIface extends Iface {
             }
             IP src = pkb.ipPkt.getSrc();
             transformToPingOutput(src, dst, pkb.pkt.getSrc());
+            return true;
         } else if (pkb.pkt.getPacket() instanceof ArpPacket) {
             assert Logger.lowLevelDebug("is arp");
             var arp = (ArpPacket) pkb.pkt.getPacket();
@@ -223,6 +224,7 @@ public class TunIface extends Iface {
                 return false;
             }
             handleArpOutput(pkb);
+            return true;
         }
         assert Logger.lowLevelDebug("not arp nor neighbor solicitation");
         return false;

@@ -535,6 +535,17 @@ project(':test') {
         include '**/TestPanamaGeneralPosix.class'
     }
 
+    task SwitchTCP(type: JavaExec) {
+        if ("true" == System.getProperty("enableAssertions")) {
+            enableAssertions = true
+        }
+        classpath = sourceSets.test.runtimeClasspath
+        workingDir = project.rootProject.rootDir.getAbsolutePath()
+        systemProperty("java.library.path",  "base/src/main/c")
+        systemProperty("vfd", "posix")
+        main = "io.vproxy.poc.SwitchTCP"
+    }
+
     task XDPPoc(type: JavaExec) {
         if (!org.gradle.internal.os.OperatingSystem.current().isLinux()) {
             return
