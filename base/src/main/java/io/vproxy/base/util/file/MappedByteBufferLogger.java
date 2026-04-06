@@ -75,7 +75,7 @@ public class MappedByteBufferLogger {
             return null;
         }
         if (fileCreationTaskFailureException != null) { // task failed
-            return null;
+            return Promise.reject(fileCreationTaskFailureException);
         }
         // need to start the task
         return doStartNewFileTask();
@@ -175,13 +175,19 @@ public class MappedByteBufferLogger {
                     handleTaskResultAndReplaceBuffers();
                 }
                 var promise = prepareNewFile();
-                return new WriteOrDropResult(WriteOrDropResultType.DROP_PENDING, promise);
+                if (promise != null) {
+                    return new WriteOrDropResult(WriteOrDropResultType.DROP_PENDING, promise);
+                }
+                // buffer is ready, fall through to write
             } else {
                 // ok for a single background buffer
                 // so normal check ...
                 if (!newFileTaskDone()) {
                     var promise = prepareNewFile();
-                    return new WriteOrDropResult(WriteOrDropResultType.DROP_PENDING, promise);
+                    if (promise != null) {
+                        return new WriteOrDropResult(WriteOrDropResultType.DROP_PENDING, promise);
+                    }
+                    // buffer is ready, fall through to write
                 }
             }
         } else {
@@ -189,7 +195,10 @@ public class MappedByteBufferLogger {
                 // cannot fill, need a new buffer
                 if (!newFileTaskDone()) {
                     var promise = prepareNewFile();
-                    return new WriteOrDropResult(WriteOrDropResultType.DROP_PENDING, promise);
+                    if (promise != null) {
+                        return new WriteOrDropResult(WriteOrDropResultType.DROP_PENDING, promise);
+                    }
+                    // buffer is ready, fall through to write
                 }
             }
         }
