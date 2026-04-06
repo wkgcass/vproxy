@@ -1,6 +1,7 @@
 package io.vproxy.base.redis.application;
 
 import io.vproxy.base.redis.RESPHandler;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.Callback;
 
@@ -23,6 +24,13 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
         return ctx;
     }
 
+    // convert a RESP element to string, returns null if not a string-like type
+    private String elementToString(Object o) {
+        if (o instanceof ByteArray)
+            return o.toString();
+        return null;
+    }
+
     // false for auth fail or not auth
     private boolean handleAuth(Object input) {
         if (config.password == null)
@@ -36,23 +44,24 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
             }
             Object arg0 = ls.get(0);
             Object arg1 = ls.get(1);
-            // both should be String
-            if (!(arg0 instanceof String) || !(arg1 instanceof String)) {
+            String s0 = elementToString(arg0);
+            String s1 = elementToString(arg1);
+            if (s0 == null || s1 == null) {
                 assert Logger.lowLevelDebug("arg0 " + arg0 + " or arg1 " + arg1 + " not string, ignore auth");
                 return false;
             }
-            if (!arg0.equals("AUTH") && !arg0.equals("auth")) {
+            if (!s0.equals("AUTH") && !s0.equals("auth")) {
                 assert Logger.lowLevelDebug("arg0 " + arg0 + " is not AUTH or auth");
                 return false; // command is not AUTH
             }
-            pass = (String) arg1;
-        } else if (input instanceof String) {
-            String[] inStr = ((String) input).split(" ");
+            pass = s1;
+        } else if (input instanceof ByteArray) {
+            String[] inStr = input.toString().split(" ");
             if (inStr.length != 2) {
                 assert Logger.lowLevelDebug("input strs length is not 2, ignore auth");
                 return false; // should be AUTH xxx, so size != 2 we ignore
             }
-            if (!inStr[0].equals("AUTH") && inStr[0].equals("auth")) {
+            if (!inStr[0].equals("AUTH") && !inStr[0].equals("auth")) {
                 assert Logger.lowLevelDebug("strs[0] " + inStr[0] + " is not AUTH or auth");
                 return false; // command is not AUTH
             }
@@ -79,24 +88,23 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
                 return null; // should be PING [xxx], so size == 0 or > 2 we ignore
             }
             Object arg0 = ls.get(0);
-            // both should be String
-            if (!(arg0 instanceof String)) {
+            String s0 = elementToString(arg0);
+            if (s0 == null) {
                 return null;
             }
-            if (!arg0.equals("PING") && !arg0.equals("ping")) {
+            if (!s0.equals("PING") && !s0.equals("ping")) {
                 return null; // command is not PING
             }
             if (ls.size() == 2) {
-                if (ls.get(1) instanceof String) {
-                    pongStr = (String) ls.get(1);
-                } else {
+                pongStr = elementToString(ls.get(1));
+                if (pongStr == null) {
                     return null; // the second object is not String, so we ignore
                 }
             } else {
                 pongStr = null; // pongStr is not specified
             }
-        } else if (input instanceof String) {
-            String[] inStr = ((String) input).split(" ");
+        } else if (input instanceof ByteArray) {
+            String[] inStr = input.toString().split(" ");
             if (inStr.length == 0 || inStr.length > 2)
                 return null; // should be PING [xxx], so size == 0 or > 2 we ignore
             if (!inStr[0].equals("PING") && !inStr[0].equals("ping"))
@@ -128,24 +136,22 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
             if (inList.isEmpty()) {
                 return null; // not command
             } else if (inList.size() == 1) {
-                if (!(inList.get(0) instanceof String))
+                String s0 = elementToString(inList.get(0));
+                if (s0 == null)
                     return null; // not string
-                String arg0 = (String) inList.get(0);
-                if (!arg0.equals("COMMAND") && !arg0.equals("command")) {
+                if (!s0.equals("COMMAND") && !s0.equals("command")) {
                     return null; // not command
                 } else {
                     isReturnNum = false;
                     requestedCmds = null;
                 }
             } else if (inList.size() == 2) {
-                if (!(inList.get(0) instanceof String))
+                String s0 = elementToString(inList.get(0));
+                String s1 = elementToString(inList.get(1));
+                if (s0 == null || s1 == null)
                     return null; // not string
-                if (!(inList.get(1) instanceof String))
-                    return null; // not string
-                String arg0 = (String) inList.get(0);
-                String arg1 = (String) inList.get(1);
-                if ((!arg0.equals("COMMAND") && !arg0.equals("command")) ||
-                    (!arg1.equals("COUNT") && !arg1.equals("count"))
+                if ((!s0.equals("COMMAND") && !s0.equals("command")) ||
+                    (!s1.equals("COUNT") && !s1.equals("count"))
                 ) {
                     return null; // not command
                 } else {
@@ -153,23 +159,27 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
                     requestedCmds = null;
                 }
             } else {
-                if (!(inList.get(0) instanceof String))
+                String s0 = elementToString(inList.get(0));
+                String s1 = elementToString(inList.get(1));
+                if (s0 == null || s1 == null)
                     return null; // not string
-                if (!(inList.get(1) instanceof String))
-                    return null; // not string
-                String arg0 = (String) inList.get(0);
-                String arg1 = (String) inList.get(1);
-                if ((!arg0.equals("COMMAND") && !arg0.equals("command")) ||
-                    (!arg1.equals("INFO") && !arg1.equals("info"))
+                if ((!s0.equals("COMMAND") && !s0.equals("command")) ||
+                    (!s1.equals("INFO") && !s1.equals("info"))
                 ) {
                     return null; // not command
                 } else {
                     isReturnNum = false;
-                    requestedCmds = new LinkedList<>(((List) input).subList(2, ((List) input).size()));
+                    requestedCmds = new LinkedList<>();
+                    for (int i = 2; i < inList.size(); i++) {
+                        String s = elementToString(inList.get(i));
+                        if (s != null) {
+                            requestedCmds.add(s);
+                        }
+                    }
                 }
             }
-        } else if (input instanceof String) {
-            String[] inList = ((String) input).split(" ");
+        } else if (input instanceof ByteArray) {
+            String[] inList = input.toString().split(" ");
             if (inList.length == 0) {
                 return null; // not command
             } else if (inList.length == 1) {

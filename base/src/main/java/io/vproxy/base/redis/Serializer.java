@@ -61,6 +61,8 @@ public class Serializer {
             return fromLong((Long) o);
         if (o instanceof String)
             return fromString((String) o);
+        if (o instanceof ByteArray)
+            return fromBulkString((ByteArray) o);
         if (o instanceof Object[])
             return fromArray((Object[]) o);
         if (o instanceof List) {

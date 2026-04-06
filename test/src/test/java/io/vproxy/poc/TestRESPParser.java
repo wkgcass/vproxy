@@ -2,21 +2,25 @@ package io.vproxy.poc;
 
 import io.vproxy.base.redis.RESPParser;
 import io.vproxy.base.redis.entity.*;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.nio.ByteArrayChannel;
+
+import java.nio.charset.StandardCharsets;
 
 public class TestRESPParser {
     public static void main(String[] args) throws Exception {
         {
             RESPString string = (RESPString) parse("+OK\r\n");
             System.out.println(string);
-            if (!string.string.toString().equals("OK"))
+            ByteArray result = (ByteArray) string.getJavaObject();
+            if (!result.toString().equals("OK"))
                 throw new Exception("wrong simple string");
         }
         {
             RESPError error = (RESPError) parse("-NOAUTH\r\n");
             System.out.println(error);
-            if (!error.error.toString().equals("NOAUTH"))
+            if (!error.getJavaObject().toString().contains("NOAUTH"))
                 throw new Exception("wrong simple error");
         }
         {
@@ -34,13 +38,15 @@ public class TestRESPParser {
         {
             RESPInline inline = (RESPInline) parse("PING\r\n");
             System.out.println(inline);
-            if (!inline.string.toString().equals("PING"))
+            ByteArray result = (ByteArray) inline.getJavaObject();
+            if (!result.toString().equals("PING"))
                 throw new Exception("wrong inline");
         }
         {
             RESPBulkString empty = (RESPBulkString) parse("$0\r\n\r\n");
             System.out.println(empty);
-            if (!empty.data.toString().isEmpty())
+            ByteArray result = (ByteArray) empty.getJavaObject();
+            if (result.length() != 0)
                 throw new Exception("wrong empty bulk string");
         }
         {
@@ -52,7 +58,8 @@ public class TestRESPParser {
         {
             RESPBulkString blk = (RESPBulkString) parse("$6\r\nfoobar\r\n");
             System.out.println(blk);
-            if (!blk.data.toString().equals("foobar"))
+            ByteArray result = (ByteArray) blk.getJavaObject();
+            if (!result.toString().equals("foobar"))
                 throw new Exception("wrong bulk string");
         }
         {
@@ -66,9 +73,9 @@ public class TestRESPParser {
             System.out.println(array);
             if (array.array.size() != 2)
                 throw new Exception("wrong array.len");
-            if (!((RESPBulkString) array.array.get(0)).data.toString().equals("foo"))
+            if (!((ByteArray) ((RESPBulkString) array.array.get(0)).getJavaObject()).toString().equals("foo"))
                 throw new Exception("wrong array[0]");
-            if (!((RESPBulkString) array.array.get(1)).data.toString().equals("bar"))
+            if (!((ByteArray) ((RESPBulkString) array.array.get(1)).getJavaObject()).toString().equals("bar"))
                 throw new Exception("wrong array[1]");
         }
         {
@@ -103,14 +110,43 @@ public class TestRESPParser {
                 throw new Exception("wrong mixArr[2]");
             if (((RESPInteger) mixArr.array.get(3)).integer != 4)
                 throw new Exception("wrong mixArr[3]");
-            if (!((RESPBulkString) mixArr.array.get(4)).data.toString().equals("foobar"))
+            if (!((ByteArray) ((RESPBulkString) mixArr.array.get(4)).getJavaObject()).toString().equals("foobar"))
                 throw new Exception("wrong mixArr[4]");
         }
+        // test binary data in bulk string
+        {
+            byte[] binaryData = new byte[]{0x00, 0x01, 0x02, (byte) 0xFF, (byte) 0xFE};
+            String input = "$5\r\n" + new String(binaryData, "ISO-8859-1") + "\r\n";
+            RESPBulkString blk = (RESPBulkString) parse(input);
+            System.out.println(blk);
+            ByteArray result = (ByteArray) blk.getJavaObject();
+            if (result.length() != 5)
+                throw new Exception("wrong binary bulk string length");
+            for (int i = 0; i < binaryData.length; i++) {
+                if (result.get(i) != binaryData[i])
+                    throw new Exception("wrong binary bulk string data at index " + i);
+            }
+        }
+        // test binary data in simple string
+        {
+            byte[] binaryData = new byte[]{0x01, 0x02, 0x03};
+            String input = "+" + new String(binaryData, "ISO-8859-1") + "\r\n";
+            RESPString str = (RESPString) parse(input);
+            System.out.println(str);
+            ByteArray result = (ByteArray) str.getJavaObject();
+            if (result.length() != 3)
+                throw new Exception("wrong binary simple string length");
+            for (int i = 0; i < binaryData.length; i++) {
+                if (result.get(i) != binaryData[i])
+                    throw new Exception("wrong binary simple string data at index " + i);
+            }
+        }
+        System.out.println("all tests passed");
     }
 
     private static RESP parse(String str) throws Exception {
         RESPParser parser = new RESPParser(16384);
-        byte[] bytes = str.getBytes();
+        byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
         RingBuffer rb = RingBuffer.allocate(bytes.length);
         ByteArrayChannel ch = ByteArrayChannel.fromFull(bytes);
         rb.storeBytesFrom(ch);

@@ -204,7 +204,7 @@ public class RESPParser {
                 return 9;
             default:
                 resp = new RESPInline();
-                ((RESPInline) resp).string.append((char) b);
+                ((RESPInline) resp).buffer.append(b);
                 return 13;
         }
     }
@@ -214,7 +214,7 @@ public class RESPParser {
             case '\r':
                 return 2;
             default:
-                ((RESPString) resp).string.append((char) b);
+                ((RESPString) resp).buffer.append(b);
                 return 1;
         }
     }
@@ -233,7 +233,7 @@ public class RESPParser {
             case '\r':
                 return 2;
             default:
-                ((RESPError) resp).error.append((char) b);
+                ((RESPError) resp).buffer.append(b);
                 return 3;
         }
     }
@@ -399,7 +399,7 @@ public class RESPParser {
         if (b == '\r') {
             return 2;
         } else {
-            ((RESPInline) resp).string.append((char) b);
+            ((RESPInline) resp).buffer.append(b);
             return 13;
         }
     }

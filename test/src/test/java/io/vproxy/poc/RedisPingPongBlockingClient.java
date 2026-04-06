@@ -111,7 +111,7 @@ public class RedisPingPongBlockingClient {
                 int r = parser.feed(rb);
                 String recv;
                 if (r == 0) {
-                    recv = (String) parser.getResult().getJavaObject();
+                    recv = parser.getResult().getJavaObject().toString();
                 } else {
                     String errMsg = parser.getErrorMessage();
                     if (errMsg != null)

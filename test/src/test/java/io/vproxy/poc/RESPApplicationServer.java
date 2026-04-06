@@ -8,6 +8,7 @@ import io.vproxy.base.redis.RESPConfig;
 import io.vproxy.base.redis.RESPProtocolHandler;
 import io.vproxy.base.redis.application.*;
 import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.IPPort;
@@ -63,11 +64,13 @@ class MyRESPApplication implements RESPApplication<RESPApplicationContext> {
             }
             o = sb.toString().trim();
         }
-        if (!(o instanceof String)) {
+        String s;
+        if (o instanceof ByteArray) {
+            s = o.toString();
+        } else {
             cb.failed(new Exception("fail"));
             return;
         }
-        String s = (String) o;
         String[] arr = s.split(" ");
         if (arr.length != 2 || !arr[0].equalsIgnoreCase("incr")) {
             cb.failed(new Exception("fail"));

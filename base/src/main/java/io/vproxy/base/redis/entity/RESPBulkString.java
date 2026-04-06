@@ -14,6 +14,6 @@ public class RESPBulkString extends RESP {
 
     @Override
     public Object getJavaObject() {
-        return data == null ? null : data.toString();
+        return data == null ? null : data.get();
     }
 }

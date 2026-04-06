@@ -53,6 +53,10 @@ public class ByteArrayBuilder extends AbstractByteArray implements ByteArray {
         return this;
     }
 
+    public ByteArrayBuilder append(int b) {
+        return this.append((byte) b);
+    }
+
     public ByteArrayBuilder append(int... b) {
         for (int b1 : b) {
             this.append((byte) b1);

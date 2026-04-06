@@ -10,6 +10,7 @@ import io.vproxy.base.protocol.ProtocolServerHandler;
 import io.vproxy.base.redis.RESPConfig;
 import io.vproxy.base.redis.RESPProtocolHandler;
 import io.vproxy.base.redis.application.*;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
@@ -68,24 +69,27 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             cb.failed(new XException("cannot accept null"));
             return;
         }
-        if (o instanceof String && ((String) o).trim().isEmpty()) {
+        if (o instanceof ByteArray && ((ByteArray) o).length() == 0) {
             cb.succeeded("?"); // the input is empty, do nothing
             return;
         }
         if (o instanceof List) {
             StringBuilder sb = new StringBuilder();
             for (Object e : (List) o) {
-                if (!(e instanceof String)) {
+                String s;
+                if (e instanceof ByteArray) {
+                    s = e.toString();
+                } else {
                     cb.failed(new XException("invalid the command format"));
                     return;
                 }
                 sb.append(" ");
-                String s = (String) e;
                 sb.append(s);
             }
             o = sb.toString();
-        }
-        if (!(o instanceof String)) {
+        } else if (o instanceof ByteArray) {
+            o = o.toString();
+        } else {
             cb.failed(new XException("invalid the command format"));
             return;
         }

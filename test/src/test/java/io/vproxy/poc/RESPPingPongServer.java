@@ -8,6 +8,7 @@ import io.vproxy.base.redis.RESPConfig;
 import io.vproxy.base.redis.RESPHandler;
 import io.vproxy.base.redis.RESPProtocolHandler;
 import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.IPPort;
@@ -38,6 +39,12 @@ public class RESPPingPongServer {
 }
 
 class MyRESPHandler implements RESPHandler<Void> {
+    private String elementToString(Object o) {
+        if (o instanceof ByteArray)
+            return o.toString();
+        return null;
+    }
+
     @Override
     public Void attachment() {
         return null;
@@ -46,8 +53,8 @@ class MyRESPHandler implements RESPHandler<Void> {
     @Override
     public void handle(Object input, Void v, Callback<Object, Throwable> cb) {
         System.out.println("got input: " + input);
-        if (input instanceof String) {
-            String s = (String) input;
+        if (input instanceof ByteArray) {
+            String s = input.toString();
             if (s.equalsIgnoreCase("ping")) {
                 cb.succeeded("PONG");
                 return;
@@ -60,11 +67,17 @@ class MyRESPHandler implements RESPHandler<Void> {
             cb.failed(new Exception("unknown input " + s));
         } else if (input instanceof List) {
             List ls = (List) input;
-            if (ls.size() >= 1 && ls.get(0) instanceof String && "ping".equalsIgnoreCase((String) ls.get(0))) {
+            String first = ls.size() >= 1 ? elementToString(ls.get(0)) : null;
+            if (first != null && "ping".equalsIgnoreCase(first)) {
                 if (ls.size() == 1) {
                     cb.succeeded("PONG");
-                } else if (ls.size() == 2 && ls.get(1) instanceof String) {
-                    cb.succeeded(ls.get(1));
+                } else if (ls.size() == 2) {
+                    String second = elementToString(ls.get(1));
+                    if (second != null) {
+                        cb.succeeded(second);
+                    } else {
+                        cb.failed(new Exception("unknown input " + ls));
+                    }
                 } else {
                     cb.failed(new Exception("unknown input " + ls));
                 }
