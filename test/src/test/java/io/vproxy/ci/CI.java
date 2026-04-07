@@ -20,6 +20,8 @@ import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import io.vproxy.test.cases.TestSSL;
@@ -28,8 +30,10 @@ import org.junit.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.NetworkInterface;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Consumer;
@@ -1752,31 +1756,40 @@ public class CI {
     int putCnt = 0;
 
     private JSON.Instance requestApi(HttpMethod method, String uri, JSON.Object body) {
-        if (method == HttpMethod.POST) {
-            ++postCnt;
-        } else if (method == HttpMethod.PUT) {
-            ++putCnt;
-        }
-
-        Logger.lowLevelDebug("api http request is " + method + " " + uri + " " + body);
-        HttpResponse<Buffer> resp = block(f -> {
-            HttpRequest<Buffer> req = webClient.request(method, vproxyHTTPPort, "127.0.0.1", "/api/v1/module" + uri);
-            if (body != null) {
-                req.sendBuffer(Buffer.buffer(body.stringify()), f);
-            } else {
-                req.send(f);
-            }
-        });
+        HttpResponse<Buffer> resp = requestApiWithRsp(method, vproxyHTTPPort, "/api/v1/module" + uri, null, body);
         Logger.lowLevelDebug("api http response is " + resp.statusCode() + " " + resp.bodyAsString());
         assertTrue(resp.bodyAsString(), 200 == resp.statusCode() || 204 == resp.statusCode());
         String respContent = resp.bodyAsString();
         JSON.Instance ret;
         if (respContent == null) {
-            ret = null;
+          ret = null;
         } else {
-            ret = JSON.parse(respContent);
+          ret = JSON.parse(respContent);
         }
         return ret;
+    }
+
+    private HttpResponse<Buffer> requestApiWithRsp(HttpMethod method, int port, String uri, Map<String, String> headers, JSON.Object body) {
+        if (method == HttpMethod.POST) {
+          ++postCnt;
+        } else if (method == HttpMethod.PUT) {
+          ++putCnt;
+        }
+
+        Logger.lowLevelDebug("api http request is " + method + " " + uri + " " + body);
+        return block(f -> {
+          HttpRequest<Buffer> req = webClient.request(method, port, "127.0.0.1", uri);
+          if (null != headers) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+              req.putHeader(entry.getKey(), entry.getValue());
+            }
+          }
+          if (body != null) {
+            req.sendBuffer(Buffer.buffer(body.stringify()), f);
+          } else {
+            req.send(f);
+          }
+        });
     }
 
     private void run(String uriBase, Class<?> entityType, Object... _params) throws Exception {
@@ -2772,5 +2785,56 @@ public class CI {
         pretty = requestApi(HttpMethod.GET, "/cert-key/" + ck + "/detail").pretty();
         System.out.println("cert-key: " + pretty);
         assertEquals(JSON.parse(ckResp).pretty(), pretty);
+    }
+
+    @Test
+    public void apiV1CorsAndBasicAuth() throws IOException, AlreadyExistException, NotFoundException, InterruptedException {
+      String test1 = "test_cors_1";
+      int test1Port = vproxyHTTPPort + 1;
+      Application.get().httpControllerHolder.add(test1, new IPPort(test1Port), true, null);
+      Map<String, String> headers = new HashMap<>();
+      String origin = "https://vproxy.io";
+      String requestMethod = "POST";
+      String requestHeaders = "Authorization";
+      headers.put("Origin", origin);
+      headers.put("Access-Control-Request-Method", requestMethod);
+      headers.put("Access-Control-Request-Headers", requestHeaders);
+      HttpResponse<Buffer> rsp = requestApiWithRsp(HttpMethod.OPTIONS, test1Port, "/healthz", headers, null);
+      assertEquals(rsp.statusCode(), 204);
+      assertEquals(rsp.headers().get("Access-Control-Allow-Origin"), origin);
+      assertEquals(rsp.headers().get("Access-Control-Allow-Methods"), requestMethod);
+      assertEquals(rsp.headers().get("Access-Control-Allow-Headers"), requestHeaders);
+      // rsp headers
+      rsp = requestApiWithRsp(HttpMethod.GET, test1Port, "/healthz", headers, null);
+      assertEquals(rsp.statusCode(), 200);
+      assertEquals(rsp.headers().get("Access-Control-Allow-Origin"), origin);
+      assertEquals(rsp.headers().get("Vary"), "Origin");
+      // no origin
+      headers.remove("Origin");
+      rsp = requestApiWithRsp(HttpMethod.OPTIONS, test1Port, "/healthz", headers, null);
+      assertEquals(rsp.statusCode(), 403);
+      // no cors
+      Application.get().httpControllerHolder.removeAndStop(test1);
+      Thread.sleep(1);
+      Application.get().httpControllerHolder.add(test1, new IPPort(test1Port), false, null);
+      rsp = requestApiWithRsp(HttpMethod.OPTIONS, test1Port, "/healthz", headers, null);
+      assertEquals(rsp.statusCode(), 403);
+      Application.get().httpControllerHolder.removeAndStop(test1);
+      Thread.sleep(100);
+
+      // basicAuth
+      headers.clear();
+      String test2 = "test_basicAuth_1";
+      int test2Port = vproxyHTTPPort + 2;
+      String secret = "123456";
+      Application.get().httpControllerHolder.add(test2, new IPPort(test2Port), false, secret);
+      rsp = requestApiWithRsp(HttpMethod.GET, test2Port, "/healthz", headers, null);
+      assertEquals(rsp.statusCode(), 401);
+      assertEquals(rsp.headers().get("WWW-Authenticate"), "Basic");
+
+      // with password
+      headers.put("Authorization", "Basic " + Base64.getEncoder().encodeToString(secret.getBytes(StandardCharsets.UTF_8)));
+      rsp = requestApiWithRsp(HttpMethod.GET, test2Port, "/healthz", headers, null);
+      assertEquals(rsp.statusCode(), 200);
     }
 }

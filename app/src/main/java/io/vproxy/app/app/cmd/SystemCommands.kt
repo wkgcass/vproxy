@@ -67,6 +67,8 @@ class SystemCommands private constructor() : Commands() {
         action = ActType.add,
         params = {
           it + ResActParam(Param.addr, true) { AddrHandle.check(it) }
+          it + ResActParam(Param.cors, false)
+          it + ResActParam(Param.secret, false)
         }
       ) {
         HttpControllerHandle.add(it)

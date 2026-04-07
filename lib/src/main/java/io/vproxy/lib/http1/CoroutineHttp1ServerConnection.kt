@@ -2,9 +2,13 @@ package io.vproxy.lib.http1
 
 import io.vproxy.lib.http.HttpServerConnection
 import io.vproxy.lib.http.HttpServerResponse
+import io.vproxy.lib.http.ResponseHandler
 import io.vproxy.lib.tcp.CoroutineConnection
 
 class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServerConnection, AutoCloseable {
+
+  private var responseHandler: ResponseHandler? = null
+
   override fun coconn(): CoroutineConnection {
     return conn
   }
@@ -18,10 +22,15 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
   }
 
   fun response(status: Int, reason: String): CoroutineHttp1Response {
-    return CoroutineHttp1Response(status, reason)
+    return CoroutineHttp1Response(status, reason, this.responseHandler)
   }
 
-  inner class CoroutineHttp1Response(private val status: Int, private val reason: String) :
+  override fun onResponse(handler: ResponseHandler) {
+    this.responseHandler = handler
+  }
+
+  inner class CoroutineHttp1Response(private val status: Int, private val reason: String,
+                                     private val responseHandler: ResponseHandler?) :
     CoroutineHttp1Common(conn), HttpServerResponse {
     private val headers = ArrayList<io.vproxy.base.processor.http1.entity.Header>()
 
@@ -32,6 +41,7 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
 
     @Suppress("DuplicatedCode")
     override suspend fun send(body: io.vproxy.base.util.ByteArray?) {
+      responseHandler?.invoke(this)
       val resp = io.vproxy.base.processor.http1.entity.Response()
       resp.version = "HTTP/1.1"
       resp.statusCode = status

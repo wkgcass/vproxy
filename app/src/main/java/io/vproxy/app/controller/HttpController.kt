@@ -20,7 +20,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Suppress("DuplicatedCode")
-class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
+class HttpController(val alias: String,
+                     val address: io.vproxy.vfd.IPPort,
+                     val cors: Boolean,
+                     val secret: String?) {
   private val server: CoroutineHttp1Server
   private val classpathResourceHolder = io.vproxy.base.util.web.ClasspathResourceHolder("io/vproxy/app/controller/webroot")
 
@@ -33,6 +36,10 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
     val loop = io.vproxy.app.app.Application.get().controlEventLoop
     server = CoroutineHttp1Server(sock.coroutine(loop))
 
+    // cors
+    server.all("/*", Tool.corsHandler(cors))
+    // secret
+    server.all("/*", Tool.basicAuthHandler(secret))
     // hc
     server.get("/healthz") { ctx -> ctx.conn.response(200).send("OK") }
     // html
@@ -1900,7 +1907,15 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
   }
 
   override fun toString(): String {
-    return alias + " -> " + address.formatToIPPortString()
+    val sb = StringBuilder()
+    sb.append(alias).append(" -> ").append(address.formatToIPPortString())
+    if (cors) {
+      sb.append(" cors")
+    }
+    if (!secret.isNullOrBlank()) {
+      sb.append(" secret")
+    }
+    return sb.toString()
   }
 }
 
