@@ -6,9 +6,13 @@ import io.vproxy.vpacket.conntrack.tcp.SAckTuple;
 import io.vproxy.vpacket.conntrack.tcp.Segment;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
+import io.vproxy.vpacket.conntrack.tcp.TcpUtils;
+import io.vproxy.vpacket.TcpPacket;
+import io.vproxy.base.util.Consts;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.*;
@@ -1193,5 +1197,218 @@ public class TestTCP {
         tcpEntry.sendingQueue.ack(seq0 + mss / 2, 65535);
         // The trimmed remaining portion should not be sacked
         // (ackSeq advanced to seq0+mss/2, remaining segment starts there)
+    }
+
+    // ===== SACK 发送 =====
+
+    @Test
+    public void sackBlocksEmptyWhenNoOOO() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+
+        // No OOO data — should return empty
+        List<SAckTuple> blocks = tcpEntry.receivingQueue.getSAckBlocks();
+        assertTrue("no OOO data should produce empty SACK blocks", blocks.isEmpty());
+    }
+
+    @Test
+    public void sackBlocksSingleHole() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+
+        // Send seq1 in order → expectingSeq advances
+        ByteArray bytes1 = rawPayload(1024);
+        tcpEntry.receivingQueue.store(new Segment(seqInit + 1, bytes1));
+
+        // Send seq3 out of order (gap = seq2 is missing)
+        ByteArray bytes3 = rawPayload(512);
+        long seq3Begin = seqInit + 1 + bytes1.length() + 1000;
+        tcpEntry.receivingQueue.store(new Segment(seq3Begin, bytes3));
+
+        List<SAckTuple> blocks = tcpEntry.receivingQueue.getSAckBlocks();
+        assertEquals(1, blocks.size());
+        // block should cover [seq3Begin, seq3Begin + bytes3.length())
+        assertEquals(seq3Begin, blocks.get(0).seqBeginInclusive);
+        assertEquals(seq3Begin + bytes3.length(), blocks.get(0).seqEndExclusive);
+    }
+
+    @Test
+    public void sackBlocksTwoHoles() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+
+        // Send seq1 in order
+        ByteArray bytes1 = rawPayload(1024);
+        tcpEntry.receivingQueue.store(new Segment(seqInit + 1, bytes1));
+
+        // Send seq3 out of order (gap at seq2)
+        ByteArray bytes3 = rawPayload(512);
+        long seq3Begin = seqInit + 1 + bytes1.length() + 1000;
+        tcpEntry.receivingQueue.store(new Segment(seq3Begin, bytes3));
+
+        // Send seq5 out of order (gap at seq4)
+        ByteArray bytes5 = rawPayload(256);
+        long seq5Begin = seq3Begin + bytes3.length() + 500;
+        tcpEntry.receivingQueue.store(new Segment(seq5Begin, bytes5));
+
+        List<SAckTuple> blocks = tcpEntry.receivingQueue.getSAckBlocks();
+        assertEquals(2, blocks.size());
+        assertEquals(seq3Begin, blocks.get(0).seqBeginInclusive);
+        assertEquals(seq3Begin + bytes3.length(), blocks.get(0).seqEndExclusive);
+        assertEquals(seq5Begin, blocks.get(1).seqBeginInclusive);
+        assertEquals(seq5Begin + bytes5.length(), blocks.get(1).seqEndExclusive);
+    }
+
+    @Test
+    public void sackBlocksContiguousOOO() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+
+        // Send seq1 in order
+        ByteArray bytes1 = rawPayload(1024);
+        tcpEntry.receivingQueue.store(new Segment(seqInit + 1, bytes1));
+
+        // Send two overlapping OOO segments — they should merge into one block
+        long gap = 1000;
+        long seq2Begin = seqInit + 1 + bytes1.length() + gap;
+        ByteArray bytes2 = rawPayload(512);
+        tcpEntry.receivingQueue.store(new Segment(seq2Begin, bytes2));
+
+        // Overlapping segment: starts 100 bytes before seq2 ends, extends 256 bytes beyond
+        ByteArray bytes3 = rawPayload(256);
+        long overlapStart = seq2Begin + bytes2.length() - 100;
+        tcpEntry.receivingQueue.store(new Segment(overlapStart, bytes3));
+
+        List<SAckTuple> blocks = tcpEntry.receivingQueue.getSAckBlocks();
+        // OOO buffer merges overlapping segments, so should produce 1 block
+        assertEquals(1, blocks.size());
+        assertEquals(seq2Begin, blocks.get(0).seqBeginInclusive);
+        assertEquals(overlapStart + bytes3.length(), blocks.get(0).seqEndExclusive);
+    }
+
+    @Test
+    public void buildAckWithSackAttachesOption() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        tcpEntry.sendingQueue.init(65535, 1360, 1);
+
+        // Prepare SACK blocks
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(20000, 21360));
+        sackBlocks.add(new SAckTuple(22720, 24080));
+
+        TcpPacket pkt = TcpUtils.buildAckResponseWithSack(tcpEntry, sackBlocks);
+
+        // Verify the packet has a SACK option
+        boolean foundSack = false;
+        for (var opt : pkt.getOptions()) {
+            if (opt.getKind() == Consts.TCP_OPTION_SACK) {
+                foundSack = true;
+                ByteArray data = opt.getData();
+                // 2 blocks * 8 bytes = 16 bytes
+                assertEquals(16, data.length());
+                // Block 0
+                assertEquals(20000, data.uint32(0));
+                assertEquals(21360, data.uint32(4));
+                // Block 1
+                assertEquals(22720, data.uint32(8));
+                assertEquals(24080, data.uint32(12));
+            }
+        }
+        assertTrue("SACK option should be present", foundSack);
+    }
+
+    @Test
+    public void sackBlocksCappedAtFour() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+
+        // Send in-order data
+        ByteArray bytes0 = rawPayload(1024);
+        tcpEntry.receivingQueue.store(new Segment(seqInit + 1, bytes0));
+
+        // Send 6 separate OOO segments with gaps between them
+        long base = seqInit + 1 + bytes0.length();
+        for (int i = 0; i < 6; i++) {
+            ByteArray data = rawPayload(256);
+            long seqBegin = base + (i + 1L) * 1000;
+            tcpEntry.receivingQueue.store(new Segment(seqBegin, data));
+        }
+
+        List<SAckTuple> blocks = tcpEntry.receivingQueue.getSAckBlocks();
+        // 6 separate OOO segments → 6 blocks from getSAckBlocks
+        assertEquals(6, blocks.size());
+
+        // But buildAckResponseWithSack should cap at 4
+        TcpPacket pkt = TcpUtils.buildAckResponseWithSack(tcpEntry, blocks);
+        for (var opt : pkt.getOptions()) {
+            if (opt.getKind() == Consts.TCP_OPTION_SACK) {
+                ByteArray data = opt.getData();
+                int numBlocks = data.length() / 8;
+                assertEquals("SACK option should cap at 4 blocks", 4, numBlocks);
+            }
+        }
+    }
+
+    @Test
+    public void sackBlocksAfterOOODrained() {
+        int seqInit = 12345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+
+        // Send seq1 in order
+        ByteArray bytes1 = rawPayload(1024);
+        tcpEntry.receivingQueue.store(new Segment(seqInit + 1, bytes1));
+
+        // Send seq3 out of order (gap at seq2)
+        ByteArray bytes3 = rawPayload(512);
+        long seq3Begin = seqInit + 1 + bytes1.length() + 1000;
+        tcpEntry.receivingQueue.store(new Segment(seq3Begin, bytes3));
+
+        // Verify SACK blocks present
+        List<SAckTuple> blocks = tcpEntry.receivingQueue.getSAckBlocks();
+        assertEquals(1, blocks.size());
+
+        // Now fill the gap with in-order data
+        ByteArray bytes2 = rawPayload(1000);
+        tcpEntry.receivingQueue.store(new Segment(seqInit + 1 + bytes1.length(), bytes2));
+
+        // After gap filled, OOO data was drained → no more SACK blocks
+        List<SAckTuple> blocksAfter = tcpEntry.receivingQueue.getSAckBlocks();
+        assertTrue("SACK blocks should be empty after OOO data is drained", blocksAfter.isEmpty());
     }
 }

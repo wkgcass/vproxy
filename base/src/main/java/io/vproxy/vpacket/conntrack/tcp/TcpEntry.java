@@ -21,6 +21,7 @@ public class TcpEntry implements WithUserData {
     public static final int RTO_MIN = 100;
     public static final int RTO_MAX = 2_000;
     public static final int DELAYED_ACK_TIMEOUT = 20; // balanced for high-latency
+    public static final int DELAYED_ACK_TIMEOUT_FOR_SACK = 20; // balanced for high-latency
     public static final int MAX_REMOTE_WINDOW = 16 * 1024 * 1024; // 16MB, safety cap for peer's advertised window
     public static final int MAX_CWND = 20 * 1024 * 1024; // 20MB max cwnd
     public static final int INIT_CWND = MAX_CWND / 10;
@@ -843,6 +844,33 @@ public class TcpEntry implements WithUserData {
 
         public int getWindowScale() {
             return windowScale;
+        }
+
+        /**
+         * Quick O(1) check for whether out-of-order data is buffered.
+         * Used by the ACK path to decide whether to send SACK immediately.
+         */
+        public boolean hasOutOfOrderData() {
+            return !oooBuffer.isEmpty();
+        }
+
+        /**
+         * Returns SACK blocks representing the out-of-order segments currently buffered.
+         * Each block is a [begin, end) pair describing contiguous received data beyond the
+         * cumulative ACK point (ackedSeq).
+         */
+        public List<SAckTuple> getSAckBlocks() {
+            if (oooBuffer.isEmpty()) {
+                return Collections.emptyList();
+            }
+            var blocks = new ArrayList<SAckTuple>();
+            for (var entry : oooBuffer.values()) {
+                long begin = Math.max(entry.seqBeginInclusive, ackedSeq);
+                if (begin < entry.seqEndExclusive) {
+                    blocks.add(new SAckTuple(begin, entry.seqEndExclusive));
+                }
+            }
+            return blocks;
         }
     }
 

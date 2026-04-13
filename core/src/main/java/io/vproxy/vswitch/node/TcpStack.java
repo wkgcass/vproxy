@@ -311,15 +311,15 @@ public class TcpStack extends Node {
                 }
                 if (sackBlocks != null && !sackBlocks.isEmpty()) {
                     startSackRetransmit(pkb.network, pkb.tcp, sackBlocks);
-                } else {
+                } else if (tcpPkt.getData().length() == 0) {
                     // fast retransmit: trigger after N duplicate ACKs
                     int dupCount = pkb.tcp.sendingQueue.incrementDupAckCount();
-                    if (dupCount >= 4) {
+                    if (dupCount >= 3) {
                         pkb.tcp.sendingQueue.resetDupAckCount();
                         transmitTcpPsh(pkb.network, pkb.tcp, new RetransContext().retransmissionCount(1));
                     }
                 }
-                if (pkb.tcp.retransmissionTimer == null) {
+                if ((sackBlocks != null || tcpPkt.getData().length() == 0) && pkb.tcp.retransmissionTimer == null) {
                     _tcpStartRetransmission(pkb.network, pkb.tcp);
                 }
             }
@@ -343,7 +343,7 @@ public class TcpStack extends Node {
         if (tcpPkt.isPsh()) {
             long seq = tcpPkt.getSeqNum();
             ByteArray data = tcpPkt.getData();
-            pkb.tcp.receivingQueue.store(new Segment(seq, data));
+            pkb.tcp.receivingQueue.store(new Segment(seq, data.copy()));
             _tcpAck(pkb.network, pkb.tcp);
         }
         if (tcpPkt.isFin()) {
@@ -477,11 +477,6 @@ public class TcpStack extends Node {
 
         if (tcp.receivingQueue.getWindow() == 0) {
             assert Logger.lowLevelDebug("no window, very bad, need to ack immediately");
-            if (tcp.delayedAckTimer != null) {
-                assert Logger.lowLevelDebug("cancel the timer");
-                tcp.delayedAckTimer.cancel();
-                tcp.delayedAckTimer = null;
-            }
             sendAck(network, tcp);
             return;
         }
@@ -489,7 +484,11 @@ public class TcpStack extends Node {
             assert Logger.lowLevelDebug("delayed ack already scheduled");
             return;
         }
-        tcp.delayedAckTimer = sw.getSelectorEventLoop().delay(TcpEntry.DELAYED_ACK_TIMEOUT, () -> sendAck(network, tcp));
+        int delayedAckTimeout = TcpEntry.DELAYED_ACK_TIMEOUT;
+        if (tcp.isRemoteSackPermitted() && tcp.receivingQueue.hasOutOfOrderData()) {
+            delayedAckTimeout = TcpEntry.DELAYED_ACK_TIMEOUT_FOR_SACK;
+        }
+        tcp.delayedAckTimer = sw.getSelectorEventLoop().delay(delayedAckTimeout, () -> sendAck(network, tcp));
     }
 
     public void tcpAck(VirtualNetwork network, TcpEntry tcp) {
@@ -506,7 +505,17 @@ public class TcpStack extends Node {
             tcp.delayedAckTimer = null;
         }
 
-        TcpPacket respondTcp = TcpUtils.buildAckResponse(tcp);
+        TcpPacket respondTcp;
+        if (tcp.isRemoteSackPermitted()) {
+            List<SAckTuple> sackBlocks = tcp.receivingQueue.getSAckBlocks();
+            if (!sackBlocks.isEmpty()) {
+                respondTcp = TcpUtils.buildAckResponseWithSack(tcp, sackBlocks);
+            } else {
+                respondTcp = TcpUtils.buildAckResponse(tcp);
+            }
+        } else {
+            respondTcp = TcpUtils.buildAckResponse(tcp);
+        }
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, respondIp);
@@ -652,6 +661,13 @@ public class TcpStack extends Node {
             assert tcp.sendingQueue.needToSendFin();
             sendTcpFin(network, tcp);
         } else {
+            // Data packets carry ACK flags, so cancel any pending delayed ACK to avoid
+            // sending a redundant standalone ACK after the data packets have already
+            // acknowledged the received data.
+            if (tcp.delayedAckTimer != null && !tcp.receivingQueue.hasOutOfOrderData()) {
+                tcp.delayedAckTimer.cancel();
+                tcp.delayedAckTimer = null;
+            }
             for (var s : segments) {
                 sendTcpPsh(network, tcp, s);
             }

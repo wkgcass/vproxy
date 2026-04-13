@@ -7,6 +7,7 @@ import io.vproxy.vfd.IPv6;
 import io.vproxy.vpacket.*;
 
 import java.util.Collections;
+import java.util.List;
 
 public class TcpUtils {
     private TcpUtils() {
@@ -65,6 +66,25 @@ public class TcpUtils {
     public static TcpPacket buildRstResponse(TcpEntry tcp) {
         TcpPacket respondTcp = buildCommonTcpResponse(tcp);
         respondTcp.setFlags(Consts.TCP_FLAGS_RST);
+        return respondTcp;
+    }
+
+    public static TcpPacket buildAckResponseWithSack(TcpEntry tcp, List<SAckTuple> sackBlocks) {
+        TcpPacket respondTcp = buildAckResponse(tcp);
+        // SACK option: kind(1) + length(1) + N*8 bytes of [start, end) pairs
+        // Max 4 blocks = 2 + 32 = 34 bytes (fits in 40-byte option space with other options)
+        int maxBlocks = Math.min(sackBlocks.size(), 4);
+        int dataLen = maxBlocks * 8;
+        ByteArray sackData = ByteArray.allocate(dataLen);
+        for (int i = 0; i < maxBlocks; i++) {
+            SAckTuple block = sackBlocks.get(i);
+            sackData.int32(i * 8, (int) block.seqBeginInclusive);
+            sackData.int32(i * 8 + 4, (int) block.seqEndExclusive);
+        }
+        var optSack = new TcpPacket.TcpOption(respondTcp);
+        optSack.setKind(Consts.TCP_OPTION_SACK);
+        optSack.setData(sackData);
+        respondTcp.getOptions().add(optSack);
         return respondTcp;
     }
 }
