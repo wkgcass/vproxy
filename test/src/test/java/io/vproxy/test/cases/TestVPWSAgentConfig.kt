@@ -151,6 +151,7 @@ class TestVPWSAgentConfig {
         "                    \"uot\": { \"enabled\": false }\n" +
         "                },\n" +
         "                \"quic\": { \"enabled\": false },\n" +
+        "                \"unet\": { \"enabled\": false },\n" +
         "                \"ip\": \"127.0.0.1\",\n" +
         "                \"port\": 18687\n" +
         "            } ],\n" +
@@ -176,6 +177,7 @@ class TestVPWSAgentConfig {
         "                        \"uot\": { \"enabled\": false }\n" +
         "                    },\n" +
         "                    \"quic\": { \"enabled\": false },\n" +
+        "                    \"unet\": { \"enabled\": false },\n" +
         "                    \"ip\": \"127.0.0.1\",\n" +
         "                    \"port\": 18686\n" +
         "                },\n" +
@@ -186,6 +188,7 @@ class TestVPWSAgentConfig {
         "                        \"uot\": { \"enabled\": false }\n" +
         "                    },\n" +
         "                    \"quic\": { \"enabled\": false },\n" +
+        "                    \"unet\": { \"enabled\": false },\n" +
         "                    \"ip\": \"example.com\",\n" +
         "                    \"port\": 443\n" +
         "                },\n" +
@@ -196,6 +199,7 @@ class TestVPWSAgentConfig {
         "                        \"uot\": { \"enabled\": false }\n" +
         "                    },\n" +
         "                    \"quic\": { \"enabled\": true },\n" +
+        "                    \"unet\": { \"enabled\": false },\n" +
         "                    \"ip\": \"my.quic.com\",\n" +
         "                    \"port\": 4443\n" +
         "                }\n" +

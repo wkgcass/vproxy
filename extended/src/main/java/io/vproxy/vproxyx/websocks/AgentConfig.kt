@@ -48,6 +48,8 @@ data class AgentConfig(
   var uot: UOTConfig = UOTConfig(),
   // quic
   var quic: QuicConfig = QuicConfig(),
+  // unet
+  var unet: UNetConfig = UNetConfig(),
   // timeout
   var timeout: Int = 60 * 1000,
 ) {
@@ -69,6 +71,7 @@ data class AgentConfig(
       .put("pool", IntRule) { pool = it }
       .put("uot", UOTConfig.rule) { uot = it }
       .put("quic", QuicConfig.rule) { quic = it }
+      .put("unet", UNetConfig.rule) { unet = it }
       .put("timeout", IntRule) { timeout = it }
   }
 }
@@ -133,6 +136,25 @@ data class QuicConfig(
     val rule: Rule<QuicConfig> = ObjectRule { QuicConfig() }
       .put("enabled", BoolRule) { enabled = it }
       .put("cacerts", NullableStringRule) { cacerts = it }
+  }
+}
+
+data class UNetConfig(
+  // enabled
+  var enabled: Boolean = false,
+  // nic
+  var nic: String = "eth0",
+  // multiplier.psh
+  var pshMultiplier: Int = 1,
+  // multiplier.ack
+  var ackMultiplier: Int = 1,
+) {
+  companion object {
+    val rule: Rule<UNetConfig> = ObjectRule { UNetConfig() }
+      .put("enabled", BoolRule) { enabled = it }
+      .put("nic", StringRule) { nic = it }
+      .put("multiplier.psh", IntRule) { pshMultiplier = it }
+      .put("multiplier.ack", IntRule) { ackMultiplier = it }
   }
 }
 

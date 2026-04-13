@@ -110,7 +110,7 @@ public class WebSocksProxyAgent {
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors
         }
-        if (configLoader.isUdpOverTcpEnabled()) {
+        if (configLoader.isUdpOverTcpEnabled() || configLoader.isUnetEnabled()) {
             workers = 1; // restrict to one thread
         }
 

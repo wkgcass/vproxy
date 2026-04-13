@@ -110,9 +110,14 @@ public class Conntrack {
     public TcpEntry lookupTcp(IPPort remote, IPPort local) {
         var map = tcpEntries.get(local);
         if (map == null) {
+            assert Logger.lowLevelDebug("lookupTcp, local ipport " + local + " not found");
             return null;
         }
-        return map.get(remote);
+        var entry = map.get(remote);
+        if (entry == null) {
+            assert Logger.lowLevelDebug("lookupTcp, remote ipport " + remote + " not found, map="+map);
+        }
+        return entry;
     }
 
     public UdpEntry lookupUdp(AbstractIpPacket ip, UdpPacket udp) {

@@ -26,6 +26,11 @@ public class UdpOverTcpSetup {
     // port: not used if client == true
     // port: the kcp port if client == false
     public static FDs setup(boolean client, int port, String nicname, EventLoopGroup elg) throws Exception {
+        return setup(client, port, nicname, elg, true);
+    }
+
+    // installUotFilter: whether to install the UdpOverTcpPacketFilter; set to false for unet
+    public static FDs setup(boolean client, int port, String nicname, EventLoopGroup elg, boolean installUotFilter) throws Exception {
         var nic = selectNic(nicname);
         var localMac = new MacAddress(nic.getHardwareAddress());
         var ips = nic.getInterfaceAddresses();
@@ -96,9 +101,11 @@ public class UdpOverTcpSetup {
                 .setBPFInfo(new XDPIface.BPFInfo(obj, xskMap))
                 .build());
 
-        UdpOverTcpPacketFilter filter = new UdpOverTcpPacketFilter(client);
-        iface.addIngressFilter(filter);
-        iface.addEgressFilter(filter);
+        if (installUotFilter) {
+            UdpOverTcpPacketFilter filter = new UdpOverTcpPacketFilter(client);
+            iface.addIngressFilter(filter);
+            iface.addEgressFilter(filter);
+        }
 
         network.macTable.record(v4gw.left, iface, true);
         Logger.alert("adding persistent mac entry for v4 gateway " + v4gw.left);

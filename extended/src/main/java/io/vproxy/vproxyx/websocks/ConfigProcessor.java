@@ -1,5 +1,6 @@
 package io.vproxy.vproxyx.websocks;
 
+import io.vproxy.vswitch.stack.fd.VSwitchFDs;
 import io.vproxy.base.component.check.CheckProtocol;
 import io.vproxy.base.component.check.HealthCheckConfig;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
@@ -20,6 +21,7 @@ import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.websocks.uot.UdpOverTcpSetup;
+import io.vproxy.vproxyx.websocks.unet.UNetSetup;
 
 import java.io.File;
 import java.io.IOException;
@@ -156,6 +158,14 @@ public class ConfigProcessor {
         return configLoader.getAgentTimeout();
     }
 
+    public int getPshMultiplier() {
+        return configLoader.getUnetPshMultiplier();
+    }
+
+    public int getAckMultiplier() {
+        return configLoader.getUnetAckMultiplier();
+    }
+
     private ServerGroup getGroup(String alias) throws Exception {
         if (alias == null) {
             alias = "DEFAULT";
@@ -189,23 +199,42 @@ public class ConfigProcessor {
         var serverListMap = configLoader.getServers();
         String nic = configLoader.getUdpOverTcpNic();
         boolean hasUOT = false;
+        FDs uotFDs = null;
+        String unetNic = configLoader.getUnetNic();
+        FDs unetFDs = null;
+        boolean hasUNet = false;
         for (String alias : serverListMap.keySet()) {
             ServerList serverList = serverListMap.get(alias);
             for (ServerList.Server svr : serverList.getServers()) {
                 KCPFDs kcpFDs;
                 if (svr.useUOT()) {
                     hasUOT = true;
-                    kcpFDs = new KCPFDs(KCPFDs.optionsClientFast4(),
-                        new UDPFDs(UdpOverTcpSetup.setup(true, -1, nic, workerLoopGroup)));
+                    if (uotFDs == null) {
+                        uotFDs = UdpOverTcpSetup.setup(true, -1, nic, workerLoopGroup);
+                    }
+                    kcpFDs = new KCPFDs(KCPFDs.optionsClientFast4(), new UDPFDs(uotFDs));
                 } else {
                     kcpFDs = KCPFDs.getClientDefault();
                 }
+                if (svr.useUNet()) {
+                    hasUNet = true;
+                    if (unetFDs == null) {
+                        unetFDs = UNetSetup.setup(true, -1, unetNic, workerLoopGroup);
+                    }
+                }
                 var handle = addIntoServerGroup(alias, svr);
-                initSharedData(handle, svr, kcpFDs, quicFDs);
+                initSharedData(handle, svr, kcpFDs, quicFDs, svr.useUNet() ? unetFDs : null);
             }
         }
         if (hasUOT) {
             Logger.alert("enhancing kcp with uot on " + nic);
+        }
+        if (hasUNet) {
+            Logger.alert("enhancing with unet on " + unetNic);
+            if (unetFDs instanceof VSwitchFDs vsFDs) {
+                vsFDs.setPshMultiplier(configLoader.getUnetPshMultiplier());
+                vsFDs.setAckMultiplier(configLoader.getUnetAckMultiplier());
+            }
         }
         // check for https relay
         if (!configLoader.getHttpsSniErasureCertKeyFiles().isEmpty()) {
@@ -267,7 +296,7 @@ public class ConfigProcessor {
         return handle;
     }
 
-    private void initSharedData(ServerGroup.ServerHandle handle, ServerList.Server svr, KCPFDs kcpFDs, FDs quicFDs) throws Exception {
+    private void initSharedData(ServerGroup.ServerHandle handle, ServerList.Server svr, KCPFDs kcpFDs, FDs quicFDs, FDs unetFDs) throws Exception {
         // init streamed fds
         Map<SelectorEventLoop, H2StreamedClientFDs> fds = new HashMap<>();
         if (svr.useKCP()) {
@@ -290,7 +319,7 @@ public class ConfigProcessor {
         // this will be used when connection establishes to remote
         // in WebSocksProxyAgentConnectorProvider.java
         // also in HttpDNSServer.java
-        handle.data = new SharedData(svr, fds, quicFDs);
+        handle.data = new SharedData(svr, fds, quicFDs, unetFDs);
     }
 
     private void loadCertKeyInAutoSignWorkingDirectory(File autoSignWorkingDirectory, String domain) throws Exception {

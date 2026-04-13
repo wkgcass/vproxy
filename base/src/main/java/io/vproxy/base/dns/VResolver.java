@@ -111,7 +111,7 @@ public class VResolver extends AbstractResolver {
                 }
                 return ret;
             } else {
-                return new IP[]{};
+                return new IP[]{addr};
             }
         }
         if (domain.equals("localhost") || domain.equals("localhost.")) {

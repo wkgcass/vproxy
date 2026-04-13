@@ -16,6 +16,7 @@ public class Logger {
     public static final boolean stackTraceOn;
     public static final boolean lowLevelDebugOn;
     public static final boolean lowLevelNetDebugOn;
+    public static final boolean tcpStackDebugOn;
 
     public static final LogDispatcher logDispatcher = new LogDispatcher();
     public static final STDOutLogHandler stdoutLogHandler;
@@ -30,6 +31,11 @@ public class Logger {
         {
             String debug = System.getProperty("javax.net.debug");
             lowLevelNetDebugOn = "all".equals(debug) || "vproxy".equals(debug);
+        }
+
+        {
+            String tcpStackDebug = Utils.getSystemProperty("tcpStackDebug");
+            tcpStackDebugOn = "on".equals(tcpStackDebug);
         }
 
         {

@@ -12,34 +12,33 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 public class TcpEntry implements WithUserData {
-    public static final int WMEM_MAX = 212992;
-    public static final int RMEM_MAX = 212992;
+    public static final int WMEM_MAX = 1048576; // 1MB, for high-latency BDP
+    public static final int RMEM_MAX = 1048576; // 1MB, for high-latency BDP
     public static final int SND_DEFAULT_MSS = 1360;
     public static final int RCV_MSS = 1360;
     public static final int TCP_SEQ_INIT_MIN = Integer.MAX_VALUE / 3;
     public static final int TCP_SEQ_RAND = Integer.MAX_VALUE / 2;
-    public static final int RTO_MIN = 200;
-    public static final int RTO_MAX = 120_000;
-    public static final int DELAYED_ACK_TIMEOUT = 20;
+    public static final int RTO_MIN = 100;
+    public static final int RTO_MAX = 2_000;
+    public static final int DELAYED_ACK_TIMEOUT = 20; // balanced for high-latency
     public static final int MAX_REMOTE_WINDOW = 16 * 1024 * 1024; // 16MB, safety cap for peer's advertised window
-    public static final int MAX_RETRANSMISSION_AFTER_CLOSING = 7;
-    public static final int TIME_WAIT_TIMEOUT_MS = 60_000; // 2MSL
+    public static final int MAX_CWND = 20 * 1024 * 1024; // 20MB max cwnd
+    public static final int INIT_CWND = MAX_CWND / 10;
+    public static final int MAX_RETRANSMISSION_AFTER_CLOSING = 14;
+    public static final int TIME_WAIT_TIMEOUT_MS = 24_000;
+
+    // 多倍发包参数
+    private int pshMultiplier = 1;
+    private int ackMultiplier = 1;
 
     // 高延迟/高丢包网络优化参数
-    public static final int HIGH_LATENCY_INITIAL_CWND_MSS = 20; // 初始cwnd为20*MSS
-    public static final double HIGH_LATENCY_LOSS_BETA = 0.90; // 丢包时保留90%的cwnd（借鉴KCP的保守策略）
-    public static final int HIGH_LATENCY_MIN_CWND_MSS = 4; // 最小cwnd为4*MSS
-    public static final double HIGH_LATENCY_RTT_VARIANCE = 0.3; // RTT方差权重，适应高延迟波动
-
-    // 快速重传参数（借鉴KCP）
-    public static final int DEFAULT_FAST_RESEND = 3; // 收到3个重复ACK立即重传
-    public static final int DEFAULT_FAST_LIMIT = 5; // 最多快速重传5次
-    public static final int DEFAULT_DEAD_LINK = 20; // 死链检测阈值
+    public static final int HIGH_LATENCY_MIN_CWND_MSS = 10; // 最小cwnd为10*MSS
 
     public final IPPort remote;
     public final IPPort local;
     private TcpState state;
     private boolean needClosing = false;
+    private boolean remoteSackPermitted = false;
 
     public final SendingQueue sendingQueue;
     public final ReceivingQueue receivingQueue;
@@ -133,41 +132,67 @@ public class TcpEntry implements WithUserData {
         }
     }
 
+    public int getPshMultiplier(int dataSize) {
+        if (dataSize > 1024) {
+            return 1;
+        }
+        if (dataSize > 512) {
+            return Math.max(1, pshMultiplier - 1);
+        }
+        return pshMultiplier;
+    }
+
+    public void setPshMultiplier(int pshMultiplier) {
+        this.pshMultiplier = pshMultiplier;
+    }
+
+    public int getAckMultiplier() {
+        return ackMultiplier;
+    }
+
+    public void setAckMultiplier(int ackMultiplier) {
+        this.ackMultiplier = ackMultiplier;
+    }
+
     public boolean requireClosing() {
         return needClosing;
+    }
+
+    public boolean isRemoteSackPermitted() {
+        return remoteSackPermitted;
+    }
+
+    public void setRemoteSackPermitted(boolean remoteSackPermitted) {
+        this.remoteSackPermitted = remoteSackPermitted;
     }
 
     public void doClose() {
         this.needClosing = true;
     }
 
-    /**
-     * 配置高延迟/高丢包网络优化模式（类似KCP的nodelay）
-     * @param enable 是否启用高延迟优化模式
-     * @param fastresend 快速重传阈值（收到多少个重复ACK触发），0表示禁用
-     * @param fastlimit 最多快速重传次数，0表示不限制
-     * @param deadLink 死链检测阈值（单个segment最大重传次数）
-     */
-    public void setHighLatencyMode(boolean enable, int fastresend, int fastlimit, int deadLink) {
-        if (sendingQueue != null) {
-            if (enable) {
-                sendingQueue.setFastResend(fastresend, fastlimit);
-                sendingQueue.setDeadLink(deadLink);
-            } else {
-                // 恢复默认值
-                sendingQueue.setFastResend(DEFAULT_FAST_RESEND, DEFAULT_FAST_LIMIT);
-                sendingQueue.setDeadLink(DEFAULT_DEAD_LINK);
-            }
-        }
-    }
 
     public class SendingQueue {
-        private static final double CUBIC_C = 0.4;
-        private static final double CUBIC_BETA = 0.7;
-        private static final double RTT_ALPHA = 0.125;
-        private static final double RTT_BETA = 0.25;
+        private static final double CUBIC_C;
+        private static final double CUBIC_BETA;
+        private static final double RTT_ALPHA;
+        private static final double RTT_BETA;
 
-        private final LinkedList<Segment> q = new LinkedList<>();
+        static {
+            // more aggressive growth for high-latency
+            var cubicC = Utils.getSystemProperty("cubic_c", "1");
+            // 高延迟网络，减少恢复时间
+            var cubicBeta = Utils.getSystemProperty("cubic_beta", "0.8");
+            var rttAlpha = Utils.getSystemProperty("rtt_alpha", "0.25");
+            // higher weight for high-latency variance
+            var rttBeta = Utils.getSystemProperty("rtt_beta", "0.2");
+
+            CUBIC_C = Double.parseDouble(cubicC);
+            CUBIC_BETA = Double.parseDouble(cubicBeta);
+            RTT_ALPHA = Double.parseDouble(rttAlpha);
+            RTT_BETA = Double.parseDouble(rttBeta);
+        }
+
+        private final ArrayDeque<Segment> q = new ArrayDeque<>();
         private int currentSize = 0;
         private long latestSeq;
         private long ackSeq;
@@ -183,20 +208,12 @@ public class TcpEntry implements WithUserData {
         private long lastLossTime;
         private int lastLossCwnd; // cwnd (in bytes) at the time of last loss
         private int bytesInFlight = 0;
+        private int dupAckCount = 0;
 
         // RTT estimation (RFC 6298)
         private long srttUs = -1;   // smoothed RTT in microseconds (-1 = no sample yet)
         private long rttVarUs = -1; // RTT variance in microseconds
         private long rto = RTO_MIN; // computed RTO in ms
-
-        // 带宽控制配置（可通过外部设置）
-        private int maxBandwidthOverhead = 0; // 0 = unlimited, >0 = 最大额外带宽消耗(bytes/sec)
-
-        // 快速重传状态（借鉴KCP）
-        private int fastresend = DEFAULT_FAST_RESEND;
-        private int fastlimit = DEFAULT_FAST_LIMIT;
-        private int deadLink = DEFAULT_DEAD_LINK;
-        private int totalXmit = 0; // 总重传次数
 
         // per-segment send timestamps for RTT sampling (seq -> sendTimeMs)
         private final java.util.Map<Long, Long> sendTimes = new java.util.HashMap<>();
@@ -211,8 +228,7 @@ public class TcpEntry implements WithUserData {
             this.window = Math.min(MAX_REMOTE_WINDOW, window * windowScale);
             this.mss = mss;
             this.windowScale = windowScale;
-            // 高延迟网络：使用更大的初始cwnd快速填满BDP
-            this.cwnd = Math.min(this.window, HIGH_LATENCY_INITIAL_CWND_MSS * mss);
+            this.cwnd = INIT_CWND;
             this.ssthresh = Integer.MAX_VALUE;
             this.lastLossTime = System.currentTimeMillis();
             this.lastLossCwnd = cwnd;
@@ -220,6 +236,10 @@ public class TcpEntry implements WithUserData {
 
         public void setCwnd(int cwnd) {
             this.cwnd = cwnd;
+        }
+
+        private void updateWindow(int window) {
+            this.window = Math.min(MAX_REMOTE_WINDOW, window * windowScale);
         }
 
         public void incAllSeq() {
@@ -281,60 +301,62 @@ public class TcpEntry implements WithUserData {
         }
 
         public List<Segment> fetch() {
+            return fetch(false);
+        }
+
+        private final List<Segment> REUSEABLE_BUFFER_FOR_fetch = new ArrayList<>(1024);
+
+        public List<Segment> fetch(boolean isRetransmit) {
             int sendLimit = getAvailableSendWindow();
-            if (sendLimit <= 0) {
+            if (sendLimit <= 0 && !isRetransmit) {
                 return Collections.emptyList();
             }
 
-            // 首先检查快速重传（借鉴KCP）
-            List<Segment> fastRetransmit = checkFastRetransmit();
-            if (!fastRetransmit.isEmpty()) {
-                // 执行快速重传，限制总字节数不超过可用窗口
-                // 注意：不累加 bytesInFlight，这些 segment 首次发送时已计入
-                int totalBytes = 0;
-                List<Segment> allowed = new LinkedList<>();
-                for (var seg : fastRetransmit) {
-                    if (totalBytes + seg.data.length() > sendLimit) {
+            long startSeq = isRetransmit ? ackSeq : fetchSeq;
+            List<Segment> ret = REUSEABLE_BUFFER_FOR_fetch;
+            ret.clear();
+            int newBytes = 0; // bytes beyond fetchSeq → added to bytesInFlight
+
+            for (var s : q) {
+                // 跳过无需处理的
+                if (s.seqBeginInclusive < startSeq) continue;
+                // 已经sack的无需处理
+                if (s.sacked) continue;
+
+                // 新发送的？
+                if (s.seqBeginInclusive > fetchSeq) {
+                    // 超出sendLimit了？
+                    if (s.seqEndExclusive - ackSeq > sendLimit) {
                         break;
                     }
-                    totalBytes += seg.data.length();
-                    allowed.add(seg);
                 }
-                return allowed;
-            }
 
+                // 如果比fetchSeq小，则说明它是重传的
+                if (s.seqBeginInclusive < fetchSeq) {
+                    s.retransmitted++;
+                }
 
-            long endSeq = ackSeq + Math.min(mss, sendLimit);
-            Segment s = fetch0(ackSeq, endSeq);
-            if (s == null) {
-                return Collections.emptyList();
-            }
-            List<Segment> ret = new LinkedList<>();
-            ret.add(s);
-            int total = s.data.length();
-            while (true) {
-                int len = mss;
-                if (total + len > sendLimit) {
-                    len = sendLimit - total;
-                }
-                if (len <= 0) {
-                    break;
-                }
-                s = fetch0(ackSeq + total, ackSeq + total + len);
-                if (s == null) {
-                    break;
-                }
-                total += s.data.length();
                 ret.add(s);
+
+                // Track new bytes for bytesInFlight
+                if (s.seqEndExclusive > fetchSeq) {
+                    newBytes += s.data.length(); // 每次必定只发送/ack/sack完整的segment，所以这里逻辑比较简单
+                }
             }
-            // track in-flight bytes and record send times
-            int totalBytes = 0;
-            long now = System.currentTimeMillis();
-            for (var seg : ret) {
-                totalBytes += seg.data.length();
-                sendTimes.put(seg.seqBeginInclusive, now);
+
+            if (!ret.isEmpty()) {
+                bytesInFlight += newBytes;
+                long now = System.currentTimeMillis();
+                for (var seg : ret) {
+                    if (seg.retransmitted == 0) {
+                        sendTimes.put(seg.seqBeginInclusive, now);
+                    }
+                    if (seg.seqEndExclusive > fetchSeq) {
+                        fetchSeq = seg.seqEndExclusive;
+                    }
+                }
             }
-            bytesInFlight += totalBytes;
+
             return ret;
         }
 
@@ -343,47 +365,61 @@ public class TcpEntry implements WithUserData {
          * the peer's receive window and our congestion window.
          */
         public int getAvailableSendWindow() {
-            return Math.min(window, cwnd - bytesInFlight);
+            return Math.max(0, cwnd - bytesInFlight);
         }
 
-        private Segment fetch0(long begin, long endExclusive) {
-            if (q.size() == 0) {
-                return null;
-            }
-            if (q.peekFirst().seqBeginInclusive > begin) {
-                // cannot retrieve data at the specified seq id
-                return null;
-            }
-            var ite = q.iterator();
-            ByteArray arr = null;
-            while (ite.hasNext()) {
-                Segment s = ite.next();
-                if (s.seqBeginInclusive >= endExclusive) {
+        /**
+         * @param sackBlocks list of [start, end) pairs representing received data ranges
+         */
+        public void markSackRetransmitSegments(List<SAckTuple> sackBlocks) {
+            if (q.isEmpty()) return;
+            if (sackBlocks.isEmpty()) return;
+
+            var sackIte = sackBlocks.iterator();
+            var currSAckBlock = sackIte.hasNext() ? sackIte.next() : null;
+            var qite = q.iterator();
+            var moveQIteNext = true;
+            Segment s = null;
+            while (qite.hasNext() || !moveQIteNext) {
+                if (moveQIteNext) {
+                    s = qite.next();
+                } else {
+                    moveQIteNext = true;
+                }
+                assert s != null;
+
+                // 已经sack的不需要处理
+                if (s.sacked) continue;
+                // 比fetchSeq大的segments不需要处理
+                if (s.seqBeginInclusive >= fetchSeq) {
                     break;
                 }
-                if (s.seqEndExclusive <= begin) {
+                // 已经没有sack要处理了？
+                if (currSAckBlock == null) {
+                    break;
+                }
+                // 太小的？
+                if (s.seqEndExclusive <= currSAckBlock.seqBeginInclusive) {
                     continue;
                 }
-                ByteArray data = s.data;
-                if (s.seqBeginInclusive < begin) {
-                    int from = (int) (begin - s.seqBeginInclusive);
-                    int to = (int) (Math.min(endExclusive, s.seqEndExclusive) - s.seqBeginInclusive - (begin - s.seqBeginInclusive));
-                    data = data.sub(from, to);
-                } else if (s.seqEndExclusive > endExclusive) {
-                    data = data.sub(0, (int) (endExclusive - s.seqBeginInclusive));
+                // 完全位于sack内？
+                if (s.seqBeginInclusive >= currSAckBlock.seqBeginInclusive && s.seqEndExclusive <= currSAckBlock.seqEndExclusive) {
+                    s.sacked = true;
+                    continue;
                 }
-                if (arr == null) {
-                    arr = data;
-                } else {
-                    arr = arr.concat(data);
+                // 部分包含的（开头在sack里）？
+                if (s.seqBeginInclusive >= currSAckBlock.seqBeginInclusive && s.seqBeginInclusive < currSAckBlock.seqEndExclusive) {
+                    continue;
                 }
+                // 部分包含的（结尾在sack里的）？
+                if (s.seqEndExclusive <= currSAckBlock.seqEndExclusive) {
+                    continue;
+                }
+                // 当前segment超出sack的
+                // roll forward
+                currSAckBlock = sackIte.hasNext() ? sackIte.next() : null;
+                moveQIteNext = false; // 当前segment还要再和新的sack进行对比处理
             }
-            if (arr == null) { // nothing found
-                return null;
-            }
-            var seg = new Segment(begin, arr);
-            fetchSeq = seg.seqEndExclusive;
-            return seg;
         }
 
         public void ack(long seq, int window) {
@@ -391,7 +427,7 @@ public class TcpEntry implements WithUserData {
                 return;
             }
 
-            this.window = Math.min(MAX_REMOTE_WINDOW, window * windowScale);
+            updateWindow(window);
 
             if (state.finSent && seq >= latestSeq + 1) {
                 ackSeq = latestSeq + 1;
@@ -409,28 +445,12 @@ public class TcpEntry implements WithUserData {
                 seq = q.peekLast().seqEndExclusive;
             }
 
-            // 快速ACK检测（借鉴KCP的parseFastack）
-            // 收到重复ACK(seq <= ackSeq)时，标记ackSeq位置之前的所有segment
-            // 这些segment的数据对端已部分或完全收到但仍在等待后续数据
-            // 包括: seqBeginInclusive < ackSeq(部分ACK) 和 seqBeginInclusive == ackSeq(完全对齐)
-            if (seq <= ackSeq && !q.isEmpty()) {
-                for (var s : q) {
-                    if (s.seqBeginInclusive <= ackSeq) {
-                        s.fastack++;
-                    } else {
-                        break; // queue is ordered, no need to continue
-                    }
-                }
-            }
-
             // compute newly acked bytes for congestion control
             long newlyAcked = seq - ackSeq;
             if (newlyAcked > 0) {
                 bytesInFlight = Math.max(0, bytesInFlight - (int) newlyAcked);
                 // CUBIC update: grow cwnd for each newly acked segment
                 cubicOnAck((int) newlyAcked);
-                // 重置快速重传计数器
-                resetFastack(seq);
             }
 
             if (ackSeq < seq) {
@@ -440,18 +460,24 @@ public class TcpEntry implements WithUserData {
             boolean sampled = false;
             while (ite.hasNext()) {
                 var s = ite.next();
-                if (s.seqEndExclusive >= seq) {
+                if (s.seqBeginInclusive >= seq) {
+                    break; // entirely after ACK, nothing to do
+                }
+                if (s.seqEndExclusive <= seq) {
+                    // fully acked — remove
+                    if (!sampled) {
+                        sampleRtt(s.seqBeginInclusive);
+                        sampled = true;
+                    }
+                    sendTimes.remove(s.seqBeginInclusive);
+                    currentSize -= s.data.length();
+                    ite.remove();
+                    if (connectionHandler != null) {
+                        connectionHandler.writable(TcpEntry.this);
+                    }
+                } else {
+                    // partially acked — segment is immutable, treat as not acked
                     break;
-                }
-                if (!sampled) {
-                    sampleRtt(s.seqBeginInclusive);
-                    sampled = true;
-                }
-                sendTimes.remove(s.seqBeginInclusive);
-                currentSize -= s.data.length();
-                ite.remove();
-                if (connectionHandler != null) {
-                    connectionHandler.writable(TcpEntry.this);
                 }
             }
         }
@@ -475,16 +501,18 @@ public class TcpEntry implements WithUserData {
                 // update SRTT and RTTVAR - 使用更高的方差权重适应高延迟波动
                 long diff = srttUs - rttUs;
                 if (diff < 0) diff = -diff;
-                rttVarUs = (long) ((1 - HIGH_LATENCY_RTT_VARIANCE) * rttVarUs + HIGH_LATENCY_RTT_VARIANCE * diff);
+                rttVarUs = (long) ((1 - RTT_BETA) * rttVarUs + RTT_BETA * diff);
                 srttUs = (long) ((1 - RTT_ALPHA) * srttUs + RTT_ALPHA * rttUs);
             }
             rto = Math.max(RTO_MIN, Math.min(RTO_MAX, (srttUs + 4 * rttVarUs) / 1000));
         }
 
         private void cubicOnAck(int newlyAcked) {
+            // number of MSS-sized increments to apply (per RFC 5681)
+            int mssCount = Math.max(1, newlyAcked / mss);
             if (cwnd < ssthresh) {
-                // slow start: increase by MSS per ACK (exponential)
-                cwnd += mss;
+                // slow start: increase by newlyAcked bytes (exponential)
+                cwnd += newlyAcked;
                 if (cwnd > ssthresh) {
                     cwnd = ssthresh;
                 }
@@ -501,22 +529,25 @@ public class TcpEntry implements WithUserData {
                 targetCwnd = Math.max(targetCwnd, 2 * mss);
 
                 // ACK-clocking increment (standard TCP rate: MSS^2 / cwnd per ACK)
-                int increment = Math.max(1, (int) ((long) mss * mss / cwnd));
-                if (cwnd < targetCwnd) {
-                    // cwnd below CUBIC target — grow toward it
-                    cwnd += increment;
-                    // don't overshoot the target
-                    if (cwnd > targetCwnd) {
-                        cwnd = targetCwnd;
+                // apply once per MSS acked, so large ACKs grow cwnd proportionally
+                for (int i = 0; i < mssCount; i++) {
+                    int increment = Math.max(1, (int) ((long) mss * mss / cwnd));
+                    if (cwnd < targetCwnd) {
+                        // cwnd below CUBIC target — grow toward it
+                        cwnd += increment;
+                        // don't overshoot the target
+                        if (cwnd > targetCwnd) {
+                            cwnd = targetCwnd;
+                        }
+                    } else {
+                        // cwnd at or above CUBIC target — grow at standard TCP rate
+                        // (TCP-friendly region per RFC 8312 Section 4.2)
+                        cwnd += increment;
                     }
-                } else {
-                    // cwnd at or above CUBIC target — grow at standard TCP rate
-                    // (TCP-friendly region per RFC 8312 Section 4.2)
-                    cwnd += increment;
                 }
             }
-            // cap cwnd to peer's receive window
-            cwnd = Math.min(cwnd, window);
+            // cap cwnd to MAX_CWND
+            cwnd = Math.min(cwnd, MAX_CWND);
         }
 
         /**
@@ -528,22 +559,20 @@ public class TcpEntry implements WithUserData {
             if (cwnd > lastLossCwnd) {
                 lastLossCwnd = cwnd;
             }
-            // 高延迟网络：保留90%的cwnd而非50%，减少恢复时间
-            int newCwnd = (int) (cwnd * HIGH_LATENCY_LOSS_BETA);
+            // use CUBIC_BETA consistently — this matches the K calculation
+            // in cubicOnAck which also uses CUBIC_BETA
+            int newCwnd = (int) (cwnd * CUBIC_BETA);
             ssthresh = Math.max(newCwnd, HIGH_LATENCY_MIN_CWND_MSS * mss);
             cwnd = ssthresh;
             lastLossTime = System.currentTimeMillis();
         }
 
-        /**
-         * Called when retransmitting — reset bytesInFlight so fetch() can send again.
-         */
-        public void onRetransmit() {
-            bytesInFlight = 0;
-        }
-
         public int getCurrentSize() {
             return currentSize;
+        }
+
+        public int getBytesInFlight() {
+            return bytesInFlight;
         }
 
         public long getLatestSeq() {
@@ -586,119 +615,20 @@ public class TcpEntry implements WithUserData {
             return finAcked;
         }
 
-        /**
-         * 设置最大额外带宽消耗限制
-         * @param maxBytesPerSec 0表示不限制，>0表示每秒最大额外开销(bytes)
-         */
-        public void setMaxBandwidthOverhead(int maxBytesPerSec) {
-            this.maxBandwidthOverhead = maxBytesPerSec;
+        public int incrementDupAckCount() {
+            return ++dupAckCount;
         }
 
-        public int getMaxBandwidthOverhead() {
-            return maxBandwidthOverhead;
-        }
-
-        /**
-         * 检查当前是否可以发送数据（考虑带宽限制）
-         * @return true if can send, false if bandwidth limited
-         */
-        public boolean canSendWithBandwidthLimit() {
-            if (maxBandwidthOverhead <= 0) {
-                return true; // unlimited
-            }
-            if (srttUs < 0) {
-                return true; // no RTT sample yet, allow sending
-            }
-            // 简化实现：基于当前cwnd估算带宽，实际应用中需要更精确的测量
-            long estimatedBandwidth = (long) cwnd * 1000 / Math.max(1, srttUs / 1000);
-            return estimatedBandwidth <= maxBandwidthOverhead;
-        }
-
-        /**
-         * 设置快速重传参数（借鉴KCP）
-         * @param fastresend 收到多少个重复ACK触发快速重传，0表示禁用
-         * @param fastlimit 最多快速重传次数，0表示不限制
-         */
-        public void setFastResend(int fastresend, int fastlimit) {
-            this.fastresend = fastresend;
-            this.fastlimit = fastlimit;
-        }
-
-        public int getFastresend() {
-            return fastresend;
-        }
-
-        public int getFastlimit() {
-            return fastlimit;
-        }
-
-        /**
-         * 设置死链检测阈值（借鉴KCP）
-         * @param deadLink 单个segment最大重传次数，超过则认为连接断开
-         */
-        public void setDeadLink(int deadLink) {
-            this.deadLink = deadLink;
-        }
-
-        public int getDeadLink() {
-            return deadLink;
-        }
-
-        /**
-         * 检查并执行快速重传（借鉴KCP）
-         * @return 需要快速重传的segment列表，如果没有则返回空列表
-         */
-        public List<Segment> checkFastRetransmit() {
-            if (fastresend <= 0) {
-                return Collections.emptyList();
-            }
-
-            List<Segment> retransmitList = new LinkedList<>();
-            var ite = q.iterator();
-            while (ite.hasNext()) {
-                var s = ite.next();
-                if (s.fastack >= fastresend) {
-                    if (s.xmit < fastlimit || fastlimit <= 0) {
-                        retransmitList.add(s);
-                        s.xmit++;
-                        s.fastack = 0;
-                        totalXmit++;
-
-                        // 死链检测
-                        if (s.xmit >= deadLink) {
-                            // 标记连接需要关闭
-                            doClose();
-                        }
-                    }
-                }
-            }
-            return retransmitList;
-        }
-
-        /**
-         * 获取总重传次数（用于监控）
-         */
-        public int getTotalXmit() {
-            return totalXmit;
-        }
-
-        /**
-         * 重置快速重传计数器（在收到新ACK时调用）
-         */
-        public void resetFastack(long ackSeq) {
-            var ite = q.iterator();
-            while (ite.hasNext()) {
-                var s = ite.next();
-                if (s.seqBeginInclusive >= ackSeq) {
-                    s.fastack = 0;
-                }
-            }
+        public void resetDupAckCount() {
+            dupAckCount = 0;
         }
     }
 
     public class ReceivingQueue {
-        private final LinkedList<Segment> q = new LinkedList<>();
+        private final ArrayDeque<Segment> q = new ArrayDeque<>();
+        private final TreeMap<Long, Segment> oooBuffer = new TreeMap<>();
         private int currentSize = 0;
+        private int oooSize = 0;
         private long expectingSeq;
         private long ackedSeq;
         private int window = RMEM_MAX;
@@ -733,36 +663,121 @@ public class TcpEntry implements WithUserData {
                 Logger.error(LogType.IMPROPER_USE, "FIN received but is still storing data");
                 return;
             }
-
-            if (currentSize > RMEM_MAX) {
+            if (currentSize + oooSize >= RMEM_MAX) {
                 // memory is full
                 return;
             }
-            if (segment.seqBeginInclusive > expectingSeq) {
-                // missing packets
-                // we do not handle mis-ordered packets for now
+
+            long segBegin = segment.seqBeginInclusive;
+            long segEnd = segment.seqEndExclusive;
+
+            // entirely before expectingSeq - already received
+            if (segEnd <= expectingSeq) {
                 return;
-            }
-            if (segment.seqEndExclusive <= expectingSeq) {
-                // already fully received
-                return;
-            }
-            var data = segment.data;
-            if (segment.seqBeginInclusive < expectingSeq) {
-                int incr = (int) (expectingSeq - segment.seqBeginInclusive);
-                data = data.sub(incr, data.length() - incr);
-            }
-            q.add(new Segment(expectingSeq, data.copy()));
-            expectingSeq += data.length();
-            currentSize += data.length();
-            window -= data.length();
-            if (window < 0) {
-                window = 0;
             }
 
-            // run callback
-            if (connectionHandler != null) {
-                connectionHandler.readable(TcpEntry.this);
+            // starts at or before expectingSeq - can add to ready queue directly
+            if (segBegin <= expectingSeq) {
+                ByteArray data = segment.data;
+                if (segBegin < expectingSeq) {
+                    int trim = (int) (expectingSeq - segBegin);
+                    data = data.sub(trim, data.length() - trim);
+                }
+                q.add(new Segment(expectingSeq, data.copy()));
+                expectingSeq += data.length();
+                currentSize += data.length();
+
+                // drain any OOO segments that are now contiguous
+                drainOOOBuffer();
+
+                resetWindow();
+
+                // run callback
+                if (connectionHandler != null) {
+                    connectionHandler.readable(TcpEntry.this);
+                }
+                return;
+            }
+
+            // out of order (segBegin > expectingSeq) - buffer for later
+            bufferOOOSegment(segment);
+        }
+
+        private void bufferOOOSegment(Segment segment) {
+            long begin = segment.seqBeginInclusive;
+            long end = segment.seqEndExclusive;
+            ByteArray data = segment.data;
+
+            // check for overlap with segment that starts before our begin
+            Map.Entry<Long, Segment> floor = oooBuffer.floorEntry(begin);
+            if (floor != null) {
+                Segment fs = floor.getValue();
+                if (fs.seqEndExclusive >= end) {
+                    // new segment is entirely within an existing one
+                    return;
+                }
+                if (fs.seqEndExclusive > begin) {
+                    // partial overlap - extend from the left
+                    oooSize -= fs.data.length();
+                    oooBuffer.remove(floor.getKey());
+
+                    int overlapFromNew = (int) (fs.seqEndExclusive - begin);
+                    ByteArray tailFromNew = data.sub(overlapFromNew, data.length() - overlapFromNew);
+                    data = fs.data.concat(tailFromNew);
+                    begin = fs.seqBeginInclusive;
+                }
+            }
+
+            // check and merge overlapping segments on the right
+            while (true) {
+                Map.Entry<Long, Segment> ceiling = oooBuffer.ceilingEntry(begin);
+                if (ceiling == null || ceiling.getValue().seqBeginInclusive >= end) {
+                    break;
+                }
+                Segment cs = ceiling.getValue();
+                oooSize -= cs.data.length();
+                oooBuffer.remove(ceiling.getKey());
+
+                if (cs.seqEndExclusive > end) {
+                    // extends beyond our current end, append its tail
+                    int overlapInExisting = (int) (end - cs.seqBeginInclusive);
+                    ByteArray tailFromExisting = cs.data.sub(overlapInExisting, cs.data.length() - overlapInExisting);
+                    data = data.concat(tailFromExisting);
+                    end = cs.seqEndExclusive;
+                }
+                // if cs.seqEndExclusive <= end, it's fully contained, already removed
+            }
+
+            Segment merged = new Segment(begin, data);
+            oooBuffer.put(begin, merged);
+            oooSize += data.length();
+            resetWindow();
+        }
+
+        private void drainOOOBuffer() {
+            while (!oooBuffer.isEmpty()) {
+                Map.Entry<Long, Segment> first = oooBuffer.firstEntry();
+                Segment s = first.getValue();
+                if (s.seqBeginInclusive > expectingSeq) {
+                    break; // gap still exists
+                }
+                oooBuffer.remove(first.getKey());
+                oooSize -= s.data.length();
+
+                if (s.seqEndExclusive <= expectingSeq) {
+                    // fully covered by already-received data
+                    continue;
+                }
+
+                // partial or full overlap
+                ByteArray data = s.data;
+                if (s.seqBeginInclusive < expectingSeq) {
+                    int trim = (int) (expectingSeq - s.seqBeginInclusive);
+                    data = data.sub(trim, data.length() - trim);
+                }
+                q.add(new Segment(expectingSeq, data.copy()));
+                expectingSeq += data.length();
+                currentSize += data.length();
             }
         }
 
@@ -772,10 +787,9 @@ public class TcpEntry implements WithUserData {
             }
             ByteArray arr = null;
             int len = 0;
-            var ite = q.iterator();
-            while (ite.hasNext()) {
-                var s = ite.next();
-                var data = s.data;
+            while (!q.isEmpty() && len < maxLen) {
+                Segment s = q.peekFirst();
+                ByteArray data = s.data;
                 int subLen = data.length();
                 if (len + data.length() > maxLen) {
                     subLen = maxLen - len;
@@ -787,14 +801,18 @@ public class TcpEntry implements WithUserData {
                 } else {
                     arr = arr.concat(data);
                 }
-                ite.remove();
-                currentSize -= s.data.length();
-                ackedSeq = s.seqEndExclusive;
-                if (subLen != s.data.length()) {
-                    var newSegment = new Segment(s.seqBeginInclusive + subLen, s.data.sub(subLen, s.data.length() - subLen));
-                    q.addFirst(newSegment);
-                    currentSize += newSegment.data.length();
-                    ackedSeq = newSegment.seqBeginInclusive;
+                if (subLen == s.data.length()) {
+                    // fully consumed
+                    q.pollFirst();
+                    currentSize -= s.data.length();
+                    ackedSeq = s.seqEndExclusive;
+                } else {
+                    // partially consumed
+                    q.pollFirst();
+                    var remaining = new Segment(s.seqBeginInclusive + subLen, s.data.sub(subLen, s.data.length() - subLen));
+                    q.addFirst(remaining);
+                    currentSize -= subLen;
+                    ackedSeq = remaining.seqBeginInclusive;
                     break;
                 }
             }
@@ -820,7 +838,7 @@ public class TcpEntry implements WithUserData {
         }
 
         public void resetWindow() {
-            this.window = RMEM_MAX - currentSize;
+            this.window = RMEM_MAX - currentSize - oooSize;
         }
 
         public int getWindowScale() {
@@ -857,12 +875,12 @@ public class TcpEntry implements WithUserData {
     @Override
     public String toString() {
         return "TcpEntry{" +
-            "parent=" + parent +
-            ", remote=" + remote +
-            ", local=" + local +
-            ", state=" + state +
-            ", nat=" + nat +
-            '}';
+               "parent=" + parent +
+               ", remote=" + remote +
+               ", local=" + local +
+               ", state=" + state +
+               ", nat=" + nat +
+               '}';
     }
 
     public String description() {

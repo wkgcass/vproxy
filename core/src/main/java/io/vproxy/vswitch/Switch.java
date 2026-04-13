@@ -623,7 +623,7 @@ public class Switch {
             throw new AlreadyExistException("umem", alias);
         }
         var umem = UMem.create(alias, chunksCount, fillRingSize, compRingSize, frameSize,
-            Consts.XDP_HEADROOM_DRIVER_RESERVED + SwitchUtils.RCV_HEAD_PRESERVE_LEN,
+            SwitchUtils.RCV_HEAD_PRESERVE_LEN,
             NativeXDP.supportTxMetadata ? 16 : 0);
         umems.put(alias, umem);
         return umem;

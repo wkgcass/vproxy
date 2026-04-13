@@ -45,7 +45,7 @@ public class IPv4 extends IP {
     }
 
     @Override
-    public boolean ipEquals(Object that) {
+    protected boolean ipEquals(Object that) {
         if (that == null) return false;
         if (!(that instanceof IPv4)) return false;
         IPv4 ipv4 = (IPv4) that;

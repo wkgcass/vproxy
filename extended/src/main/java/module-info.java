@@ -19,4 +19,5 @@ module io.vproxy.extended {
     exports io.vproxy.vproxyx.websocks.ss;
     exports io.vproxy.vproxyx.websocks.ssl;
     exports io.vproxy.vproxyx.websocks.uot;
+    exports io.vproxy.vproxyx.websocks.unet;
 }

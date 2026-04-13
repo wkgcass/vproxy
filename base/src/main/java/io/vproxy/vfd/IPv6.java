@@ -62,7 +62,7 @@ public class IPv6 extends IP {
     }
 
     @Override
-    public boolean ipEquals(Object o) {
+    protected boolean ipEquals(Object o) {
         if (o == null) return false;
         if (!(o instanceof IPv6)) return false;
         IPv6 that = (IPv6) o;

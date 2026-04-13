@@ -10,6 +10,7 @@ public class ServerList {
         public static final int USE_KCP = 0x2;
         public static final int USE_UOT = 0x4;
         public static final int USE_QUIC = 0x8;
+        public static final int USE_UNET = 0x10;
 
         public static final int SVR_ENCRYPTED = USE_SSL | USE_QUIC;
 
@@ -17,7 +18,7 @@ public class ServerList {
         public final String host;
         public final int port;
 
-        public Server(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, String host, int port) {
+        public Server(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, boolean useUNet, String host, int port) {
             int flags = 0;
             if (useSSL) {
                 flags |= Server.USE_SSL;
@@ -30,6 +31,9 @@ public class ServerList {
             }
             if (useQuic) {
                 flags |= Server.USE_QUIC;
+            }
+            if (useUNet) {
+                flags |= Server.USE_UNET;
             }
             this.flags = flags;
             this.host = host;
@@ -52,6 +56,10 @@ public class ServerList {
             return (flags & USE_QUIC) != 0;
         }
 
+        public boolean useUNet() {
+            return (flags & USE_UNET) != 0;
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -70,8 +78,8 @@ public class ServerList {
 
     private final List<Server> servers = new LinkedList<>();
 
-    public boolean add(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, String host, int port) {
-        var svr = new Server(useSSL, useKCP, useUOT, useQuic, host, port);
+    public boolean add(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, boolean useUNet, String host, int port) {
+        var svr = new Server(useSSL, useKCP, useUOT, useQuic, useUNet, host, port);
         if (servers.contains(svr)) {
             return false;
         }
@@ -79,8 +87,8 @@ public class ServerList {
         return true;
     }
 
-    public boolean remove(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, String host, int port) {
-        var foo = new Server(useSSL, useKCP, useUOT, useQuic, host, port);
+    public boolean remove(boolean useSSL, boolean useKCP, boolean useUOT, boolean useQuic, boolean useUNet, String host, int port) {
+        var foo = new Server(useSSL, useKCP, useUOT, useQuic, useUNet, host, port);
         return servers.remove(foo);
     }
 

@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 
 public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
     private TcpEntry entry;
+    private final VSwitchFDs fds;
 
     private boolean connected = false;
 
@@ -20,11 +21,13 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
     private boolean fin = false;
 
-    protected VSwitchSocketFD(VSwitchFDContext ctx, TcpEntry entry) {
+    protected VSwitchSocketFD(VSwitchFDContext ctx, VSwitchFDs fds, TcpEntry entry) {
         super(ctx);
+        this.fds = fds;
         this.entry = entry;
         this.connected = true;
 
+        applyMultiSend(entry);
         entry.setConnectionHandler(new ConnectionHandler());
 
         if (entry.receivingQueue.hasMoreDataToRead()) {
@@ -33,8 +36,14 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         isWritable = true;
     }
 
-    public VSwitchSocketFD(VSwitchFDContext ctx) {
+    public VSwitchSocketFD(VSwitchFDContext ctx, VSwitchFDs fds) {
         super(ctx);
+        this.fds = fds;
+    }
+
+    private void applyMultiSend(TcpEntry entry) {
+        entry.setPshMultiplier(fds.getPshMultiplier());
+        entry.setAckMultiplier(fds.getAckMultiplier());
     }
 
     private void setReadable() {
@@ -82,6 +91,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
             throw new IOException("unable to find free ip-port to bind");
         }
         entry = ctx.conntrack.createTcp(null, l4addr, local, 0);
+        applyMultiSend(entry);
         entry.setConnectionHandler(new ConnectionHandler());
         ctx.tcpStack.tcpStartRetransmission(ctx.network, entry);
     }

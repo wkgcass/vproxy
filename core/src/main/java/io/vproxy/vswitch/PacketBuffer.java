@@ -385,7 +385,14 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
     }
 
     public PacketBuffer copy() {
-        var pkb = new PacketBuffer(network, pkt.copy());
+        PacketBuffer pkb;
+        if (pkt != null) {
+            pkb = new PacketBuffer(network, pkt.copy());
+        } else if (ipPkt != null) {
+            pkb = new PacketBuffer(network, ipPkt.copy());
+        } else {
+            throw new NullPointerException("both pkt and ipPkt are null, cannot copy the pkb");
+        }
         pkb.ifaceInput = this.ifaceInput;
         pkb.devin = this.devin;
         pkb.debugger.setDebugOn(this.debugger.isDebugOn());

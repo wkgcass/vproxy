@@ -248,6 +248,15 @@ public class TcpPacket extends TransportPacket {
             data = ByteArray.allocate(0);
         }
 
+        this.raw = raw;
+        return ensureOptions();
+    }
+
+    public String ensureOptions() {
+        if (options != null) {
+            return null;
+        }
+        var bytes = raw.pktBuf;
         options = new LinkedList<>();
         if (dataOffset > 20) {
             // parse tcp options
@@ -256,7 +265,7 @@ public class TcpPacket extends TransportPacket {
                 byte kind = bytes.get(off);
                 if (TcpOption.CASE_1_OPTION_KINDS[kind & 0xff]) {
                     var opt = new TcpOption(this);
-                    var err = opt.from(ByteArray.from(new byte[]{kind}));
+                    var err = opt.from(ByteArray.from(kind));
                     if (err != null) {
                         return err;
                     }
@@ -285,8 +294,6 @@ public class TcpPacket extends TransportPacket {
                 }
             }
         }
-
-        this.raw = raw;
         return null;
     }
 
@@ -602,6 +609,7 @@ public class TcpPacket extends TransportPacket {
         public String from(ByteArray bytes) {
             kind = bytes.get(0);
             if (CASE_1_OPTION_KINDS[kind & 0xff]) {
+                data = ByteArray.allocate(0);
                 return null;
             }
             length = bytes.uint8(1);

@@ -1,5 +1,6 @@
 package io.vproxy.vproxyx;
 
+import io.vproxy.vswitch.stack.fd.VSwitchFDs;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.connection.*;
 import io.vproxy.base.processor.Hint;
@@ -29,6 +30,7 @@ import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.websocks.*;
 import io.vproxy.vproxyx.websocks.uot.UdpOverTcpSetup;
+import io.vproxy.vproxyx.websocks.unet.UNetSetup;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
@@ -47,7 +49,8 @@ public class WebSocksProxyServer {
                   [quic certpem {} keypem {} [quic-listen]] \\
                   [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\
                   [redirectport {}] [kcp [uot.port {} [uot.nic {eth0}]]] \\
-                  [webroot {}] [target-limit {}] [timeout {secs}]
+                  [webroot {}] [target-limit {}] [timeout {secs}] \\
+                  [multiplier.psh {1}] [multiplier.ack {1}]
         examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80
                   listen 443 auth alice:pasSw0rD ssl \\
                           certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\
@@ -70,9 +73,13 @@ public class WebSocksProxyServer {
         boolean useKcp = false;
         int udpOverTcpPort = -1;
         String udpOverTcpNic = "eth0";
+        int unetPort = -1;
+        String unetNic = "eth0";
         String webroot = null;
         List<DomainChecker> targetLimits = null;
         int timeout = 60 * 1000;
+        int pshMultiplier = 1;
+        int ackMultiplier = 1;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
@@ -182,6 +189,25 @@ public class WebSocksProxyServer {
                 }
                 udpOverTcpNic = next;
                 ++i;
+            } else if (arg.equals("unet.port")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`unet.port` should be followed with a port number");
+                }
+                try {
+                    unetPort = Integer.parseInt(next);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("unet.port is not a number");
+                }
+                if (unetPort < 1 || unetPort > 65535) {
+                    throw new IllegalArgumentException("unet.port is not valid");
+                }
+                ++i;
+            } else if (arg.equals("unet.nic")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`unet.nic` should be followed with nic to bind");
+                }
+                unetNic = next;
+                ++i;
             } else if (arg.equals("webroot")) {
                 if (next == null) {
                     throw new IllegalArgumentException("`webroot` should be followed with a directory path");
@@ -215,6 +241,30 @@ public class WebSocksProxyServer {
                 timeout = Integer.parseInt(next) * 1000;
                 if (timeout <= 0) {
                     throw new IllegalArgumentException("`timeout` must be a positive integer");
+                }
+                ++i;
+            } else if (arg.equals("multiplier.psh")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`multiplier.psh` should be followed with an integer");
+                }
+                if (!Utils.isInteger(next)) {
+                    throw new IllegalArgumentException("`multiplier.psh` should be an integer");
+                }
+                pshMultiplier = Integer.parseInt(next);
+                if (pshMultiplier < 1) {
+                    throw new IllegalArgumentException("`multiplier.psh` must be >= 1");
+                }
+                ++i;
+            } else if (arg.equals("multiplier.ack")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`multiplier.ack` should be followed with an integer");
+                }
+                if (!Utils.isInteger(next)) {
+                    throw new IllegalArgumentException("`multiplier.ack` should be an integer");
+                }
+                ackMultiplier = Integer.parseInt(next);
+                if (ackMultiplier < 1) {
+                    throw new IllegalArgumentException("`multiplier.ack` must be >= 1");
                 }
                 ++i;
             } else
@@ -282,6 +332,12 @@ public class WebSocksProxyServer {
         if (!useKcp && udpOverTcpPort != -1) {
             throw new IllegalArgumentException("kcp is not enabled but uot is set");
         }
+        if (unetPort != -1 && useQuic) {
+            throw new IllegalArgumentException("unet and quic cannot be used together");
+        }
+        if (unetPort != -1 && udpOverTcpPort != -1) {
+            throw new IllegalArgumentException("unet and uot cannot be used together");
+        }
 
         assert Logger.lowLevelDebug("listen: " + port);
         assert Logger.lowLevelDebug("auth: " + auth);
@@ -297,9 +353,13 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("useKcp: " + useKcp);
         assert Logger.lowLevelDebug("uot.port: " + udpOverTcpPort);
         assert Logger.lowLevelDebug("uot.nic: " + udpOverTcpNic);
+        assert Logger.lowLevelDebug("unet.port: " + unetPort);
+        assert Logger.lowLevelDebug("unet.nic: " + unetNic);
         assert Logger.lowLevelDebug("webroot: " + webroot);
         assert Logger.lowLevelDebug("target-limits: " + targetLimits);
         assert Logger.lowLevelDebug("timeout: " + timeout);
+        assert Logger.lowLevelDebug("multiplier.psh: " + pshMultiplier);
+        assert Logger.lowLevelDebug("multiplier.ack: " + ackMultiplier);
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -384,6 +444,24 @@ public class WebSocksProxyServer {
                 kcpFDs = new KCPFDs(KCPFDs.optionsFast4(), new UDPFDs(fds));
                 serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, v6ipport);
                 server = ServerSock.createUDP(v6ipport, loopForKcp, serverFds);
+                servers.add(server);
+            }
+        }
+        if (unetPort != -1) {
+            var ipv4v6 = UNetSetup.chooseIPs(unetNic);
+            var fds = UNetSetup.setup(false, unetPort, unetNic, acceptor);
+            if (fds instanceof VSwitchFDs vsFDs) {
+                vsFDs.setPshMultiplier(pshMultiplier);
+                vsFDs.setAckMultiplier(ackMultiplier);
+            }
+            // v4
+            var v4ipport = new IPPort(ipv4v6.left, unetPort);
+            ServerSock server = ServerSock.create(v4ipport, fds);
+            servers.add(server);
+            // v6
+            if (ipv4v6.right != null) {
+                var v6ipport = new IPPort(ipv4v6.right, unetPort);
+                server = ServerSock.create(v6ipport, fds);
                 servers.add(server);
             }
         }
@@ -511,6 +589,9 @@ public class WebSocksProxyServer {
         }
         if (udpOverTcpPort != -1) {
             Logger.alert("uot kcp server started on " + udpOverTcpPort);
+        }
+        if (unetPort != -1) {
+            Logger.alert("unet server started on " + unetPort);
         }
     }
 

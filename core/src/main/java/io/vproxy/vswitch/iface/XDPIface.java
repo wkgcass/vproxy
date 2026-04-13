@@ -289,6 +289,8 @@ public class XDPIface extends Iface {
                 assert Logger.lowLevelDebug("xdp readable: " + xsk + ", chunks=" + ls.size());
             }
             for (var chunk : ls) {
+                assert Logger.lowLevelDebug("fetched chunk: " +
+                                            "realaddr=" + chunk.getRealAddr().address() + ", pkt=" + chunk.getPkt().address() + ", pktLen=" + chunk.getPktLen());
                 var fullBuffer = new UMemChunkByteArray(xsk, chunk);
 
                 var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vrf, fullBuffer,

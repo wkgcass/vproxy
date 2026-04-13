@@ -7,13 +7,20 @@ public class Segment {
     public final long seqEndExclusive;
     public final ByteArray data;
 
-    // 快速重传计数器（借鉴KCP）
-    public int fastack = 0;
-    public int xmit = 0; // 重传次数
+    public int retransmitted = 0; // 是否经过重传（用于Karn算法，跳过RTT采样）
+    public boolean sacked = false; // 是否已被对端SACK确认（后续重传可跳过）
 
     public Segment(long seqBeginInclusive, ByteArray data) {
         this.seqBeginInclusive = seqBeginInclusive;
         this.seqEndExclusive = seqBeginInclusive + data.length();
         this.data = data;
+    }
+
+    @Override
+    public String toString() {
+        return "Segment[" + seqBeginInclusive + ", " + seqEndExclusive + "){" +
+               "retransmitted=" + retransmitted +
+               ", sacked=" + sacked +
+               '}';
     }
 }

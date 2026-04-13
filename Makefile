@@ -119,7 +119,7 @@ endif
 ifeq ($(OS),Linux)
 jar-with-lib: clean jar native _add_linux_so_to_zip
 .PHONY: jar-with-lib-skip-native
-jar-with-lib-skip-native: clean-jar jar _add_linux_so_to_zip
+jar-with-lib-skip-native: jar _add_linux_so_to_zip
 else
 jar-with-lib: clean jar native _add_linux_so_to_zip jar-with-lib-skip-native
 .PHONY: jar-with-lib-no-docker

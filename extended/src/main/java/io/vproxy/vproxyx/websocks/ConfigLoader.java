@@ -38,6 +38,8 @@ public class ConfigLoader {
     private String udpOverTcpNic;
     private boolean quicEnabled;
     private String quicCacertsPath;
+    private boolean unetEnabled;
+    private String unetNic;
     private int agentTimeout = 60 * 1000;
     private final Map<String, ServerList> servers = new HashMap<>();
     private final Map<String, List<DomainChecker>> domains = new HashMap<>();
@@ -60,6 +62,8 @@ public class ConfigLoader {
     private boolean strictMode = false;
     private int poolSize = 10;
     private boolean noHealthCheck = false;
+    private int unetPshMultiplier = 1;
+    private int unetAckMultiplier = 1;
 
     public ConfigLoader() {
     }
@@ -106,6 +110,14 @@ public class ConfigLoader {
 
     public String getQuicCacertsPath() {
         return quicCacertsPath;
+    }
+
+    public boolean isUnetEnabled() {
+        return unetEnabled;
+    }
+
+    public String getUnetNic() {
+        return unetNic;
     }
 
     public Map<String, ServerList> getServers() {
@@ -210,6 +222,14 @@ public class ConfigLoader {
 
     public int getAgentTimeout() {
         return agentTimeout;
+    }
+
+    public int getUnetPshMultiplier() {
+        return unetPshMultiplier;
+    }
+
+    public int getUnetAckMultiplier() {
+        return unetAckMultiplier;
     }
 
     private ServerList getGroup(String alias) {
@@ -337,6 +357,18 @@ public class ConfigLoader {
                 if (quicEnabled) {
                     quicCacertsPath = config.getAgent().getQuic().getCacerts();
                 }
+                unetEnabled = config.getAgent().getUnet().getEnabled();
+                if (unetEnabled) {
+                    unetNic = config.getAgent().getUnet().getNic();
+                }
+                unetPshMultiplier = config.getAgent().getUnet().getPshMultiplier();
+                if (unetPshMultiplier < 1) {
+                    throw new Exception("invalid agent.multiplier.psh: " + unetPshMultiplier + ", must be >= 1");
+                }
+                unetAckMultiplier = config.getAgent().getUnet().getAckMultiplier();
+                if (unetAckMultiplier < 1) {
+                    throw new Exception("invalid agent.multiplier.ack: " + unetAckMultiplier + ", must be >= 1");
+                }
                 if (config.getAgent().getTlsSniErasure() != null) {
                     var args = config.getAgent().getTlsSniErasure().getCertKeyAutoSign();
                     if (args.size() != 2 && args.size() != 3) {
@@ -367,7 +399,8 @@ public class ConfigLoader {
                 if (!line.startsWith("websocks://") && !line.startsWith("websockss://")
                     && !line.startsWith("websocks:kcp://") && !line.startsWith("websockss:kcp://")
                     && !line.startsWith("websocks:uot:kcp://") && !line.startsWith("websockss:uot:kcp://")
-                    && !line.startsWith("websocks:quic://")) {
+                    && !line.startsWith("websocks:quic://") && !line.startsWith("websocks:unet://")
+                    && !line.startsWith("websockss:unet://")) {
                     throw new Exception("unknown protocol: " + line);
                 }
 
@@ -375,6 +408,7 @@ public class ConfigLoader {
                 boolean useKCP = line.contains(":kcp://");
                 boolean useUOT = line.contains(":uot:");
                 boolean useQuic = line.contains(":quic://");
+                boolean useUNet = line.contains(":unet://");
                 // format line
                 if (useSSL) {
                     if (useKCP) {
@@ -383,6 +417,8 @@ public class ConfigLoader {
                         } else {
                             line = line.substring("websockss:kcp://".length());
                         }
+                    } else if (useUNet) {
+                        line = line.substring("websockss:unet://".length());
                     } else {
                         line = line.substring("websockss://".length());
                     }
@@ -395,6 +431,8 @@ public class ConfigLoader {
                         }
                     } else if (useQuic) {
                         line = line.substring("websocks:quic://".length());
+                    } else if (useUNet) {
+                        line = line.substring("websocks:unet://".length());
                     } else {
                         line = line.substring("websocks://".length());
                     }
@@ -417,7 +455,7 @@ public class ConfigLoader {
                     throw new Exception("invalid port: " + line);
                 }
 
-                getGroup(currentAlias).add(useSSL, useKCP, useUOT, useQuic, hostPart, port);
+                getGroup(currentAlias).add(useSSL, useKCP, useUOT, useQuic, useUNet, hostPart, port);
             }
             for (var line : group.getDomains()) {
                 getDomainList(currentAlias).add(formatDomainChecker(line));
@@ -532,6 +570,51 @@ public class ConfigLoader {
         // uot and quic must not be enabled at the same time
         if (udpOverTcpEnabled && quicEnabled) {
             failReasons.add("agent.uot and agent.quic cannot be enabled at the same time");
+        }
+        // check unet
+        if (unetEnabled) {
+            if (unetNic == null) {
+                unetNic = "eth0";
+            }
+        } else {
+            if (unetNic != null) {
+                failReasons.add("agent.unet is disabled but agent.unet.nic is set: " + unetNic);
+            }
+        }
+        // unet servers should not exist if unet not enabled
+        if (!unetEnabled) {
+            out:
+            for (var entry : servers.entrySet()) {
+                var group = entry.getKey();
+                var ls = entry.getValue().getServers();
+                for (var svr : ls) {
+                    if (svr.useUNet()) {
+                        failReasons.add("agent.unet is not enabled, but server group " + group + " has server using unet");
+                        continue out;
+                    }
+                }
+            }
+        }
+        // unet must not be enabled with uot or quic at the same time
+        if (unetEnabled && udpOverTcpEnabled) {
+            failReasons.add("agent.unet and agent.uot cannot be enabled at the same time");
+        }
+        if (unetEnabled && quicEnabled) {
+            failReasons.add("agent.unet and agent.quic cannot be enabled at the same time");
+        }
+        // unet and kcp must not be used together
+        if (unetEnabled) {
+            out:
+            for (var entry : servers.entrySet()) {
+                var group = entry.getKey();
+                var ls = entry.getValue().getServers();
+                for (var svr : ls) {
+                    if (svr.useUNet() && svr.useKCP()) {
+                        failReasons.add("server group " + group + " has server using both unet and kcp, which is invalid");
+                        continue out;
+                    }
+                }
+            }
         }
         // check quic related
         if (!quicEnabled) {
@@ -662,6 +745,11 @@ public class ConfigLoader {
                 .put("enabled", true)
                 .put("cacerts", quicCacertsPath));
         }
+        if (unetEnabled) {
+            builder.putObject("unet", o -> o
+                .put("enabled", true)
+                .put("nic", unetNic));
+        }
         if (user != null) {
             builder.put("serverUser", user);
         }
@@ -693,6 +781,8 @@ public class ConfigLoader {
                                 );
                                 svr.putObject("quic", o -> o
                                     .put("enabled", server.useQuic()));
+                                svr.putObject("unet", o -> o
+                                    .put("enabled", server.useUNet()));
                                 svr.put("ip", server.host);
                                 svr.put("port", server.port);
                             });

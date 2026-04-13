@@ -18,7 +18,6 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -117,9 +116,6 @@ public class WebSocksUtils {
         boolean foundUpgrade = false;
         boolean foundSec = false;
         boolean foundConnection = false;
-        if (headers == null) { // the headers may be null (e.g. GET /\r\n\r\n)
-            headers = new LinkedList<>();
-        }
         for (Header header : headers) {
             String headerKey = header.key.trim();
             String headerVal = header.value.trim();

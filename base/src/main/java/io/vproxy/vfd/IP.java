@@ -190,10 +190,10 @@ public abstract class IP implements ToByteArray {
             return false;
         if (!ipEquals(o))
             return false;
-        return Objects.equals(hostname, that.hostname);
+        return true;
     }
 
-    abstract public boolean ipEquals(Object o);
+    abstract protected boolean ipEquals(Object o);
 
     @Override
     abstract public int hashCode();

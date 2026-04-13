@@ -529,6 +529,10 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return connector.connect(
                     WebSocksUtils.newConnectionOpts().setFDs(sharedData.quicFDs),
                     RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+            } else if (sharedData.svr.useUNet()) {
+                return connector.connect(
+                    WebSocksUtils.newConnectionOpts().setFDs(sharedData.unetFDs),
+                    RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
             } else {
                 return connector.connect(
                     WebSocksUtils.newConnectionOpts(),
@@ -574,6 +578,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return ConnectableConnection.createUDP(connector.remote,
                     new ConnectionOpts(), pair.left, pair.right,
                     loop, fds);
+            } else if (sharedData.svr.useUNet()) {
+                return connector.connect(WebSocksUtils.newConnectionOpts().setFDs(sharedData.unetFDs), pair.left, pair.right);
             } else {
                 return connector.connect(WebSocksUtils.newConnectionOpts(), pair.left, pair.right);
             }
@@ -618,6 +624,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
             Response resp = httpRespParser.getResult();
             assert Logger.lowLevelDebug("got http response: " + resp);
+            if (resp.headers == null) {
+                resp.headers = Collections.emptyList();
+            }
 
             // status code should be 101
             if (resp.statusCode != 101) {

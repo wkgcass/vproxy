@@ -52,6 +52,8 @@ public class Consts {
     public static final byte TCP_OPTION_NOP = 1;
     public static final byte TCP_OPTION_MSS = 2;
     public static final byte TCP_OPTION_WINDOW_SCALE = 3;
+    public static final byte TCP_OPTION_SACK_PERMITTED = 4;
+    public static final byte TCP_OPTION_SACK = 5;
 
     public static final byte TCP_FLAGS_URG = 0b100000;
     public static final byte TCP_FLAGS_ACK = 0b010000;
@@ -82,7 +84,7 @@ public class Consts {
     public static final byte DHCP_MSG_TYPE_DHCPRELEASE = 7;
     public static final byte DHCP_MSG_TYPE_DHCPINFORM = 8;
 
-    public static final int XDP_HEADROOM_DRIVER_RESERVED = 256;
+    public static final int XDP_HEADROOM_DRIVER_RESERVED = 256; // will be automatically added by linux kernel
 
     public static final int I_DETECTED_A_POSSIBLE_LOOP =
         0b00001000_00000000_00000000;

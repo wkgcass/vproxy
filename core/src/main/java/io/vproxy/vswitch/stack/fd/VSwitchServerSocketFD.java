@@ -14,11 +14,13 @@ import java.io.IOException;
 public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
     private IPPort local;
     private TcpListenEntry entry;
+    private final VSwitchFDs fds;
 
     private boolean isReadable = false;
 
-    public VSwitchServerSocketFD(VSwitchFDContext ctx) {
+    public VSwitchServerSocketFD(VSwitchFDContext ctx, VSwitchFDs fds) {
         super(ctx);
+        this.fds = fds;
     }
 
     private void checkEntry() throws IOException {
@@ -55,7 +57,7 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
             cancelReadable();
         }
 
-        return new VSwitchSocketFD(ctx, tcp);
+        return new VSwitchSocketFD(ctx, fds, tcp);
     }
 
     @Override

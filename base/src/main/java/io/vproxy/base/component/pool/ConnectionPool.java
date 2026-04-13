@@ -118,7 +118,7 @@ public class ConnectionPool {
             new PoolCallback(this)
         ));
 
-        fill();
+        loop.getSelectorEventLoop().runOnLoop(this::fill);
         // run keepalive
         if (params.keepaliveInterval > 0) {
             loop.getSelectorEventLoop().period(params.keepaliveInterval, this::keepalive);

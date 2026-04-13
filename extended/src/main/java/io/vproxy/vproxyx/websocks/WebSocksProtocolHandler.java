@@ -94,6 +94,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 fail(ctx, 400, "unsupported http method " + req.method);
                 return;
             }
+            if (req.headers == null) {
+                req.headers = Collections.emptyList();
+            }
             if (req.headers.stream().map(h -> h.key).noneMatch(key -> key.equalsIgnoreCase("upgrade"))) {
                 assert Logger.lowLevelDebug("not upgrade request, try to respond with a registered page");
 

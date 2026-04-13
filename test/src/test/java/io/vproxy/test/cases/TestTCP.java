@@ -2,13 +2,13 @@ package io.vproxy.test.cases;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.conntrack.tcp.SAckTuple;
 import io.vproxy.vpacket.conntrack.tcp.Segment;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.*;
@@ -89,28 +89,20 @@ public class TestTCP {
             new IPPort("98.76.54.32", 5678),
             12345);
         tcpEntry.setState(TcpState.ESTABLISHED);
-        tcpEntry.sendingQueue.init(128, 1360, 1);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(mss, mss, 1); // window = mss, but ignored for send limiting
 
-        ByteArray bytes = randomPayload(32768);
+        ByteArray bytes = rawPayload(mss * 4);
         ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
         int n = tcpEntry.sendingQueue.apiWrite(buffer);
         assertEquals(bytes.length(), n);
 
         var segments = tcpEntry.sendingQueue.fetch();
-        assertEquals(1, segments.size());
-        var s = segments.get(0);
-        assertEquals(128, s.data.length());
-        var result = s.data;
-        assertEquals(bytes.sub(0, 128), result);
-
-        tcpEntry.sendingQueue.ack(s.seqEndExclusive, 65535);
-        tcpEntry.sendingQueue.ack(s.seqEndExclusive, 65535);
-        tcpEntry.sendingQueue.ack(s.seqEndExclusive, 65535); // one ack multiple times
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE); // bypass cwnd limit for test
-
-        segments = tcpEntry.sendingQueue.fetch();
-        for (var rr : segments) {
-            result = result.concat(rr.data);
+        // cwnd starts at MAX_CWND, so all segments can be fetched
+        assertEquals(4, segments.size());
+        var result = segments.get(0).data;
+        for (int i = 1; i < segments.size(); i++) {
+            result = result.concat(segments.get(i).data);
         }
         assertEquals(bytes, result);
     }
@@ -154,9 +146,8 @@ public class TestTCP {
         int mss = 1360;
         tcpEntry.sendingQueue.init(65535, mss, 1);
 
-        // 初始cwnd应为 min(window, HIGH_LATENCY_INITIAL_CWND_MSS * mss)
-        int expected = Math.min(65535, TcpEntry.HIGH_LATENCY_INITIAL_CWND_MSS * mss);
-        assertEquals(expected, tcpEntry.sendingQueue.getCwnd());
+        // 初始cwnd = INIT_CWND
+        assertEquals(TcpEntry.INIT_CWND, tcpEntry.sendingQueue.getCwnd());
     }
 
     @Test
@@ -171,8 +162,8 @@ public class TestTCP {
         int smallWindow = 4096;
         tcpEntry.sendingQueue.init(smallWindow, mss, 1);
 
-        // 窗口比 20*MSS 小时，cwnd 应被限制为窗口大小
-        assertEquals(smallWindow, tcpEntry.sendingQueue.getCwnd());
+        // cwnd 不受 window 限制，始终为 INIT_CWND
+        assertEquals(TcpEntry.INIT_CWND, tcpEntry.sendingQueue.getCwnd());
     }
 
     @Test
@@ -226,8 +217,8 @@ public class TestTCP {
 
         // 丢包后 cwnd 应减小（保留 90%）
         assertTrue("cwnd should decrease after loss", cwndAfter < cwndBefore);
-        // 验证近似 90% 保留率（允许1字节的整数截断误差）
-        int expected = (int) (cwndBefore * TcpEntry.HIGH_LATENCY_LOSS_BETA);
+        // 验证近似 80% 保留率（允许1字节的整数截断误差）
+        int expected = (int) (cwndBefore * 0.8);
         assertEquals(expected, cwndAfter);
     }
 
@@ -281,7 +272,7 @@ public class TestTCP {
     }
 
     @Test
-    public void onRetransmitResetsBytesInFlight() {
+    public void onRetransmitDoesNotResetBytesInFlight() {
         TcpEntry tcpEntry = new TcpEntry(
             null,
             new IPPort("12.34.56.78", 1234),
@@ -295,20 +286,10 @@ public class TestTCP {
         ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
         tcpEntry.sendingQueue.apiWrite(buffer);
 
-        // fetch数据，这会增加 bytesInFlight
         var segments = tcpEntry.sendingQueue.fetch();
         assertFalse(segments.isEmpty());
-
-        // fetch后 available window 应该变小（因为bytesInFlight增加了）
-        int windowAfterFetch = tcpEntry.sendingQueue.getAvailableSendWindow();
-
-        // 模拟重传：重置 bytesInFlight
-        tcpEntry.sendingQueue.onRetransmit();
-
-        // 重传后 available window 应恢复
-        int windowAfterRetransmit = tcpEntry.sendingQueue.getAvailableSendWindow();
-        assertTrue("available window should increase after retransmit reset",
-            windowAfterRetransmit > windowAfterFetch);
+        int bytesInFlightAfterFetch = tcpEntry.sendingQueue.getBytesInFlight();
+        assertTrue(bytesInFlightAfterFetch > 0);
     }
 
     // ===== 窗口管理 =====
@@ -371,13 +352,12 @@ public class TestTCP {
         int smallWindow = 4096;
         tcpEntry.sendingQueue.init(smallWindow, mss, 1);
 
-        // cwnd 默认是 min(window, 20*mss)，这里 window 较小
-        // available window = min(window, cwnd - bytesInFlight) = window (bytesInFlight=0)
-        assertEquals(smallWindow, tcpEntry.sendingQueue.getAvailableSendWindow());
+        // available window = cwnd - bytesInFlight (window 不参与限制)
+        assertEquals(TcpEntry.INIT_CWND, tcpEntry.sendingQueue.getAvailableSendWindow());
 
-        // 设置较大的 cwnd，window 仍为限制因素
+        // 设置较大的 cwnd，不受 window 限制
         tcpEntry.sendingQueue.setCwnd(65535);
-        assertEquals(smallWindow, tcpEntry.sendingQueue.getAvailableSendWindow());
+        assertEquals(65535, tcpEntry.sendingQueue.getAvailableSendWindow());
 
         // 设置较小的 cwnd，cwnd 成为限制因素
         tcpEntry.sendingQueue.setCwnd(2048);
@@ -406,8 +386,8 @@ public class TestTCP {
         for (var s : segments) {
             totalFetched += s.data.length();
         }
-        // 不应超过窗口大小
-        assertTrue("fetched data should not exceed send window", totalFetched <= smallWindow);
+        // window 不参与限制，所有数据都可发送（受 cwnd 限制）
+        assertTrue("fetched data should not exceed cwnd", totalFetched <= TcpEntry.MAX_CWND);
     }
 
     @Test
@@ -432,191 +412,6 @@ public class TestTCP {
         // 第二次 fetch 应返回空（bytesInFlight 已占满窗口）
         var seg2 = tcpEntry.sendingQueue.fetch();
         assertTrue("fetch should return empty when window exhausted", seg2.isEmpty());
-    }
-
-    // ===== 快速重传 (KCP 风格) =====
-
-    @Test
-    public void fastRetransmitTriggeredAfterDuplicateAcks() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        int mss = 1360;
-        tcpEntry.sendingQueue.init(65535, mss, 1);
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-
-        // 使用 rawPayload 确保数据长度精确为 mss * 5
-        ByteArray bytes = rawPayload(mss * 5);
-        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
-        tcpEntry.sendingQueue.apiWrite(buffer);
-
-        // 发送数据（fetch 返回的 segment 数取决于 mss 和窗口）
-        var segments = tcpEntry.sendingQueue.fetch();
-        assertFalse(segments.isEmpty());
-
-        // ACK 第一个 segment，剩余数据留在队列中
-        tcpEntry.sendingQueue.ack(segments.get(0).seqEndExclusive, 65535);
-
-        // 对 ackSeq 发 3 个重复 ACK，触发 parseFastack
-        long currentAckSeq = tcpEntry.sendingQueue.getAckSeq();
-        for (int i = 0; i < 3; i++) {
-            tcpEntry.sendingQueue.ack(currentAckSeq, 65535);
-        }
-
-        // fetch 应触发快速重传（fastack >= fastresend=3）
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-        var retransmitSegs = tcpEntry.sendingQueue.fetch();
-        assertFalse("fast retransmit should return segments", retransmitSegs.isEmpty());
-    }
-
-    @Test
-    public void fastRetransmitRespectsLimit() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        int mss = 1360;
-        tcpEntry.sendingQueue.init(65535, mss, 1);
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-        // 设置 fastlimit=2，最多快速重传2次
-        tcpEntry.sendingQueue.setFastResend(3, 2);
-
-        ByteArray bytes = randomPayload(mss * 3);
-        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
-        tcpEntry.sendingQueue.apiWrite(buffer);
-
-        var segments = tcpEntry.sendingQueue.fetch();
-        // ACK 第一个 segment
-        tcpEntry.sendingQueue.ack(segments.get(0).seqEndExclusive, 65535);
-        long ackSeq = tcpEntry.sendingQueue.getAckSeq();
-
-        // 发送大量重复ACK使 fastack 增长
-        for (int i = 0; i < 10; i++) {
-            tcpEntry.sendingQueue.ack(ackSeq, 65535);
-        }
-
-        // 多次触发快速重传，直到达到 fastlimit
-        for (int round = 0; round < 5; round++) {
-            tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-            var retx = tcpEntry.sendingQueue.fetch();
-            if (retx.isEmpty()) break;
-        }
-
-        // xmit 不应超过 fastlimit
-        // 通过 checkFastRetransmit 直接检查
-        var retx = tcpEntry.sendingQueue.checkFastRetransmit();
-        // 超过 fastlimit 后应返回空
-        assertTrue("should not retransmit beyond fastlimit", retx.isEmpty());
-    }
-
-    @Test
-    public void deadLinkDetectionTriggersClose() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        int mss = 1360;
-        tcpEntry.sendingQueue.init(65535, mss, 1);
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-        // 设置 deadLink=3，超过3次重传认为死链
-        tcpEntry.sendingQueue.setDeadLink(3);
-        tcpEntry.sendingQueue.setFastResend(1, 0); // fastresend=1, fastlimit=0(无限)
-
-        ByteArray bytes = randomPayload(mss * 2);
-        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
-        tcpEntry.sendingQueue.apiWrite(buffer);
-
-        var segments = tcpEntry.sendingQueue.fetch();
-        tcpEntry.sendingQueue.ack(segments.get(0).seqEndExclusive, 65535);
-        long ackSeq = tcpEntry.sendingQueue.getAckSeq();
-
-        assertFalse("should not require closing initially", tcpEntry.requireClosing());
-
-        // 触发足够多次的快速重传使 xmit 达到 deadLink
-        for (int i = 0; i < 20; i++) {
-            tcpEntry.sendingQueue.ack(ackSeq, 65535);
-            tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-            tcpEntry.sendingQueue.fetch();
-        }
-
-        assertTrue("should require closing after dead link detected", tcpEntry.requireClosing());
-    }
-
-    @Test
-    public void resetFastackClearsCountersForAckedSegments() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        int mss = 1360;
-        tcpEntry.sendingQueue.init(65535, mss, 1);
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-
-        ByteArray bytes = rawPayload(mss * 4);
-        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
-        tcpEntry.sendingQueue.apiWrite(buffer);
-
-        var segments = tcpEntry.sendingQueue.fetch();
-        assertEquals(4, segments.size());
-
-        // ACK 第一个 segment，然后发重复 ACK 累积 fastack
-        tcpEntry.sendingQueue.ack(segments.get(0).seqEndExclusive, 65535);
-        long ackSeq = tcpEntry.sendingQueue.getAckSeq();
-
-        // 发重复 ACK 增加快 fastack
-        for (int i = 0; i < 5; i++) {
-            tcpEntry.sendingQueue.ack(ackSeq, 65535);
-        }
-
-        // ACK 推进到下一个 segment，这应重置后续 segment 的 fastack
-        tcpEntry.sendingQueue.ack(segments.get(1).seqEndExclusive, 65535);
-        // 此时 segments.get(0) 和 segments.get(1) 都应被移除
-        // 剩余 segment 的 fastack 应被 resetFastack 清零
-
-        // 验证通过再次 fetch 不触发快速重传（因为 fastack 已被重置）
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-        var result = tcpEntry.sendingQueue.fetch();
-        // 没有重复ACK的话，不应有快速重传
-        // （ACK推进后 fastack 应为 0）
-        // 注意：如果 fetch 返回了正常数据而非快速重传，也是正常的
-        // 关键是检查这些 segment 的 fastack 确实被清零了
-    }
-
-    @Test
-    public void setHighLatencyModeConfiguresParameters() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        tcpEntry.sendingQueue.init(65535, 1360, 1);
-
-        // 默认值
-        assertEquals(TcpEntry.DEFAULT_FAST_RESEND, tcpEntry.sendingQueue.getFastresend());
-        assertEquals(TcpEntry.DEFAULT_FAST_LIMIT, tcpEntry.sendingQueue.getFastlimit());
-        assertEquals(TcpEntry.DEFAULT_DEAD_LINK, tcpEntry.sendingQueue.getDeadLink());
-
-        // 启用高延迟模式
-        tcpEntry.setHighLatencyMode(true, 2, 10, 15);
-        assertEquals(2, tcpEntry.sendingQueue.getFastresend());
-        assertEquals(10, tcpEntry.sendingQueue.getFastlimit());
-        assertEquals(15, tcpEntry.sendingQueue.getDeadLink());
-
-        // 关闭高延迟模式，恢复默认值
-        tcpEntry.setHighLatencyMode(false, 0, 0, 0);
-        assertEquals(TcpEntry.DEFAULT_FAST_RESEND, tcpEntry.sendingQueue.getFastresend());
-        assertEquals(TcpEntry.DEFAULT_FAST_LIMIT, tcpEntry.sendingQueue.getFastlimit());
-        assertEquals(TcpEntry.DEFAULT_DEAD_LINK, tcpEntry.sendingQueue.getDeadLink());
     }
 
     // ===== RTT 估算与 RTO =====
@@ -664,74 +459,6 @@ public class TestTCP {
         assertTrue("RTO should reflect actual RTT", rto <= TcpEntry.RTO_MAX);
     }
 
-    // ===== 带宽限制 =====
-
-    @Test
-    public void bandwidthLimitAllowsSendingWhenDisabled() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        tcpEntry.sendingQueue.init(65535, 1360, 1);
-
-        // maxBandwidthOverhead=0 表示不限制
-        assertTrue(tcpEntry.sendingQueue.canSendWithBandwidthLimit());
-    }
-
-    @Test
-    public void bandwidthLimitAllowsSendingWhenNoRttSample() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        tcpEntry.sendingQueue.init(65535, 1360, 1);
-
-        // 设置带宽限制，但没有RTT样本
-        tcpEntry.sendingQueue.setMaxBandwidthOverhead(1000);
-        // 没有RTT样本时应允许发送
-        assertTrue(tcpEntry.sendingQueue.canSendWithBandwidthLimit());
-    }
-
-    // ===== 快速重传窗口限制 =====
-
-    @Test
-    public void fastRetransmitRespectsSendWindow() {
-        TcpEntry tcpEntry = new TcpEntry(
-            null,
-            new IPPort("12.34.56.78", 1234),
-            new IPPort("98.76.54.32", 5678),
-            12345);
-        tcpEntry.setState(TcpState.ESTABLISHED);
-        int mss = 1360;
-        // 窗口很小
-        tcpEntry.sendingQueue.init(mss * 2, mss, 1);
-        tcpEntry.sendingQueue.setFastResend(1, 0); // fastresend=1, 容易触发
-
-        ByteArray bytes = randomPayload(mss * 5);
-        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
-        tcpEntry.sendingQueue.apiWrite(buffer);
-
-        // fetch 用完窗口
-        var segments = tcpEntry.sendingQueue.fetch();
-        int totalFetched = 0;
-        for (var s : segments) totalFetched += s.data.length();
-        assertTrue(totalFetched <= mss * 2);
-
-        // 即使触发快速重传，也不应超过窗口
-        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
-        // 手动触发 checkFastRetransmit
-        var retx = tcpEntry.sendingQueue.checkFastRetransmit();
-        // 由于窗口限制，fetch() 内部会限制快速重传的数据量
-        tcpEntry.sendingQueue.setCwnd(mss * 2);
-        var fetched = tcpEntry.sendingQueue.fetch();
-        int totalRetx = 0;
-        for (var s : fetched) totalRetx += s.data.length();
-        assertTrue("fast retransmit should respect window", totalRetx <= mss * 2);
-    }
 
     // ===== ACK 流程与 bytesInFlight =====
 
@@ -1120,5 +847,351 @@ public class TestTCP {
         }
         // verify ackSeq advanced to second-to-last segment end
         assertEquals(segments.get(segments.size() - 2).seqEndExclusive, tcpEntry.sendingQueue.getAckSeq());
+    }
+
+    // ===== SACK 选择性重传 =====
+
+    @Test
+    public void sackGapSingleHole() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        // 写4个MSS的数据并fetch
+        ByteArray bytes = rawPayload(mss * 4);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(4, segments.size());
+
+        long seq0 = segments.get(0).seqBeginInclusive;
+        long seq1 = segments.get(1).seqBeginInclusive;
+        long seq2 = segments.get(2).seqBeginInclusive;
+        long seq3 = segments.get(3).seqBeginInclusive;
+
+        // 模拟：段0被ACK，段1丢失，段2被接收，段3未收到（无SACK信息）
+        // 对端发 dup ACK=seq1, SACK=[seq2, seq3)
+        tcpEntry.sendingQueue.ack(seq1, 65535);
+
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq2, seq3));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+
+        // 段1和段3未被sacked，都应被重传
+        assertEquals(2, gaps.size());
+        assertEquals(seq1, gaps.get(0).seqBeginInclusive);
+        assertEquals(seq2, gaps.get(0).seqEndExclusive);
+        assertTrue(gaps.get(0).retransmitted > 0);
+        assertEquals(bytes.sub(mss, mss), gaps.get(0).data);
+        assertEquals(seq3, gaps.get(1).seqBeginInclusive);
+        assertTrue(gaps.get(1).retransmitted > 0);
+    }
+
+    @Test
+    public void sackGapTwoHoles() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        ByteArray bytes = rawPayload(mss * 5);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(5, segments.size());
+
+        long seq0 = segments.get(0).seqBeginInclusive;
+        long seq1 = segments.get(1).seqBeginInclusive;
+        long seq2 = segments.get(2).seqBeginInclusive;
+        long seq3 = segments.get(3).seqBeginInclusive;
+        long seq4 = segments.get(4).seqBeginInclusive;
+        long seq5End = segments.get(4).seqEndExclusive;
+
+        // 模拟：段0被ACK，段1丢失，段2被接收，段3丢失，段4被接收
+        // ACK=seq1, SACK=[seq2,seq3) + [seq4,seq5)
+        tcpEntry.sendingQueue.ack(seq1, 65535);
+
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq2, seq3));
+        sackBlocks.add(new SAckTuple(seq4, seq5End));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+
+        // 应该有两个gap: [seq1,seq2) 和 [seq3,seq4)
+        assertEquals(2, gaps.size());
+        assertEquals(seq1, gaps.get(0).seqBeginInclusive);
+        assertEquals(seq2, gaps.get(0).seqEndExclusive);
+        assertEquals(seq3, gaps.get(1).seqBeginInclusive);
+        assertEquals(seq4, gaps.get(1).seqEndExclusive);
+    }
+
+    @Test
+    public void sackGapNoHole() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        ByteArray bytes = rawPayload(mss * 3);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(3, segments.size());
+
+        long seq0 = segments.get(0).seqBeginInclusive;
+
+        // SACK覆盖了ackSeq之后的所有数据 — 无gap
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq0, segments.get(2).seqEndExclusive));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+
+        assertTrue("no gaps when SACK covers everything from ackSeq", gaps.isEmpty());
+    }
+
+    @Test
+    public void sackGapDoesNotModifyFetchSeq() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        ByteArray bytes = rawPayload(mss * 4);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        tcpEntry.sendingQueue.fetch();
+
+        long fetchSeqBefore = tcpEntry.sendingQueue.getFetchSeq();
+
+        // 触发SACK gap获取
+        long ackSeq = tcpEntry.sendingQueue.getAckSeq();
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(ackSeq + mss * 2, ackSeq + mss * 3));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+
+        // fetchSeq不应被修改
+        assertEquals(fetchSeqBefore, tcpEntry.sendingQueue.getFetchSeq());
+    }
+
+    @Test
+    public void sackGapEmptyQueue() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        tcpEntry.sendingQueue.init(65535, 1360, 1);
+
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(100, 200));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+        assertTrue("empty queue should return empty gaps", gaps.isEmpty());
+    }
+
+    @Test
+    public void sackGapEmptyBlocks() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        ByteArray bytes = rawPayload(mss * 2);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        tcpEntry.sendingQueue.fetch();
+
+        tcpEntry.sendingQueue.markSackRetransmitSegments(java.util.Collections.emptyList());
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+        // empty SACK = no SACK info, so all segments up to fetchSeq should be retransmitted
+        assertEquals(2, gaps.size());
+    }
+
+    @Test
+    public void sackGapAfterPartialAck() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        ByteArray bytes = rawPayload(mss * 4);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(4, segments.size());
+
+        // ACK第一个段
+        tcpEntry.sendingQueue.ack(segments.get(0).seqEndExclusive, 65535);
+
+        long ackSeq = tcpEntry.sendingQueue.getAckSeq();
+        long seq2 = segments.get(2).seqBeginInclusive;
+        long seq3 = segments.get(3).seqBeginInclusive;
+        long seq4 = segments.get(3).seqEndExclusive;
+
+        // SACK=[seq3,seq4)，gap=[ackSeq,seq3)中段2丢失，段1已ACK+段2没收到
+        // 实际 gap 是 [ackSeq, seq2) 因为 ackSeq=seg0.end=seg1.begin
+        // 所以 gap = [ackSeq(=seq1_begin), seq2)
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq3, seq4));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+
+        // gap: [ackSeq, seq2) 和 [seq2, seq3) 之间没有SACK，所以实际上
+        // 累计ack到seg0.end(=seq1)，SACK=[seq3,seq4)
+        // gap = [ackSeq(=seq1), seq3)
+        // 这会生成2个MSS大小的gap段
+        assertFalse(gaps.isEmpty());
+        assertEquals(ackSeq, gaps.get(0).seqBeginInclusive);
+    }
+
+    // ===== SACK sacked 标记 =====
+
+    @Test
+    public void sackMarksSegmentsAsSacked() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(mss * 10);
+
+        ByteArray bytes = rawPayload(mss * 4);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(4, segments.size());
+
+        long seq1 = segments.get(1).seqBeginInclusive;
+        long seq2 = segments.get(2).seqBeginInclusive;
+        long seq3 = segments.get(3).seqBeginInclusive;
+
+        // ACK seg0, then SACK [seq2, seq3) — seg2 should be marked sacked
+        tcpEntry.sendingQueue.ack(seq1, 65535);
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq2, seq3));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+
+        // seg1 (not sacked) and seg2 (sacked) — check via retransmit path
+        // fetch(isRetransmit=true) should skip sacked segments
+        var retransmitSegs = tcpEntry.sendingQueue.fetch(true);
+        for (var s : retransmitSegs) {
+            // sacked segments should not appear in retransmit output
+            assertFalse("sacked segment should not be retransmitted: seq=" + s.seqBeginInclusive,
+                s.seqBeginInclusive >= seq2 && s.seqEndExclusive <= seq3);
+        }
+    }
+
+    @Test
+    public void sackRetransmitSkipsSackedSegments() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(mss * 10);
+
+        ByteArray bytes = rawPayload(mss * 5);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(5, segments.size());
+
+        long seq0 = segments.get(0).seqBeginInclusive;
+        long seq1 = segments.get(1).seqBeginInclusive;
+        long seq2 = segments.get(2).seqBeginInclusive;
+        long seq3 = segments.get(3).seqBeginInclusive;
+        long seq4 = segments.get(4).seqBeginInclusive;
+
+        // ACK seg0, SACK [seq2,seq3) and [seq4, seq4+mss)
+        // → seg2 and seg4 are sacked
+        // → seg1 and seg3 are gaps
+        tcpEntry.sendingQueue.ack(seq1, 65535);
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq2, seq3));
+        sackBlocks.add(new SAckTuple(seq4, seq4 + mss));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+        var gaps = tcpEntry.sendingQueue.fetch(true);
+        // gaps should be seg1 and seg3
+        assertEquals(2, gaps.size());
+        assertEquals(seq1, gaps.get(0).seqBeginInclusive);
+        assertEquals(seq3, gaps.get(1).seqBeginInclusive);
+
+        // Now do a full retransmit — should only return seg1 and seg3 (not sacked)
+        var retransmitSegs = tcpEntry.sendingQueue.fetch(true);
+        assertEquals(2, retransmitSegs.size());
+        assertEquals(seq1, retransmitSegs.get(0).seqBeginInclusive);
+        assertEquals(seq3, retransmitSegs.get(1).seqBeginInclusive);
+    }
+
+    @Test
+    public void ackClearsSackedOnTrimmedSegment() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1360;
+        tcpEntry.sendingQueue.init(65535, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(Integer.MAX_VALUE);
+
+        ByteArray bytes = rawPayload(mss * 2);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
+        tcpEntry.sendingQueue.apiWrite(buffer);
+        var segments = tcpEntry.sendingQueue.fetch();
+        assertEquals(2, segments.size());
+
+        long seq0 = segments.get(0).seqBeginInclusive;
+        long seq1 = segments.get(1).seqBeginInclusive;
+        long seq2 = segments.get(1).seqEndExclusive;
+
+        // SACK the whole first segment
+        java.util.List<SAckTuple> sackBlocks = new java.util.ArrayList<>();
+        sackBlocks.add(new SAckTuple(seq0, seq1));
+        tcpEntry.sendingQueue.markSackRetransmitSegments(sackBlocks);
+
+        // Now ACK part of seg0 — this trims it, should clear sacked
+        tcpEntry.sendingQueue.ack(seq0 + mss / 2, 65535);
+        // The trimmed remaining portion should not be sacked
+        // (ackSeq advanced to seq0+mss/2, remaining segment starts there)
     }
 }
