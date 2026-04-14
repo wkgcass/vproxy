@@ -104,6 +104,7 @@ module io.vproxy.base {
     exports io.vproxy.vpacket.tuples;
     exports io.vproxy.xdp;
     exports io.vproxy.vpxdp;
+    exports io.vproxy.vpacket.conntrack.tcp.cwnd;
 
     uses io.vproxy.vfd.FDs;
     uses io.vproxy.base.processor.ProcessorRegistry;

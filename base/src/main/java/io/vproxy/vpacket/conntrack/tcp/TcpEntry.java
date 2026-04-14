@@ -7,6 +7,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.conntrack.tcp.cwnd.CwndNegotiator;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -14,8 +15,8 @@ import java.util.*;
 public class TcpEntry implements WithUserData {
     public static final int WMEM_MAX = 1048576; // 1MB, for high-latency BDP
     public static final int RMEM_MAX = 1048576; // 1MB, for high-latency BDP
-    public static final int SND_DEFAULT_MSS = 1360;
-    public static final int RCV_MSS = 1360;
+    public static final int SND_MAX_MSS = 1400; // xdp frame size = 2048, hardware reserved = 256, headroom = 128, mac+ip+tcp_hdr=14+40+20
+    public static final int RCV_MSS = 1400;
     public static final int TCP_SEQ_INIT_MIN = Integer.MAX_VALUE / 3;
     public static final int TCP_SEQ_RAND = Integer.MAX_VALUE / 2;
     public static final int RTO_MIN = 100;
@@ -40,6 +41,7 @@ public class TcpEntry implements WithUserData {
     private TcpState state;
     private boolean needClosing = false;
     private boolean remoteSackPermitted = false;
+    private CwndNegotiator cwndNegotiator = CwndNegotiator.createDefault();
 
     public final SendingQueue sendingQueue;
     public final ReceivingQueue receivingQueue;
@@ -167,6 +169,14 @@ public class TcpEntry implements WithUserData {
         this.remoteSackPermitted = remoteSackPermitted;
     }
 
+    public CwndNegotiator getCwndNegotiator() {
+        return cwndNegotiator;
+    }
+
+    public void setCwndNegotiator(CwndNegotiator cwndNegotiator) {
+        this.cwndNegotiator = cwndNegotiator;
+    }
+
     public void doClose() {
         this.needClosing = true;
     }
@@ -211,6 +221,10 @@ public class TcpEntry implements WithUserData {
         private int bytesInFlight = 0;
         private int dupAckCount = 0;
 
+        // cwnd negotiation state
+        private int yourCwnd = 0;  // last received peer cwnd, 0 means not yet received
+        private int minCwnd = 0;   // negotiated floor, 0 means not yet negotiated
+
         // RTT estimation (RFC 6298)
         private long srttUs = -1;   // smoothed RTT in microseconds (-1 = no sample yet)
         private long rttVarUs = -1; // RTT variance in microseconds
@@ -226,10 +240,14 @@ public class TcpEntry implements WithUserData {
         }
 
         public void init(int window, int mss, int windowScale) {
+            init(window, mss, windowScale, INIT_CWND);
+        }
+
+        public void init(int window, int mss, int windowScale, int initialCwnd) {
             this.window = Math.min(MAX_REMOTE_WINDOW, window * windowScale);
             this.mss = mss;
             this.windowScale = windowScale;
-            this.cwnd = INIT_CWND;
+            this.cwnd = initialCwnd;
             this.ssthresh = Integer.MAX_VALUE;
             this.lastLossTime = System.currentTimeMillis();
             this.lastLossCwnd = cwnd;
@@ -565,6 +583,10 @@ public class TcpEntry implements WithUserData {
             int newCwnd = (int) (cwnd * CUBIC_BETA);
             ssthresh = Math.max(newCwnd, HIGH_LATENCY_MIN_CWND_MSS * mss);
             cwnd = ssthresh;
+            // enforce minCwnd floor: never reduce below the negotiated minimum
+            if (minCwnd > 0 && cwnd < minCwnd) {
+                cwnd = minCwnd;
+            }
             lastLossTime = System.currentTimeMillis();
         }
 
@@ -605,7 +627,30 @@ public class TcpEntry implements WithUserData {
         }
 
         public int getCwnd() {
+            if (cwnd > 0xffffff) {
+                return 0xffffff;
+            }
             return cwnd;
+        }
+
+        public int getYourCwnd() {
+            return yourCwnd;
+        }
+
+        public void setYourCwnd(int yourCwnd) {
+            this.yourCwnd = yourCwnd;
+            // recalculate minCwnd when peer info changes
+            if (mss > 0) {
+                minCwnd = TcpEntry.this.cwndNegotiator.computeMinCwnd(yourCwnd);
+                // immediately enforce floor
+                if (cwnd < minCwnd) {
+                    cwnd = minCwnd;
+                }
+            }
+        }
+
+        public int getMinCwnd() {
+            return minCwnd;
         }
 
         public boolean needToSendFin() {

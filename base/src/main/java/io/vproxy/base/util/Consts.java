@@ -54,6 +54,7 @@ public class Consts {
     public static final byte TCP_OPTION_WINDOW_SCALE = 3;
     public static final byte TCP_OPTION_SACK_PERMITTED = 4;
     public static final byte TCP_OPTION_SACK = 5;
+    public static final byte TCP_OPTION_CWND = 25; // custom: selfCwnd(3) + yourCwnd(3)
 
     public static final byte TCP_FLAGS_URG = 0b100000;
     public static final byte TCP_FLAGS_ACK = 0b010000;

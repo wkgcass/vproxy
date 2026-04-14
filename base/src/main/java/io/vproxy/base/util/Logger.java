@@ -34,7 +34,7 @@ public class Logger {
         }
 
         {
-            String tcpStackDebug = Utils.getSystemProperty("tcpStackDebug");
+            String tcpStackDebug = Utils.getSystemProperty("tcp_stack_debug");
             tcpStackDebugOn = "on".equals(tcpStackDebug);
         }
 
