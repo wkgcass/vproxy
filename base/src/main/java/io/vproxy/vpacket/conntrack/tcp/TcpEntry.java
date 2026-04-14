@@ -338,7 +338,7 @@ public class TcpEntry implements WithUserData {
 
             for (var s : q) {
                 // 跳过无需处理的
-                if (s.seqBeginInclusive < startSeq) continue;
+                if (s.seqEndExclusive <= startSeq) continue;
                 // 已经sack的无需处理
                 if (s.sacked) continue;
 
