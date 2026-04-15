@@ -1,6 +1,7 @@
 package io.vproxy.vproxyx.websocks.uot;
 
 import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.Utils;
@@ -32,6 +33,7 @@ public class UdpOverTcpSetup {
     // installUotFilter: whether to install the UdpOverTcpPacketFilter; set to false for unet
     public static FDs setup(boolean client, int port, String nicname, EventLoopGroup elg, boolean installUotFilter) throws Exception {
         var nic = selectNic(nicname);
+        setupNicQueues(nicname);
         var localMac = new MacAddress(nic.getHardwareAddress());
         var ips = nic.getInterfaceAddresses();
         var localIp4 = getIPv4(ips);
@@ -127,6 +129,26 @@ public class UdpOverTcpSetup {
             ipv6 = IP.fromIPv6(v6.getAddress().getAddress());
         }
         return new Tuple<>(ipv4, ipv6);
+    }
+
+    private static void setupNicQueues(String nicname) {
+        try {
+            var rxTxResult = Utils.execute("ethtool -L " + nicname + " rx 1 tx 1", true);
+            if (rxTxResult.exitCode == 0) {
+                return;
+            }
+        } catch (Exception e) {
+            // ignore and try combined
+        }
+        try {
+            var combinedResult = Utils.execute("ethtool -L " + nicname + " combined 1", true);
+            if (combinedResult.exitCode == 0) {
+                return;
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        Logger.warn(LogType.SYS_ERROR, "failed to set " + nicname + " queues to rx 1 tx 1 or combined 1");
     }
 
     private static NetworkInterface selectNic(String nicname) throws Exception {
