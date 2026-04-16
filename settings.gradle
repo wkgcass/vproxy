@@ -12,4 +12,5 @@ include 'adaptor-netty'
 include 'adaptor-vertx'
 include 'pni-template'
 include 'msquic-dummy'
+include 'static'
 

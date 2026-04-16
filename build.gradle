@@ -143,7 +143,7 @@ subprojects {
         enabled = false
     }
 
-    def releaseProjects = ['dep', 'base', 'lib', 'adaptor-netty', 'adaptor-vertx', 'msquic-dummy']
+    def releaseProjects = ['dep', 'base', 'lib', 'adaptor-netty', 'adaptor-vertx', 'msquic-dummy', 'static']
     if (System.getProperty("MavenLocalInstall", "false") == "true") {
         releaseProjects.addAll(['core', 'extended', 'app', 'all'])
     }
@@ -411,6 +411,7 @@ project(':all') {
         api project(':extended')
         api project(':app')
         api project(':msquic-dummy')
+        api project(':static')
 
         compileOnly group: 'io.vproxy', name: 'graal-sdk-mock-nativeimage', version: GRAAL_SDK_MOCK_VERSION
         runtimeOnly group: 'io.vproxy', name: 'graal-sdk-mock-runtime', version: GRAAL_SDK_MOCK_VERSION
@@ -629,6 +630,12 @@ project(':test') {
 project(':msquic-dummy') {
     dependencies {
         api project(':base')
+    }
+}
+
+project(':static') {
+    jar {
+        archiveFileName = "vproxy-static.jar"
     }
 }
 
