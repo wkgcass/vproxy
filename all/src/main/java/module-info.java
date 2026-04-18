@@ -5,6 +5,6 @@ module io.vproxy.all {
     requires transitive io.vproxy.lib;
     requires transitive io.vproxy.core;
     requires transitive io.vproxy.extended;
-    requires transitive io.vproxy.app;
     requires transitive io.vproxy.statics;
+    requires transitive io.vproxy.app;
 }

@@ -3,6 +3,7 @@ package io.vproxy.app.app;
 import io.vproxy.app.controller.HttpController;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.util.web.ClasspathResourceHolder;
 import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
@@ -22,7 +23,8 @@ public class HttpControllerHolder {
                               IPPort address) throws AlreadyExistException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("http-controller", alias);
-        HttpController rc = new HttpController(alias, address);
+        HttpController rc = new HttpController(alias, address,
+            new ClasspathResourceHolder("io/vproxy/statics/vproxy"));
         map.put(alias, rc);
         return rc;
     }

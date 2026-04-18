@@ -1,10 +1,6 @@
 package io.vproxy.app.controller
 
-import io.vproxy.base.util.exception.NotFoundException
-import vjson.JSON
-import vjson.simple.SimpleArray
-import vjson.util.ArrayBuilder
-import vjson.util.ObjectBuilder
+import io.vproxy.base.util.web.ClasspathResourceHolder
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.launch
 import io.vproxy.lib.http.RoutingContext
@@ -13,6 +9,10 @@ import io.vproxy.lib.http.Tool
 import io.vproxy.lib.http1.CoroutineHttp1Server
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.suspendCancellableCoroutine
+import vjson.JSON
+import vjson.simple.SimpleArray
+import vjson.util.ArrayBuilder
+import vjson.util.ObjectBuilder
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Collectors
@@ -20,9 +20,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Suppress("DuplicatedCode")
-class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
+class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort,
+                     private val classpathResourceHolder: ClasspathResourceHolder) {
   private val server: CoroutineHttp1Server
-  private val classpathResourceHolder = io.vproxy.base.util.web.ClasspathResourceHolder("io/vproxy/app/controller/webroot")
 
   init {
     // prepare
@@ -36,6 +36,7 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
     // hc
     server.get("/healthz") { ctx -> ctx.conn.response(200).send("OK") }
     // html
+    server.get("/") { ctx -> ctx.conn.response(302).header("Location", "/html/index.html").send() }
     server.get(htmlBase) { ctx -> ctx.conn.response(302).header("Location", "/html/index.html").send() }
     server.get("$htmlBase/*") { ctx ->
       val path: String = ctx.req.uri().substring(htmlBase.length)
@@ -43,7 +44,18 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
       if (b == null) {
         ctx.conn.response(404).send("Page Not Found\r\n")
       } else {
-        ctx.conn.response(200).header("Content-Type", "text/html").send(b)
+        val mime = if (path.endsWith(".css")) {
+          "text/css"
+        } else if (path.endsWith(".js")) {
+          "application/javascript"
+        } else if (path.endsWith(".html")) {
+          "text/html"
+        } else null
+        val resp = ctx.conn.response(200)
+        if (mime != null) {
+          resp.header("Content-Type", mime)
+        }
+        resp.send(b)
       }
     }
     // json
@@ -220,6 +232,7 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
       "$moduleBase/event-loop-group", wrapAsync(
         { rctx: RoutingContext, cb: io.vproxy.base.util.callback.Callback<JSON.Instance<*>, Throwable> -> createEventLoopGroup(rctx, cb) }, ObjectBuilder()
           .put("name", "alias of the event loop group")
+          .putInst("annotations", ObjectBuilder().put("key", "value").build())
           .build(),
         "name"
       )
@@ -982,10 +995,12 @@ class HttpController(val alias: String, val address: io.vproxy.vfd.IPPort) {
   private fun createEventLoopGroup(rctx: RoutingContext, cb: io.vproxy.base.util.callback.Callback<JSON.Instance<*>, Throwable>) {
     val body = rctx.get(Tool.bodyJson) as JSON.Object
     val name = body.getString("name")
-    io.vproxy.app.controller.utils.execute(
-      cb,
-      "add", "event-loop-group", name
-    )
+    val options = LinkedList(listOf("add", "event-loop-group", name))
+    if (bodyContainsKey(body, "annotations")) {
+      options.add("annotations")
+      options.add(body.getObject("annotations").stringify())
+    }
+    io.vproxy.app.controller.utils.execute(cb, options)
   }
 
   private fun deleteEventLoopGroup(rctx: RoutingContext, cb: io.vproxy.base.util.callback.Callback<JSON.Instance<*>, Throwable>) {

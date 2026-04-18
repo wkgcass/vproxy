@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vproxy Console</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+  <div id="app" class="app">
+    <nav class="navbar">
+      <a href="index.html" class="navbar-brand">vproxy Console</a>
+      <div class="navbar-links">
+        <a href="index.html" class="nav-link active">Dashboard</a>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <div class="welcome-hero">
+        <h1>vproxy Console</h1>
+        <p>Manage load balancers, servers, security groups, and certificates through a clean web interface.</p>
+      </div>
+
+      <div class="container">
+        <div class="module-grid">
+          <a v-for="g in moduleGroups" :key="g.key" :href="g.href" class="module-card card-hover">
+            <div class="module-card-icon">{{ g.icon }}</div>
+            <h4>{{ g.title }}</h4>
+            <p>{{ g.desc }}</p>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" style="margin-top: 2rem; padding-bottom: 2rem;">
+      <div class="card">
+        <div class="card-body">
+          <h4 style="margin-bottom: 0.75rem;">Backend Address</h4>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <input class="form-input" v-model="apiBase" placeholder="http://127.0.0.1:18776" style="min-width: 280px; flex: 1;">
+            <button class="btn btn-primary btn-lg" @click="saveApiBase">Save</button>
+            <button class="btn btn-secondary btn-lg" @click="resetApiBase">Reset</button>
+          </div>
+          <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.75rem;">All API requests will use this base URL. Stored in browser localStorage.</p>
+        </div>
+      </div>
+    </div>
+    <!-- Toasts -->
+    <div class="toast-stack">
+      <div v-for="t in Toast.toasts" :key="t.id" class="toast" :class="t.type">
+        <div class="toast-message">{{ t.message }}</div>
+        <button class="toast-close" @click="Toast.toasts.splice(Toast.toasts.indexOf(t),1)">&times;</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+    createApp({
+      setup() {
+        const moduleGroups = [
+          { key: 'tcp-lb', title: 'TCP Load Balancer', desc: 'Manage TCP load balancers and backends.', href: 'tcp-lb.html', icon: '⚖️' },
+          { key: 'socks5-server', title: 'SOCKS5 Server', desc: 'Configure SOCKS5 proxy servers.', href: 'socks5-server.html', icon: '🧦' },
+          { key: 'dns-server', title: 'DNS Server', desc: 'Manage DNS servers and answer records.', href: 'dns-server.html', icon: '🌐' },
+          { key: 'event-loop-group', title: 'Event Loop Group', desc: 'Organize event loop groups.', href: 'event-loop-group.html', icon: '🔁' },
+          { key: 'upstream', title: 'Upstream', desc: 'Define upstream server collections.', href: 'upstream.html', icon: '⬆️' },
+          { key: 'server-group', title: 'Server Group', desc: 'Configure health-checked server groups.', href: 'server-group.html', icon: '👥' },
+          { key: 'security-group', title: 'Security Group', desc: 'Control access with security groups.', href: 'security-group.html', icon: '🔒' },
+          { key: 'cert-key', title: 'Cert Key', desc: 'Manage TLS certificates and keys.', href: 'cert-key.html', icon: '🔑' },
+        ];
+        const apiBase = ref('');
+        onMounted(() => {
+          const stored = localStorage.getItem('vproxy-api-base');
+          if (stored) {
+            apiBase.value = stored;
+          } else {
+            const proto = location.protocol;
+            if (proto === 'http:' || proto === 'https:') {
+              apiBase.value = proto + '//' + location.host;
+            } else {
+              apiBase.value = 'http://127.0.0.1:18776';
+            }
+          }
+        });
+        function saveApiBase() {
+          localStorage.setItem('vproxy-api-base', apiBase.value);
+          Toast.success('Backend address saved to localStorage');
+        }
+        function resetApiBase() {
+          localStorage.removeItem('vproxy-api-base');
+          const proto = location.protocol;
+          let defaultUrl;
+          if (proto === 'http:' || proto === 'https:') {
+            defaultUrl = proto + '//' + location.host;
+          } else {
+            defaultUrl = 'http://127.0.0.1:18776';
+          }
+          apiBase.value = defaultUrl;
+          Toast.success('Backend address reset to ' + defaultUrl);
+        }
+        return { moduleGroups, apiBase, saveApiBase, resetApiBase, Toast };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

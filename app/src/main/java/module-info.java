@@ -10,6 +10,7 @@ module io.vproxy.app {
     requires transitive io.vproxy.core;
     requires transitive io.vproxy.extended;
     requires transitive io.vproxy.lib;
+    requires transitive io.vproxy.statics;
 
     exports io.vproxy.app.app;
     exports io.vproxy.app.app.args;

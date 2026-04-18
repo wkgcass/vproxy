@@ -587,6 +587,9 @@ public class Shutdown {
                 String cmd = "add dns-server " + jsonstr(dns.alias) +
                     " event-loop-group " + jsonstr(dns.eventLoopGroup.alias) +
                     " address " + dns.bindAddress.formatToIPPortString() + " upstream " + jsonstr(dns.rrsets.alias);
+                if (!dns.securityGroup.alias.equals(SecurityGroup.defaultName)) {
+                    cmd += " security-group " + jsonstr(dns.securityGroup.alias);
+                }
                 commands.add(cmd);
             }
         }

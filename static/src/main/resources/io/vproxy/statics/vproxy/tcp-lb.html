@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vproxy - tcp-lb</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+  <div id="app" class="app">
+    <nav class="navbar">
+      <a href="index.html" class="navbar-brand">vproxy Console</a>
+      <div class="navbar-links">
+        <a href="index.html" class="nav-link">Dashboard</a>
+      </div>
+    </nav>
+    <div id="crud"></div>
+  </div>
+  <script src="js/app.js"></script>
+  <script>
+    initCrudApp('tcp-lb', document.getElementById('crud')).mount('#crud');
+  </script>
+</body>
+</html>

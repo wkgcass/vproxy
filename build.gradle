@@ -395,6 +395,7 @@ project(':app') {
         api project(':core')
         api project(':lib')
         api project(':extended')
+        api project(':static')
 
         implementation 'io.vproxy:pni-api-graal-jdk22:' + PNI_VERSION
         compileOnly group: 'io.vproxy', name: 'graal-sdk-mock-nativeimage', version: GRAAL_SDK_MOCK_VERSION
@@ -409,9 +410,9 @@ project(':all') {
         api project(':lib')
         api project(':core')
         api project(':extended')
+        api project(':static')
         api project(':app')
         api project(':msquic-dummy')
-        api project(':static')
 
         compileOnly group: 'io.vproxy', name: 'graal-sdk-mock-nativeimage', version: GRAAL_SDK_MOCK_VERSION
         runtimeOnly group: 'io.vproxy', name: 'graal-sdk-mock-runtime', version: GRAAL_SDK_MOCK_VERSION

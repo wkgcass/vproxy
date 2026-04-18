@@ -58,8 +58,6 @@ public class TcpLBHandle {
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
         IPPort addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
-        int inBufferSize = InBufferSizeHandle.get(cmd, 16384);
-        int outBufferSize = OutBufferSizeHandle.get(cmd, 16384);
         String protocol = cmd.args.get(Param.protocol);
         if (protocol == null) protocol = "tcp";
         int timeout;
@@ -82,6 +80,8 @@ public class TcpLBHandle {
                 certKeys[i] = Application.get().certKeyHolder.get(cks[i]);
             }
         }
+        int inBufferSize = InBufferSizeHandle.get(cmd, certKeys == null ? 16384 : 24576);
+        int outBufferSize = OutBufferSizeHandle.get(cmd, certKeys == null ? 16384 : 24576);
         Application.get().tcpLBHolder.add(
             alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, certKeys, secg
         );
