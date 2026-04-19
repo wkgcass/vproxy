@@ -610,7 +610,9 @@ public class Utils {
         }
         File file = File.createTempFile("script", OS.isWindows() ? ".bat" : ".sh");
         try {
-            script = "@echo off\r\n" + script;
+            if (OS.isWindows()) {
+                script = "@echo off\r\n" + script;
+            }
             Files.writeString(file.toPath(), script, OS.shellCharset());
             if (!file.setExecutable(true)) {
                 throw new Exception("chmod +x " + file.getAbsolutePath() + " failed");
