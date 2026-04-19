@@ -37,7 +37,11 @@ public class UMem {
                               int frameSize, int headroom, int metaLen) throws IOException {
         NativeXDP.load();
 
-        var umem = XDP.get().createUMem(chunksCount, fillRingSize, compRingSize, frameSize, headroom, metaLen);
+        var flags = 0;
+        if (NativeXDP.supportTxMetadata && NativeXDP.needUmemTxMetadataLenFlag) {
+            flags |= NativeXDP.XDP_UMEM_TX_METADATA_LEN;
+        }
+        var umem = XDP.get().createUMemFlags(chunksCount, fillRingSize, compRingSize, frameSize, headroom, metaLen, flags);
         if (umem == null) {
             throw new IOException("failed to create UMem");
         }

@@ -42,7 +42,11 @@ if [[ "$cnt" -eq 0 ]]; then
 	/usr/bin/ctr image pull $PLUGIN_IMAGE --skip-verify --plain-http
 fi
 
-/usr/bin/ctr image pull $PLUGIN_IMAGE # --skip-verify --plain-http
+set +e
+ctr snapshot rm vproxy-docker-network-plugin
+ctr container rm vproxy-docker-network-plugin
+set -e
+
 exec /usr/bin/ctr run \
 	--rm --net-host \
 	--mount type=bind,src=/etc,dst=/x-etc,options=rbind \

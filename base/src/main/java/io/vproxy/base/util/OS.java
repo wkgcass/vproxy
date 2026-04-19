@@ -1,7 +1,10 @@
 package io.vproxy.base.util;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -14,6 +17,9 @@ public class OS {
     private static final String arch;
     private static final int linuxMajorVersion;
     private static final int linuxMinorVersion;
+    private static final int linuxPatchVersion;
+    private static final String linuxVersionSuffix;
+    private static final String osdist;
 
     static {
         osname = System.getProperty("os.name", "");
@@ -33,21 +39,59 @@ public class OS {
 
         int major = -1;
         int minor = -1;
+        int patch = -1;
+        var suffix = "";
         if (osLinux) {
             String[] split = osversion.split("\\.");
-            if (split.length >= 2) {
-                try {
-                    major = Integer.parseInt(split[0]);
-                    minor = Integer.parseInt(split[1]);
-                } catch (NumberFormatException ignore) {
+            try {
+                major = Integer.parseInt(split[0]);
+                minor = Integer.parseInt(split[1]);
+                if (split[2].contains("-")) {
+                    patch = Integer.parseInt(split[2].substring(0, split[2].indexOf("-")));
+                } else {
+                    patch = Integer.parseInt(split[2]);
                 }
-            }
-            if (minor == -1) {
-                major = -1;
+                var sb = new StringBuilder(split[2]);
+                for (int i = 3; i < split.length; i++) {
+                    sb.append(".").append(split[i]);
+                }
+                var s = sb.toString();
+                if (s.contains("-")) {
+                    s = s.substring(s.indexOf("-") + 1);
+                }
+                suffix = s;
+            } catch (NumberFormatException | ArrayIndexOutOfBoundsException ignore) {
             }
         }
         linuxMajorVersion = major;
         linuxMinorVersion = minor;
+        linuxPatchVersion = patch;
+        if (suffix.startsWith("-")) {
+            suffix = suffix.substring(1);
+        }
+        linuxVersionSuffix = suffix;
+
+        var _osdist = "";
+        if (osLinux) {
+            try {
+                var osRelease = Files.readString(Path.of("/etc/os-release"));
+                var lines = osRelease.split("\n");
+                for (var line : lines) {
+                    line = line.trim();
+                    if (line.startsWith("NAME=") || line.startsWith("name=")) {
+                        var v = line.substring("NAME=".length()).trim();
+                        if (v.startsWith("\"") && v.endsWith("\"")) {
+                            _osdist = v.substring(1, v.length() - 1);
+                        } else {
+                            _osdist = v;
+                        }
+                        break;
+                    }
+                }
+            } catch (IOException ignore) {
+            }
+        }
+        osdist = _osdist;
     }
 
     private OS() {
@@ -69,6 +113,14 @@ public class OS {
         return linuxMinorVersion;
     }
 
+    public static int patch() {
+        return linuxPatchVersion;
+    }
+
+    public static String osVersionSuffix() {
+        return linuxVersionSuffix;
+    }
+
     public static boolean isWindows() {
         return osWin;
     }
@@ -83,6 +135,10 @@ public class OS {
 
     public static String arch() {
         return arch;
+    }
+
+    public static String dist() {
+        return osdist;
     }
 
     private static Charset SHELL_CHARSET = null;
@@ -136,7 +192,7 @@ public class OS {
             }
             if (exitCode != 0) {
                 Logger.warn(LogType.SYS_ERROR, "failed executing cmd: " + cmd + ", exitCode = " + exitCode +
-                    ", stdout = " + stdout + ", stderr = " + stderr);
+                                               ", stdout = " + stdout + ", stderr = " + stderr);
                 continue;
             }
             stdout = stdout.trim();
