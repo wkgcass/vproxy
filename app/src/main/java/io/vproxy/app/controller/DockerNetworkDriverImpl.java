@@ -469,21 +469,19 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         String currentConfig = Shutdown.currentConfig();
         String[] split = currentConfig.split("\n");
         for (String s : split) {
-            if (s.startsWith("add bpf-object ")) {
-                if (s.startsWith("add bpf-object " + POD_VETH_PREFIX)) {
-                    continue;
-                }
-            } else if (s.startsWith("add umem ")) {
-                if (s.split(" ")[2].length() == ("umem".length() + 8)) {
+            if (s.startsWith("add umem ")) {
+                if (s.split(" ")[2].length() == ("\"umem\"".length() + 8)) { // 8 for short version of docker endpointId
                     continue;
                 }
             } else if (s.startsWith("add xdp ")) {
-                if (s.startsWith("add xdp " + POD_VETH_PREFIX)) {
+                if (s.startsWith("add xdp \"" + POD_VETH_PREFIX)) {
                     continue;
                 } else {
-                    netEntryIfaces.add(s.split(" ")[2]);
+                    var foo = s.split(" ")[2];
+                    foo = foo.substring(1, foo.length() - 1);
+                    netEntryIfaces.add(foo);
                 }
-            } else if (s.startsWith("update iface xdp:") && !s.startsWith("update iface xdp:" + NETWORK_ENTRY_VETH_PREFIX)) {
+            } else if (s.startsWith("update iface \"xdp:") && !s.startsWith("update iface \"xdp:" + NETWORK_ENTRY_VETH_PREFIX)) {
                 continue;
             }
             sb.append(s).append("\n");
