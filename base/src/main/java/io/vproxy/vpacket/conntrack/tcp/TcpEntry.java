@@ -232,9 +232,6 @@ public class TcpEntry implements WithUserData {
         private long rttVarUs = -1; // RTT variance in microseconds
         private long rto = RTO_MIN; // computed RTO in ms
 
-        // per-segment send timestamps for RTT sampling (seq -> sendTimeMs)
-        private final java.util.Map<Long, Long> sendTimes = new java.util.HashMap<>();
-
         public SendingQueue(int seq) {
             this.latestSeq = seq;
             this.ackSeq = seq;
@@ -370,7 +367,7 @@ public class TcpEntry implements WithUserData {
                 long now = Config.currentTimestamp;
                 for (var seg : ret) {
                     if (seg.retransmitted == 0) {
-                        sendTimes.put(seg.seqBeginInclusive, now);
+                        seg.lastSendTime = now;
                         if (seg.firstSentTime == 0) {
                             seg.firstSentTime = now;
                         }
@@ -490,10 +487,9 @@ public class TcpEntry implements WithUserData {
                 if (s.seqEndExclusive <= seq) {
                     // fully acked — remove
                     if (!sampled) {
-                        sampleRtt(s.seqBeginInclusive);
+                        sampleRtt(s);
                         sampled = true;
                     }
-                    sendTimes.remove(s.seqBeginInclusive);
                     currentSize -= s.data.length();
                     ite.remove();
                     if (connectionHandler != null) {
@@ -506,13 +502,12 @@ public class TcpEntry implements WithUserData {
             }
         }
 
-        private void sampleRtt(long ackedSeq) {
-            Long sendTime = sendTimes.get(ackedSeq);
-            if (sendTime == null) {
+        private void sampleRtt(Segment s) {
+            if (s.lastSendTime == 0) {
                 return;
             }
             long now = Config.currentTimestamp;
-            long rttMs = now - sendTime;
+            long rttMs = now - s.lastSendTime;
             if (rttMs <= 0) {
                 return;
             }
