@@ -6,6 +6,7 @@ import io.vproxy.vfd.FDs;
 
 public class ConnectionOpts {
     private int timeout = Config.tcpTimeout;
+    private int connectTimeout = Config.tcpConnectTimeout;
     private FDs fds;
 
     public static ConnectionOpts getDefault() {
@@ -20,6 +21,11 @@ public class ConnectionOpts {
         return this;
     }
 
+    public ConnectionOpts setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+        return this;
+    }
+
     public ConnectionOpts setFDs(FDs fds) {
         this.fds = fds;
         return this;
@@ -27,6 +33,10 @@ public class ConnectionOpts {
 
     public int getTimeout() {
         return timeout;
+    }
+
+    public int getConnectTimeout() {
+        return connectTimeout;
     }
 
     public FDs getFds() {
@@ -44,6 +54,11 @@ final class DefaultConnectionOpts extends ConnectionOpts {
 
     @Override
     public ConnectionOpts setTimeout(int timeout) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ConnectionOpts setConnectTimeout(int connectTimeout) {
         throw new UnsupportedOperationException();
     }
 }

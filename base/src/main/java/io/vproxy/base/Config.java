@@ -25,6 +25,9 @@ public class Config {
     // set it smaller if your environment have a smaller tcp session ttl
     public static final int tcpTimeout = 15 * 60_000;
 
+    // the default tcpConnectTimeout is 15s
+    public static final int tcpConnectTimeout = 15 * 1000;
+
     // the maximum expected size of a udp packet
     public static final int udpMtu = 65536;
 

@@ -151,6 +151,7 @@ public class Connection implements NetFlowRecorder {
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
     long lastTimestamp;
     int timeout;
+    int connectTimeout;
 
     // statistics fields
     // the connection is handled in a single thread, so no need to synchronize
@@ -188,6 +189,7 @@ public class Connection implements NetFlowRecorder {
 
         this.channel = channel;
         this.timeout = opts.getTimeout();
+        this.connectTimeout = opts.getConnectTimeout();
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
         this.remote = remote;
@@ -201,6 +203,10 @@ public class Connection implements NetFlowRecorder {
         this.getOutBuffer().addHandler(outBufferETHandler);
         // in the outBufferETHandler
         // if buffer did not wrote all content, simply ignore the left part
+    }
+
+    public boolean isConnected() {
+        return channel.isConnected();
     }
 
     public IPPort getLocal() {
@@ -418,6 +424,16 @@ public class Connection implements NetFlowRecorder {
     public void setTimeout(int timeout) {
         assert Logger.lowLevelDebug("setting timeout for conn " + this + " to " + timeout);
         this.timeout = timeout;
+        resetCloseTimeout();
+    }
+
+    public void setConnectTimeout(int connectTimeout) {
+        assert Logger.lowLevelDebug("setting connectTimeout for conn " + this + " to " + connectTimeout);
+        this.connectTimeout = connectTimeout;
+        resetCloseTimeout();
+    }
+
+    private void resetCloseTimeout() {
         var loop = _eventLoop;
         if (loop != null) {
             assert Logger.lowLevelDebug("the connection is registered inside an event loop");
@@ -438,6 +454,10 @@ public class Connection implements NetFlowRecorder {
         } else {
             assert Logger.lowLevelDebug("the connection is not registered into any event loop");
         }
+    }
+
+    public int getConnectTimeout() {
+        return connectTimeout;
     }
 
     public String id() {

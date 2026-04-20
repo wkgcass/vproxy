@@ -272,7 +272,7 @@ class NetEventLoopUtils {
         Connection conn = ctx.connection;
         assert Logger.lowLevelDebug("do reset timeout for " + conn);
 
-        final int timeout = conn.timeout;
+        final int timeout = conn.isConnected() ? conn.timeout : conn.connectTimeout;
         int delay;
         if (conn.lastTimestamp == 0) {
             delay = timeout;
@@ -480,6 +480,9 @@ class HandlerForConnectableConnection extends HandlerForConnection {
         if (!connected) {
             Logger.shouldNotHappen("the connection is not connected, should not fire the event");
         }
+
+        // connection established, reset close timeout with the regular timeout value
+        NetEventLoopUtils.resetCloseTimeout(cctx);
 
         // user might want to write some data in the callback
         // so call the callback before setting events
