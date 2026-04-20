@@ -1,5 +1,6 @@
 package io.vproxy.vpacket.conntrack.tcp;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
@@ -28,6 +29,7 @@ public class TcpEntry implements WithUserData {
     public static final int INIT_CWND = MAX_CWND / 10;
     public static final int MAX_RETRANSMISSION_AFTER_CLOSING = 14;
     public static final int TIME_WAIT_TIMEOUT_MS = 24_000;
+    public static final int RETRANSMISSION_TIMEOUT_MS = 15_000;
 
     // 多倍发包参数
     private int pshMultiplier = 1;
@@ -249,7 +251,7 @@ public class TcpEntry implements WithUserData {
             this.windowScale = windowScale;
             this.cwnd = initialCwnd;
             this.ssthresh = Integer.MAX_VALUE;
-            this.lastLossTime = System.currentTimeMillis();
+            this.lastLossTime = Config.currentTimestamp;
             this.lastLossCwnd = cwnd;
         }
 
@@ -365,10 +367,13 @@ public class TcpEntry implements WithUserData {
 
             if (!ret.isEmpty()) {
                 bytesInFlight += newBytes;
-                long now = System.currentTimeMillis();
+                long now = Config.currentTimestamp;
                 for (var seg : ret) {
                     if (seg.retransmitted == 0) {
                         sendTimes.put(seg.seqBeginInclusive, now);
+                        if (seg.firstSentTime == 0) {
+                            seg.firstSentTime = now;
+                        }
                     }
                     if (seg.seqEndExclusive > fetchSeq) {
                         fetchSeq = seg.seqEndExclusive;
@@ -506,7 +511,7 @@ public class TcpEntry implements WithUserData {
             if (sendTime == null) {
                 return;
             }
-            long now = System.currentTimeMillis();
+            long now = Config.currentTimestamp;
             long rttMs = now - sendTime;
             if (rttMs <= 0) {
                 return;
@@ -537,7 +542,7 @@ public class TcpEntry implements WithUserData {
                 }
             } else {
                 // CUBIC congestion avoidance
-                double elapsedSec = (System.currentTimeMillis() - lastLossTime) / 1000.0;
+                double elapsedSec = (Config.currentTimestamp - lastLossTime) / 1000.0;
                 double wMaxMss = (double) lastLossCwnd / mss; // W_max in MSS units
                 double k = Math.cbrt(wMaxMss * (1 - CUBIC_BETA) / CUBIC_C);
                 double tMinusK = elapsedSec - k;
@@ -587,7 +592,7 @@ public class TcpEntry implements WithUserData {
             if (minCwnd > 0 && cwnd < minCwnd) {
                 cwnd = minCwnd;
             }
-            lastLossTime = System.currentTimeMillis();
+            lastLossTime = Config.currentTimestamp;
         }
 
         public int getCurrentSize() {
@@ -667,6 +672,29 @@ public class TcpEntry implements WithUserData {
 
         public void resetDupAckCount() {
             dupAckCount = 0;
+        }
+
+        /**
+         * 检查最早未ACK的分片是否已超过重传超时时间。
+         * @return 超时的分片，如果没有超时返回 null
+         */
+        public Segment checkRetransmissionTimeout() {
+            if (q.isEmpty()) return null;
+            long now = Config.currentTimestamp;
+            for (var s : q) {
+                if (s.firstSentTime == 0) {
+                    // 队列是有序的，所以遇到没有发送时间的分片就可以直接退出循环了
+                    return null;
+                }
+                if (s.sacked) {
+                    continue;
+                }
+                if (s.firstSentTime > 0 && now - s.firstSentTime >= RETRANSMISSION_TIMEOUT_MS) {
+                    return s;
+                }
+                break;
+            }
+            return null;
         }
     }
 

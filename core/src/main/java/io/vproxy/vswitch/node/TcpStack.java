@@ -2,6 +2,7 @@ package io.vproxy.vswitch.node;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.commons.graph.GraphBuilder;
@@ -141,11 +142,11 @@ public class TcpStack extends Node {
         var tcpPkt = pkb.tcpPkt;
         // only handle syn
         if (tcpPkt.getFlags() != Consts.TCP_FLAGS_SYN) {
-            assert Logger.lowLevelDebug("not SYN packet");
+            assert Logger.lowLevelDebug("not SYN packet, respond with RST");
             if (pkb.debugger.isDebugOn()) {
-                pkb.debugger.line(d -> d.append("not SYN packet"));
+                pkb.debugger.line(d -> d.append("not SYN packet, respond with RST"));
             }
-            return _returndrop(pkb);
+            return _returnnext(pkb, tcpReset);
         }
         if (pkb.ensurePartialPacketParsed()) {
             if (pkb.debugger.isDebugOn()) {
@@ -632,6 +633,15 @@ public class TcpStack extends Node {
         if (tcp.requireClosing() && ctx.retransmissionCount > TcpEntry.MAX_RETRANSMISSION_AFTER_CLOSING) {
             assert Logger.lowLevelDebug("conn " + tcp + " is closed due to too many retransmission after closing");
             _resetTcpConnection(network, tcp);
+            return;
+        }
+
+        // check broken pipe: per-segment retransmission timeout
+        var timedOutSeg = tcp.sendingQueue.checkRetransmissionTimeout();
+        if (timedOutSeg != null) {
+            Logger.error(LogType.SYS_ERROR, "Broken Pipe: segment [" + timedOutSeg.seqBeginInclusive + ", " + timedOutSeg.seqEndExclusive + ") retransmission timeout after " + TcpEntry.RETRANSMISSION_TIMEOUT_MS + "ms for " + tcp);
+            _resetTcpConnection(network, tcp);
+            tcp.destroy();
             return;
         }
 

@@ -279,6 +279,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
                 return;
             }
             setReadable();
+            setWritable();
         }
     }
 }
