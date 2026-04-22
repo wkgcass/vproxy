@@ -30,7 +30,6 @@ public class TcpEntry implements WithUserData {
     public static final int MAX_RETRANSMISSION_AFTER_CLOSING = 14;
     public static final int TIME_WAIT_TIMEOUT_MS = 24_000;
     public static final int RETRANSMISSION_TIMEOUT_MS = 15_000;
-
     // 多倍发包参数
     private int pshMultiplier = 1;
     private int ackMultiplier = 1;
@@ -50,6 +49,7 @@ public class TcpEntry implements WithUserData {
 
     public TimerEvent retransmissionTimer = null;
     public TimerEvent delayedAckTimer = null;
+    public long synBacklogTimestamp = 0;
 
     // only one of these fields can be null
     // {
@@ -65,6 +65,7 @@ public class TcpEntry implements WithUserData {
         this.state = TcpState.CLOSED;
         this.sendingQueue = new SendingQueue(new Random().nextInt(TCP_SEQ_RAND) + TCP_SEQ_INIT_MIN);
         this.receivingQueue = new ReceivingQueue(seq == 0 ? 0 : seq + 1 /* the sequence is syn_packet.seq + 1 */);
+        this.synBacklogTimestamp = Config.currentTimestamp;
     }
 
     public TcpEntry(IPPort remote, IPPort local) {

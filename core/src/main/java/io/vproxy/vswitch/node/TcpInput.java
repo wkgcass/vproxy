@@ -63,6 +63,13 @@ public class TcpInput extends Node {
             } else {
                 assert Logger.lowLevelDebug("got new connection");
 
+                // cleanup timed-out syn backlog entries
+                var timedOut = listenEntry.cleanupTimedOutSynBacklogEntries();
+                for (var e : timedOut) {
+                    e.destroy();
+                    pkb.network.conntrack.removeTcp(e.remote, e.local);
+                }
+
                 // check backlog
                 if (listenEntry.synBacklog.size() >= TcpListenEntry.MAX_SYN_BACKLOG_SIZE) {
                     assert Logger.lowLevelDebug("syn-backlog is full");

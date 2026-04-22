@@ -252,23 +252,33 @@ public class TcpStack extends Node {
             }
             return _returndrop(pkb);
         }
-        connectionEstablishes(pkb);
+        var establishedResult = connectionEstablishes(pkb);
+        if (establishedResult != null) {
+            return establishedResult;
+        }
 
         // then run the same handling as established
         return handleTcpEstablished(pkb);
     }
 
-    private void connectionEstablishes(PacketBuffer pkb) {
+    private HandleResult connectionEstablishes(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("connectionEstablishes");
         pkb.tcp.setState(TcpState.ESTABLISHED);
         // alert that this connection can be retrieved
         var parent = pkb.tcp.getParent();
         if (parent == null) {
-            return;
+            return null;
         }
         parent.synBacklog.remove(pkb.tcp);
+        if (parent.backlog.size() >= TcpListenEntry.MAX_BACKLOG_SIZE) {
+            assert Logger.lowLevelDebug("backlog is full, resetting connection");
+            pkb.tcp.destroy();
+            pkb.network.conntrack.removeTcp(pkb.tcp.remote, pkb.tcp.local);
+            return _returnnext(pkb, tcpReset);
+        }
         parent.backlog.add(pkb.tcp);
         parent.listenHandler.readable(parent);
+        return null;
     }
 
     private boolean handleTcpGeneralReturnFalse(PacketBuffer pkb) {
