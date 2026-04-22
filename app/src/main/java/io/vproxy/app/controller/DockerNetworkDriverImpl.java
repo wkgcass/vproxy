@@ -136,7 +136,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             }
         }
         for (var ipv6Data : req.ipv6Data) {
-            if (ipv6Data.auxAddresses != null && ipv6Data.auxAddresses.isEmpty()) {
+            if (ipv6Data.auxAddresses != null && !ipv6Data.auxAddresses.isEmpty()) {
                 throw new Exception("auxAddresses are not supported");
             }
             Network net;
