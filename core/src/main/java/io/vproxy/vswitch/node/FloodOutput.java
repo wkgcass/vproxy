@@ -48,7 +48,7 @@ public class FloodOutput extends AbstractNeighborResolve {
 
         Logger.warn(LogType.ALERT, "flood packet: " + pkb);
         HandleResult res = HandleResult.DROP;
-        boolean isFirst = true;
+        Iface firstIface = null;
         for (Iface iface : sw.getIfaces()) {
             if (pkb.devin != null && iface == pkb.devin) {
                 continue;
@@ -66,15 +66,17 @@ public class FloodOutput extends AbstractNeighborResolve {
                 }
                 return _returndropSkipErrorDrop();
             }
-            if (isFirst) {
-                isFirst = false;
-                pkb.devout = iface;
-                res = _next(pkb, devOutput);
+            if (firstIface == null) {
+                firstIface = iface;
             } else {
                 var copied = pkb.copy();
                 copied.devout = iface;
                 _schedule(scheduler, copied, devOutput);
             }
+        }
+        if (firstIface != null) {
+            pkb.devout = firstIface;
+            res = _next(pkb, devOutput);
         }
 
         // also, send arp/ndp request for these addresses if they are ip packet

@@ -38,7 +38,7 @@ public class BroadcastOutput extends Node {
         if (pkb.devin != null) {
             sent.add(pkb.devin);
         }
-        var isFirst = true;
+        Iface firstIface = null;
         HandleResult res = HandleResult.DROP;
         for (Iface f : sw.getIfaces()) {
             // send if vrf matches
@@ -55,15 +55,17 @@ public class BroadcastOutput extends Node {
                 }
                 return _returndropSkipErrorDrop();
             }
-            if (isFirst) {
-                isFirst = false;
-                pkb.devout = f;
-                res = _next(pkb, devOutput);
+            if (firstIface == null) {
+                firstIface = f;
             } else {
                 var copied = pkb.copy();
                 copied.devout = f;
                 _schedule(scheduler, copied, devOutput);
             }
+        }
+        if (firstIface != null) {
+            pkb.devout = firstIface;
+            res = _next(pkb, devOutput);
         }
         return _return(res, pkb, scheduler);
     }

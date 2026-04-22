@@ -40,7 +40,7 @@ public class MulticastInput extends Node {
             return _returndropSkipErrorDrop();
         }
         var p = pkb.copy();
-        _schedule(scheduler, p, multicastOutput);
-        return _returnnext(pkb, localMulticastInput);
+        _schedule(scheduler, p, localMulticastInput);
+        return _returnnext(pkb, multicastOutput); // output may reuse the umem buf, so use original pkb
     }
 }
