@@ -144,6 +144,7 @@ public class Fubuki implements AutoCloseable {
     }
 
     private static void doLoad() {
+        Utils.loadDynamicLibrary("pni");
         try {
             Utils.loadDynamicLibrary("fubuki");
         } catch (UnsatisfiedLinkError e) {
