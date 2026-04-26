@@ -61,6 +61,7 @@ public class WebSocksProxyAgent {
     private CoroutineHttp1Server relayHttp = null;
     private Proxy relayHttps = null;
     private Proxy relayAny = null;
+    private Proxy relayAny6 = null;
 
     private void loadConfig(String[] args) throws Exception {
         if (configLoader != null) {
@@ -166,6 +167,10 @@ public class WebSocksProxyAgent {
         if (configProcessor.getDirectRelayIpRange() != null) {
             domainBinder = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIpRange());
         }
+        DomainBinder domainBinder6 = null;
+        if (configProcessor.getDirectRelayIp6Range() != null) {
+            domainBinder6 = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIp6Range());
+        }
 
         // init dns server
         {
@@ -173,7 +178,7 @@ public class WebSocksProxyAgent {
             if (port == 0) {
                 port = 53; // just a hint. if not configured, the dns server won't start
             }
-            WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", new IPPort("0.0.0.0", port), worker, configProcessor, domainBinder);
+            WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", new IPPort("0.0.0.0", port), worker, configProcessor, domainBinder, domainBinder6);
             dnsServer = WebSocksUtils.agentDNSServer;
             // may need to start dns server
             if (configProcessor.getDnsListenPort() != 0) {
@@ -183,7 +188,7 @@ public class WebSocksProxyAgent {
 
                 if (!FDProvider.get().getProvided().isV4V6DualStack()) {
                     try {
-                        dnsServer6 = new AgentDNSServer("dns6", new IPPort("::", port), worker, configProcessor, domainBinder);
+                        dnsServer6 = new AgentDNSServer("dns6", new IPPort("::", port), worker, configProcessor, domainBinder, domainBinder6);
                         dnsServer6.start();
                         Logger.alert("dns server for ipv6 started on " + configProcessor.getDnsListenPort());
                     } catch (Exception e) {
@@ -309,6 +314,12 @@ public class WebSocksProxyAgent {
                 relayAny = new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
                 Logger.alert("relay-bind-any-port-server started on " + listen.formatToIPPortString() + " which handles " + ipRange);
             }
+            if (configProcessor.getDirectRelayIp6Range() != null) {
+                IPPort listen6 = configProcessor.getDirectRelayListen6();
+                Network ipRange6 = configProcessor.getDirectRelayIp6Range();
+                relayAny6 = new RelayBindAnyPortServer(connectorProvider, domainBinder6, listen6).launch(acceptor, worker);
+                Logger.alert("relay-bind-any-port-server6 started on " + listen6.formatToIPPortString() + " which handles " + ipRange6);
+            }
         }
     }
 
@@ -359,6 +370,11 @@ public class WebSocksProxyAgent {
             Logger.warn(LogType.ALERT, "stopping relayAny: " + relayAny.config.getServer().bind);
             relayAny.stop();
             relayAny = null;
+        }
+        if (relayAny6 != null) {
+            Logger.warn(LogType.ALERT, "stopping relayAny6: " + relayAny6.config.getServer().bind);
+            relayAny6.stop();
+            relayAny6 = null;
         }
         // release configProcessor
         // stop health check
@@ -438,5 +454,9 @@ public class WebSocksProxyAgent {
 
     public Proxy getRelayAny() {
         return relayAny;
+    }
+
+    public Proxy getRelayAny6() {
+        return relayAny6;
     }
 }

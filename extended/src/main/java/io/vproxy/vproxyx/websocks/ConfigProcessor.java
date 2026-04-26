@@ -98,6 +98,14 @@ public class ConfigProcessor {
         return configLoader.getDirectRelayIpRange();
     }
 
+    public Network getDirectRelayIp6Range() {
+        return configLoader.getDirectRelayIp6Range();
+    }
+
+    public IPPort getDirectRelayListen6() {
+        return configLoader.getDirectRelayListen6();
+    }
+
     public int getDirectRelayIpBondTimeout() {
         return configLoader.getDirectRelayIpBondTimeout();
     }

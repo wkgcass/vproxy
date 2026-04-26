@@ -100,8 +100,12 @@ data class DirectRelayConfig(
   var enabled: Boolean = false,
   // ip-range
   var ipRange: String = "",
+  // ip6-range
+  var ip6Range: String = "",
   // listen
   var listen: String = "",
+  // listen6
+  var listen6: String = "",
   // ip-bond-timeout
   var ipBondTimeout: Int = 10,
 ) {
@@ -109,7 +113,9 @@ data class DirectRelayConfig(
     val rule: Rule<DirectRelayConfig> = ObjectRule { DirectRelayConfig() }
       .put("enabled", BoolRule) { enabled = it }
       .put("ip-range", StringRule) { ipRange = it }
+      .put("ip6-range", StringRule) { ip6Range = it }
       .put("listen", StringRule) { listen = it }
+      .put("listen6", StringRule) { listen6 = it }
       .put("ip-bond-timeout", IntRule) { ipBondTimeout = it }
   }
 }

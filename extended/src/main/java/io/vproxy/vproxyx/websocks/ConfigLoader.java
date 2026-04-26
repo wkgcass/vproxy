@@ -52,7 +52,9 @@ public class ConfigLoader {
     private final List<List<String>> httpsSniErasureCertKeyFiles = new ArrayList<>();
     private boolean directRelay = false;
     private Network directRelayIpRange = null;
+    private Network directRelayIp6Range = null;
     private IPPort directRelayListen = null;
+    private IPPort directRelayListen6 = null;
     private int directRelayIpBondTimeout = 10 * 60_000;
     private String user;
     private String pass;
@@ -162,6 +164,14 @@ public class ConfigLoader {
 
     public Network getDirectRelayIpRange() {
         return directRelayIpRange;
+    }
+
+    public Network getDirectRelayIp6Range() {
+        return directRelayIp6Range;
+    }
+
+    public IPPort getDirectRelayListen6() {
+        return directRelayListen6;
     }
 
     public int getDirectRelayIpBondTimeout() {
@@ -313,6 +323,18 @@ public class ConfigLoader {
                     }
                 }
                 if (config.getAgent().getDirectRelay() != null) {
+                    var val = config.getAgent().getDirectRelay().getIp6Range();
+                    if (!val.isBlank()) {
+                        if (!Network.validNetworkStr(val)) {
+                            throw new Exception("invalid network in agent.direct-relay.ip6-range: " + val);
+                        }
+                        directRelayIp6Range = Network.from(val);
+                        if (directRelayIp6Range.getMask() < 96) {
+                            throw new Exception("agent.direct-relay.ip6-range mask must be >= 96: " + val);
+                        }
+                    }
+                }
+                if (config.getAgent().getDirectRelay() != null) {
                     var val = config.getAgent().getDirectRelay().getListen();
                     if (!val.isBlank()) {
                         if (!IPPort.validL4AddrStr(val)) {
@@ -321,6 +343,15 @@ public class ConfigLoader {
                         String host = val.substring(0, val.lastIndexOf(":"));
                         int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
                         directRelayListen = new IPPort(IP.from(host), port);
+                    }
+                }
+                if (config.getAgent().getDirectRelay() != null) {
+                    var val = config.getAgent().getDirectRelay().getListen6();
+                    if (!val.isBlank()) {
+                        if (!IPPort.validL4AddrStr(val)) {
+                            throw new Exception("invalid binding address in agent.direct-relay.listen6: " + val);
+                        }
+                        directRelayListen6 = new IPPort(val);
                     }
                 }
                 if (config.getAgent().getDirectRelay() != null) {
@@ -504,6 +535,12 @@ public class ConfigLoader {
             if (directRelayListen != null) {
                 failReasons.add("agent.direct-relay is disabled, but agent.direct-relay.listen is set");
             }
+            if (directRelayIp6Range != null) {
+                failReasons.add("agent.direct-relay is disabled, but agent.direct-relay.ip6-range is set");
+            }
+            if (directRelayListen6 != null) {
+                failReasons.add("agent.direct-relay is disabled, but agent.direct-relay.listen6 is set");
+            }
         }
         // check for direct-relay.ip-range/listen
         if (directRelayIpRange != null && directRelayListen == null) {
@@ -511,6 +548,13 @@ public class ConfigLoader {
         }
         if (directRelayIpRange == null && directRelayListen != null) {
             failReasons.add("agent.direct-relay.ip-range is not set, but agent.direct-relay.listen is set");
+        }
+        // check for direct-relay.ip6-range/listen6
+        if (directRelayIp6Range != null && directRelayListen6 == null) {
+            failReasons.add("agent.direct-relay.ip6-range is set, but agent.direct-relay.listen6 is not set");
+        }
+        if (directRelayIp6Range == null && directRelayListen6 != null) {
+            failReasons.add("agent.direct-relay.ip6-range is not set, but agent.direct-relay.listen6 is set");
         }
         // check for https-sni-erasure and certificates configuration
         if (!httpsSniErasureDomains.isEmpty()) {
@@ -733,6 +777,13 @@ public class ConfigLoader {
                 .put("enabled", true)
                 .put("network", directRelayIpRange.toString())
                 .put("listen", directRelayListen.formatToIPPortString())
+                .put("timeout", directRelayIpBondTimeout));
+        }
+        if (directRelayIp6Range != null) {
+            builder.putObject("directrelayadvanced6", o -> o
+                .put("enabled", true)
+                .put("network", directRelayIp6Range.toString())
+                .put("listen", directRelayListen6.formatToIPPortString())
                 .put("timeout", directRelayIpBondTimeout));
         }
         if (udpOverTcpEnabled) {

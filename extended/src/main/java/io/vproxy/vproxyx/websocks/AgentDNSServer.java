@@ -31,30 +31,28 @@ public class AgentDNSServer extends DNSServer {
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
     private final Map<String, IP> cache = new HashMap<>();
-    private final List<DomainChecker> selfDomains = new LinkedList<>();
     private final List<DomainChecker> bondDomains = new LinkedList<>();
     private final ConfigProcessor config;
     private final DomainBinder domainBinder;
+    private final DomainBinder domainBinder6;
 
     public AgentDNSServer(String alias, IPPort bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config,
-                          // domainBinder is optional, respond managed domains with self ip if null
-                          DomainBinder domainBinder) {
+                          // domainBinder/domainBinder6 is optional, respond managed domains with self ip if null
+                          DomainBinder domainBinder,
+                          DomainBinder domainBinder6) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0, SecurityGroup.allowAll());
         this.serverGroups = config.getServers();
         this.resolves = config.getProxyResolves();
         boolean directRelay = config.isDirectRelay();
         if (directRelay) {
-            this.selfDomains.addAll(config.getHttpsSniErasureDomains());
+            this.bondDomains.addAll(config.getHttpsSniErasureDomains());
             for (List<DomainChecker> domains : config.getDomains().values()) {
-                if (domainBinder == null) {
-                    this.selfDomains.addAll(domains);
-                } else {
-                    this.bondDomains.addAll(domains);
-                }
+                this.bondDomains.addAll(domains);
             }
         }
         this.config = config;
         this.domainBinder = domainBinder;
+        this.domainBinder6 = domainBinder6;
     }
 
     @Override
@@ -201,14 +199,6 @@ public class AgentDNSServer extends DNSServer {
             if (domain.endsWith(".")) {
                 domain = domain.substring(0, domain.length() - 1);
             }
-            // check self domains
-            for (DomainChecker chk : selfDomains) {
-                if (chk.needProxy(domain, 0)) {
-                    Logger.alert("[DNS] resolve to self ip for " + domain);
-                    respondWithSelfIp(p, domain, remote);
-                    return;
-                }
-            }
             // check bond domains
             for (DomainChecker chk : bondDomains) {
                 if (chk.needProxy(domain, 0)) {
@@ -337,7 +327,13 @@ public class AgentDNSServer extends DNSServer {
     }
 
     private void respondWithBondIp(DNSPacket p, String domain, IPPort remote) {
-        IP l3addr = domainBinder.assignForDomain(domain, config.getDirectRelayIpBondTimeout());
+        DNSType qtype = p.questions.isEmpty() ? DNSType.A : p.questions.get(0).qtype;
+        DomainBinder binder = (qtype == DNSType.AAAA) ? domainBinder6 : domainBinder;
+        if (binder == null) {
+            respondWithSelfIp(p, domain, remote);
+            return;
+        }
+        IP l3addr = binder.assignForDomain(domain, config.getDirectRelayIpBondTimeout());
         if (l3addr == null) {
             String msg = "[DNS] cannot assign ip for domain " + domain;
             Logger.error(LogType.SYS_ERROR, msg);
