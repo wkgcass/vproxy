@@ -105,6 +105,7 @@ public class GetDnsServerListFromConfigFile implements DnsServerListGetter {
                             ipName.startsWith("[::7f")) { // v4-compatible v6
                             // special cases to exclude
                             if (!ipName.equals("127.0.0.53") // commonly used by ubuntu dns masq
+                                && !ipName.equals("127.0.0.11") // used by docker
                             ) {
                                 continue;
                             }
