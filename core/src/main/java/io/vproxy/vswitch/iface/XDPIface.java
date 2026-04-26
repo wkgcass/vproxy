@@ -44,7 +44,7 @@ public class XDPIface extends Iface {
     }
 
     public record XDPParams(int queueId, int rxRingSize, int txRingSize, BPFMode mode,
-                            boolean zeroCopy, int busyPollBudget, boolean rxGenChecksum,
+                            boolean zeroCopy, int busyPollBudget,
                             boolean pktswOffloaded, boolean csumOffloaded,
                             BPFInfo bpf) {
     }
@@ -76,7 +76,7 @@ public class XDPIface extends Iface {
         XDPSocket xsk;
         try {
             xsk = XDPSocket.create(nic, params.queueId, umem, params.rxRingSize, params.txRingSize,
-                params.mode, params.zeroCopy, params.busyPollBudget, params.rxGenChecksum);
+                params.mode, params.zeroCopy, params.busyPollBudget);
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "creating xsk of " + nic + "#" + params.queueId + " failed", e);
             throw e;
@@ -356,7 +356,6 @@ public class XDPIface extends Iface {
         private BPFMode mode = BPFMode.SKB;
         private boolean zeroCopy = false;
         private int busyPollBudget = 0;
-        private boolean rxGenChecksum = false;
         private boolean pktswOffloaded = false;
         private boolean csumOffloaded = false;
 
@@ -368,7 +367,7 @@ public class XDPIface extends Iface {
         public XDPParams build() {
             return new XDPParams(
                 queueId, rxRingSize, txRingSize, mode,
-                zeroCopy, busyPollBudget, rxGenChecksum,
+                zeroCopy, busyPollBudget,
                 pktswOffloaded, csumOffloaded,
                 bpf);
         }
@@ -395,11 +394,6 @@ public class XDPIface extends Iface {
 
         public XDPParamsBuilder$2 setBusyPollBudget(int busyPollBudget) {
             this.busyPollBudget = busyPollBudget;
-            return this;
-        }
-
-        public XDPParamsBuilder$2 setRxGenChecksum(boolean rxGenChecksum) {
-            this.rxGenChecksum = rxGenChecksum;
             return this;
         }
 

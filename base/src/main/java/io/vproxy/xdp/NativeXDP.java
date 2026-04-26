@@ -11,8 +11,6 @@ public class NativeXDP {
     public static final boolean needUmemTxMetadataLenFlag;
     public static final int XDP_UMEM_TX_METADATA_LEN = (1 << 2);
 
-    public static final int VP_XSK_FLAG_RX_GEN_CSUM = 1;
-
     private static boolean isLoaded = false;
 
     static {

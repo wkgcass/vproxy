@@ -28,7 +28,6 @@ public class XDPHandle {
         if (cmd.args.containsKey(Param.busypoll)) {
             busyPollBudget = BusyPollHandle.get(cmd);
         }
-        boolean rxGenChecksum = cmd.flags.contains(Flag.rxgencsum);
         int vrf = VrfParamHandle.get(cmd);
         boolean pktswOffloaded = OffloadHandle.isPacketSwitchingOffloaded(cmd);
         boolean csumOffloaded = OffloadHandle.isChecksumOffloaded(cmd);
@@ -57,7 +56,6 @@ public class XDPHandle {
                 .setMode(mode)
                 .setZeroCopy(zeroCopy)
                 .setBusyPollBudget(busyPollBudget)
-                .setRxGenChecksum(rxGenChecksum)
                 .setPktswOffloaded(pktswOffloaded)
                 .setCsumOffloaded(csumOffloaded)
                 .build()

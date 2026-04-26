@@ -779,9 +779,6 @@ public class Shutdown {
                     if (xdp.params.zeroCopy()) {
                         cmd += " zerocopy";
                     }
-                    if (xdp.params.rxGenChecksum()) {
-                        cmd += " rx-gen-csum";
-                    }
                     commands.add(cmd);
                 }
                 // create fubuki-etherip

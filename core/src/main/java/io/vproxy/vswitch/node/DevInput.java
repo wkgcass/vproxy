@@ -4,7 +4,6 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.commons.graph.GraphBuilder;
 import io.vproxy.vpacket.PartialPacket;
 import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.util.CSumRecalcType;
 
 public class DevInput extends Node {
     private final NodeEgress ethernetInput = new NodeEgress("ethernet-input");
@@ -32,20 +31,6 @@ public class DevInput extends Node {
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
         if (pkb.debugger.isDebugOn()) {
             pkb.debugger.line(d -> d.append("in=").append(pkb.devin == null ? "null" : pkb.devin.name()));
-        }
-
-        // clear csum if required
-        if (pkb.devin.getParams().getCSumRecalc() != CSumRecalcType.none) {
-            if (pkb.ipPkt != null) {
-                if (pkb.ipPkt.getPacket() != null) {
-                    assert Logger.lowLevelDebug("checksum cleared for " + pkb.ipPkt.getPacket().description());
-                    pkb.ipPkt.getPacket().clearChecksum();
-                }
-                if (pkb.devin.getParams().getCSumRecalc() == CSumRecalcType.all) {
-                    assert Logger.lowLevelDebug("checksum cleared for " + pkb.ipPkt.description());
-                    pkb.ipPkt.clearChecksum();
-                }
-            }
         }
 
         // try fastpath, directly send to user apps

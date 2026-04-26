@@ -471,7 +471,7 @@ public class HelpCommand {
         noswitchflag("no-switch-flag", null, "do not add switch flag on vxlan packet"),
         force("force", null, "forcibly to do something"),
         zerocopy("zerocopy", null, "indicate to perform zerocopy operations"),
-        rxgencsum("rx-gen-csum", null, "generate checksum before receiving the packet into vswitch"),
+
         enable("enable", null, "enable the resource"),
         disable("disable", null, "disable the resource"),
         ;
@@ -1382,8 +1382,7 @@ public class HelpCommand {
                                                          "Note that checksum offloading requires kernel version >= 6.8 and not all drivers support this feature",
                         "(none)")
                 ), Arrays.asList(
-                    new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false),
-                    new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet in java", false)
+                    new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false)
                 ), Arrays.asList(
                     new Tuple<>(
                         "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vrf 1 zerocopy",

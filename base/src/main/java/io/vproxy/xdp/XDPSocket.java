@@ -36,8 +36,7 @@ public class XDPSocket extends PosixFD implements FD {
     public static XDPSocket create(String nicName, int queueId, UMem umem,
                                    int rxRingSize, int txRingSize,
                                    BPFMode mode, boolean zeroCopy,
-                                   int busyPollBudget,
-                                   boolean rxGenChecksum) throws IOException {
+                                   int busyPollBudget) throws IOException {
         if (!umem.isValid()) {
             throw new IOException("umem " + umem + " is not valid, create a new one instead");
         }
@@ -54,9 +53,6 @@ public class XDPSocket extends PosixFD implements FD {
                 bindFlags |= XDPConsts.XDP_ZEROCOPY;
             } else {
                 bindFlags |= XDPConsts.XDP_COPY;
-            }
-            if (rxGenChecksum) {
-                vpxdpFlags |= NativeXDP.VP_XSK_FLAG_RX_GEN_CSUM;
             }
             xsk = XDP.get().createXsk(new PNIString(allocator, nicName), queueId, umem.umem, rxRingSize, txRingSize,
                 xdpFlags, bindFlags, busyPollBudget, vpxdpFlags);

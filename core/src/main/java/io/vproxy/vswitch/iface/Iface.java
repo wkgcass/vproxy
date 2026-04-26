@@ -7,6 +7,7 @@ import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.plugin.PacketFilter;
+import io.vproxy.vswitch.util.CSumRecalcType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -152,7 +153,26 @@ public abstract class Iface implements WithUserData {
     }
 
     protected final void received(PacketBuffer pkb) {
+        handleCSumRecalc(pkb);
         rcvQ.add(pkb);
+    }
+
+    private void handleCSumRecalc(PacketBuffer pkb) {
+        if (pkb.ipPkt == null) {
+            return;
+        }
+        var csumRecalc = params.getCSumRecalc();
+        if (csumRecalc == CSumRecalcType.none) {
+            pkb.ipPkt.checksumCalculated();
+            if (pkb.ipPkt.getPacket() != null) {
+                pkb.ipPkt.getPacket().checksumCalculated();
+            }
+        } else {
+            pkb.ipPkt.checksumSkipped();
+            if (pkb.ipPkt.getPacket() != null) {
+                pkb.ipPkt.getPacket().checksumSkipped();
+            }
+        }
     }
 
     public abstract String name();

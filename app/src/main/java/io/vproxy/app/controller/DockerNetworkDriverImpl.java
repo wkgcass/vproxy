@@ -417,7 +417,6 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 new XDPIface.XDPParamsBuilder()
                     .setQueueId(0)
                     .setBPFInfo(bpfInfo)
-                    .setRxGenChecksum(!NativeXDP.supportTxMetadata)
                     .setPktswOffloaded(isPodNic)
                     .setCsumOffloaded(true)
                     .build());
@@ -433,9 +432,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         // set iface parameters
         iface.getParams().setBaseMTU(-1);
-        if (isPodNic) {
-            iface.getParams().setCSumRecalc(CSumRecalcType.all);
-        }
+        iface.getParams().setCSumRecalc(CSumRecalcType.all);
         return iface;
     }
 

@@ -923,7 +923,6 @@ class ModuleCommands private constructor() : Commands() {
         },
         flags = {
           it + ResActFlag(Flag.zerocopy)
-          it + ResActFlag(Flag.rxgencsum)
         },
         exec = execUpdate { XDPHandle.add(it) }
       )
