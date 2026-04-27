@@ -828,7 +828,7 @@ JNIEXPORT int JNICALL Java_io_vproxy_vfd_posix_PosixNative_recvfromIPv6
     if (retAddr == NULL) {
         return -1;
     }
-    result->len = len;
+    result->len = retLen;
     return 0;
 }
 
