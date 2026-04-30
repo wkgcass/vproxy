@@ -11,6 +11,7 @@ import io.vproxy.pni.PNIString;
 import io.vproxy.vfd.IPMask;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
+import vjson.JSON;
 import vjson.util.ObjectBuilder;
 
 import java.lang.foreign.MemorySegment;
@@ -37,6 +38,7 @@ public class Fubuki implements AutoCloseable {
         IPPort server,
         String key,
         IPMask localAddr,
+        JSON.Object ipsJson,
         FubukiCallback callback
     ) {
     }
@@ -51,16 +53,21 @@ public class Fubuki implements AutoCloseable {
             opts.setFnDeleteAddr(FubukiUpcall.deleteAddress);
             //noinspection DataFlowIssue
             var configJson = new ObjectBuilder()
-                .putArray("groups", arr -> arr.addObject(o -> o
-                    .put("node_name", data.nodeName)
-                    .put("server_addr", data.server.formatToIPPortString())
-                    .put("key", data.key)
-                    .putNullableInst("tun_addr", data.localAddr == null, () ->
-                        new ObjectBuilder()
-                            .put("ip", data.localAddr.ip().formatToIPString())
-                            .put("netmask", data.localAddr.mask().formatToIPString())
-                            .build())
-                ))
+                .putArray("groups", arr -> arr.addObject(o -> {
+                    o
+                        .put("node_name", data.nodeName)
+                        .put("server_addr", data.server.formatToIPPortString())
+                        .put("key", data.key)
+                        .putNullableInst("tun_addr", data.localAddr == null, () ->
+                            new ObjectBuilder()
+                                .put("ip", data.localAddr.ip().formatToIPString())
+                                .put("netmask", data.localAddr.mask().formatToIPString())
+                                .build())
+                        .putArray("allowed_ips", a -> a.add("0.0.0.0/0"));
+                    if (data.ipsJson != null) {
+                        o.putInst("ips", data.ipsJson);
+                    }
+                }))
                 .putObject("features", o -> o
                     .put("disable_api_server", true)
                     .put("disable_hosts_operation", true)

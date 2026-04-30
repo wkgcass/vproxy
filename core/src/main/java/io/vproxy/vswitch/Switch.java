@@ -15,6 +15,7 @@ import io.vproxy.base.util.exception.*;
 import io.vproxy.base.util.objectpool.CursorList;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.fubuki.FubukiCallback;
 import io.vproxy.vfd.*;
 import io.vproxy.vmirror.Mirror;
 import io.vproxy.vpacket.EthernetPacket;
@@ -31,6 +32,7 @@ import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.xdp.NativeXDP;
 import io.vproxy.xdp.UMem;
+import vjson.JSON;
 
 import java.io.IOException;
 import java.util.*;
@@ -432,6 +434,15 @@ public class Switch {
                                     int vrf, MacAddress mac,
                                     IPPort remoteAddr,
                                     IPMask localAddr) throws AlreadyExistException, XException {
+        return addFubuki(nodeName, password, vrf, mac, remoteAddr, localAddr, null, null);
+    }
+
+    public FubukiTunIface addFubuki(String nodeName, String password,
+                                    int vrf, MacAddress mac,
+                                    IPPort remoteAddr,
+                                    IPMask localAddr,
+                                    JSON.Object ipsJson,
+                                    FubukiCallback callback) throws AlreadyExistException, XException {
         for (Iface i : ifaces.keySet()) {
             if (!(i instanceof FubukiTunIface f)) {
                 continue;
@@ -441,7 +452,7 @@ public class Switch {
             }
         }
 
-        var iface = new FubukiTunIface(vrf, mac, nodeName, remoteAddr, localAddr, password);
+        var iface = new FubukiTunIface(vrf, mac, nodeName, remoteAddr, localAddr, ipsJson, password, callback);
 
         try {
             initIface(iface);

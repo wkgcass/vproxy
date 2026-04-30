@@ -6,6 +6,7 @@ module io.vproxy.core {
     requires transitive io.vproxy.dep;
     requires transitive io.vproxy.base;
     requires transitive io.vproxy.lib;
+    requires vjson;
 
     exports io.vproxy.component.app;
     exports io.vproxy.component.proxy;

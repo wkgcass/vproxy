@@ -8,11 +8,15 @@ import io.vproxy.base.util.exception.XException;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.fubuki.Fubuki;
 import io.vproxy.fubuki.FubukiCallback;
-import io.vproxy.vfd.*;
+import io.vproxy.vfd.IPMask;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.EtherIPPacket;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
+import vjson.JSON;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
@@ -23,19 +27,25 @@ public class FubukiTunIface extends TunIface {
     public final String nodeName;
     public final IPPort serverIPPort;
     private IPMask localAddr;
+    private final JSON.Object ipsJson;
     public final String key;
+    public final FubukiCallback initCallback;
     Fubuki fubuki;
     private Switch sw;
 
     public FubukiTunIface(int localSideVrf, MacAddress mac,
                           String nodeName, IPPort serverIPPort,
                           IPMask localAddr,
-                          String key) {
+                          JSON.Object ipsJson,
+                          String key,
+                          FubukiCallback callback) {
         super("", localSideVrf, mac, null);
         this.nodeName = nodeName;
         this.serverIPPort = serverIPPort;
         this.localAddr = localAddr;
+        this.ipsJson = ipsJson;
         this.key = key;
+        this.initCallback = callback;
     }
 
     public IPMask getLocalAddr() {
@@ -45,7 +55,11 @@ public class FubukiTunIface extends TunIface {
     @Override
     public void init(IfaceInitParams params) throws Exception {
         super.init(params);
-        fubuki = new Fubuki(new Fubuki.Data(getIndex(), nodeName, serverIPPort, key, localAddr, new Callback()));
+        var callback = initCallback;
+        if (callback == null) {
+            callback = new Callback();
+        }
+        fubuki = new Fubuki(new Fubuki.Data(getIndex(), nodeName, serverIPPort, key, localAddr, ipsJson, callback));
         sw = params.sw;
         bondLoop = params.loop;
     }
