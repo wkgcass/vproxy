@@ -51,7 +51,6 @@ public class Fubuki implements AutoCloseable {
             opts.setFnOnPacket(FubukiUpcall.onPacket);
             opts.setFnAddAddr(FubukiUpcall.addAddress);
             opts.setFnDeleteAddr(FubukiUpcall.deleteAddress);
-            //noinspection DataFlowIssue
             var configJson = new ObjectBuilder()
                 .putArray("groups", arr -> arr.addObject(o -> {
                     o

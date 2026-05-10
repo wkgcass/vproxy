@@ -58,6 +58,8 @@ public class FubukiTunIface extends TunIface {
         var callback = initCallback;
         if (callback == null) {
             callback = new Callback();
+        } else {
+            callback = new CallbackDelegate(new Callback(), callback);
         }
         fubuki = new Fubuki(new Fubuki.Data(getIndex(), nodeName, serverIPPort, key, localAddr, ipsJson, callback));
         sw = params.sw;
@@ -77,6 +79,11 @@ public class FubukiTunIface extends TunIface {
     @Override
     public int getOverhead() {
         return 6 /* fubuki header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
+    }
+
+    @Override
+    protected boolean denyTxPacket(PacketBuffer pkb) {
+        return pkb.pkt.getDst().isBroadcast() || pkb.pkt.getDst().isMulticast();
     }
 
     @Override
@@ -243,6 +250,37 @@ public class FubukiTunIface extends TunIface {
                 Logger.warn(LogType.ALERT, "fubuki is terminated, clearing ips: " + managedIPs);
                 clearManagedIPs();
             });
+        }
+    }
+
+    private class CallbackDelegate implements FubukiCallback {
+        private final Callback callback;
+        private final FubukiCallback fubukiCallback;
+
+        private CallbackDelegate(Callback callback, FubukiCallback fubukiCallback) {
+            this.callback = callback;
+            this.fubukiCallback = fubukiCallback;
+        }
+
+        @Override
+        public void onPacket(Fubuki fubuki, ByteArray packet) {
+            fubukiCallback.onPacket(fubuki, packet);
+            callback.onPacket(fubuki, packet);
+        }
+
+        @Override
+        public void addAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
+            fubukiCallback.addAddress(fubuki, ip, mask);
+        }
+
+        @Override
+        public void deleteAddress(Fubuki fubuki, IPv4 ip, IPv4 mask) {
+            fubukiCallback.deleteAddress(fubuki, ip, mask);
+        }
+
+        @Override
+        public void terminate(Fubuki fubuki) {
+            fubukiCallback.terminate(fubuki);
         }
     }
 }

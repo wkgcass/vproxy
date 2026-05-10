@@ -144,12 +144,20 @@ public class TunIface extends Iface {
                                         "original packet will not be sent");
             return;
         }
+        if (denyTxPacket(pkb)) {
+            assert Logger.lowLevelDebug("packet is denied for the tun iface: " + pkb.description());
+            return;
+        }
         if (pkb.ipPkt == null) {
             assert Logger.lowLevelDebug("packet is not sent to " + this + " because there is no ip packet");
             return;
         }
 
         sendPacket(pkb.ipPkt);
+    }
+
+    protected boolean denyTxPacket(PacketBuffer pkb) {
+        return false;
     }
 
     private void sendPacket(AbstractIpPacket ipPkt) {
