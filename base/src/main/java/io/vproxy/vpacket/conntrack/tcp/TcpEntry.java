@@ -667,6 +667,7 @@ public class TcpEntry implements WithUserData {
         private long ackedSeq;
         private int window = RMEM_MAX;
         private int windowScale = 64;
+        private boolean oooGapFilled = false;
 
         public ReceivingQueue(long seq) {
             this.expectingSeq = seq;
@@ -722,7 +723,11 @@ public class TcpEntry implements WithUserData {
                 currentSize += data.length();
 
                 // drain any OOO segments that are now contiguous
+                boolean hadOOO = !oooBuffer.isEmpty();
                 drainOOOBuffer();
+                if (hadOOO && oooBuffer.isEmpty()) {
+                    oooGapFilled = true;
+                }
 
                 resetWindow();
 
@@ -904,6 +909,12 @@ public class TcpEntry implements WithUserData {
                 }
             }
             return blocks;
+        }
+
+        public boolean consumeOooGapFilled() {
+            var v = oooGapFilled;
+            oooGapFilled = false;
+            return v;
         }
     }
 

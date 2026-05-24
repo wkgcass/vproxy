@@ -495,6 +495,13 @@ public class TcpStack extends Node {
             sendAck(network, tcp);
             return;
         }
+        // if an OOO gap was just filled, send ACK immediately so the sender
+        // knows the cumulative ACK point advanced (RFC 2018 / RFC 5681)
+        if (tcp.receivingQueue.consumeOooGapFilled()) {
+            assert Logger.lowLevelDebug("OOO gap filled, sending ACK immediately");
+            sendAck(network, tcp);
+            return;
+        }
         if (tcp.delayedAckTimer != null) {
             assert Logger.lowLevelDebug("delayed ack already scheduled");
             return;
