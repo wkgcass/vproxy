@@ -8,7 +8,6 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vpacket.conntrack.tcp.cwnd.CwndNegotiator;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -42,7 +41,6 @@ public class TcpEntry implements WithUserData {
     private TcpState state;
     private boolean needClosing = false;
     private boolean remoteSackPermitted = false;
-    private CwndNegotiator cwndNegotiator = CwndNegotiator.createDefault();
 
     public final SendingQueue sendingQueue;
     public final ReceivingQueue receivingQueue;
@@ -172,13 +170,6 @@ public class TcpEntry implements WithUserData {
         this.remoteSackPermitted = remoteSackPermitted;
     }
 
-    public CwndNegotiator getCwndNegotiator() {
-        return cwndNegotiator;
-    }
-
-    public void setCwndNegotiator(CwndNegotiator cwndNegotiator) {
-        this.cwndNegotiator = cwndNegotiator;
-    }
 
     public void doClose() {
         this.needClosing = true;
@@ -223,10 +214,6 @@ public class TcpEntry implements WithUserData {
         private int lastLossCwnd; // cwnd (in bytes) at the time of last loss
         private int bytesInFlight = 0;
         private int dupAckCount = 0;
-
-        // cwnd negotiation state
-        private int yourCwnd = 0;  // last received peer cwnd, 0 means not yet received
-        private int expectedCwnd = 0;  // negotiated expected value, 0 means not yet negotiated
 
         // RTT estimation (RFC 6298)
         private long srttUs = -1;   // smoothed RTT in microseconds (-1 = no sample yet)
@@ -568,18 +555,6 @@ public class TcpEntry implements WithUserData {
             }
             // cap cwnd to MAX_CWND
             cwnd = Math.min(cwnd, MAX_CWND);
-
-            approachExpectedCwnd();
-        }
-
-        /**
-         * Gradually approach expectedCwnd from the negotiator.
-         * Only increases cwnd toward expectedCwnd, never decreases.
-         */
-        private void approachExpectedCwnd() {
-            if (expectedCwnd > 0 && cwnd < expectedCwnd) {
-                cwnd += Math.max(1, (expectedCwnd - cwnd) / 2);
-            }
         }
 
         /**
@@ -597,8 +572,6 @@ public class TcpEntry implements WithUserData {
             ssthresh = Math.max(newCwnd, HIGH_LATENCY_MIN_CWND_MSS * mss);
             cwnd = ssthresh;
             lastLossTime = Config.currentTimestamp;
-
-            approachExpectedCwnd();
         }
 
         public int getCurrentSize() {
@@ -644,31 +617,6 @@ public class TcpEntry implements WithUserData {
             return cwnd;
         }
 
-        public int getYourCwnd() {
-            return yourCwnd;
-        }
-
-        public void setYourCwnd(int yourCwnd) {
-            this.yourCwnd = yourCwnd;
-        }
-
-        public void setSelfCwnd(int selfCwnd) {
-            if (selfCwnd <= 0) {
-                return;
-            }
-            // recalculate expectedCwnd when peer info changes
-            if (mss > 0) {
-                expectedCwnd = TcpEntry.this.cwndNegotiator.computeExpectedCwnd(selfCwnd);
-            }
-        }
-
-        public int getExpectedCwnd() {
-            return expectedCwnd;
-        }
-
-        public void clearCwndNegotiation() {
-            this.expectedCwnd = 0;
-        }
 
         public boolean needToSendFin() {
             return state.finSent && !finAcked;
@@ -719,7 +667,6 @@ public class TcpEntry implements WithUserData {
         private long ackedSeq;
         private int window = RMEM_MAX;
         private int windowScale = 64;
-        private boolean peerRetransmitting = false;  // true when peer is retransmitting
 
         public ReceivingQueue(long seq) {
             this.expectingSeq = seq;
@@ -957,18 +904,6 @@ public class TcpEntry implements WithUserData {
                 }
             }
             return blocks;
-        }
-
-        public boolean isPeerRetransmitting() {
-            return peerRetransmitting;
-        }
-
-        public void setPeerRetransmitting(boolean flag) {
-            this.peerRetransmitting = flag;
-            if (flag) {
-                //noinspection DataFlowIssue
-                sendingQueue.clearCwndNegotiation();
-            }
         }
     }
 

@@ -6,7 +6,6 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.commons.graph.GraphBuilder;
-import io.vproxy.vfd.IP;
 import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.TcpPacket;
 import io.vproxy.vpacket.conntrack.tcp.*;
@@ -15,9 +14,7 @@ import io.vproxy.vswitch.SwitchDelegate;
 import io.vproxy.vswitch.VirtualNetwork;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import static io.vproxy.base.util.Logger.tcpStackDebugOn;
 
@@ -26,13 +23,6 @@ public class TcpStack extends Node {
     private final SwitchDelegate sw;
     private final NodeEgress tcpReset = new NodeEgress("tcp-reset");
     private final NodeEgress l4output = new NodeEgress("l4-output");
-
-    private final Map<IP, PeerCwndHistory> peerCwndMap = new LinkedHashMap<>(256, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<IP, PeerCwndHistory> eldest) {
-            return size() > 1024;
-        }
-    };
 
     public TcpStack(SwitchDelegate sw) {
         super("tcp-stack");
@@ -191,8 +181,7 @@ public class TcpStack extends Node {
             }
         }
         tcp.setRemoteSackPermitted(sackPermitted);
-        tcp.sendingQueue.init(tcpPkt.getWindow(), mss, windowScale,
-            getInitialCwndForPeer(tcp.remote.getAddress()));
+        tcp.sendingQueue.init(tcpPkt.getWindow(), mss, windowScale);
     }
 
     private HandleResult handleTcpSynSent(PacketBuffer pkb) {
@@ -309,12 +298,6 @@ public class TcpStack extends Node {
             // PSH with seq != expect:
             //   seq < expect: retransmission or partial overlap, ReceivingQueue will handle
             //   seq > expect: out-of-order, ReceivingQueue will buffer it
-            if (seq < expect) {
-                pkb.tcp.receivingQueue.setPeerRetransmitting(true);
-            }
-        } else {
-            // seq >= expect: new packets arrived, clear retransmitting flag
-            pkb.tcp.receivingQueue.setPeerRetransmitting(false);
         }
 
         if (tcpPkt.isAck()) {
@@ -329,8 +312,6 @@ public class TcpStack extends Node {
             // rather than waiting for the retransmission timer to expire
             if (ack > oldAckSeq) {
                 // parse CWND option only when ack num increased
-                handleCwndOption(tcpPkt, pkb.tcp);
-
                 pkb.tcp.sendingQueue.resetDupAckCount();
                 // cancel existing retransmission timer; we'll send fresh now
                 if (pkb.tcp.retransmissionTimer != null) {
@@ -472,7 +453,6 @@ public class TcpStack extends Node {
         }
         if (pkb.tcp.sendingQueue.ackOfFinReceived()) {
             assert Logger.lowLevelDebug("FIN acked in LAST_ACK, connection fully closed");
-            recordPeerCwnd(pkb.tcp);
             pkb.tcp.setState(TcpState.CLOSED);
             pkb.tcp.destroy();
             pkb.network.conntrack.removeTcp(pkb.tcp.remote, pkb.tcp.local);
@@ -501,7 +481,6 @@ public class TcpStack extends Node {
         final TcpEntry tcp = pkb.tcp;
         final VirtualNetwork network = pkb.network;
         tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(TcpEntry.TIME_WAIT_TIMEOUT_MS, () -> {
-            recordPeerCwnd(tcp);
             tcp.setState(TcpState.CLOSED);
             tcp.destroy();
             network.conntrack.removeTcp(tcp.remote, tcp.local);
@@ -552,8 +531,6 @@ public class TcpStack extends Node {
         } else {
             respondTcp = TcpUtils.buildAckResponse(tcp);
         }
-        // attach CWND option for peer cwnd negotiation
-        respondTcp.getOptions().add(buildCwndOption(respondTcp, tcp));
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, respondIp);
@@ -594,30 +571,6 @@ public class TcpStack extends Node {
             blocks.sort((a, b) -> (int) (a.seqBeginInclusive - b.seqBeginInclusive));
         }
         return blocks;
-    }
-
-    /**
-     * Parse a received CWND option and update the TcpEntry's yourCwnd field.
-     * The peer advertises its cwnd as selfCwnd in the option; that becomes our yourCwnd.
-     */
-    private void handleCwndOption(TcpPacket tcpPkt, TcpEntry tcp) {
-        tcpPkt.ensureOptions();
-        for (var opt : tcpPkt.getOptions()) {
-            if (opt.getKind() == Consts.TCP_OPTION_CWND) {
-                ByteArray data = opt.getData();
-                // the peer's selfCwnd (first 3 bytes) is our yourCwnd
-                int peerSelfCwnd = data.uint24(0);
-                if (peerSelfCwnd > 0) {
-                    tcp.sendingQueue.setYourCwnd(peerSelfCwnd);
-                }
-                // the peer's yourCwnd (second 3 bytes) is our selfCwnd
-                int peerYourCwnd = data.uint24(3);
-                if (peerYourCwnd > 0) {
-                    tcp.sendingQueue.setSelfCwnd(peerYourCwnd);
-                }
-                return; // only process the first CWND option
-            }
-        }
     }
 
     private void startSackRetransmit(VirtualNetwork network, TcpEntry tcp, List<SAckTuple> sackBlocks) {
@@ -780,7 +733,6 @@ public class TcpStack extends Node {
         pkb.tcp = tcp;
         _output(pkb);
 
-        recordPeerCwnd(tcp);
         tcp.setState(TcpState.CLOSED);
         network.conntrack.removeTcp(tcp.remote, tcp.local);
     }
@@ -812,8 +764,6 @@ public class TcpStack extends Node {
         tcpPkt.setSeqNum(s.seqBeginInclusive);
         tcpPkt.setFlags(Consts.TCP_FLAGS_PSH | Consts.TCP_FLAGS_ACK);
         tcpPkt.setData(s.data);
-        // attach CWND option for peer cwnd negotiation
-        tcpPkt.getOptions().add(buildCwndOption(tcpPkt, tcp));
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
@@ -845,48 +795,6 @@ public class TcpStack extends Node {
         _output(pkb);
     }
 
-    private void recordPeerCwnd(TcpEntry tcp) {
-        if (tcp.getState() == TcpState.CLOSED) {
-            return;
-        }
-        if (tcp.remote == null) {
-            return;
-        }
-        int cwnd = tcp.sendingQueue.getCwnd();
-        if (cwnd <= 0) {
-            return;
-        }
-        peerCwndMap.computeIfAbsent(tcp.remote.getAddress(), k -> new PeerCwndHistory()).add(cwnd);
-    }
-
-    private int getInitialCwndForPeer(IP peerIp) {
-        PeerCwndHistory history = peerCwndMap.get(peerIp);
-        if (history == null) {
-            return TcpEntry.INIT_CWND;
-        }
-        int avg = history.getAverage();
-        if (avg <= 0) {
-            return TcpEntry.INIT_CWND;
-        }
-        return Math.min(avg, TcpEntry.MAX_CWND);
-    }
-
-    /**
-     * Build a custom CWND TCP option carrying selfCwnd and yourCwnd.
-     * Format: kind(1) + length(1) + selfCwnd(3) + yourCwnd(3) = 8 bytes
-     */
-    private TcpPacket.TcpOption buildCwndOption(TcpPacket tcpPkt, TcpEntry tcp) {
-        var opt = new TcpPacket.TcpOption(tcpPkt);
-        opt.setKind(Consts.TCP_OPTION_CWND);
-        ByteArray data = ByteArray.allocate(6);
-        data.int24(0, tcp.sendingQueue.getCwnd());
-        data.int24(3,
-            tcp.receivingQueue.hasOutOfOrderData() || tcp.receivingQueue.isPeerRetransmitting() ? 0 :
-                tcp.sendingQueue.getYourCwnd());
-        opt.setData(data);
-        return opt;
-    }
-
     private void _output(PacketBuffer pkb) {
         _schedule(sw.scheduler, pkb, l4output);
     }
@@ -894,30 +802,5 @@ public class TcpStack extends Node {
     public void output(PacketBuffer pkb) {
         VProxyThread.current().newUuidDebugInfo();
         _output(pkb);
-    }
-
-    private static class PeerCwndHistory {
-        private final long[] values = new long[10];
-        private int count = 0;
-        private int idx = 0;
-        private long sum = 0;
-
-        void add(int cwnd) {
-            if (count == values.length) {
-                sum -= values[idx];
-            } else {
-                count++;
-            }
-            values[idx] = cwnd;
-            sum += cwnd;
-            idx = (idx + 1) % values.length;
-        }
-
-        int getAverage() {
-            if (count == 0) {
-                return 0;
-            }
-            return (int) (sum / count);
-        }
     }
 }
