@@ -226,7 +226,7 @@ public class TcpEntry implements WithUserData {
 
         // cwnd negotiation state
         private int yourCwnd = 0;  // last received peer cwnd, 0 means not yet received
-        private int minCwnd = 0;   // negotiated floor, 0 means not yet negotiated
+        private int expectedCwnd = 0;  // negotiated expected value, 0 means not yet negotiated
 
         // RTT estimation (RFC 6298)
         private long srttUs = -1;   // smoothed RTT in microseconds (-1 = no sample yet)
@@ -568,6 +568,18 @@ public class TcpEntry implements WithUserData {
             }
             // cap cwnd to MAX_CWND
             cwnd = Math.min(cwnd, MAX_CWND);
+
+            approachExpectedCwnd();
+        }
+
+        /**
+         * Gradually approach expectedCwnd from the negotiator.
+         * Only increases cwnd toward expectedCwnd, never decreases.
+         */
+        private void approachExpectedCwnd() {
+            if (expectedCwnd > 0 && cwnd < expectedCwnd) {
+                cwnd += Math.max(1, (expectedCwnd - cwnd) / 2);
+            }
         }
 
         /**
@@ -584,11 +596,9 @@ public class TcpEntry implements WithUserData {
             int newCwnd = (int) (cwnd * CUBIC_BETA);
             ssthresh = Math.max(newCwnd, HIGH_LATENCY_MIN_CWND_MSS * mss);
             cwnd = ssthresh;
-            // enforce minCwnd floor: never reduce below the negotiated minimum
-            if (minCwnd > 0 && cwnd < minCwnd) {
-                cwnd = minCwnd;
-            }
             lastLossTime = Config.currentTimestamp;
+
+            approachExpectedCwnd();
         }
 
         public int getCurrentSize() {
@@ -640,18 +650,24 @@ public class TcpEntry implements WithUserData {
 
         public void setYourCwnd(int yourCwnd) {
             this.yourCwnd = yourCwnd;
-            // recalculate minCwnd when peer info changes
+        }
+
+        public void setSelfCwnd(int selfCwnd) {
+            if (selfCwnd <= 0) {
+                return;
+            }
+            // recalculate expectedCwnd when peer info changes
             if (mss > 0) {
-                minCwnd = TcpEntry.this.cwndNegotiator.computeMinCwnd(yourCwnd);
-                // immediately enforce floor
-                if (cwnd < minCwnd) {
-                    cwnd = minCwnd;
-                }
+                expectedCwnd = TcpEntry.this.cwndNegotiator.computeExpectedCwnd(selfCwnd);
             }
         }
 
-        public int getMinCwnd() {
-            return minCwnd;
+        public int getExpectedCwnd() {
+            return expectedCwnd;
+        }
+
+        public void clearCwndNegotiation() {
+            this.expectedCwnd = 0;
         }
 
         public boolean needToSendFin() {
@@ -703,6 +719,7 @@ public class TcpEntry implements WithUserData {
         private long ackedSeq;
         private int window = RMEM_MAX;
         private int windowScale = 64;
+        private boolean peerRetransmitting = false;  // true when peer is retransmitting
 
         public ReceivingQueue(long seq) {
             this.expectingSeq = seq;
@@ -940,6 +957,18 @@ public class TcpEntry implements WithUserData {
                 }
             }
             return blocks;
+        }
+
+        public boolean isPeerRetransmitting() {
+            return peerRetransmitting;
+        }
+
+        public void setPeerRetransmitting(boolean flag) {
+            this.peerRetransmitting = flag;
+            if (flag) {
+                //noinspection DataFlowIssue
+                sendingQueue.clearCwndNegotiation();
+            }
         }
     }
 

@@ -309,6 +309,12 @@ public class TcpStack extends Node {
             // PSH with seq != expect:
             //   seq < expect: retransmission or partial overlap, ReceivingQueue will handle
             //   seq > expect: out-of-order, ReceivingQueue will buffer it
+            if (seq < expect) {
+                pkb.tcp.receivingQueue.setPeerRetransmitting(true);
+            }
+        } else {
+            // seq >= expect: new packets arrived, clear retransmitting flag
+            pkb.tcp.receivingQueue.setPeerRetransmitting(false);
         }
 
         if (tcpPkt.isAck()) {
@@ -604,6 +610,11 @@ public class TcpStack extends Node {
                 if (peerSelfCwnd > 0) {
                     tcp.sendingQueue.setYourCwnd(peerSelfCwnd);
                 }
+                // the peer's yourCwnd (second 3 bytes) is our selfCwnd
+                int peerYourCwnd = data.uint24(3);
+                if (peerYourCwnd > 0) {
+                    tcp.sendingQueue.setSelfCwnd(peerYourCwnd);
+                }
                 return; // only process the first CWND option
             }
         }
@@ -870,7 +881,7 @@ public class TcpStack extends Node {
         ByteArray data = ByteArray.allocate(6);
         data.int24(0, tcp.sendingQueue.getCwnd());
         data.int24(3,
-            tcp.receivingQueue.hasOutOfOrderData() ? 0 :
+            tcp.receivingQueue.hasOutOfOrderData() || tcp.receivingQueue.isPeerRetransmitting() ? 0 :
                 tcp.sendingQueue.getYourCwnd());
         opt.setData(data);
         return opt;
