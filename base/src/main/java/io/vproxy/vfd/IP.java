@@ -186,7 +186,7 @@ public abstract class IP implements ToByteArray {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof IP that))
+        if (!(o instanceof IP))
             return false;
         if (!ipEquals(o))
             return false;

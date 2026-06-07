@@ -1018,6 +1018,10 @@ public class Utils {
     }
 
     public static void loadDynamicLibrary(String name, ClassLoader cl, String basePath) throws UnsatisfiedLinkError {
+        loadDynamicLibrary(name, cl, basePath, null);
+    }
+
+    public static void loadDynamicLibrary(String name, ClassLoader cl, String basePath, String releaseTo) throws UnsatisfiedLinkError {
         // format basePath
         if (basePath.startsWith("/")) {
             basePath = basePath.substring(1);
@@ -1072,13 +1076,45 @@ public class Utils {
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new UnsatisfiedLinkError(Utils.formatErr(e));
         }
+
+        if (releaseTo != null) {
+            String releaseMd5hex = "";
+            // check md5(file:releaseTo)
+            if (new File(releaseTo).exists()) {
+                try (var fis = new FileInputStream(releaseTo)) {
+                    var md = MessageDigest.getInstance("MD5");
+                    byte[] buf = new byte[1024];
+                    int n;
+                    while ((n = fis.read(buf)) > 0) {
+                        md.update(buf, 0, n);
+                    }
+                    var md5Bytes = md.digest();
+                    releaseMd5hex = ByteArray.from(md5Bytes).toHexString();
+                } catch (IOException | NoSuchAlgorithmException e) {
+                    throw new UnsatisfiedLinkError(Utils.formatErr(e));
+                }
+            }
+            if (!releaseMd5hex.equals(md5hex)) {
+                try {
+                    Files.copy(f.toPath(), Path.of(releaseTo));
+                } catch (IOException e) {
+                    throw new UnsatisfiedLinkError(Utils.formatErr(e));
+                }
+            }
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+            f = new File(releaseTo);
+        }
+
         if (!f.setExecutable(true)) {
             throw new UnsatisfiedLinkError("failed setting executable on tmp file " + f.getAbsolutePath());
         }
         System.out.println("System.load(" + f.getAbsolutePath() + ")\tmd5=" + md5hex);
         System.load(f.getAbsolutePath());
-        //noinspection ResultOfMethodCallIgnored
-        f.delete();
+        if (releaseTo == null) { // do not delete the file if it's released to a location specified by user
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+        }
     }
 
     public static void validateVProxyVersion(String version) throws Exception {
