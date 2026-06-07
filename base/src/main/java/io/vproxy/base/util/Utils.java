@@ -18,6 +18,7 @@ import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -1096,7 +1097,7 @@ public class Utils {
             }
             if (!releaseMd5hex.equals(md5hex)) {
                 try {
-                    Files.copy(f.toPath(), Path.of(releaseTo));
+                    Files.copy(f.toPath(), Path.of(releaseTo), StandardCopyOption.REPLACE_EXISTING);
                 } catch (IOException e) {
                     throw new UnsatisfiedLinkError(Utils.formatErr(e));
                 }
