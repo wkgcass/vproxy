@@ -34,6 +34,7 @@ public class PcapGlobalHeader {
     public static final int LINKTYPE_NULL = 0;
     public static final int LINKTYPE_ETHERNET = 1;
     public static final int LINKTYPE_LINUX_SLL = 113;
+    public static final int LINKTYPE_LINUX_SLL2 = 276;
 
     public ByteArray build() {
         return ByteArray.allocate(24)

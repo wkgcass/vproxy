@@ -131,6 +131,10 @@ public class PcapParser {
             var l = new LinuxCookedPacket();
             err = l.from(new PacketDataBuffer(buf));
             pcapPacket.setPacket(l);
+        } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_LINUX_SLL2) {
+            var l = new LinuxCookedV2Packet();
+            err = l.from(new PacketDataBuffer(buf));
+            pcapPacket.setPacket(l);
         } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_NULL) {
             var bsd = new BSDLoopbackEncapsulation();
             err = bsd.from(new PacketDataBuffer(buf));

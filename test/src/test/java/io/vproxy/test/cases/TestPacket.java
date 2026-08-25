@@ -316,6 +316,43 @@ public class TestPacket {
     }
 
     @Test
+    public void linuxCookedV2() {
+        var sll2 = new LinuxCookedV2Packet();
+        sll2.setProto(Consts.ETHER_TYPE_IPv4);
+        sll2.setReserved(0);
+        sll2.setIfIndex(0xfedcba98L);
+        sll2.setAddrType(1);
+        sll2.setType(LinuxCookedV2Packet.TYPE_SND);
+        sll2.setAddrLen(6);
+        sll2.setAddr(ByteArray.fromHexString("001122334455"));
+        sll2.setPayload(genIpv4());
+
+        var bytes = sll2.getRawPacket(0);
+        assertEquals(ByteArray.fromHexString("08000000fedcba98000104060011223344550000"), bytes.sub(0, 20));
+        var parsed = new LinuxCookedV2Packet();
+        assertNull(parsed.from(new PacketDataBuffer(bytes)));
+        assertEquals(Consts.ETHER_TYPE_IPv4, parsed.getProto());
+        assertEquals(0, parsed.getReserved());
+        assertEquals(0xfedcba98L, parsed.getIfIndex());
+        assertEquals(1, parsed.getAddrType());
+        assertEquals(LinuxCookedV2Packet.TYPE_SND, parsed.getType());
+        assertEquals(6, parsed.getAddrLen());
+        assertEquals(ByteArray.fromHexString("0011223344550000"), parsed.getAddr());
+        assertTrue(parsed.getPayload() instanceof Ipv4Packet);
+
+        parsed.clearAllRawPackets();
+        assertEquals(bytes, parsed.getRawPacket(0));
+        assertEquals(bytes, parsed.copy().getRawPacket(0));
+
+        var pcap = new PcapGlobalHeader(65_536, PcapGlobalHeader.LINKTYPE_LINUX_SLL2)
+            .build().concat(new PcapPacket(1234L, sll2).build());
+        var parser = new PcapParser(new ByteArrayInputStream(pcap.toJavaArray()));
+        assertEquals(PcapGlobalHeader.LINKTYPE_LINUX_SLL2, parser.getGlobalHeader().dataLinkType);
+        assertTrue(parser.next().getPacket() instanceof LinuxCookedV2Packet);
+        assertNull(parser.next());
+    }
+
+    @Test
     public void vxlan() {
         VXLanPacket vxlan = new VXLanPacket();
         vxlan.setFlags(0b01000000);
