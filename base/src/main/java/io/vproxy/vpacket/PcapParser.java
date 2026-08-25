@@ -12,6 +12,10 @@ import java.util.List;
 public class PcapParser {
     private final InputStream data;
     private boolean copyPacket = true;
+    // when true, frames whose header-declared length exceeds the captured bytes (snaplen-truncated
+    // payloads) are padded with PacketDataBuffer.TRUNCATED_PAD_SEQ and parsed anyway, instead of
+    // being downgraded to PacketBytes. opt-in for analysers that only need header fields.
+    private boolean allowTruncatedPacket = false;
     private byte[] buf = new byte[4096];
     private int state = 0;
     // 0 -> waiting for global header
@@ -65,6 +69,14 @@ public class PcapParser {
 
     public void setCopyPacket(boolean copyPacket) {
         this.copyPacket = copyPacket;
+    }
+
+    public boolean isAllowTruncatedPacket() {
+        return allowTruncatedPacket;
+    }
+
+    public void setAllowTruncatedPacket(boolean allowTruncatedPacket) {
+        this.allowTruncatedPacket = allowTruncatedPacket;
     }
 
     private void readGlobalHeader() {
@@ -121,23 +133,25 @@ public class PcapParser {
         if (copyPacket) {
             buf = buf.copy();
         }
+        var raw = new PacketDataBuffer(buf);
+        raw.setAllowTruncatedPacket(allowTruncatedPacket);
         String err = null;
         if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_ETHERNET) {
             // for null type, try to use ethernet anyway
             var e = new EthernetPacket();
-            err = e.from(new PacketDataBuffer(buf));
+            err = e.from(raw);
             pcapPacket.setPacket(e);
         } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_LINUX_SLL) {
             var l = new LinuxCookedPacket();
-            err = l.from(new PacketDataBuffer(buf));
+            err = l.from(raw);
             pcapPacket.setPacket(l);
         } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_LINUX_SLL2) {
             var l = new LinuxCookedV2Packet();
-            err = l.from(new PacketDataBuffer(buf));
+            err = l.from(raw);
             pcapPacket.setPacket(l);
         } else if (globalHeader.dataLinkType == PcapGlobalHeader.LINKTYPE_NULL) {
             var bsd = new BSDLoopbackEncapsulation();
-            err = bsd.from(new PacketDataBuffer(buf));
+            err = bsd.from(raw);
             pcapPacket.setPacket(bsd);
         } else {
             pcapPacket.setPacket(new PacketBytes(buf));

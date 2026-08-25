@@ -3,6 +3,7 @@ package io.vproxy.vpacket;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv6;
 
@@ -41,7 +42,13 @@ public class Ipv6Packet extends AbstractIpPacket {
             return "we do not support Jumbo Payload for now";
         }
         if (40 + payloadLength > bytes.length()) {
-            return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
+            if (!raw.allowTruncatedPacket()) {
+                return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
+            }
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "truncated ipv6 packet (partial): 40+payloadLength="
+                + (40 + payloadLength) + " > captured=" + bytes.length() + "; padding missing bytes with repeating 0xFF..0xFA");
+            raw = raw.padTo(40 + payloadLength);
+            bytes = raw.pktBuf;
         }
 
         ByteArray srcBytes = bytes.sub(8, 16);
@@ -105,7 +112,13 @@ public class Ipv6Packet extends AbstractIpPacket {
             setPktBufLen(raw, 40 + payloadLength);
             bytes = raw.pktBuf;
         } else if (40 + payloadLength > bytes.length()) {
-            return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
+            if (!raw.allowTruncatedPacket()) {
+                return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
+            }
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "truncated ipv6 packet: 40+payloadLength="
+                + (40 + payloadLength) + " > captured=" + bytes.length() + "; padding missing bytes with repeating 0xFF..0xFA");
+            raw = raw.padTo(40 + payloadLength);
+            bytes = raw.pktBuf;
         }
 
         ByteArray srcBytes = bytes.sub(8, 16);

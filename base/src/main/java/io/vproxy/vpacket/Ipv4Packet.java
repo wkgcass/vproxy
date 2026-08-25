@@ -3,6 +3,7 @@ package io.vproxy.vpacket;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv4;
@@ -45,7 +46,13 @@ public class Ipv4Packet extends AbstractIpPacket {
             return "input ihl(" + ihl + ") > totalLength(" + totalLength + ")";
         }
         if (totalLength > bytes.length()) {
-            return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
+            if (!raw.allowTruncatedPacket()) {
+                return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
+            }
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "truncated ipv4 packet (partial): totalLength="
+                + totalLength + " > captured=" + bytes.length() + "; padding missing bytes with repeating 0xFF..0xFA");
+            raw = raw.padTo(totalLength);
+            bytes = raw.pktBuf;
         }
         protocol = bytes.uint8(9);
         ByteArray srcBytes = bytes.sub(12, 4);
@@ -102,7 +109,13 @@ public class Ipv4Packet extends AbstractIpPacket {
             setPktBufLen(raw, totalLength);
             bytes = raw.pktBuf;
         } else if (totalLength > bytes.length()) {
-            return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
+            if (!raw.allowTruncatedPacket()) {
+                return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
+            }
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "truncated ipv4 packet: totalLength="
+                + totalLength + " > captured=" + bytes.length() + "; padding missing bytes with repeating 0xFF..0xFA");
+            raw = raw.padTo(totalLength);
+            bytes = raw.pktBuf;
         }
 
         // 4-7

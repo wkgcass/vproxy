@@ -2,6 +2,8 @@ package io.vproxy.vpacket;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Utils;
 
 import java.util.ArrayList;
@@ -239,7 +241,13 @@ public class TcpPacket extends TransportPacket {
         urgentPointer = bytes.uint16(18);
 
         if (dataOffset > bytes.length()) {
-            return "dataOffset too big";
+            if (!raw.allowTruncatedPacket()) {
+                return "dataOffset too big";
+            }
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "truncated tcp packet: dataOffset="
+                + dataOffset + " > captured=" + bytes.length() + "; padding missing bytes with repeating 0xFF..0xFA");
+            raw = raw.padTo(dataOffset);
+            bytes = raw.pktBuf;
         }
 
         if (bytes.length() > dataOffset) {

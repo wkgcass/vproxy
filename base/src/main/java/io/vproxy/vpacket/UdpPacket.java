@@ -2,6 +2,8 @@ package io.vproxy.vpacket;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Utils;
 
 import java.util.Objects;
@@ -49,7 +51,15 @@ public class UdpPacket extends TransportPacket {
         length = bytes.uint16(4);
         checksum = bytes.uint16(6);
         if (bytes.length() != length) {
-            return "udp packet length not matching the input bytes length";
+            if (raw.allowTruncatedPacket() && bytes.length() < length) {
+                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "truncated udp packet: length="
+                    + length + " > captured=" + bytes.length() + "; padding missing bytes with repeating 0xFF..0xFA");
+                raw = raw.padTo(length);
+                bytes = raw.pktBuf;
+            } else {
+                return "udp packet length not matching the input bytes length: length="
+                    + length + " captured=" + bytes.length();
+            }
         }
         PacketBytes pktBytes = new PacketBytes();
         pktBytes.from(new PacketDataBuffer(bytes.sub(8, bytes.length() - 8)));
