@@ -80,3 +80,10 @@ submodules/msquic/
 /cargo-cache/registry/*
 !/cargo-cache/git/.gitkeep
 !/cargo-cache/registry/.gitkeep
+
+# local ai assistant data
+.pi/
+.zcode/
+
+# local-only pcap debug scripts
+test/src/test/java/io/vproxy/Debug*.java
