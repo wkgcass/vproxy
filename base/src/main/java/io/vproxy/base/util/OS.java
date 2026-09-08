@@ -13,6 +13,7 @@ public class OS {
     private static final String osversion;
     private static final boolean osWin;
     private static final boolean osMac;
+    private static final boolean osIOS;
     private static final boolean osLinux;
     private static final String arch;
     private static final int linuxMajorVersion;
@@ -27,6 +28,7 @@ public class OS {
         String os = osname.toLowerCase();
         osLinux = os.contains("linux");
         osMac = os.contains("mac");
+        osIOS = os.contains("darwin");
         osWin = os.contains("windows");
         var arch0 = System.getProperty("os.arch", "x86_64" /*most java users are x86_64*/);
         // fix java returned arch
@@ -127,6 +129,10 @@ public class OS {
 
     public static boolean isMac() {
         return osMac;
+    }
+
+    public static boolean isIOS() {
+        return osIOS;
     }
 
     public static boolean isLinux() {
