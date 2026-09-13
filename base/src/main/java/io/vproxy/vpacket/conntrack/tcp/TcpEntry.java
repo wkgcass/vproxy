@@ -17,12 +17,14 @@ public class TcpEntry implements WithUserData {
     public static final int RMEM_MAX = 1048576; // 1MB, for high-latency BDP
     public static final int SND_MAX_MSS = 1400; // xdp frame size = 2048, hardware reserved = 256, headroom = 128, mac+ip+tcp_hdr=14+40+20
     public static final int RCV_MSS = 1400;
+    public static final int MIN_MSS = 48; // same floor as Linux TCP_MIN_SND_MSS, prevents DoS via tiny-MSS
     public static final int TCP_SEQ_INIT_MIN = Integer.MAX_VALUE / 3;
     public static final int TCP_SEQ_RAND = Integer.MAX_VALUE / 2;
     public static final int RTO_MIN = 100;
     public static final int RTO_MAX = 2_000;
     public static final int DELAYED_ACK_TIMEOUT = 20; // balanced for high-latency
     public static final int DELAYED_ACK_TIMEOUT_FOR_SACK = 20; // balanced for high-latency
+    public static final int IMMEDIATE_ACK_DATA_SIZE = 100 * 1024 * 1024 / 8 / 1000 * DELAYED_ACK_TIMEOUT / 2; // bandwidth(100Mbps)*1024*1024/8 / 1000 * DELAYED_ACK_TIMEOUT / 2(half)
     public static final int MAX_REMOTE_WINDOW = 16 * 1024 * 1024; // 16MB, safety cap for peer's advertised window
     public static final int MAX_CWND = 20 * 1024 * 1024; // 20MB max cwnd
     public static final int INIT_CWND = MAX_CWND / 10;
@@ -107,12 +109,15 @@ public class TcpEntry implements WithUserData {
         state = TcpState.CLOSED;
         if (retransmissionTimer != null) {
             retransmissionTimer.cancel();
+            retransmissionTimer = null;
         }
         if (delayedAckTimer != null) {
             delayedAckTimer.cancel();
+            delayedAckTimer = null;
         }
         if (connectionHandler != null) {
             connectionHandler.destroy(this);
+            connectionHandler = null;
         }
     }
 
@@ -494,6 +499,10 @@ public class TcpEntry implements WithUserData {
             if (s.lastSendTime == 0) {
                 return;
             }
+            // Karn's algorithm: RTT samples from retransmitted segments are ambiguous, skip them
+            if (s.retransmitted != 0) {
+                return;
+            }
             long now = Config.currentTimestamp;
             long rttMs = now - s.lastSendTime;
             if (rttMs <= 0) {
@@ -663,29 +672,31 @@ public class TcpEntry implements WithUserData {
         private final TreeMap<Long, Segment> oooBuffer = new TreeMap<>();
         private int currentSize = 0;
         private int oooSize = 0;
-        private long expectingSeq;
-        private long ackedSeq;
+        private long expectingSeq; // receive point: everything before this is held contiguously (RCV.NXT)
+        private long readSeq; // app-read point: everything before this has been consumed via apiRead
+        private long lastSentAckSeq; // ack number carried by the last outgoing ACK/data packet (quickack bookkeeping)
         private int window = RMEM_MAX;
         private int windowScale = 64;
         private boolean oooGapFilled = false;
 
         public ReceivingQueue(long seq) {
             this.expectingSeq = seq;
-            this.ackedSeq = seq;
+            this.readSeq = seq;
+            this.lastSentAckSeq = seq;
         }
 
         public void incExpectingSeq() {
-            assert ackedSeq == expectingSeq;
+            assert readSeq == expectingSeq;
             expectingSeq += 1;
-            ackedSeq += 1;
+            readSeq += 1;
         }
 
         public void setInitialSeq(long seq) {
-            if (this.expectingSeq == 0 && this.ackedSeq == 0) {
+            if (this.expectingSeq == 0 && this.readSeq == 0) {
                 this.expectingSeq = seq;
-                this.ackedSeq = seq;
+                this.readSeq = seq;
             } else {
-                Logger.error(LogType.IMPROPER_USE, "calling setInitialSeq while expectingSeq(" + expectingSeq + ") or acked(" + ackedSeq + ") is not 0");
+                Logger.error(LogType.IMPROPER_USE, "calling setInitialSeq while expectingSeq(" + expectingSeq + ") or readSeq(" + readSeq + ") is not 0");
             }
         }
 
@@ -718,7 +729,8 @@ public class TcpEntry implements WithUserData {
                     int trim = (int) (expectingSeq - segBegin);
                     data = data.sub(trim, data.length() - trim);
                 }
-                q.add(new Segment(expectingSeq, data.copy()));
+                // the caller hands over a private copy of the payload
+                q.add(new Segment(expectingSeq, data));
                 expectingSeq += data.length();
                 currentSize += data.length();
 
@@ -814,7 +826,8 @@ public class TcpEntry implements WithUserData {
                     int trim = (int) (expectingSeq - s.seqBeginInclusive);
                     data = data.sub(trim, data.length() - trim);
                 }
-                q.add(new Segment(expectingSeq, data.copy()));
+                // the ooo segment is discarded right after, its buffer can be reused directly
+                q.add(new Segment(expectingSeq, data));
                 expectingSeq += data.length();
                 currentSize += data.length();
             }
@@ -844,14 +857,14 @@ public class TcpEntry implements WithUserData {
                     // fully consumed
                     q.pollFirst();
                     currentSize -= s.data.length();
-                    ackedSeq = s.seqEndExclusive;
+                    readSeq = s.seqEndExclusive;
                 } else {
                     // partially consumed
                     q.pollFirst();
                     var remaining = new Segment(s.seqBeginInclusive + subLen, s.data.sub(subLen, s.data.length() - subLen));
                     q.addFirst(remaining);
                     currentSize -= subLen;
-                    ackedSeq = remaining.seqBeginInclusive;
+                    readSeq = remaining.seqBeginInclusive;
                     break;
                 }
             }
@@ -868,8 +881,16 @@ public class TcpEntry implements WithUserData {
             return expectingSeq;
         }
 
-        public long getAckedSeq() {
-            return ackedSeq;
+        public long getReadSeq() {
+            return readSeq;
+        }
+
+        public long getLastSentAckSeq() {
+            return lastSentAckSeq;
+        }
+
+        public void setLastSentAckSeq(long lastSentAckSeq) {
+            this.lastSentAckSeq = lastSentAckSeq;
         }
 
         public int getWindow() {
@@ -894,8 +915,9 @@ public class TcpEntry implements WithUserData {
 
         /**
          * Returns SACK blocks representing the out-of-order segments currently buffered.
-         * Each block is a [begin, end) pair describing contiguous received data beyond the
-         * cumulative ACK point (ackedSeq).
+         * Each block is a [begin, end) pair describing contiguous received data beyond
+         * expectingSeq (the ACK point carried by outgoing packets, so blocks never
+         * overlap what the cumulative ACK already covers).
          */
         public List<SAckTuple> getSAckBlocks() {
             if (oooBuffer.isEmpty()) {
@@ -903,7 +925,7 @@ public class TcpEntry implements WithUserData {
             }
             var blocks = new ArrayList<SAckTuple>();
             for (var entry : oooBuffer.values()) {
-                long begin = Math.max(entry.seqBeginInclusive, ackedSeq);
+                long begin = Math.max(entry.seqBeginInclusive, expectingSeq);
                 if (begin < entry.seqEndExclusive) {
                     blocks.add(new SAckTuple(begin, entry.seqEndExclusive));
                 }

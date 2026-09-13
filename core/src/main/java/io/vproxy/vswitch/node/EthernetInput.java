@@ -10,7 +10,11 @@ import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.AbstractPacket;
 import io.vproxy.vpacket.ArpPacket;
 import io.vproxy.vpacket.IcmpPacket;
+import io.vproxy.vpacket.icmpv6.AbstractNeighborDiscoveryPacket;
+import io.vproxy.vpacket.icmpv6.NeighborAdvertisementPacket;
+import io.vproxy.vpacket.icmpv6.NeighborSolicitationPacket;
 import io.vproxy.vswitch.PacketBuffer;
+import io.vproxy.vswitch.util.SwitchUtils;
 
 public class EthernetInput extends Node {
     private final NodeEgress unicastInput = new NodeEgress("unicast-input");
@@ -113,6 +117,19 @@ public class EthernetInput extends Node {
                 }
                 assert Logger.lowLevelDebug("this arp packet is a response, continue to handle");
             }
+            var arpSenderMac = new MacAddress(arp.getSenderMac());
+            if (!arpSenderMac.equals(pkb.pkt.getSrc())) {
+                assert Logger.lowLevelDebug("arp sender mac != ethernet src mac, ignore");
+                return;
+            }
+            if (!arpSenderMac.isUnicast()) {
+                assert Logger.lowLevelDebug("arp sender mac is not unicast, ignore");
+                return;
+            }
+            if (!SwitchUtils.isUnicastV4(ip)) {
+                assert Logger.lowLevelDebug("arp sender ip is not unicast, ignore");
+                return;
+            }
             pkb.network.arpTable.record(pkb.pkt.getSrc(), ip);
             // ============================================================
             // ============================================================
@@ -141,13 +158,19 @@ public class EthernetInput extends Node {
             if (pkb.ensurePartialPacketParsed()) return;
 
             assert Logger.lowLevelDebug("is ndp");
-            var other = icmp.getOther();
-            if (other.length() < 28) { // 4 reserved and 16 target address and 8 option
-                assert Logger.lowLevelDebug("ndp length not enough");
+            var isNA = icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement;
+            AbstractNeighborDiscoveryPacket ndp;
+            if (isNA) {
+                ndp = new NeighborAdvertisementPacket();
+            } else {
+                ndp = new NeighborSolicitationPacket();
+            }
+            var err = ndp.from(icmp.getOther());
+            if (err != null) {
+                assert Logger.lowLevelDebug("failed to parse NA packet: " + err);
                 return;
             }
-            assert Logger.lowLevelDebug("ndp length is ok");
-            var targetIp = IP.from(other.sub(4, 16).toJavaArray());
+            var targetIp = ndp.getTargetAddress();
             // check the target ip
             if (pkb.network.v6network == null || !pkb.network.v6network.contains(targetIp)) {
                 assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + targetIp + " not in " + pkb.network.v6network);
@@ -164,24 +187,27 @@ public class EthernetInput extends Node {
             }
 
             // try to build arp table
-            var optType = other.uint8(20);
-            var optLen = other.uint8(21);
-            if (optLen != 1) {
-                assert Logger.lowLevelDebug("optLen is not 1");
-                return;
-            }
-            assert Logger.lowLevelDebug("ndp optLen == 1");
-            var mac = new MacAddress(other.sub(22, 6));
-            if (optType == Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address) {
+            var slla = ndp.getLinkLayerAddress(Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address);
+            var tlla = ndp.getLinkLayerAddress(Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address);
+            if (slla != null) {
                 assert Logger.lowLevelDebug("ndp has opt source link layer address");
                 // mac is the sender's mac, record with src ip in ip packet
                 // this ip address might be solicited node address, but it won't harm to record
                 IP ip = ipPkt.getSrc();
-                pkb.network.arpTable.record(mac, ip);
-            } else if (optType == Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address) {
+                if (slla.isUnicast()) {
+                    pkb.network.arpTable.record(slla, ip);
+                } else {
+                    assert Logger.lowLevelDebug("ndp lladdr(" + slla + ") is not unicast, ignore, ip = " + ip);
+                }
+            }
+            if (tlla != null) {
                 assert Logger.lowLevelDebug("ndp has opt target link layer address");
                 // mac is the target's mac, record with target ip in icmp packet
-                pkb.network.arpTable.record(mac, targetIp);
+                if (tlla.isUnicast()) {
+                    pkb.network.arpTable.record(tlla, targetIp);
+                } else {
+                    assert Logger.lowLevelDebug("ndp lladdr(" + tlla + ") is not unicast, ignore, ip = " + targetIp);
+                }
             }
             // ============================================================
             // ============================================================

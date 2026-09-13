@@ -668,4 +668,20 @@ public class TestSwitch {
         assertEquals(443, tcp.getSrcPort());
         assertEquals(34567, tcp.getDstPort());
     }
+
+    @Test
+    public void switchUtilsAddressClassification() {
+        // isUnicastV4
+        assertTrue(SwitchUtils.isUnicastV4(IP.from("10.0.0.1")));
+        assertFalse(SwitchUtils.isUnicastV4(IP.from("0.0.0.0")));
+        assertFalse(SwitchUtils.isUnicastV4(IP.from("255.255.255.255")));
+        assertFalse(SwitchUtils.isUnicastV4(IP.from("224.0.0.1")));
+        assertTrue(SwitchUtils.isUnicastV4(IP.from("127.0.0.1"))); // loopback stays allowed (as smoltcp)
+        assertFalse(SwitchUtils.isUnicastV4(IP.from("fe80::1")));
+
+        // isUsableSourceIp
+        assertTrue(SwitchUtils.isUsableSourceIp(IP.from("::"))); // unspecified v6 is usable (DAD)
+        assertFalse(SwitchUtils.isUsableSourceIp(IP.from("ff02::1")));
+        assertFalse(SwitchUtils.isUsableSourceIp(IP.from("0.0.0.0")));
+    }
 }

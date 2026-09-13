@@ -9,6 +9,9 @@ import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.vpacket.conntrack.udp.UdpNat;
+import io.vproxy.vpacket.icmpv6.NdpOption;
+import io.vproxy.vpacket.icmpv6.NeighborAdvertisementPacket;
+import io.vproxy.vpacket.icmpv6.NeighborSolicitationPacket;
 import io.vproxy.vpxdp.XDPConsts;
 import io.vproxy.vswitch.*;
 import io.vproxy.vswitch.iface.Iface;
@@ -31,6 +34,33 @@ public class SwitchUtils {
     public static final MacAddress ZERO_MAC = new MacAddress("00:00:00:00:00:00");
 
     private SwitchUtils() {
+    }
+
+    /**
+     * Whether this is a usable unicast IPv4 source/target:
+     * rejects 0.0.0.0, 255.255.255.255 and the multicast range 224.0.0.0/4.
+     * 127.0.0.0/8 is not filtered.
+     */
+    public static boolean isUnicastV4(IP ip) {
+        if (!(ip instanceof IPv4)) {
+            return false;
+        }
+        byte[] b = ip.getAddress();
+        int first = b[0] & 0xff;
+        return first != 0 && first != 255 && (first & 0xf0) != 0xe0;
+    }
+
+    /**
+     * Whether this address may be used as an IP source for local delivery / ICMP replies.
+     * For IPv6 rejects multicast (ff00::/8); the unspecified address is allowed
+     * because DAD neighbor solicitations legitimately use it as the source.
+     */
+    public static boolean isUsableSourceIp(IP ip) {
+        if (ip instanceof IPv4) {
+            return isUnicastV4(ip);
+        }
+        byte[] b = ip.getAddress();
+        return b[0] != (byte) 0xff;
     }
 
     public static VXLanPacket getOrMakeVXLanPacket(PacketBuffer pkb) {
@@ -107,15 +137,14 @@ public class SwitchUtils {
     }
 
     public static IPv6 extractTargetAddressFromNeighborSolicitation(IcmpPacket inIcmp) {
-        ByteArray other = inIcmp.getOther();
-        if (other.length() < 20) { // 4 reserved and 16 target address
-            assert Logger.lowLevelDebug("invalid packet for neighbor solicitation: too short");
+        var ns = new NeighborSolicitationPacket();
+        var err = ns.from(inIcmp.getOther());
+        if (err != null) {
+            assert Logger.lowLevelDebug("invalid packet for neighbor solicitation: " + err);
             return null;
         }
         assert Logger.lowLevelDebug("is a valid neighbor solicitation");
-
-        byte[] targetAddr = other.sub(4, 16).toJavaArray();
-        return IP.fromIPv6(targetAddr);
+        return ns.getTargetAddress();
     }
 
     public static ArpPacket buildArpPacket(int opcode, MacAddress dst, IPv4 dstIp, MacAddress src, IPv4 srcIp) {
@@ -143,17 +172,17 @@ public class SwitchUtils {
     }
 
     public static Ipv6Packet buildNeighborAdvertisementPacket(MacAddress requestedMac, IPv6 requestedIpOrSrc, IPv6 dstIp) {
+        var na = new NeighborAdvertisementPacket();
+        na.setSolicited(true);
+        na.setOverride(true); // -R,+S,+O
+        na.setTargetAddress(requestedIpOrSrc);
+        // the target link-layer address
+        na.getOptions().add(new NdpOption(Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address, requestedMac.bytes));
+
         IcmpPacket icmp = new IcmpPacket(true);
         icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement);
         icmp.setCode(0);
-        icmp.setOther(
-            (ByteArray.allocate(4).set(0, (byte) 0b01100000 /*-R,+S,+O*/)).concat(requestedIpOrSrc.bytes)
-                .concat(( // the target link-layer address
-                    ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address)
-                        .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
-                        .concat(requestedMac.bytes)
-                ))
-        );
+        icmp.setOther(na.toByteArray());
 
         Ipv6Packet ipv6 = new Ipv6Packet();
         ipv6.setVersion(6);
@@ -169,17 +198,15 @@ public class SwitchUtils {
     }
 
     public static Ipv6Packet buildNeighborSolicitationPacket(IPv6 targetIp, MacAddress senderMac, IPv6 senderIp) {
+        var ns = new NeighborSolicitationPacket();
+        ns.setTargetAddress(targetIp);
+        // the source link-layer address
+        ns.getOptions().add(new NdpOption(Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address, senderMac.bytes));
+
         IcmpPacket icmp = new IcmpPacket(true);
         icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation);
         icmp.setCode(0);
-        icmp.setOther(
-            (ByteArray.allocate(4).set(0, (byte) 0)).concat(targetIp.bytes)
-                .concat(( // the source link-layer address
-                    ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address)
-                        .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
-                        .concat(senderMac.bytes)
-                ))
-        );
+        icmp.setOther(ns.toByteArray());
 
         Ipv6Packet ipv6 = new Ipv6Packet();
         ipv6.setVersion(6);

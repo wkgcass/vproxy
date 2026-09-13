@@ -37,8 +37,8 @@ public class UdpInput extends Node {
             assert Logger.lowLevelDebug("invalid packet");
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.line(d -> d.append("invalid packet"));
-                return _returnnext(pkb, errorDrop);
             }
+            return _returnnext(pkb, errorDrop);
         }
 
         var ipPkt = pkb.ipPkt;

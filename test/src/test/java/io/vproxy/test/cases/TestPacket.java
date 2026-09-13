@@ -8,6 +8,9 @@ import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
+import io.vproxy.vpacket.icmpv6.NeighborAdvertisementPacket;
+import io.vproxy.vpacket.icmpv6.NeighborSolicitationPacket;
+import io.vproxy.vpacket.icmpv6.NdpOption;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -609,5 +612,77 @@ public class TestPacket {
             "ether,dl_dst=52:54:00:02:54:02,dl_src=00:0e:0c:4c:f4:c4," +
             "ip,nw_src=172.17.219.5,nw_dst=172.17.219.6,icmp",
             ether.description());
+    }
+
+    @Test
+    public void ipv6ChainedExtHeaders() {
+        // 40B ipv6 header + 8B hop-by-hop + 8B routing + 8B icmpv6 = 64B
+        byte[] src = IP.from("fe80::1").getAddress();
+        byte[] dst = IP.from("fe80::2").getAddress();
+        ByteArray pkt = ByteArray.allocate(0)
+            .concat(ByteArray.allocate(8)
+                .set(0, (byte) 0x60).set(1, (byte) 0).int16(2, (byte) 0) // version/traffic/flow
+                .int16(4, 24) // payloadLength = 8+8+8
+                .set(6, (byte) 0 /*HopByHop*/).set(7, (byte) 64 /*hop*/))
+            .concat(ByteArray.from(src))
+            .concat(ByteArray.from(dst))
+            // hop-by-hop: next=Routing(43), len=0, 6 bytes padding
+            .concat(ByteArray.allocate(8).set(0, (byte) 43).set(1, (byte) 0))
+            // routing: next=ICMPv6(58), len=0, 6 bytes padding
+            .concat(ByteArray.allocate(8).set(0, (byte) 58).set(1, (byte) 0))
+            // icmpv6 echo request
+            .concat(ByteArray.allocate(8).set(0, (byte) 128).set(1, (byte) 0));
+
+        var p = new Ipv6Packet();
+        var err = p.from(new PacketDataBuffer(pkt));
+        assertNull(err);
+        assertEquals(2, p.getExtHeaders().size());
+        assertTrue(p.getPacket() instanceof IcmpPacket);
+        assertEquals(128, ((IcmpPacket) p.getPacket()).getType());
+    }
+
+    @Test
+    public void ndpNeighborDiscoverySerialization() {
+        IPv6 target = (IPv6) IP.from("fd00::99:55");
+        MacAddress mac = new MacAddress("00:00:00:00:03:04");
+        String want = String.valueOf(target); // /[fd00::99:55]
+
+        // neighbor solicitation: reserved(4) + target(16) + SLLA option(8) = 28 bytes (RFC 4861 4.3)
+        var ns = new NeighborSolicitationPacket();
+        ns.setTargetAddress(target);
+        ns.getOptions().add(new NdpOption(Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address, mac.bytes));
+        ByteArray nsBytes = ns.toByteArray();
+        assertEquals(28, nsBytes.length());
+        var ns2 = new NeighborSolicitationPacket();
+        assertNull(ns2.from(nsBytes));
+        assertEquals(want, String.valueOf(ns2.getTargetAddress()));
+        assertEquals(mac, ns2.getSourceLinkLayerAddress());
+
+        // neighbor advertisement: flags(4) + target(16) + TLLA option(8) = 28 bytes (RFC 4861 4.4)
+        var na = new NeighborAdvertisementPacket();
+        na.setSolicited(true);
+        na.setOverride(true);
+        na.setTargetAddress(target);
+        na.getOptions().add(new NdpOption(Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address, mac.bytes));
+        ByteArray naBytes = na.toByteArray();
+        assertEquals(28, naBytes.length());
+        var na2 = new NeighborAdvertisementPacket();
+        assertNull(na2.from(naBytes));
+        assertEquals(want, String.valueOf(na2.getTargetAddress()));
+        assertTrue(na2.isSolicited());
+        assertTrue(na2.isOverride());
+        assertFalse(na2.isRouter());
+        assertEquals(mac, na2.getTargetLinkLayerAddress());
+
+        // toByteArray must produce exactly the RFC 4861 wire layout, and that layout must parse back
+        // (regression: toByteArray used to prepend 4 extra reserved bytes, shifting the target
+        // address by 4 and breaking v6 neighbor learning)
+        ByteArray wire = ByteArray.allocate(4).set(0, (byte) 0x60) // solicited | override
+            .concat(ByteArray.from(target.getAddress()))
+            .concat(ByteArray.allocate(2).set(0, (byte) 2).set(1, (byte) 1).concat(mac.bytes));
+        assertEquals(wire, naBytes);
+        var na3 = new NeighborAdvertisementPacket();
+        assertNull(na3.from(wire));
+        assertEquals(want, String.valueOf(na3.getTargetAddress()));
     }
 }

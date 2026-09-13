@@ -13,12 +13,22 @@ public class TcpUtils {
     private TcpUtils() {
     }
 
+    /**
+     * Extends a raw 32-bit TCP sequence/ack number into the 64-bit sequence space around {@code ref}.
+     * Internal sequence state grows as an unbounded long while wire values wrap at 2^32,
+     * so every inbound seq/ack must be normalized before being compared with internal state.
+     */
+    public static long extendSeq(long ref, long seq32) {
+        long delta = ((seq32 - ref) << 32) >> 32; // signed 32-bit difference
+        return ref + delta;
+    }
+
     public static TcpPacket buildCommonTcpResponse(TcpEntry tcp) {
         var ret = new TcpPacket();
         ret.setSrcPort(tcp.local.getPort());
         ret.setDstPort(tcp.remote.getPort());
         ret.setSeqNum(tcp.sendingQueue.getFetchSeq());
-        ret.setAckNum(tcp.receivingQueue.getAckedSeq());
+        ret.setAckNum(tcp.receivingQueue.getExpectingSeq());
         ret.setWindow(tcp.receivingQueue.getWindow() / tcp.receivingQueue.getWindowScale());
 
         return ret;

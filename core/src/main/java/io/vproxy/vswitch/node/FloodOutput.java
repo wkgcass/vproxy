@@ -10,6 +10,9 @@ import io.vproxy.vswitch.SwitchDelegate;
 import io.vproxy.vswitch.iface.Iface;
 
 public class FloodOutput extends AbstractNeighborResolve {
+    private static final long FLOOD_LOG_INTERVAL_MS = 75;
+    private static long lastFloodLogTime = 0;
+
     private final SwitchDelegate sw;
     private final NodeEgress devOutput = new NodeEgress("dev-output");
 
@@ -46,7 +49,12 @@ public class FloodOutput extends AbstractNeighborResolve {
             return _returndrop(pkb);
         }
 
-        Logger.warn(LogType.ALERT, "flood packet: " + pkb);
+        // rate-limit the warning
+        long now = io.vproxy.base.Config.currentTimestamp;
+        if (now - lastFloodLogTime >= FLOOD_LOG_INTERVAL_MS) {
+            lastFloodLogTime = now;
+            Logger.warn(LogType.ALERT, "flood packet: " + pkb);
+        }
         HandleResult res = HandleResult.DROP;
         Iface firstIface = null;
         for (Iface iface : sw.getIfaces()) {

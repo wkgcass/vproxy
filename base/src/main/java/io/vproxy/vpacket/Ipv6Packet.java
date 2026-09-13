@@ -146,7 +146,7 @@ public class Ipv6Packet extends AbstractIpPacket {
                     return "invalid packet length too short for next header";
                 }
                 skipLengthForExtHeaders += len;
-                xhBuf = xhBuf.sub(0, len);
+                xhBuf = xhBuf.sub(len, xhBuf.length() - len);
             }
         }
 

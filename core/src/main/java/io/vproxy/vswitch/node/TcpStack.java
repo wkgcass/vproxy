@@ -169,6 +169,8 @@ public class TcpStack extends Node {
                     mss = opt.getData().uint16(0);
                     if (mss > TcpEntry.SND_MAX_MSS) {
                         mss = TcpEntry.SND_MAX_MSS;
+                    } else if (mss < TcpEntry.MIN_MSS) {
+                        mss = TcpEntry.MIN_MSS;
                     }
                     break;
                 case Consts.TCP_OPTION_WINDOW_SCALE:
@@ -217,7 +219,7 @@ public class TcpStack extends Node {
         var tcpPkt = pkb.tcpPkt;
         if (tcpPkt.isSyn()) {
             assert Logger.lowLevelDebug("probably a syn retransmission");
-            if (tcpPkt.getSeqNum() == pkb.tcp.receivingQueue.getAckedSeq() - 1) {
+            if (tcpPkt.getSeqNum() == pkb.tcp.receivingQueue.getExpectingSeq() - 1) {
                 assert Logger.lowLevelDebug("seq matches");
                 pkb.tcp.sendingQueue.decAllSeq();
                 TcpPacket respondTcp = buildSynAck(pkb);
@@ -276,11 +278,11 @@ public class TcpStack extends Node {
         var tcpPkt = pkb.tcpPkt;
 
         // check whether seq matches
-        var seq = tcpPkt.getSeqNum();
         var expect = pkb.tcp.receivingQueue.getExpectingSeq();
-        var acked = pkb.tcp.receivingQueue.getAckedSeq();
+        var seq = TcpUtils.extendSeq(expect, tcpPkt.getSeqNum());
+        var read = pkb.tcp.receivingQueue.getReadSeq();
         if (tcpPkt.isFin()) {
-            if (seq != acked) {
+            if (seq != read) {
                 assert Logger.lowLevelDebug("data not fully consumed yet but received FIN");
                 if (pkb.debugger.isDebugOn()) {
                     pkb.debugger.line(d -> d.append("data not fully consumed yet but received FIN"));
@@ -288,29 +290,31 @@ public class TcpStack extends Node {
                 return true;
             }
         } else if (seq != expect) {
-            if (!tcpPkt.isPsh()) {
-                assert Logger.lowLevelDebug("invalid sequence number for non-PSH packet");
+            var data = tcpPkt.getData();
+            if (seq == expect - 1 && (data == null || data.length() <= 1)) {
+                // a keepalive probe from the peer must be answered, otherwise the peer tears the connection down
+                assert Logger.lowLevelDebug("keepalive probe received, responding with ACK");
                 if (pkb.debugger.isDebugOn()) {
-                    pkb.debugger.line(d -> d.append("invalid sequence number"));
+                    pkb.debugger.line(d -> d.append("keepalive probe received, responding with ACK"));
                 }
-                return true;
+                sendAck(pkb.network, pkb.tcp);
             }
-            // PSH with seq != expect:
-            //   seq < expect: retransmission or partial overlap, ReceivingQueue will handle
-            //   seq > expect: out-of-order, ReceivingQueue will buffer it
+            // for the rest:
+            //   seq < expect: retransmission or partial overlap, ReceivingQueue.store will handle
+            //   seq > expect: out-of-order, ReceivingQueue.store will buffer it
         }
 
         if (tcpPkt.isAck()) {
-            long ack = tcpPkt.getAckNum();
+            long ack = TcpUtils.extendSeq(pkb.tcp.sendingQueue.getLatestSeq(), tcpPkt.getAckNum());
             int window = tcpPkt.getWindow();
             long oldAckSeq = pkb.tcp.sendingQueue.getAckSeq();
             if (tcpStackDebugOn) {
                 Logger.alert("TCP ACK received: ack=" + ack + " oldAckSeq=" + oldAckSeq + " bytesInFlight=" + pkb.tcp.sendingQueue.getBytesInFlight() + " cwnd=" + pkb.tcp.sendingQueue.getCwnd() + " window=" + pkb.tcp.sendingQueue.getWindow());
             }
             pkb.tcp.sendingQueue.ack(ack, window);
-            // when new data is acked, immediately try to send more data
-            // rather than waiting for the retransmission timer to expire
             if (ack > oldAckSeq) {
+                // when new data is acked, immediately try to send more data
+                // rather than waiting for the retransmission timer to expire
                 // parse CWND option only when ack num increased
                 pkb.tcp.sendingQueue.resetDupAckCount();
                 // cancel existing retransmission timer; we'll send fresh now
@@ -322,7 +326,7 @@ public class TcpStack extends Node {
             } else {
                 List<SAckTuple> sackBlocks = null;
                 if (pkb.tcp.isRemoteSackPermitted()) {
-                    sackBlocks = parseSackBlocks(tcpPkt);
+                    sackBlocks = parseSackBlocks(pkb.tcp, tcpPkt);
                 }
                 if (sackBlocks != null && !sackBlocks.isEmpty()) {
                     startSackRetransmit(pkb.network, pkb.tcp, sackBlocks);
@@ -355,9 +359,10 @@ public class TcpStack extends Node {
             return _returnnext(pkb, l4output);
         }
         var tcpPkt = pkb.tcpPkt;
-        if (tcpPkt.isPsh()) {
-            long seq = tcpPkt.getSeqNum();
-            ByteArray data = tcpPkt.getData();
+        var data = tcpPkt.getData();
+        if (data != null && data.length() > 0) {
+            // PSH is only a hint, data must be accepted regardless of the flag
+            long seq = TcpUtils.extendSeq(pkb.tcp.receivingQueue.getExpectingSeq(), tcpPkt.getSeqNum());
             pkb.tcp.receivingQueue.store(new Segment(seq, data.copy()));
             _tcpAck(pkb.network, pkb.tcp);
         }
@@ -425,7 +430,8 @@ public class TcpStack extends Node {
         var tcpPkt = pkb.tcpPkt;
         if (tcpPkt.isFin()) {
             assert Logger.lowLevelDebug("received FIN again, maybe it's retransmission");
-            if (tcpPkt.getSeqNum() == pkb.tcp.receivingQueue.getExpectingSeq() - 1) {
+            long seq = TcpUtils.extendSeq(pkb.tcp.receivingQueue.getExpectingSeq(), tcpPkt.getSeqNum());
+            if (seq == pkb.tcp.receivingQueue.getExpectingSeq() - 1) {
                 _tcpAck(pkb.network, pkb.tcp);
                 return _return(HandleResult.STOLEN, pkb);
             }
@@ -502,6 +508,12 @@ public class TcpStack extends Node {
             sendAck(network, tcp);
             return;
         }
+        // quickack: don't let too much received-but-unacked data accumulate while waiting for the delayed timer
+        if (tcp.receivingQueue.getExpectingSeq() - tcp.receivingQueue.getLastSentAckSeq() >= TcpEntry.IMMEDIATE_ACK_DATA_SIZE) {
+            assert Logger.lowLevelDebug("quickack: too much unacked data, sending ACK immediately");
+            sendAck(network, tcp);
+            return;
+        }
         if (tcp.delayedAckTimer != null) {
             assert Logger.lowLevelDebug("delayed ack already scheduled");
             return;
@@ -539,6 +551,7 @@ public class TcpStack extends Node {
             respondTcp = TcpUtils.buildAckResponse(tcp);
         }
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
+        tcp.receivingQueue.setLastSentAckSeq(tcp.receivingQueue.getExpectingSeq());
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, respondIp);
         pkb.tcp = tcp;
@@ -555,7 +568,7 @@ public class TcpStack extends Node {
         }
     }
 
-    private List<SAckTuple> parseSackBlocks(TcpPacket tcpPkt) {
+    private List<SAckTuple> parseSackBlocks(TcpEntry tcp, TcpPacket tcpPkt) {
         tcpPkt.ensureOptions();
 
         List<SAckTuple> blocks = null;
@@ -570,7 +583,10 @@ public class TcpStack extends Node {
                 for (int i = 0; i < numBlocks; i++) {
                     long start = data.uint32(i * 8);
                     long end = data.uint32(i * 8 + 4);
-                    blocks.add(new SAckTuple(start, end));
+                    // extend the 32-bit block into our 64-bit sequence space
+                    long extStart = TcpUtils.extendSeq(tcp.sendingQueue.getAckSeq(), start);
+                    long extEnd = extStart + ((end - start) & 0xFFFFFFFFL);
+                    blocks.add(new SAckTuple(extStart, extEnd));
                 }
             }
         }
@@ -622,7 +638,6 @@ public class TcpStack extends Node {
         if (timedOutSeg != null) {
             Logger.error(LogType.SYS_ERROR, "Broken Pipe: segment [" + timedOutSeg.seqBeginInclusive + ", " + timedOutSeg.seqEndExclusive + ") retransmission timeout after " + TcpEntry.RETRANSMISSION_TIMEOUT_MS + "ms for " + tcp);
             _resetTcpConnection(network, tcp);
-            tcp.destroy();
             return;
         }
 
@@ -650,8 +665,11 @@ public class TcpStack extends Node {
                 tcp.sendingQueue.onLoss();
             }
         } else if (tcp.sendingQueue.getAvailableSendWindow() <= 0) {
-            // check congestion window before fetching data (only for non-retransmissions)
-            assert Logger.lowLevelDebug("cwnd full, waiting for ACKs before sending more");
+            // keep the retransmission timer armed while data is in flight, or a lost ACK would stall the connection
+            if (tcp.sendingQueue.getBytesInFlight() > 0 && tcp.retransmissionTimer == null) {
+                assert Logger.lowLevelDebug("send window exhausted, keeping the retransmission timer armed");
+                setRetransmitTimer(network, tcp, ctx);
+            }
             afterTransmission(network, tcp);
             return;
         }
@@ -718,6 +736,9 @@ public class TcpStack extends Node {
         }
         assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
         final int finalDelay = (int) delay;
+        if (tcp.retransmissionTimer != null) {
+            tcp.retransmissionTimer.cancel();
+        }
         tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(finalDelay, () -> {
             ctx.retransmissionCount++;
             transmitTcp(network, tcp, ctx);
@@ -742,6 +763,7 @@ public class TcpStack extends Node {
 
         tcp.setState(TcpState.CLOSED);
         network.conntrack.removeTcp(tcp.remote, tcp.local);
+        tcp.destroy(); // make sure pending timers are cancelled and the handler gets notified
     }
 
     public void resetTcpConnection(VirtualNetwork network, TcpEntry tcp) {
@@ -771,6 +793,7 @@ public class TcpStack extends Node {
         tcpPkt.setSeqNum(s.seqBeginInclusive);
         tcpPkt.setFlags(Consts.TCP_FLAGS_PSH | Consts.TCP_FLAGS_ACK);
         tcpPkt.setData(s.data);
+        tcp.receivingQueue.setLastSentAckSeq(tcp.receivingQueue.getExpectingSeq());
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);

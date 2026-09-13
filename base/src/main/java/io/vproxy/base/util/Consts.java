@@ -37,8 +37,10 @@ public class Consts {
     public static final int ICMPv6_PROTOCOL_TYPE_TIME_EXCEEDED = 3;
     public static final int ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation = 135;
     public static final int ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement = 136;
+    public static final int ICMPv6_PROTOCOL_TYPE_Router_Advertisement = 134;
     public static final int ICMPv6_OPTION_TYPE_Source_Link_Layer_Address = 1;
     public static final int ICMPv6_OPTION_TYPE_Target_Link_Layer_Address = 2;
+    public static final int ICMPv6_OPTION_TYPE_Prefix_Information = 3;
     public static final int ICMP_PROTOCOL_TYPE_DEST_UNREACHABLE = 3;
     public static final int ICMP_PROTOCOL_CODE_PORT_UNREACHABLE = 3;
     public static final int ICMPv6_PROTOCOL_TYPE_DEST_UNREACHABLE = 1;

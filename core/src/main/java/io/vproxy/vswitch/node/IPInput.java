@@ -1,10 +1,13 @@
 package io.vproxy.vswitch.node;
 
+import io.vproxy.base.util.Logger;
 import io.vproxy.commons.graph.GraphBuilder;
+import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.IcmpPacket;
 import io.vproxy.vpacket.TcpPacket;
 import io.vproxy.vpacket.UdpPacket;
 import io.vproxy.vswitch.PacketBuffer;
+import io.vproxy.vswitch.util.SwitchUtils;
 
 public class IPInput extends Node {
     private final NodeEgress icmpInput = new NodeEgress("icmp-input");
@@ -36,7 +39,17 @@ public class IPInput extends Node {
 
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
-        var pkt = pkb.ipPkt.getPacket();
+        var ipPkt = pkb.ipPkt;
+        // martian filtering: bogus-source packets must not reach the local stack
+        if (!SwitchUtils.isUsableSourceIp(ipPkt.getSrc())) {
+            assert Logger.lowLevelDebug("martian source for local delivery, drop: " + ipPkt.getSrc());
+            if (pkb.debugger.isDebugOn()) {
+                pkb.debugger.line(d -> d.append("martian source"));
+            }
+            return _returndrop(pkb);
+        }
+
+        var pkt = ipPkt.getPacket();
         if (pkt instanceof TcpPacket) {
             return _returnnext(pkb, tcpInput);
         } else if (pkt instanceof UdpPacket) {

@@ -101,6 +101,7 @@ module io.vproxy.base {
     exports io.vproxy.vpacket.dhcp.options;
     exports io.vproxy.vpacket.dns;
     exports io.vproxy.vpacket.dns.rdata;
+    exports io.vproxy.vpacket.icmpv6;
     exports io.vproxy.vpacket.tuples;
     exports io.vproxy.xdp;
     exports io.vproxy.vpxdp;

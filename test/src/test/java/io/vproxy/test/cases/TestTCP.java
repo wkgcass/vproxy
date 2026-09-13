@@ -11,6 +11,7 @@ import io.vproxy.vpacket.TcpPacket;
 import io.vproxy.base.util.Consts;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
@@ -1410,5 +1411,109 @@ public class TestTCP {
         // After gap filled, OOO data was drained → no more SACK blocks
         List<SAckTuple> blocksAfter = tcpEntry.receivingQueue.getSAckBlocks();
         assertTrue("SACK blocks should be empty after OOO data is drained", blocksAfter.isEmpty());
+    }
+
+    @Test
+    public void extendSeqAcross32BitBoundary() {
+        long M = 0xFFFFFFFFL; // 2^32 - 1
+        long W = 0x100000000L; // 2^32
+
+        assertEquals(5L, TcpUtils.extendSeq(0L, 5L));
+        assertEquals(0L, TcpUtils.extendSeq(5L, 0L)); // one below
+        assertEquals(W, TcpUtils.extendSeq(W - 5, 0L));
+        assertEquals(W + 10, TcpUtils.extendSeq(W - 5, 10)); // wraps forward
+        assertEquals(W + 5, TcpUtils.extendSeq(W + 10, 5)); // wraps backward
+        assertEquals(W + 7, TcpUtils.extendSeq(W + 3, 7L)); // stays in current window
+        assertEquals(W - 1, TcpUtils.extendSeq(W + 10, W - 1)); // old duplicate maps below
+        assertEquals(100L + 0x7FFFFFFFL, TcpUtils.extendSeq(100L, 100L + 0x7FFFFFFFL));
+        assertEquals(100L - 0x80000000L, TcpUtils.extendSeq(100L, (100L + 0x80000000L) & M)); // +2^31 -> -2^31
+    }
+
+    @Test
+    public void recvAcrossSeqWraparound() {
+        long M = 0xFFFFFFFFL; // 2^32 - 1
+        long W = 0x100000000L; // 2^32
+
+        // peer ISN = 2^32-200
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            M - 200);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        var rq = tcpEntry.receivingQueue;
+        assertEquals(W - 200, rq.getExpectingSeq());
+
+        // in-order 100 bytes ending at 2^32-99
+        rq.store(new Segment(W - 200, ByteArray.allocate(100)));
+        assertEquals(W - 100, rq.getExpectingSeq());
+
+        // out-of-order 100 bytes at wire seq 100 (i.e. 2^32+100)
+        rq.store(new Segment(TcpUtils.extendSeq(rq.getExpectingSeq(), 100L), ByteArray.allocate(100)));
+        assertEquals(W - 100, rq.getExpectingSeq());
+        assertTrue(rq.hasOutOfOrderData());
+        List<SAckTuple> blocks = rq.getSAckBlocks();
+        assertEquals(1, blocks.size());
+        assertEquals(W + 100, blocks.get(0).seqBeginInclusive); // SACK block uses extended seq
+
+        // fill the gap [2^32-99, 2^32+100)
+        rq.store(new Segment(TcpUtils.extendSeq(rq.getExpectingSeq(), (W - 100) & M), ByteArray.allocate(200)));
+        assertEquals(W + 200, rq.getExpectingSeq());
+        assertFalse(rq.hasOutOfOrderData());
+        assertEquals(400, rq.apiRead(100000).length());
+    }
+
+    @Test
+    public void sendAcrossSeqWraparound() throws Exception {
+        long M = 0xFFFFFFFFL; // 2^32 - 1
+        long W = 0x100000000L; // 2^32
+
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            1000);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        var sq = tcpEntry.sendingQueue;
+        sq.init(65535, 1400, 1);
+
+        // bump the internal seq state past the 2^32 boundary
+        Field latestSeq = TcpEntry.SendingQueue.class.getDeclaredField("latestSeq");
+        Field ackSeq = TcpEntry.SendingQueue.class.getDeclaredField("ackSeq");
+        Field fetchSeq = TcpEntry.SendingQueue.class.getDeclaredField("fetchSeq");
+        for (Field f : List.of(latestSeq, ackSeq, fetchSeq)) {
+            f.setAccessible(true);
+        }
+        long base = W - 100;
+        latestSeq.setLong(sq, base);
+        ackSeq.setLong(sq, base);
+        fetchSeq.setLong(sq, base);
+
+        // write 5000 bytes -> segments [base, base+5000)
+        int wrote = sq.apiWrite(ByteBuffer.allocate(5000));
+        assertEquals(5000, wrote);
+        var segments = sq.fetch();
+        assertEquals(4, segments.size());
+        assertEquals(base + 5000, sq.getFetchSeq());
+
+        // peer acks the first 2 segments; wire ack value = (base+2800) mod 2^32
+        long wireAck = (base + 2800) & M;
+        sq.ack(TcpUtils.extendSeq(latestSeq.getLong(sq), wireAck), 65535);
+        assertEquals(base + 2800, sq.getAckSeq());
+
+        // SACK the 4th segment with wrapped wire values
+        long s4Begin = (base + 4200) & M;
+        long s4End = (base + 5000) & M;
+        long extBegin = TcpUtils.extendSeq(sq.getAckSeq(), s4Begin);
+        long extEnd = extBegin + ((s4End - s4Begin) & M);
+        sq.markSackRetransmitSegments(List.of(new SAckTuple(extBegin, extEnd)));
+        assertTrue(segments.get(3).sacked);
+        assertFalse(segments.get(2).sacked);
+
+        // retransmit fetch should only return the unsacked 3rd segment
+        // (note: fetch() reuses its internal list, so compare sequence numbers, not object identity)
+        var retrans = sq.fetch(true);
+        assertEquals(1, retrans.size());
+        assertEquals(base + 2800, retrans.get(0).seqBeginInclusive);
     }
 }
