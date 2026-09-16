@@ -6,7 +6,7 @@ import io.vproxy.vfd.IPv6;
 
 import java.util.Objects;
 
-public abstract class Network {
+public abstract class Network implements Networks.Rule {
     protected final IP ip;
     protected final ByteArray mask;
     protected final int maskNumber;

@@ -110,6 +110,43 @@ public class ConfigProcessor {
         return configLoader.getDirectRelayIpBondTimeout();
     }
 
+    public boolean isDirectRelayTunEnabled() {
+        return configLoader.isDirectRelayTunEnabled();
+    }
+
+    public String getDirectRelayTunDev() {
+        return configLoader.getDirectRelayTunDev();
+    }
+
+    public String getDirectRelayTunMac() {
+        return configLoader.getDirectRelayTunMac();
+    }
+
+    public String getDirectRelayTunPostScript() {
+        return configLoader.getDirectRelayTunPostScript();
+    }
+
+    public IP getDirectRelayTunDnsIP() {
+        return configLoader.getDirectRelayTunDnsIP();
+    }
+
+    public IP getDirectRelayTunDnsIP6() {
+        return configLoader.getDirectRelayTunDnsIP6();
+    }
+
+    public IP getDirectRelayTunHostIP() {
+        return configLoader.getDirectRelayTunHostIP();
+    }
+
+    public IP getDirectRelayTunHostIP6() {
+        return configLoader.getDirectRelayTunHostIP6();
+    }
+
+    // the relay http/https servers (80/443) are launched for direct-relay in non-tun mode
+    public boolean isRelayHttpHttpsLaunched() {
+        return isDirectRelay() && !isDirectRelayTunEnabled();
+    }
+
     public List<DomainChecker> getHttpsSniErasureDomains() {
         return configLoader.getHttpsSniErasureDomains();
     }
@@ -253,7 +290,7 @@ public class ConfigProcessor {
                     certs[i] = files.get(i);
                 }
                 String key = files.get(files.size() - 1);
-                CertKey certKey = CoreUtils.readCertKeyFromFile("agent.https-sni-erasure.cert-key." + idx, certs, key);
+                CertKey certKey = CoreUtils.readCertKeyFromFile("agent.tls-sni-erasure.cert-key." + idx, certs, key);
                 httpsSniErasureCertKeys.add(certKey);
                 ++idx;
             }

@@ -16,6 +16,7 @@ import vjson.util.ObjectBuilder;
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.MacAddress;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -56,6 +57,14 @@ public class ConfigLoader {
     private IPPort directRelayListen = null;
     private IPPort directRelayListen6 = null;
     private int directRelayIpBondTimeout = 10 * 60_000;
+    private boolean directRelayTunEnabled = false;
+    private String directRelayTunDev = "tun";
+    private String directRelayTunMac = "00:00:00:05:05:05";
+    private String directRelayTunPostScript = null;
+    private IP directRelayTunDnsIP = null;
+    private IP directRelayTunDnsIP6 = null;
+    private IP directRelayTunHostIP = null;
+    private IP directRelayTunHostIP6 = null;
     private String user;
     private String pass;
     private String cacertsPath;
@@ -176,6 +185,38 @@ public class ConfigLoader {
 
     public int getDirectRelayIpBondTimeout() {
         return directRelayIpBondTimeout;
+    }
+
+    public boolean isDirectRelayTunEnabled() {
+        return directRelayTunEnabled;
+    }
+
+    public String getDirectRelayTunDev() {
+        return directRelayTunDev;
+    }
+
+    public String getDirectRelayTunMac() {
+        return directRelayTunMac;
+    }
+
+    public String getDirectRelayTunPostScript() {
+        return directRelayTunPostScript;
+    }
+
+    public IP getDirectRelayTunDnsIP() {
+        return directRelayTunDnsIP;
+    }
+
+    public IP getDirectRelayTunDnsIP6() {
+        return directRelayTunDnsIP6;
+    }
+
+    public IP getDirectRelayTunHostIP() {
+        return directRelayTunHostIP;
+    }
+
+    public IP getDirectRelayTunHostIP6() {
+        return directRelayTunHostIP6;
     }
 
     public List<DomainChecker> getHttpsSniErasureDomains() {
@@ -357,6 +398,79 @@ public class ConfigLoader {
                 if (config.getAgent().getDirectRelay() != null) {
                     directRelayIpBondTimeout = config.getAgent().getDirectRelay().getIpBondTimeout() * 60 * 1000;
                 }
+                if (config.getAgent().getDirectRelay() != null && config.getAgent().getDirectRelay().getTun() != null) {
+                    var tun = config.getAgent().getDirectRelay().getTun();
+                    directRelayTunEnabled = tun.getEnabled();
+                    if (!tun.getDev().isBlank()) {
+                        directRelayTunDev = tun.getDev();
+                    }
+                    if (!tun.getMac().isBlank()) {
+                        // validate the mac string
+                        try {
+                            if (!new MacAddress(tun.getMac()).isUnicast()) {
+                                throw new IllegalArgumentException("tun mac must be unicast");
+                            }
+                        } catch (Exception e) {
+                            throw new Exception("invalid mac address in agent.direct-relay.tun.mac: " + tun.getMac());
+                        }
+                        directRelayTunMac = tun.getMac();
+                    }
+                    if (!tun.getPostScript().isBlank()) {
+                        directRelayTunPostScript = Utils.filename(tun.getPostScript());
+                    }
+                    if (!tun.getDnsIP().isBlank()) {
+                        var val = tun.getDnsIP();
+                        byte[] bytes;
+                        try {
+                            bytes = IP.parseIpString(val);
+                        } catch (Exception e) {
+                            throw new Exception("invalid ip in agent.direct-relay.tun.dns-ip: " + val);
+                        }
+                        if (bytes == null || bytes.length != 4) {
+                            throw new Exception("agent.direct-relay.tun.dns-ip expects an ipv4 address, but got: " + val);
+                        }
+                        directRelayTunDnsIP = IP.from(bytes);
+                    }
+                    if (!tun.getDnsIP6().isBlank()) {
+                        var val = tun.getDnsIP6();
+                        byte[] bytes;
+                        try {
+                            bytes = IP.parseIpString(val);
+                        } catch (Exception e) {
+                            throw new Exception("invalid ip in agent.direct-relay.tun.dns-ip6: " + val);
+                        }
+                        if (bytes == null || bytes.length != 16) {
+                            throw new Exception("agent.direct-relay.tun.dns-ip6 expects an ipv6 address, but got: " + val);
+                        }
+                        directRelayTunDnsIP6 = IP.from(bytes);
+                    }
+                    if (!tun.getHostIP().isBlank()) {
+                        var val = tun.getHostIP();
+                        byte[] bytes;
+                        try {
+                            bytes = IP.parseIpString(val);
+                        } catch (Exception e) {
+                            throw new Exception("invalid ip in agent.direct-relay.tun.host-ip: " + val);
+                        }
+                        if (bytes == null || bytes.length != 4) {
+                            throw new Exception("agent.direct-relay.tun.host-ip expects an ipv4 address, but got: " + val);
+                        }
+                        directRelayTunHostIP = IP.from(bytes);
+                    }
+                    if (!tun.getHostIP6().isBlank()) {
+                        var val = tun.getHostIP6();
+                        byte[] bytes;
+                        try {
+                            bytes = IP.parseIpString(val);
+                        } catch (Exception e) {
+                            throw new Exception("invalid ip in agent.direct-relay.tun.host-ip6: " + val);
+                        }
+                        if (bytes == null || bytes.length != 16) {
+                            throw new Exception("agent.direct-relay.tun.host-ip6 expects an ipv6 address, but got: " + val);
+                        }
+                        directRelayTunHostIP6 = IP.from(bytes);
+                    }
+                }
                 {
                     var auth = config.getProxy().getAuth();
                     String[] userpass = auth.split(":");
@@ -414,7 +528,7 @@ public class ConfigLoader {
                     if (args.size() == 3) {
                         autoSignWorkingDirectory = new File(Utils.filename(args.get(2)));
                         if (!autoSignWorkingDirectory.isDirectory()) {
-                            throw new Exception("agent.https-sni-erasure.cert-key.auto-sign tempDir is not a directory");
+                            throw new Exception("agent.tls-sni-erasure.cert-key.auto-sign tempDir is not a directory");
                         }
                     } else {
                         // allocate the temporary directory for auto signing
@@ -520,10 +634,10 @@ public class ConfigLoader {
         if (autoSignCert == null) {
             if (directRelayIpRange == null) {
                 if (!httpsSniErasureDomains.isEmpty()) {
-                    failReasons.add("agent.https-sni-erasure.cert-key.list is empty and auto-sign is disabled, but https-sni-erasure.domain.list is not empty");
+                    failReasons.add("agent.tls-sni-erasure.cert-key.list is empty and auto-sign is disabled, but agent.tls-sni-erasure.domains is not empty");
                 }
                 if (directRelay) {
-                    failReasons.add("agent.https-sni-erasure.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
+                    failReasons.add("agent.tls-sni-erasure.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
                 }
             }
         }
@@ -543,23 +657,88 @@ public class ConfigLoader {
             }
         }
         // check for direct-relay.ip-range/listen
-        if (directRelayIpRange != null && directRelayListen == null) {
+        if (!directRelayTunEnabled && directRelayIpRange != null && directRelayListen == null) {
             failReasons.add("agent.direct-relay.ip-range is set, but agent.direct-relay.listen is not set");
         }
         if (directRelayIpRange == null && directRelayListen != null) {
             failReasons.add("agent.direct-relay.ip-range is not set, but agent.direct-relay.listen is set");
         }
         // check for direct-relay.ip6-range/listen6
-        if (directRelayIp6Range != null && directRelayListen6 == null) {
+        if (!directRelayTunEnabled && directRelayIp6Range != null && directRelayListen6 == null) {
             failReasons.add("agent.direct-relay.ip6-range is set, but agent.direct-relay.listen6 is not set");
         }
         if (directRelayIp6Range == null && directRelayListen6 != null) {
             failReasons.add("agent.direct-relay.ip6-range is not set, but agent.direct-relay.listen6 is set");
         }
-        // check for https-sni-erasure and certificates configuration
+        // check for direct-relay.tun
+        if (directRelayTunEnabled) {
+            for (var range : new Network[]{directRelayIpRange, directRelayIp6Range}) {
+                if (range != null && range.getMask() > (range.getIp().getAddress().length == 4 ? 29 : 125)) {
+                    failReasons.add("agent.direct-relay.tun requires at least 8 addresses in each ip range");
+                }
+            }
+            if (directRelayIpRange != null) {
+                var hostIp = directRelayTunHostIP != null ? directRelayTunHostIP
+                    : io.vproxy.vproxyx.websocks.relay.DirectRelayTunSetup.hostIP(directRelayIpRange);
+                if (directRelayTunDnsIP != null && directRelayTunDnsIP.equals(hostIp)) {
+                    failReasons.add("agent.direct-relay.tun.dns-ip conflicts with the reserved tun host address");
+                }
+                if (directRelayTunHostIP != null && !directRelayIpRange.contains(directRelayTunHostIP)) {
+                    failReasons.add("agent.direct-relay.tun.host-ip " + directRelayTunHostIP.formatToIPString() + " is not inside agent.direct-relay.ip-range " + directRelayIpRange);
+                }
+            }
+            if (!directRelay) {
+                failReasons.add("agent.direct-relay.tun is enabled, but agent.direct-relay is not enabled");
+            }
+            if (directRelayIpRange == null) {
+                failReasons.add("agent.direct-relay.tun is enabled, but agent.direct-relay.ip-range is not set");
+            }
+            if (directRelayListen != null) {
+                failReasons.add("agent.direct-relay.tun is enabled, but agent.direct-relay.listen is set, which is only used for tproxy mode");
+            }
+            if (directRelayListen6 != null) {
+                failReasons.add("agent.direct-relay.tun is enabled, but agent.direct-relay.listen6 is set, which is only used for tproxy mode");
+            }
+            if (directRelayTunDnsIP == null) {
+                failReasons.add("agent.direct-relay.tun is enabled, but agent.direct-relay.tun.dns-ip is not set");
+            } else if (directRelayIpRange != null && !directRelayIpRange.contains(directRelayTunDnsIP)) {
+                failReasons.add("agent.direct-relay.tun.dns-ip " + directRelayTunDnsIP.formatToIPString() + " is not inside agent.direct-relay.ip-range " + directRelayIpRange);
+            }
+            if (directRelayIp6Range == null) {
+                if (directRelayTunDnsIP6 != null) {
+                    failReasons.add("agent.direct-relay.tun.dns-ip6 is set, but agent.direct-relay.ip6-range is not set");
+                }
+                if (directRelayTunHostIP6 != null) {
+                    failReasons.add("agent.direct-relay.tun.host-ip6 is set, but agent.direct-relay.ip6-range is not set");
+                }
+            } else {
+                var hostIp6 = directRelayTunHostIP6 != null ? directRelayTunHostIP6
+                    : io.vproxy.vproxyx.websocks.relay.DirectRelayTunSetup.hostIP(directRelayIp6Range);
+                if (directRelayTunDnsIP6 == null) {
+                    failReasons.add("agent.direct-relay.tun is enabled with ip6-range, but agent.direct-relay.tun.dns-ip6 is not set");
+                } else if (directRelayTunDnsIP6.equals(hostIp6)) {
+                    failReasons.add("agent.direct-relay.tun.dns-ip6 conflicts with the reserved tun host address");
+                } else if (!directRelayIp6Range.contains(directRelayTunDnsIP6)) {
+                    failReasons.add("agent.direct-relay.tun.dns-ip6 " + directRelayTunDnsIP6.formatToIPString() + " is not inside agent.direct-relay.ip6-range " + directRelayIp6Range);
+                }
+                if (directRelayTunHostIP6 != null && !directRelayIp6Range.contains(directRelayTunHostIP6)) {
+                    failReasons.add("agent.direct-relay.tun.host-ip6 " + directRelayTunHostIP6.formatToIPString() + " is not inside agent.direct-relay.ip6-range " + directRelayIp6Range);
+                }
+            }
+            if (udpOverTcpEnabled) {
+                failReasons.add("agent.direct-relay.tun and agent.uot cannot be enabled at the same time");
+            }
+            if (quicEnabled) {
+                failReasons.add("agent.direct-relay.tun and agent.quic cannot be enabled at the same time");
+            }
+            if (unetEnabled) {
+                failReasons.add("agent.direct-relay.tun and agent.unet cannot be enabled at the same time");
+            }
+        }
+        // check for tls-sni-erasure and certificates configuration
         if (!httpsSniErasureDomains.isEmpty()) {
             if (autoSignCert == null && httpsSniErasureCertKeyFiles.isEmpty()) {
-                failReasons.add("https-sni-erasure.domain.list is set, but neither agent.https-sni-erasure.cert-key.auto-sign nor agent.https-sni-erasure.cert-key.list set");
+                failReasons.add("agent.tls-sni-erasure.domains is set, but neither agent.tls-sni-erasure.cert-key.auto-sign nor agent.tls-sni-erasure.cert-key.list set");
             }
         }
         // check for consistency of server list and domain list

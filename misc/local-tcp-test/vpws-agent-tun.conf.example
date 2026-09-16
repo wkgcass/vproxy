@@ -1,0 +1,31 @@
+{
+  agent {
+    # run the direct-relay and dns servers on the userspace tcp/ip stack
+    # with a tun device (see doc_zh/vpws-direct-relay.md for details)
+    direct-relay {
+      enabled = true
+      ip-range = 100.64.0.0/10
+      tun {
+        enabled = true
+        dev = tun%d
+        dns-ip = 100.64.0.53
+        # host side address of the tun device;
+        # defaults to the first host address of the ip range (network + 1)
+        # host-ip = 100.64.0.1
+      }
+    }
+  }
+  proxy {
+    auth = your-user:your-password
+    groups = [
+      {
+        servers = [
+          'websockss://your-vpws-server.example.com:8443'
+        ]
+        domains = [
+          /.*/
+        ]
+      }
+    ]
+  }
+}

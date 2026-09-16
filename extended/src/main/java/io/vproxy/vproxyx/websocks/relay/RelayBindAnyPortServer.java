@@ -15,6 +15,8 @@ import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.component.proxy.ConnectorGen;
 import io.vproxy.component.proxy.Proxy;
 import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.vfd.FDs;
+import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
 
@@ -28,6 +30,8 @@ public class RelayBindAnyPortServer {
     private final DomainBinder domainBinder;
     private final IPPort bindAddress;
 
+    // pass null as the bindAddress for the userspace tcp/ip stack mode,
+    // where the listening fd binds the wildcard address with port 0 (see launchUserSpace)
     public RelayBindAnyPortServer(WebSocksProxyAgentConnectorProvider connectorProvider, DomainBinder domainBinder, IPPort bindAddress) {
         this.connectorProvider = connectorProvider;
         this.domainBinder = domainBinder;
@@ -39,6 +43,27 @@ public class RelayBindAnyPortServer {
 
         ServerSock server = ServerSock.create(bindAddress, new ServerSock.BindOptions().setTransparent(true));
 
+        return launch0(acceptor, worker, server, bindAddress);
+    }
+
+    /**
+     * Launch the server on a userspace tcp/ip stack.
+     * <p>
+     * The listening fd binds the wildcard address with port 0 (0.0.0.0:0 or ::0),
+     * so connections to any ip of the stack network and any port are accepted,
+     * and the accepted connection's local address is exactly the original destination,
+     * which is the userspace equivalent of a transparent fd (no tproxy needed).
+     * <p>
+     * The passed-in event loop group must be the (single) loop running the stack.
+     */
+    public Proxy launchUserSpace(EventLoopGroup loop, FDs fds, boolean ipv6) throws IOException {
+        IPPort any = new IPPort(ipv6 ? IP.from("::") : IP.from("0.0.0.0"), 0);
+        ServerSock server = ServerSock.create(any, fds);
+
+        return launch0(loop, loop, server, any);
+    }
+
+    private Proxy launch0(EventLoopGroup acceptor, EventLoopGroup worker, ServerSock server, IPPort bind) throws IOException {
         Proxy proxy = new Proxy(
             new ProxyNetConfig()
                 .setAcceptLoop(acceptor.next())
@@ -48,7 +73,7 @@ public class RelayBindAnyPortServer {
                 .setServer(server)
                 .setConnGen(new RelayBindAnyPortServerConnectorGen()),
             s -> {
-                Logger.warn(LogType.ALERT, "closing server " + bindAddress);
+                Logger.warn(LogType.ALERT, "closing server " + bind);
                 server.close();
             });
         proxy.handle();

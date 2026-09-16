@@ -72,6 +72,9 @@ test/src/test/java/io/vproxy/test/gen/packetfilters/*.java
 # javaagent
 !misc/modify-gradle-compiler-args-agent.jar
 
+# local test configs (may contain credentials), see *.conf.example
+/misc/local-tcp-test/*.conf
+
 # some submodules but not tracked with gitsubmodule
 submodules/msquic/
 

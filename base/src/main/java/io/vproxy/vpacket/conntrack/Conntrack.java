@@ -32,6 +32,8 @@ public class Conntrack {
 
     private static final IP ipv4BindAny = IP.from("0.0.0.0");
     private static final IP ipv6BindAny = IP.from("::");
+    private static final IPPort ipv4BindAnyPort = new IPPort(ipv4BindAny, 0);
+    private static final IPPort ipv6BindAnyPort = new IPPort(ipv6BindAny, 0);
 
     public Conntrack(SelectorEventLoop loop) {
         this.loop = loop;
@@ -86,7 +88,15 @@ public class Conntrack {
     }
 
     public TcpListenEntry lookupTcpListen(IPPort dst) {
-        var ret = tcpListenEntries.get(dst);
+        var ret = lookupTcpListenWithoutAnyPort(dst);
+        if (ret != null) {
+            return ret;
+        }
+        return tcpListenEntries.get(dst.getAddress() instanceof IPv4 ? ipv4BindAnyPort : ipv6BindAnyPort);
+    }
+
+    public TcpListenEntry lookupTcpListenWithoutAnyPort(IPPort dst) {
+        var ret = lookupTcpListenExact(dst);
         if (ret != null) {
             return ret;
         }
@@ -96,6 +106,10 @@ public class Conntrack {
         } else {
             return tcpListenEntries.get(new IPPort(ipv6BindAny, dst.getPort()));
         }
+    }
+
+    public TcpListenEntry lookupTcpListenExact(IPPort dst) {
+        return tcpListenEntries.get(dst);
     }
 
     public UdpListenEntry lookupUdpListen(IPPort dst) {

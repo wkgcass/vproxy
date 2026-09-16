@@ -62,6 +62,7 @@ PNI 原生库（`base/src/main/c/libpni.so`）仓库里已预编译好 Linux x64
 | `prepare_classpath.sh` | 构建 base/core jar 并提取 POC classpath | JDK 22 + gradle |
 | `run_swtcp.sh` | 以 root 启动 SwitchTCP POC（前台运行） | root，先跑过 prepare |
 | `test_nonpsh.py` | 用 `TCP_CORK` 让内核发出不带 PSH 的中间分片，验证非 PSH 数据被正确接收 | POC 已启动 |
+| `run_vpws_agent_test.sh` | vpws agent（direct-relay tun 模式）一键端到端测试，含配置自动回滚 | root + vproxy.jar + 真实配置 |
 
 ## 三、使用方法与预期输出
 
@@ -149,3 +150,67 @@ curl -s -X POST http://169.254.99.254/exit --data '1'
   `ip link set` 时以启动日志里的 `tun device added: tunXX` 为准。
 - 从 Windows 侧 Git Bash 调用 wsl 时，`/mnt/...` 之类的路径参数会被
   MSYS 转换破坏，建议统一用 `wsl -d Ubuntu-WSL2 -- bash -c '...'` 包裹。
+
+## 六、vpws agent direct-relay（tun 用户态栈）测试
+
+`vpws-agent-tun.conf.example` 是 agent 以 tun 用户态栈模式跑 direct-relay 的模板
+（jar 构建方式同上，Windows 侧 `./gradlew shadowJar` 即可，仓库自带 Linux 原生库）。
+
+### 1. 准备配置
+
+```bash
+cp misc/local-tcp-test/vpws-agent-tun.conf.example misc/local-tcp-test/vpws-agent-tun.conf
+# 编辑真实配置：填入 proxy.auth 与真实的 websocks server 地址
+```
+
+注意：`vpws-agent-tun.conf` 含凭据，已被 gitignore（`.gitignore` 中的
+`/misc/local-tcp-test/*.conf`），不要提交。
+
+### 2. 一键测试
+
+`run_vpws_agent_test.sh` 完成整个流程：启动 agent → 从日志解析 tun 设备名并配置
+主机侧（`ip addr add`/`ip link up`）→ ping dns-ip 预热 tun 侧 ARP（首个回程包按设计
+会被丢弃，由 arp-over-icmp 机制学习对端）→ 直连对照 → 切系统 DNS 到栈内 DNS →
+代理访问测试 → **回滚**（恢复 /etc/resolv.conf、删除 tun 设备、杀掉 agent 进程）。
+
+回滚保证：
+
+- 任意步骤显式失败（agent 启动失败、测试 FAIL）→ 退出时自动回滚；
+- Ctrl+C / SIGTERM → 信号转为退出码，由 EXIT trap 统一回滚（只执行一次）；
+- 前置检查阶段（root/配置/jar/jdk）失败时尚未修改任何东西，无需回滚；
+- **SIGKILL 无法拦截**是唯一例外——残留状态由下次运行自愈：备份存放在固定路径
+  `/root/.vpws-agent-test-resolv.conf.bak`，脚本启动时检测到即先恢复 DNS、杀掉
+  残留 agent、删除残留 tun 设备再继续。
+
+```bash
+wsl -d Ubuntu-WSL2 -u root -- bash -c 'bash /mnt/d/wsl-workspace/opensource/vproxy/misc/local-tcp-test/run_vpws_agent_test.sh'
+```
+
+预期输出（测试网址默认 `https://www.youtube.com/`，可用 `TEST_URL=...` 覆盖）：
+
+```
+[test] direct access (control):
+  direct access failed (expected in blocked networks)
+[run] starting agent (log: /root/vpws-agent.log) ...
+[run] agent ready, tun device: tun0
+[warmup] ping the dns ip to learn the tun arp entry:
+  ...
+[test] proxied access (system dns -> 100.64.0.53):
+  200
+RESULT: PASS
+[cleanup] restoring resolv.conf, removing tun device, stopping agent ...
+```
+
+细节说明：
+
+- jdk 自动查找：优先 `JAVA_BIN` 环境变量，其次 `/home/*/jdks/jdk-*/bin/java`，
+  最后 PATH 上的 java；
+- 等待 agent 就绪的方式是轮询日志中的
+  `relay-bind-any-port-server started on the userspace stack`（最多 20s）；
+- agent 日志中应看到 `[DNS] assigned ip ...`、`[DNS] respond ... to 100.64.0.1:port`、
+  `[PROXY] ipMap: <fake-ip>:443 -> <domain>:443`、`proxy the request ... via DEFAULT`；
+- 若测试失败，agent 日志保留在 `/root/vpws-agent.log` 供排查。
+
+**坑**（脚本内已规避，手工操作时注意）：清理用的 pkill 模式必须写成 `"[v]proxy.jar"`
+这类括号形式，并且不能与启动命令放在同一条 bash -c 里——否则模式会匹配到自身
+命令行（其中含 `vproxy.jar` 等字样），把当前 shell 一并杀死（表现为 exit code 9）。

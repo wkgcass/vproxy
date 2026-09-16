@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 public class Networks<R extends Networks.Rule> {
-    private final List<V4RulesGroupedByMask> v4Rules = new ArrayList<>(32);
-    private final List<V6RulesGroupedByMask> v6Rules = new ArrayList<>(128);
+    private final List<V4RulesGroupedByMask> v4Rules = new ArrayList<>(1);
+    private final List<V6RulesGroupedByMask> v6Rules = new ArrayList<>(1);
 
     public interface Rule {
     }

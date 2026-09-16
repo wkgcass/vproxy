@@ -23,8 +23,10 @@ import io.vproxy.vfd.FDProvider;
 import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.MacAddress;
 import io.vproxy.vproxyx.util.Browser;
 import io.vproxy.vproxyx.websocks.*;
+import io.vproxy.vproxyx.websocks.relay.DirectRelayTunSetup;
 import io.vproxy.vproxyx.websocks.relay.DomainBinder;
 import io.vproxy.vproxyx.websocks.relay.RelayBindAnyPortServer;
 import io.vproxy.vproxyx.websocks.relay.RelayHttpServer;
@@ -39,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-@SuppressWarnings({"StringTemplateMigration"})
 public class WebSocksProxyAgent {
     private static final String defaultConfigName = "vpws-agent.conf";
 
@@ -62,6 +63,7 @@ public class WebSocksProxyAgent {
     private Proxy relayHttps = null;
     private Proxy relayAny = null;
     private Proxy relayAny6 = null;
+    private DirectRelayTunSetup directRelayTunSetup = null;
 
     private void loadConfig(String[] args) throws Exception {
         if (configLoader != null) {
@@ -111,7 +113,7 @@ public class WebSocksProxyAgent {
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors
         }
-        if (configLoader.isUdpOverTcpEnabled() || configLoader.isUnetEnabled()) {
+        if (configLoader.isUdpOverTcpEnabled() || configLoader.isUnetEnabled() || configLoader.isDirectRelayTunEnabled()) {
             workers = 1; // restrict to one thread
         }
 
@@ -162,14 +164,38 @@ public class WebSocksProxyAgent {
             WebSocksUtils.initHttpsSniErasureContext(configProcessor);
         }
 
+        // maybe setup the userspace tcp/ip stack (tun device) for direct-relay
+        // it must be created before the domain binders and the dns server
+        if (configProcessor.isDirectRelayTunEnabled()) {
+            directRelayTunSetup = DirectRelayTunSetup.launch(new DirectRelayTunSetup.Params()
+                .setEventLoopGroup(worker)
+                .setV4Range(configProcessor.getDirectRelayIpRange())
+                .setV6Range(configProcessor.getDirectRelayIp6Range())
+                .setDev(configProcessor.getDirectRelayTunDev())
+                .setMac(new MacAddress(configProcessor.getDirectRelayTunMac()))
+                .setPostScript(configProcessor.getDirectRelayTunPostScript())
+                .setDnsIp(configProcessor.getDirectRelayTunDnsIP())
+                .setDnsIp6(configProcessor.getDirectRelayTunDnsIP6())
+                .setHostIp(configProcessor.getDirectRelayTunHostIP())
+                .setHostIp6(configProcessor.getDirectRelayTunHostIP6()));
+        }
+
         // domain binder
         DomainBinder domainBinder = null;
         if (configProcessor.getDirectRelayIpRange() != null) {
-            domainBinder = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIpRange());
+            if (directRelayTunSetup != null) {
+                domainBinder = directRelayTunSetup.createDomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIpRange());
+            } else {
+                domainBinder = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIpRange());
+            }
         }
         DomainBinder domainBinder6 = null;
         if (configProcessor.getDirectRelayIp6Range() != null) {
-            domainBinder6 = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIp6Range());
+            if (directRelayTunSetup != null) {
+                domainBinder6 = directRelayTunSetup.createDomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIp6Range());
+            } else {
+                domainBinder6 = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIp6Range());
+            }
         }
 
         // init dns server
@@ -178,25 +204,49 @@ public class WebSocksProxyAgent {
             if (port == 0) {
                 port = 53; // just a hint. if not configured, the dns server won't start
             }
-            WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", new IPPort("0.0.0.0", port), worker, configProcessor, domainBinder, domainBinder6);
-            dnsServer = WebSocksUtils.agentDNSServer;
-            // may need to start dns server
-            if (configProcessor.getDnsListenPort() != 0) {
-                assert Logger.lowLevelDebug("start dns server");
+            boolean relayHttpHttps = configProcessor.isRelayHttpHttpsLaunched();
+            if (configProcessor.isDirectRelayTunEnabled()) {
+                // the dns servers run on the userspace tcp/ip stack,
+                // bound to the configured ips inside the direct-relay ranges
+                assert Logger.lowLevelDebug("start dns server on the userspace stack");
+                WebSocksUtils.agentDNSServer = new AgentDNSServer("dns",
+                    new IPPort(configProcessor.getDirectRelayTunDnsIP(), port), worker, configProcessor, domainBinder, domainBinder6,
+                    relayHttpHttps, directRelayTunSetup.fds(), configProcessor.getDirectRelayTunDnsIP());
+                dnsServer = WebSocksUtils.agentDNSServer;
                 WebSocksUtils.agentDNSServer.start();
-                Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
+                Logger.alert("dns server started on the userspace stack "
+                    + configProcessor.getDirectRelayTunDnsIP().formatToIPString() + ":" + port);
 
-                if (!FDProvider.get().getProvided().isV4V6DualStack()) {
-                    try {
-                        dnsServer6 = new AgentDNSServer("dns6", new IPPort("::", port), worker, configProcessor, domainBinder, domainBinder6);
-                        dnsServer6.start();
-                        Logger.alert("dns server for ipv6 started on " + configProcessor.getDnsListenPort());
-                    } catch (Exception e) {
-                        Logger.error(LogType.SYS_ERROR, "failed to launch dns on ipv6, skip and continue", e);
-                        if (dnsServer6 != null) {
-                            dnsServer6.stop();
+                // in tun mode the stack is not v4v6 dual stack, so always run a separate v6 instance when configured
+                if (configProcessor.getDirectRelayTunDnsIP6() != null) {
+                    dnsServer6 = new AgentDNSServer("dns6",
+                        new IPPort(configProcessor.getDirectRelayTunDnsIP6(), port), worker, configProcessor, domainBinder, domainBinder6,
+                        relayHttpHttps, directRelayTunSetup.fds(), configProcessor.getDirectRelayTunDnsIP6());
+                    dnsServer6.start();
+                    Logger.alert("dns server for ipv6 started on the userspace stack "
+                        + configProcessor.getDirectRelayTunDnsIP6().formatToIPString() + ":" + port);
+                }
+            } else {
+                WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", new IPPort("0.0.0.0", port), worker, configProcessor, domainBinder, domainBinder6, relayHttpHttps);
+                dnsServer = WebSocksUtils.agentDNSServer;
+                // may need to start dns server
+                if (configProcessor.getDnsListenPort() != 0) {
+                    assert Logger.lowLevelDebug("start dns server");
+                    WebSocksUtils.agentDNSServer.start();
+                    Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
+
+                    if (!FDProvider.get().getProvided().isV4V6DualStack()) {
+                        try {
+                            dnsServer6 = new AgentDNSServer("dns6", new IPPort("::", port), worker, configProcessor, domainBinder, domainBinder6, relayHttpHttps);
+                            dnsServer6.start();
+                            Logger.alert("dns server for ipv6 started on " + configProcessor.getDnsListenPort());
+                        } catch (Exception e) {
+                            Logger.error(LogType.SYS_ERROR, "failed to launch dns on ipv6, skip and continue", e);
+                            if (dnsServer6 != null) {
+                                dnsServer6.stop();
+                            }
+                            dnsServer6 = null;
                         }
-                        dnsServer6 = null;
                     }
                 }
             }
@@ -302,7 +352,20 @@ public class WebSocksProxyAgent {
         }
 
         // maybe we can start the relay servers
-        if (configProcessor.isDirectRelay()) {
+        if (configProcessor.isDirectRelayTunEnabled()) {
+            // direct-relay runs on the userspace tcp/ip stack:
+            // traffic routed to the tun device (the direct-relay ranges) is accepted
+            // by the stack on any ip and any port, so no tproxy/iptables is needed;
+            // the 80/443 relay servers are not launched because clients always
+            // connect to fake ips returned by the dns server
+            assert Logger.lowLevelDebug("start relay server on the userspace stack");
+            relayAny = new RelayBindAnyPortServer(connectorProvider, domainBinder, null).launchUserSpace(worker, directRelayTunSetup.fds(), false);
+            Logger.alert("relay-bind-any-port-server started on the userspace stack which handles " + configProcessor.getDirectRelayIpRange());
+            if (configProcessor.getDirectRelayIp6Range() != null) {
+                relayAny6 = new RelayBindAnyPortServer(connectorProvider, domainBinder6, null).launchUserSpace(worker, directRelayTunSetup.fds(), true);
+                Logger.alert("relay-bind-any-port-server6 started on the userspace stack which handles " + configProcessor.getDirectRelayIp6Range());
+            }
+        } else if (configProcessor.isRelayHttpHttpsLaunched()) {
             assert Logger.lowLevelDebug("start relay server");
             relayHttp = RelayHttpServer.launch(worker);
             Logger.alert("http relay server started on 80");
@@ -375,6 +438,13 @@ public class WebSocksProxyAgent {
             Logger.warn(LogType.ALERT, "stopping relayAny6: " + relayAny6.config.getServer().bind);
             relayAny6.stop();
             relayAny6 = null;
+        }
+        // destroy the userspace stack (tun device) for direct-relay
+        // after the dns/relay servers running on it are stopped
+        if (directRelayTunSetup != null) {
+            Logger.warn(LogType.ALERT, "destroying directRelayTunSetup");
+            directRelayTunSetup.destroy();
+            directRelayTunSetup = null;
         }
         // release configProcessor
         // stop health check

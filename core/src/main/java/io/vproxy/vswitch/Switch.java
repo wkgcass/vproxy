@@ -892,6 +892,14 @@ public class Switch {
                 if (mac == null) {
                     mac = network.ips.lookup(pkb.ipPkt.getDst());
                 }
+                if (mac == null) {
+                    // dst inside a declared local range (transparent proxy):
+                    // all addresses of the range are owned by the stack
+                    var localRange = network.lookupLocalIpRange(pkb.ipPkt.getDst());
+                    if (localRange != null) {
+                        mac = localRange.mac;
+                    }
+                }
                 if (mac != null) {
                     buildEthernetHeaderForTunDev(pkb, mac);
                 } else {

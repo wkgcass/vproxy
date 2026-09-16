@@ -110,7 +110,7 @@ public class IcmpInput extends Node {
         var inIcmp = (IcmpPacket) inIpPkt.getPacket();
 
         var srcIp = inIpPkt.getDst();
-        var srcMac = pkb.network.ips.lookup(srcIp);
+        var srcMac = pkb.lookupLocalMac(srcIp);
         if (srcMac == null) {
             Logger.shouldNotHappen("cannot find src mac for sending the icmp echo resp packet");
             if (pkb.debugger.isDebugOn()) {

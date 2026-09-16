@@ -30,6 +30,94 @@ import java.util.ArrayList;
 import static org.junit.Assert.*;
 
 public class TestSwitch {
+    @Test(timeout = 10_000)
+    public void transparentIpRange() throws Exception {
+        var network = sw.getNetwork(1);
+        var localMac = new MacAddress("02:00:00:00:00:02");
+        var peerMac = new MacAddress("02:00:00:00:00:03");
+        network.addIp(IP.from("192.168.1.53"), localMac, null);
+        network.addIp(IP.from("fd00::1:53"), localMac, null);
+        network.declareLocalIpRange(Network.from("192.168.1.0/24"), localMac);
+        network.declareLocalIpRange(Network.from("fd00::1:0/120"), localMac);
+        assertFalse(network.isLocalIpRange(IP.from("192.168.2.10")));
+        assertFalse(network.isLocalIpRange(IP.from("fd00::2:10")));
+        // lpm: the most specific range wins, and ranges can be removed
+        var specificMac = new MacAddress("02:00:00:00:00:04");
+        network.declareLocalIpRange(Network.from("192.168.1.128/25"), specificMac);
+        assertEquals(specificMac, network.lookupLocalIpRange(IP.from("192.168.1.200")).mac);
+        assertEquals(localMac, network.lookupLocalIpRange(IP.from("192.168.1.100")).mac);
+        assertFalse(network.declareLocalIpRange(Network.from("192.168.1.0/24"), specificMac));
+        assertTrue(network.removeLocalIpRange(Network.from("192.168.1.128/25")));
+        assertEquals(localMac, network.lookupLocalIpRange(IP.from("192.168.1.200")).mac);
+        for (boolean ipv6 : new boolean[]{false, true}) {
+            String src = ipv6 ? "fd00::1:1" : "192.168.1.1";
+            String dst = ipv6 ? "fd00::1:99" : "192.168.1.99";
+            assertNull(network.ips.lookup(IP.from(dst)));
+            network.arpTable.record(peerMac, IP.from(src));
+            try (var server = network.fds().openServerSocketFD()) {
+                server.bind(new IPPort(ipv6 ? "::" : "0.0.0.0", 0));
+                eth0.injectPacket(buildTcp(peerMac.toString(), src, 23456,
+                    localMac.toString(), dst, 8443, 100));
+                var response = waitForPacket(eth0);
+                var ip = (AbstractIpPacket) response.pkt.getPacket();
+                var synAck = (TcpPacket) ip.getPacket();
+                assertEquals(IP.from(dst), ip.getSrc());
+                assertEquals(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK, synAck.getFlags());
+                var ack = buildTcp(peerMac.toString(), src, 23456,
+                    localMac.toString(), dst, 8443, 101, Consts.TCP_FLAGS_ACK);
+                ((TcpPacket) ((AbstractIpPacket) ack.getPacket()).getPacket()).setAckNum(synAck.getSeqNum() + 1);
+                eth0.injectPacket(ack);
+                io.vproxy.vfd.SocketFD accepted;
+                while ((accepted = server.accept()) == null) {
+                    Thread.sleep(10);
+                }
+                assertEquals(new IPPort(dst, 8443), accepted.getLocalAddress());
+                assertEquals(new IPPort(src, 23456), accepted.getRemoteAddress());
+                accepted.close();
+                // Closing may emit FIN; do not let it enter the next iteration.
+                while (eth0.poll() != null) { }
+            }
+        }
+
+        // icmp echo, arp and ndp for ips inside the local ranges are responded,
+        // as if the whole ranges were owned by the stack
+
+        // ping a range ip (v4 and v6)
+        for (boolean ipv6 : new boolean[]{false, true}) {
+            String src = ipv6 ? "fd00::1:1" : "192.168.1.1";
+            String dst = ipv6 ? "fd00::1:77" : "192.168.1.77";
+            eth0.injectPacket(buildPing(peerMac.toString(), src, localMac.toString(), dst));
+            var response = waitForPacket(eth0);
+            var ip = (AbstractIpPacket) response.pkt.getPacket();
+            var icmp = (IcmpPacket) ip.getPacket();
+            assertEquals(IP.from(dst), ip.getSrc());
+            assertEquals(ipv6 ? Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP : Consts.ICMP_PROTOCOL_TYPE_ECHO_RESP, icmp.getType());
+        }
+
+        // arp for a range ip: the request is flooded to the other ifaces, and responded on the input iface
+        var arpReq = buildArpRequest(peerMac.toString(), "192.168.1.1", "192.168.1.77");
+        eth0.injectPacket(arpReq);
+        assertEquals(waitForPacket(eth1).pkt, arpReq);
+        assertEquals(waitForPacket(eth2).pkt, arpReq);
+        assertEquals(waitForPacket(eth3).pkt, arpReq);
+        var arpResp = (ArpPacket) waitForPacket(eth0).pkt.getPacket();
+        assertEquals(Consts.ARP_PROTOCOL_OPCODE_RESP, arpResp.getOpcode());
+        assertEquals(localMac.bytes, arpResp.getSenderMac());
+        assertEquals(IP.from("192.168.1.77").bytes, arpResp.getSenderIp());
+
+        // ndp ns for a range ip: flooded like the arp request, and responded with na
+        var ns = buildNeighborSolicitation(peerMac.toString(), "fd00::1:1", "fd00::1:77");
+        eth0.injectPacket(ns);
+        assertEquals(waitForPacket(eth1).pkt, ns);
+        assertEquals(waitForPacket(eth2).pkt, ns);
+        assertEquals(waitForPacket(eth3).pkt, ns);
+        var na = (Ipv6Packet) waitForPacket(eth0).pkt.getPacket();
+        var naIcmp = (IcmpPacket) na.getPacket();
+        assertEquals(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement, naIcmp.getType());
+        var expectedNa = SwitchUtils.buildNeighborAdvertisementPacket(localMac, IP.fromIPv6("fd00::1:77"), IP.fromIPv6("fd00::1:1"));
+        assertEquals(expectedNa, na);
+    }
+
     private Switch sw;
     private EventLoopGroup eventLoopGroup;
     private ProgramIface eth0;

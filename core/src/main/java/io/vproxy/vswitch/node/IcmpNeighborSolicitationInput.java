@@ -51,19 +51,11 @@ public class IcmpNeighborSolicitationInput extends Node {
             return _returndrop(pkb);
         }
 
-        if (!pkb.matchedIps.contains(ndpNeighborSolicitation)) {
-            assert Logger.lowLevelDebug("this ndp ns does not request for matched synthetic ip");
+        MacAddress correspondingMac = pkb.lookupLocalMac(ndpNeighborSolicitation);
+        if (correspondingMac == null) {
+            assert Logger.lowLevelDebug("this ndp ns does not request for a local ip");
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.append("no matched ip found for the neighbor solicitation packet");
-            }
-            return _returndrop(pkb);
-        }
-
-        MacAddress correspondingMac = pkb.network.ips.lookup(ndpNeighborSolicitation);
-        if (correspondingMac == null) {
-            assert Logger.lowLevelDebug("requested ip is not synthetic ip");
-            if (pkb.debugger.isDebugOn()) {
-                pkb.debugger.append("requested ip is not synthetic ip");
             }
             return _returndrop(pkb);
         }

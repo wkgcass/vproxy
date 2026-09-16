@@ -30,8 +30,9 @@ public class LocalUnicastInput extends Node {
     protected HandleResult preHandle(PacketBuffer pkb) {
         // then we search whether we have virtual hosts can accept the packet
         var dst = pkb.pkt.getDst();
-        var ips = pkb.network.ips.lookupByMac(dst);
-        if (ips == null) {
+        var ips = pkb.network.ips.lookupIPMacByMac(dst);
+        var localRanges = pkb.network.lookupLocalIpRanges(dst);
+        if (ips == null && localRanges == null) {
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger
                     .append("mac ").append(dst).append(" is not local")
@@ -40,7 +41,12 @@ public class LocalUnicastInput extends Node {
             assert Logger.lowLevelDebug("no synthetic ip found");
             return HandleResult.CONTINUE;
         }
-        pkb.setMatchedIps(ips);
+        if (ips != null) {
+            pkb.setMatchedIps(ips);
+        }
+        if (localRanges != null) {
+            pkb.setMatchedLocalRanges(localRanges);
+        }
         return HandleResult.PASS;
     }
 

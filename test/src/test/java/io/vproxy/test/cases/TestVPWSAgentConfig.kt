@@ -353,7 +353,8 @@ class TestVPWSAgentConfig {
       tmp.deleteOnExit()
       Files.writeString(tmp.toPath(), TestSSL.TEST_CERT)
       strToParse = strToParse.replace(replace, tmp.absolutePath)
-      strToCheck = strToCheck.replace(replace, tmp.absolutePath)
+      // the path is embedded into an expected json string, so backslashes (windows) must be escaped
+      strToCheck = strToCheck.replace(replace, tmp.absolutePath.replace("\\", "\\\\"))
       replaceMap[replace] = tmp.absolutePath
     }
     for (replace in listOf("{{ca.key.pem}}", "{{pixiv.key.pem}}", "{{google.key.pem}}")) {
@@ -362,7 +363,8 @@ class TestVPWSAgentConfig {
       tmp.deleteOnExit()
       Files.writeString(tmp.toPath(), TestSSL.TEST_KEY)
       strToParse = strToParse.replace(replace, tmp.absolutePath)
-      strToCheck = strToCheck.replace(replace, tmp.absolutePath)
+      // the path is embedded into an expected json string, so backslashes (windows) must be escaped
+      strToCheck = strToCheck.replace(replace, tmp.absolutePath.replace("\\", "\\\\"))
       replaceMap[replace] = tmp.absolutePath
     }
 
@@ -395,5 +397,212 @@ class TestVPWSAgentConfig {
       listOf("agent.uot and agent.quic cannot be enabled at the same time"),
       validationResult
     )
+  }
+
+  private fun loadConfig(content: String): ConfigLoader {
+    val tmpFile = File.createTempFile("vpws-agent", ".conf")
+    tmpFile.deleteOnExit()
+    Files.writeString(tmpFile.toPath(), content)
+    val loader = ConfigLoader()
+    loader.load(tmpFile.absolutePath)
+    return loader
+  }
+
+  private fun tunConfig(directRelayEnabled: String, tunBlock: String): String {
+    return "{\n" +
+      "  agent {\n" +
+      "    direct-relay {\n" +
+      "      enabled = " + directRelayEnabled + "\n" +
+      "      ip-range = 100.64.0.0/10\n" +
+      "      ip6-range = fd00::/96\n" +
+      tunBlock +
+      "    }\n" +
+      "  }\n" +
+      "  proxy {\n" +
+      "    auth = user:pass\n" +
+      "    groups = [ { servers = ['websocks://127.0.0.1:19999'] } ]\n" +
+      "  }\n" +
+      "}\n"
+  }
+
+  @Test
+  fun directRelayTun() {
+    // valid config
+    val loader = loadConfig(tunConfig("true", "" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dev = tun100\n" +
+      "        dns-ip = 100.64.0.53\n" +
+      "        dns-ip6 = fd00::53\n" +
+      "      }\n"))
+    assertTrue(loader.isDirectRelayTunEnabled)
+    assertEquals("tun100", loader.directRelayTunDev)
+    assertEquals(io.vproxy.vfd.IP.from("100.64.0.53"), loader.directRelayTunDnsIP)
+    assertEquals(io.vproxy.vfd.IP.from("fd00::53"), loader.directRelayTunDnsIP6)
+    assertEquals(emptyList<String>(), loader.validate())
+
+    // tun enabled but direct-relay disabled
+    var l = loadConfig(tunConfig("false", "" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dns-ip = 100.64.0.53\n" +
+      "        dns-ip6 = fd00::53\n" +
+      "      }\n"))
+    assertTrue(
+      l.validate().contains("agent.direct-relay.tun is enabled, but agent.direct-relay is not enabled")
+    )
+
+    // tun enabled together with tproxy listen
+    l = loadConfig(tunConfig("true", "" +
+      "      listen = 127.0.0.1:8888\n" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dns-ip = 100.64.0.53\n" +
+      "        dns-ip6 = fd00::53\n" +
+      "      }\n"))
+    assertEquals(
+      listOf("agent.direct-relay.tun is enabled, but agent.direct-relay.listen is set, which is only used for tproxy mode"),
+      l.validate()
+    )
+
+    // dns-ip out of the ip-range
+    l = loadConfig(tunConfig("true", "" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dns-ip = 192.168.1.53\n" +
+      "        dns-ip6 = fd00::53\n" +
+      "      }\n"))
+    assertEquals(
+      listOf("agent.direct-relay.tun.dns-ip 192.168.1.53 is not inside agent.direct-relay.ip-range 100.64.0.0/10"),
+      l.validate()
+    )
+
+    // ip6-range is set but dns-ip6 is missing
+    l = loadConfig(tunConfig("true", "" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dns-ip = 100.64.0.53\n" +
+      "      }\n"))
+    assertEquals(
+      listOf("agent.direct-relay.tun is enabled with ip6-range, but agent.direct-relay.tun.dns-ip6 is not set"),
+      l.validate()
+    )
+
+    // tun cannot be enabled with unet
+    l = loadConfig("{\n" +
+      "  agent {\n" +
+      "    direct-relay {\n" +
+      "      enabled = true\n" +
+      "      ip-range = 100.64.0.0/10\n" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dns-ip = 100.64.0.53\n" +
+      "      }\n" +
+      "    }\n" +
+      "    unet {\n" +
+      "      enabled = true\n" +
+      "    }\n" +
+      "  }\n" +
+      "  proxy {\n" +
+      "    auth = user:pass\n" +
+      "    groups = [ { servers = ['websocks://127.0.0.1:19999'] } ]\n" +
+      "  }\n" +
+      "}\n")
+    assertEquals(
+      listOf("agent.direct-relay.tun and agent.unet cannot be enabled at the same time"),
+      l.validate()
+    )
+
+    // host-ip/host-ip6 are configurable, default derived from the range
+    l = loadConfig(tunConfig("true", """
+      tun {
+        enabled = true
+        dns-ip = 100.64.0.53
+        dns-ip6 = fd00::53
+        host-ip = 100.64.0.9
+        host-ip6 = fd00::9
+      }
+    """))
+    assertEquals(io.vproxy.vfd.IP.from("100.64.0.9"), l.directRelayTunHostIP)
+    assertEquals(io.vproxy.vfd.IP.from("fd00::9"), l.directRelayTunHostIP6)
+    assertEquals(emptyList<String>(), l.validate())
+
+    // dns-ip conflicts with the configured host-ip
+    l = loadConfig(tunConfig("true", """
+      tun {
+        enabled = true
+        dns-ip = 100.64.0.53
+        dns-ip6 = fd00::53
+        host-ip = 100.64.0.53
+      }
+    """))
+    assertEquals(
+      listOf("agent.direct-relay.tun.dns-ip conflicts with the reserved tun host address"),
+      l.validate()
+    )
+
+    // host-ip out of the ip-range
+    l = loadConfig(tunConfig("true", """
+      tun {
+        enabled = true
+        dns-ip = 100.64.0.53
+        dns-ip6 = fd00::53
+        host-ip = 192.168.1.1
+      }
+    """))
+    assertEquals(
+      listOf("agent.direct-relay.tun.host-ip 192.168.1.1 is not inside agent.direct-relay.ip-range 100.64.0.0/10"),
+      l.validate()
+    )
+
+    // host-ip6 set without ip6-range
+    l = loadConfig("{\n" +
+      "  agent {\n" +
+      "    direct-relay {\n" +
+      "      enabled = true\n" +
+      "      ip-range = 100.64.0.0/10\n" +
+      "      tun {\n" +
+      "        enabled = true\n" +
+      "        dns-ip = 100.64.0.53\n" +
+      "        host-ip6 = fd00::1\n" +
+      "      }\n" +
+      "    }\n" +
+      "  }\n" +
+      "  proxy {\n" +
+      "    auth = user:pass\n" +
+      "    groups = [ { servers = ['websocks://127.0.0.1:19999'] } ]\n" +
+      "  }\n" +
+      "}\n")
+    assertEquals(
+      listOf("agent.direct-relay.tun.host-ip6 is set, but agent.direct-relay.ip6-range is not set"),
+      l.validate()
+    )
+  }
+
+  @Test
+  fun directRelayTunReservedHost() {
+    val loader = loadConfig(tunConfig("true", """
+      tun {
+        enabled = true
+        dns-ip = 100.64.0.1
+        dns-ip6 = fd00::1
+      }
+    """))
+    assertEquals(listOf(
+      "agent.direct-relay.tun.dns-ip conflicts with the reserved tun host address",
+      "agent.direct-relay.tun.dns-ip6 conflicts with the reserved tun host address",
+    ), loader.validate())
+  }
+
+  @Test
+  fun directRelayTunInvalidIp() {
+    try {
+      loadConfig(tunConfig("true", """
+        tun { enabled = true, dns-ip = invalid, dns-ip6 = fd00::53 }
+      """))
+      throw AssertionError("invalid IP was accepted")
+    } catch (e: Exception) {
+      assertTrue(e.message.orEmpty().contains("agent.direct-relay.tun.dns-ip"))
+    }
   }
 }

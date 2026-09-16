@@ -32,7 +32,8 @@ public class LocalBroadcastInput extends Node {
 
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
-        pkb.setMatchedIps(pkb.network.ips.allIps());
+        pkb.setMatchedIps(pkb.network.ips.entries());
+        pkb.setMatchedLocalRanges(pkb.network.allLocalIpRanges());
         var packet = pkb.pkt.getPacket();
         if (packet instanceof ArpPacket) {
             return _returnnext(pkb, arpBroadcastInput);

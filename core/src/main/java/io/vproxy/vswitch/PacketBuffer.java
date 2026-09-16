@@ -3,9 +3,11 @@ package io.vproxy.vswitch;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Networks;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpNat;
@@ -18,6 +20,7 @@ import io.vproxy.vswitch.node.TraceDebugger;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PacketBuffer extends PacketDataBuffer implements WithUserData {
@@ -72,7 +75,8 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
 
     // ----- helper fields -----
     // l3
-    public Collection<IP> matchedIps;
+    public Collection<IPMac> matchedIps;
+    public Networks<VirtualNetwork.LocalIpRange> matchedLocalRanges;
     // l4
     public TcpEntry tcp = null;
     public UdpEntry udp = null;
@@ -196,6 +200,7 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
 
     public void clearHelperFields() {
         matchedIps = null;
+        matchedLocalRanges = null;
     }
 
     public void clearFilterFields() {
@@ -339,8 +344,46 @@ public class PacketBuffer extends PacketDataBuffer implements WithUserData {
         setNetwork(networkBackup);
     }
 
-    public void setMatchedIps(Collection<IP> matchedIps) {
+    public void setMatchedIps(Collection<IPMac> matchedIps) {
         this.matchedIps = matchedIps;
+    }
+
+    public void setMatchedLocalRanges(List<VirtualNetwork.LocalIpRange> matchedLocalRanges) {
+        var networks = new Networks<VirtualNetwork.LocalIpRange>();
+        for (var r : matchedLocalRanges) {
+            networks.add(r.range, r);
+        }
+        this.matchedLocalRanges = networks;
+    }
+
+    public void setMatchedLocalRanges(Networks<VirtualNetwork.LocalIpRange> matchedLocalRanges) {
+        this.matchedLocalRanges = matchedLocalRanges;
+    }
+
+    // the mac owning the given ip among the matched synthetic ips / local ranges
+    // (for the local ranges, longest prefix match within the matched set);
+    // null when the ip is not local for this packet
+    public MacAddress lookupLocalMac(IP ip) {
+        if (matchedIps != null) {
+            for (var ipmac : matchedIps) {
+                if (ipmac.ip.equals(ip)) {
+                    return ipmac.mac;
+                }
+            }
+        }
+        if (matchedLocalRanges != null) {
+            var range = matchedLocalRanges.lookup(ip);
+            if (range != null) {
+                return range.mac;
+            }
+        }
+        return null;
+    }
+
+    // whether the given ip is owned by the local stack:
+    // either one of the matched synthetic ips, or inside one of the matched local ranges
+    public boolean isIpLocal(IP ip) {
+        return lookupLocalMac(ip) != null;
     }
 
     /**

@@ -165,17 +165,14 @@ public class Utils {
     }
 
     public static byte[] long2bytes(long v) {
-        LinkedList<Byte> bytes = new LinkedList<>();
-        while (v != 0) {
-            byte b = (byte) (v & 0xff);
-            bytes.addFirst(b);
-            v = v >> 8;
+        if (v == 0) {
+            return allocateByteArray(0);
         }
-        byte[] ret = allocateByteArray(bytes.size());
-        int idx = 0;
-        for (byte b : bytes) {
-            ret[idx] = b;
-            ++idx;
+        int len = (64 - Long.numberOfLeadingZeros(v) + 7) / 8;
+        byte[] ret = allocateByteArray(len);
+        for (int i = len - 1; i >= 0; --i) {
+            ret[i] = (byte) v;
+            v >>>= 8;
         }
         return ret;
     }

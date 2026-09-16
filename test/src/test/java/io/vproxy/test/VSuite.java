@@ -35,6 +35,7 @@ import org.junit.runners.Suite;
     TestFlowParser.class,
     TestFlowGen.class,
     TestVPWSAgentConfig.class,
+    TestDirectRelayAllocation.class,
     TestUtils.class,
     TestCommand.class,
     TestIssues.class,

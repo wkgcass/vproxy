@@ -108,6 +108,8 @@ data class DirectRelayConfig(
   var listen6: String = "",
   // ip-bond-timeout
   var ipBondTimeout: Int = 10,
+  // tun
+  var tun: DirectRelayTunConfig? = null,
 ) {
   companion object {
     val rule: Rule<DirectRelayConfig> = ObjectRule { DirectRelayConfig() }
@@ -117,6 +119,49 @@ data class DirectRelayConfig(
       .put("listen", StringRule) { listen = it }
       .put("listen6", StringRule) { listen6 = it }
       .put("ip-bond-timeout", IntRule) { ipBondTimeout = it }
+      .put("tun", DirectRelayTunConfig.rule) { tun = it }
+  }
+}
+
+data class DirectRelayTunConfig(
+  // enabled
+  // run the direct-relay and dns servers on the userspace tcp/ip stack
+  // with a tun device created by the agent itself (for now)
+  var enabled: Boolean = false,
+  // dev
+  // the tun device name; Linux accepts a pattern such as "tun%d"
+  var dev: String = "tun",
+  // mac
+  // the tun peer mac; the stack uses a distinct mac derived from this address
+  var mac: String = "00:00:00:05:05:05",
+  // post-script
+  // a script executed after the tun device is created, with env DEV/VRF/SWITCH
+  var postScript: String = "",
+  // dns-ip
+  // the ipv4 address of the dns server inside ip-range, e.g. 100.64.0.53
+  var dnsIP: String = "",
+  // dns-ip6
+  // the ipv6 address of the dns server inside ip6-range, e.g. fd00::53
+  var dnsIP6: String = "",
+  // host-ip
+  // the ipv4 address reserved for the host side of the tun device, inside ip-range;
+  // defaults to the first host address of ip-range (network address + 1)
+  var hostIP: String = "",
+  // host-ip6
+  // the ipv6 address reserved for the host side of the tun device, inside ip6-range;
+  // defaults to the first host address of ip6-range (network address + 1)
+  var hostIP6: String = "",
+) {
+  companion object {
+    val rule: Rule<DirectRelayTunConfig> = ObjectRule { DirectRelayTunConfig() }
+      .put("enabled", BoolRule) { enabled = it }
+      .put("dev", StringRule) { dev = it }
+      .put("mac", StringRule) { mac = it }
+      .put("post-script", StringRule) { postScript = it }
+      .put("dns-ip", StringRule) { dnsIP = it }
+      .put("dns-ip6", StringRule) { dnsIP6 = it }
+      .put("host-ip", StringRule) { hostIP = it }
+      .put("host-ip6", StringRule) { hostIP6 = it }
   }
 }
 
@@ -193,7 +238,7 @@ data class ProxyServerGroupConfig(
   var domains: List<String> = listOf(),
   // resolve
   var resolve: List<String> = listOf(),
-  // no-proxy.domains
+  // no-proxy
   var noProxy: List<String> = listOf(),
 ) {
   companion object {

@@ -61,16 +61,14 @@ public abstract class AbstractArpInput extends Node {
         IP ip = IP.from(targetIp.toJavaArray());
 
         // check whether we can handle the packet
-        if (!pkb.matchedIps.contains(ip)) {
+        MacAddress mac = pkb.lookupLocalMac(ip);
+        if (mac == null) {
             assert Logger.lowLevelDebug("no matched ip found for the arp packet");
             if (pkb.debugger.isDebugOn()) {
                 pkb.debugger.append("no matched ip found for the arp packet");
             }
             return _returndrop(pkb);
         }
-
-        // handle
-        MacAddress mac = pkb.network.ips.lookup(ip);
 
         assert Logger.lowLevelDebug("respond arp");
         ArpPacket resp = new ArpPacket();

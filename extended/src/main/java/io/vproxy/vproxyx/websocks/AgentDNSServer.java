@@ -16,6 +16,7 @@ import io.vproxy.component.svrgroup.Upstream;
 import vjson.JSON;
 import io.vproxy.dns.DNSServer;
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection;
+import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
@@ -35,11 +36,28 @@ public class AgentDNSServer extends DNSServer {
     private final ConfigProcessor config;
     private final DomainBinder domainBinder;
     private final DomainBinder domainBinder6;
+    private final boolean relayHttpHttps; // whether the relay http/https servers (80/443) run on this agent
+    private final FDs fdsOverride; // non-null when running on a userspace tcp/ip stack
+    private final IP tunSelfIp; // non-null when running on a userspace tcp/ip stack (tun mode)
 
     public AgentDNSServer(String alias, IPPort bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config,
                           // domainBinder/domainBinder6 is optional, respond managed domains with self ip if null
                           DomainBinder domainBinder,
-                          DomainBinder domainBinder6) {
+                          DomainBinder domainBinder6,
+                          boolean relayHttpHttps) {
+        this(alias, bindAddress, eventLoopGroup, config, domainBinder, domainBinder6, relayHttpHttps, null, null);
+    }
+
+    // relayHttpHttps: whether the relay http/https servers (80/443) run on this agent;
+    // when false, queries with no binder for the family are responded with an
+    // empty NoError answer instead of the self ip
+    // fds/tunSelfIp: when running on a userspace tcp/ip stack (tun mode), pass the stack FDs
+    // and the ip of this dns server inside the stack network
+    public AgentDNSServer(String alias, IPPort bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config,
+                          DomainBinder domainBinder,
+                          DomainBinder domainBinder6,
+                          boolean relayHttpHttps,
+                          FDs fds, IP tunSelfIp) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0, SecurityGroup.allowAll());
         this.serverGroups = config.getServers();
         this.resolves = config.getProxyResolves();
@@ -53,6 +71,27 @@ public class AgentDNSServer extends DNSServer {
         this.config = config;
         this.domainBinder = domainBinder;
         this.domainBinder6 = domainBinder6;
+        this.relayHttpHttps = relayHttpHttps;
+        this.fdsOverride = fds;
+        this.tunSelfIp = tunSelfIp;
+    }
+
+    @Override
+    protected FDs getFDs() {
+        if (fdsOverride != null) {
+            return fdsOverride;
+        }
+        return super.getFDs();
+    }
+
+    @Override
+    protected IP getLocalAddressFor(IPPort remote) {
+        if (tunSelfIp != null) {
+            // this dns server runs on a userspace stack (tun mode); the self ip is already known
+            // and a temp connected datagram fd cannot be used with the stack
+            return tunSelfIp;
+        }
+        return super.getLocalAddressFor(remote);
     }
 
     @Override
@@ -145,6 +184,9 @@ public class AgentDNSServer extends DNSServer {
     }
 
     private DNSRecord getSocks5Record(IP localAddr) {
+        if (tunSelfIp != null) {
+            return null; // tun mode: the socks5 server does not run on the userspace stack
+        }
         if (config.getSocks5ListenPort() == 0) {
             return null;
         }
@@ -152,6 +194,9 @@ public class AgentDNSServer extends DNSServer {
     }
 
     private DNSRecord getHttpConnectRecord(IP localAddr) {
+        if (tunSelfIp != null) {
+            return null; // tun mode: the httpconnect server does not run on the userspace stack
+        }
         if (config.getHttpConnectListenPort() == 0) {
             return null;
         }
@@ -159,6 +204,9 @@ public class AgentDNSServer extends DNSServer {
     }
 
     private DNSRecord getSsRecord(IP localAddr) {
+        if (tunSelfIp != null) {
+            return null; // tun mode: the ss server does not run on the userspace stack
+        }
         if (config.getSsListenPort() == 0) {
             return null;
         }
@@ -166,6 +214,9 @@ public class AgentDNSServer extends DNSServer {
     }
 
     private DNSRecord getPacServerRecord(IP localAddr) {
+        if (tunSelfIp != null) {
+            return null; // tun mode: the pac server does not run on the userspace stack
+        }
         if (config.getPacServerPort() == 0) {
             return null;
         }
@@ -173,6 +224,9 @@ public class AgentDNSServer extends DNSServer {
     }
 
     private DNSRecord getDNSServerRecord(IP localAddr) {
+        if (tunSelfIp != null) {
+            return new DNSRecord(localAddr, config.getDnsListenPort() == 0 ? 53 : config.getDnsListenPort(), "dns.agent.vproxy.local");
+        }
         if (config.getDnsListenPort() == 0) {
             return null;
         }
@@ -330,6 +384,21 @@ public class AgentDNSServer extends DNSServer {
         DNSType qtype = p.questions.isEmpty() ? DNSType.A : p.questions.get(0).qtype;
         DomainBinder binder = (qtype == DNSType.AAAA) ? domainBinder6 : domainBinder;
         if (binder == null) {
+            if (!relayHttpHttps) {
+                // No pool for this family and no local relay http/https servers to catch
+                // direct connections to the self ip. Do not advertise the self ip as
+                // a proxy destination (nor return an A record for an AAAA query).
+                DNSPacket response = new DNSPacket();
+                response.id = p.id;
+                response.isResponse = true;
+                response.opcode = p.opcode;
+                response.rd = p.rd;
+                response.ra = true;
+                response.rcode = DNSPacket.RCode.NoError;
+                response.questions.addAll(p.questions);
+                sendPacket(p.id, remote, response);
+                return;
+            }
             respondWithSelfIp(p, domain, remote);
             return;
         }

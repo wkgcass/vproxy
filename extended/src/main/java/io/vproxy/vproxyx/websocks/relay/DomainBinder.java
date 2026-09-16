@@ -8,18 +8,24 @@ import io.vproxy.vfd.IP;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class DomainBinder {
     private final SelectorEventLoop loop;
     private final byte[] network;
     private final int ipLimit;
-    private int incr = 1; // begin at 1 to skip the network address
+    private final Set<IP> reserved;
     private final Lock lock = Lock.create();
     private final Map<IP, EntryWithTimeout> ipMap = new HashMap<>(1024);
     private final Map<String, EntryWithTimeout> domainMap = new HashMap<>(1024);
 
     public DomainBinder(SelectorEventLoop loop, Network net) {
+        this(loop, net, Set.of());
+    }
+
+    public DomainBinder(SelectorEventLoop loop, Network net, Set<IP> reserved) {
         this.loop = loop;
+        this.reserved = Set.copyOf(reserved);
         this.network = net.getIp().getAddress();
         int maskInt = net.getMask();
         double ipLimitDouble = Math.pow(2, (network.length > 4 ? 128 : 32) - maskInt) - 2; // -2 to remove network and broadcast address
@@ -35,6 +41,9 @@ public class DomainBinder {
                 return entry.l3addr;
             }
             var l3addr = assignNext(domain);
+            if (l3addr == null) {
+                return null;
+            }
             entry = new EntryWithTimeout(domain, l3addr, timeout);
             domainMap.put(domain, entry);
             ipMap.put(l3addr, entry);
@@ -44,6 +53,9 @@ public class DomainBinder {
     }
 
     private IP assignNext(String domain) {
+        if (ipLimit <= 0) {
+            return null;
+        }
         // first use hash to try to keep the old ip
 
         long hash = CryptoUtils.md5ToPositiveLong(domain.getBytes());
@@ -52,45 +64,25 @@ public class DomainBinder {
             hash = -hash;
         }
         int off = (int) (hash % ipLimit) + 1; // +1 to skip the network address
-        IP i = buildIPFromIncr(off);
-        if (!ipMap.containsKey(i)) {
-            return i;
+        IP ip = buildIPFromIncr(off);
+        if (!ipMap.containsKey(ip) && !reserved.contains(ip)) {
+            return ip;
         }
         Logger.warn(LogType.ALERT, "cannot use hash-generated ip for " + domain + ", choose one instead");
-        // it's already allocated, so try to choose a free ip
-        i = assignNext0();
-        if (i != null) {
-            return i;
+        for (int delta = 1; delta < ipLimit; ++delta) {
+            int incr = (int) ((off - 1L + delta) % ipLimit) + 1;
+            IP candidate = buildIPFromIncr(incr);
+            if (!ipMap.containsKey(candidate) && !reserved.contains(candidate)) {
+                return candidate;
+            }
         }
-        // not found, search again from the beginning
-        incr = 1;
-        i = assignNext0();
-        if (i != null) {
-            return i;
-        }
-        // still not found, reset the cursor and return null
-        incr = 1;
         return null;
-    }
-
-    private IP assignNext0() {
-        while (true) {
-            ++incr;
-            if (incr > ipLimit) {
-                return null;
-            }
-            IP inet = buildIPFromIncr(incr);
-            if (ipMap.containsKey(inet)) {
-                continue;
-            }
-            return inet;
-        }
     }
 
     private IP buildIPFromIncr(int incr) {
         byte[] l3addr = Utils.allocateByteArray(network.length);
         System.arraycopy(network, 0, l3addr, 0, network.length);
-        byte[] sub = Utils.long2bytes(incr);
+        byte[] sub = Utils.long2bytes(incr & 0xffffffffL);
         for (int i = 0; i < sub.length; ++i) {
             l3addr[l3addr.length - i - 1] = (byte) (l3addr[l3addr.length - i - 1] | sub[sub.length - i - 1]);
         }
@@ -130,6 +122,7 @@ public class DomainBinder {
             if (timeout <= 0) {
                 timeout = lastTimeout;
             }
+            lastTimeout = timeout;
             if (e != null) {
                 e.cancel();
             }

@@ -291,3 +291,70 @@ sudo java -Deploy=WebSocksProxyAgent -Dvfd=posix -Djava.library.path=./base/src/
 
 1. 在客户端机上任意浏览器中（不打开任何代理选项），直接访问要代理的域名。
 2. 在agent日志中能看到DNS解析和代理。并且可以看到绑定ip和域名的日志。
+
+## 用户态协议栈版（tun）
+
+`高级版`依赖 Linux 的 tproxy + iptables + 本地路由表。`用户态协议栈版`使用 vproxy 内置的用户态 tcp/ip 协议栈（vswitch）替代该依赖：agent 自己创建一个 tun 网口，direct-relay 网段整体由用户态协议栈接管，发往该网段任意 ip、任意端口的 tcp 连接都会被栈接收，dns server 也运行在栈内。agent 与 websocks server 之间的连接仍使用普通操作系统 api。
+
+对应工作流程：
+
+1. 外部程序（或管理员）配置路由，将 direct-relay 网段指向该 tun 网口，并将系统 dns 指向网段内的 dns 地址。
+2. 用户程序发起 dns 查询，agent 的 dns 模块根据域名规则判断是否需要代理；需要时返回网段内的一个 ip（fake-ip）。整个网段在协议栈中声明为本机所有（等价于内核的 local 路由），无需逐个注册 fake-ip。
+3. 用户程序向该 fake-ip 发起 tcp 连接，包从 tun 网口进入用户态协议栈，栈完成 tcp 握手（网段内任意 ip 任意端口都会被接受，连接的本地地址即原始目的地址，等同于 transparent fd 的语义）。
+4. agent 按照 direct-relay 逻辑反查域名，向远端 websocks server 发起连接（posix api）并转发数据。
+
+### 配置方式
+
+在 `agent.direct-relay` 中追加 `tun` 段（不能与 `listen`/`listen6`、`agent.uot`、`agent.quic`、`agent.unet` 同时使用）：
+
+```
+agent {
+  direct-relay {
+    enabled = true
+    ip-range = 100.64.0.0/10
+    ip6-range = fd00::/96
+    tun {
+      enabled = true
+      dev = tun            # tun 设备名（模式），默认 tun；Linux 上可用 tun%d 让内核自动分配空闲编号
+      dns-ip = 100.64.0.53   # 必填，必须在 ip-range 内
+      dns-ip6 = fd00::53     # 配置了 ip6-range 时必填，必须在 ip6-range 内
+      # host-ip = 100.64.0.1   # 主机侧（tun 对端）地址，可选；默认取 ip-range 的第一个主机地址（网络地址 + 1）
+      # host-ip6 = fd00::1     # 配置了 ip6-range 时可选；默认取 ip6-range 的第一个主机地址
+      # mac = 00:00:00:05:05:05  # tun 侧 MAC，必须是单播地址；协议栈内部会派生一个不同的本地 MAC
+      # post-script = /path/to/script.sh  # tun 创建后执行的脚本，可用环境变量 DEV/VRF/SWITCH
+    }
+  }
+}
+```
+
+`agent.dns.listen` 可省略（默认使用 53 端口）。`relay-bind-any-port-server` 与 dns server 均运行在用户态协议栈上；80/443 的 relay server 在该模式下不会启动（客户端只会访问 dns 返回的 fake-ip）。
+
+### 主机侧配置
+
+agent 启动时会打印创建的 tun 设备名。将主机侧地址（`host-ip`/`host-ip6`，未配置时默认为网段的第一个主机地址，即网络地址 + 1）配置到该设备上；该地址和 DNS 地址均从 fake-ip 池中排除。每个网段至少包含 8 个地址，DNS 地址不能与主机地址相同。例如：
+
+```
+ip addr add 100.64.0.1/10 dev tunX
+ip -6 addr add fd00::1/96 dev tunX
+ip link set dev tunX up
+```
+
+然后将系统 dns 指向 `100.64.0.53`（v6 为 `fd00::53`），例如修改 `/etc/resolv.conf`：
+
+```
+nameserver 100.64.0.53
+```
+
+以上命令也可以写到 `post-script` 中由 agent 在创建 tun 设备后自动执行。后续 tun 网口将以 fd 形式由外部程序直接提供，届时主机侧配置将由外部程序完成。
+
+### 运行
+
+与高级版相同，需要 root 权限并使用 posix vfd：
+
+```
+sudo java -Deploy=WebSocksProxyAgent -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar "$配置文件路径"
+```
+
+### 期望结果
+
+与高级版一致：在客户端上不配置任何代理，直接访问需要代理的域名即可；agent 日志中可看到 dns 分配 fake-ip、以及 relay 的 `ipMap: fake-ip:port -> 域名:端口` 代理日志。

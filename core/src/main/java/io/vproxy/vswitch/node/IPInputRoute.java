@@ -49,7 +49,7 @@ public class IPInputRoute extends AbstractNeighborResolve {
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
         // check local
-        if (pkb.matchedIps.contains(pkb.ipPkt.getDst())) {
+        if (pkb.isIpLocal(pkb.ipPkt.getDst())) {
             return _next(pkb, ipInput);
         }
         // route

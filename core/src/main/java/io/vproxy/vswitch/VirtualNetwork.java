@@ -5,6 +5,7 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Network;
+import io.vproxy.base.util.Networks;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.XException;
 import io.vproxy.base.util.misc.WithUserData;
@@ -16,7 +17,9 @@ import io.vproxy.vswitch.stack.conntrack.EnhancedConntrack;
 import io.vproxy.vswitch.stack.fd.VSwitchFDContext;
 import io.vproxy.vswitch.stack.fd.VSwitchFDs;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -28,6 +31,7 @@ public class VirtualNetwork implements WithUserData {
     public final ArpTable arpTable;
     public final SyntheticIpHolder ips;
     public final RouteTable routeTable;
+    private final Networks<LocalIpRange> localIpRanges = new Networks<>();
     private Annotations annotations;
 
     public final Conntrack conntrack;
@@ -108,7 +112,7 @@ public class VirtualNetwork implements WithUserData {
         for (int i = 0; i < 100; ++i) { // randomly retry 100 times
             int port = ThreadLocalRandom.current().nextInt(IP_LOCAL_PORT_MAX - IP_LOCAL_PORT_MIN) + IP_LOCAL_PORT_MIN;
             var ipport = new IPPort(ip, port);
-            TcpListenEntry entry = conntrack.lookupTcpListen(ipport);
+            TcpListenEntry entry = conntrack.lookupTcpListenWithoutAnyPort(ipport);
             if (entry == null) {
                 return ipport;
             }
@@ -143,6 +147,56 @@ public class VirtualNetwork implements WithUserData {
         }
         assert Logger.lowLevelDebug("unable to allocate a free port for udp from " + ip);
         return null;
+    }
+
+    /**
+     * @param range ip range, must be inside (or equal to) this virtual network's own subnet
+     * @param mac   the mac used for local delivery of the range (e.g. for synthesizing
+     *              ethernet headers of packets from tun devices, and for matching in
+     *              LocalUnicastInput). Backing synthetic ips with the same mac is
+     *              recommended (e.g. for choosing a source ip for ARP/NDP), but not required.
+     * @return true if added succeeded, false if range already exists
+     */
+    public boolean declareLocalIpRange(Network range, MacAddress mac) throws XException {
+        Network subnet = range.getIp() instanceof IPv4 ? v4network : v6network;
+        if (subnet == null || !subnet.contains(range.getIp()) || subnet.getMask() > range.getMask()) {
+            throw new XException("local ip range " + range + " is not inside the virtual network "
+                + (range.getIp() instanceof IPv4 ? v4network : v6network));
+        }
+        if (localIpRanges.lookup(range) != null) {
+            return false;
+        }
+        localIpRanges.add(range, new LocalIpRange(range, mac));
+        return true;
+    }
+
+    public boolean removeLocalIpRange(Network range) {
+        return localIpRanges.remove(range) != null;
+    }
+
+    public LocalIpRange lookupLocalIpRange(IP ip) {
+        return localIpRanges.lookup(ip);
+    }
+
+    public List<LocalIpRange> lookupLocalIpRanges(MacAddress mac) {
+        List<LocalIpRange> ret = new ArrayList<>();
+        localIpRanges.forEach(r -> {
+            if (r.mac.equals(mac)) {
+                ret.add(r);
+            }
+        });
+        if (ret.isEmpty()) {
+            return null;
+        }
+        return ret;
+    }
+
+    public Networks<LocalIpRange> allLocalIpRanges() {
+        return localIpRanges;
+    }
+
+    public boolean isLocalIpRange(IP ip) {
+        return lookupLocalIpRange(ip) != null;
     }
 
     public FDs fds() {
@@ -197,5 +251,20 @@ public class VirtualNetwork implements WithUserData {
             return null;
         }
         return userdata.remove(key);
+    }
+
+    public static class LocalIpRange implements Networks.Rule {
+        public final Network range;
+        public final MacAddress mac;
+
+        public LocalIpRange(Network range, MacAddress mac) {
+            this.range = range;
+            this.mac = mac;
+        }
+
+        @Override
+        public String toString() {
+            return range + "->" + mac;
+        }
     }
 }

@@ -66,7 +66,7 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
         if (local != null) {
             throw new IOException("already bond " + local);
         }
-        var lsnCtx = ctx.conntrack.lookupTcpListen(l4addr);
+        var lsnCtx = ctx.conntrack.lookupTcpListenWithoutAnyPort(l4addr);
         if (lsnCtx != null) {
             throw new IOException("already listening on " + l4addr);
         }
