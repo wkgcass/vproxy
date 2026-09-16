@@ -48,6 +48,8 @@ build/
 *.dylib
 *.so
 *.dll
+# ios frameworks
+*.framework/
 
 # graal result
 /vproxy

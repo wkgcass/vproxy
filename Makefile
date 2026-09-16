@@ -41,6 +41,7 @@ clean: clean-jar
 	rm -f ./base/src/main/c/*.dylib
 	rm -f ./base/src/main/c/*.so
 	rm -f ./base/src/main/c/*.dll
+	rm -rf ./base/src/main/c/*.framework
 	cd ./submodules/vpxdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
@@ -171,6 +172,10 @@ jlink: jar
 vfdposix: libpni
 	cd ./base/src/main/c && /usr/bin/env bash ./make-general.sh
 
+.PHONY: ios-vfdposix
+ios-vfdposix: ios-libpni
+	cd ./base/src/main/c && /usr/bin/env bash ./make-ios-general.sh
+
 .PHONY: vpxdp
 ifeq ($(OS),Linux)
 vpxdp: vfdposix
@@ -293,6 +298,10 @@ vfdwindows: libpni
 .PHONY: libpni
 libpni:
 	cd ./base/src/main/c && ./make-pni.sh
+
+.PHONY: ios-libpni
+ios-libpni:
+	cd ./base/src/main/c && ./make-ios-pni.sh
 
 .PHONY: image
 image:
