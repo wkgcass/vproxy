@@ -7,7 +7,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -57,7 +57,7 @@ public class KCPHandler extends ArqUDPHandler {
     }
 
     @Override
-    public ByteArray parse(ByteArrayChannel buf) throws IOException {
+    public ByteArray parse(ByteArrayChannel buf, int receiveLimit) throws IOException {
         assert Logger.lowLevelDebug("inputting into kcp: " + buf.used());
         assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.used());
 
@@ -66,26 +66,38 @@ public class KCPHandler extends ArqUDPHandler {
             throw new IOException("writing from network to kcp failed: " + ret);
         }
 
-        ByteArray array = null;
-        while (kcp.canRecv()) {
-            List<ByteBuf> arrays = new LinkedList<>();
-            ret = kcp.recv(arrays);
+        return receive(receiveLimit);
+    }
+
+    @Override
+    public ByteArray receive(int receiveLimit) {
+        if (receiveLimit <= 0) {
+            return null;
+        }
+        int len = 0;
+        List<ByteBuf> arrays = new ArrayList<>();
+        while (len < receiveLimit && kcp.canRecv()) {
+            int ret = kcp.recv(arrays);
             if (ret <= 0) {
                 break;
             }
-            if (arrays.isEmpty()) {
-                break;
-            }
-            for (ByteBuf b : arrays) {
-                ByteArray a = b.chnl.readAll();
-                if (array == null) {
-                    array = a;
-                } else {
-                    array = array.concat(a);
-                }
+            len += ret;
+        }
+        if (len == 0) {
+            return null;
+        }
+        if (arrays.size() == 1) {
+            return arrays.getFirst().chnl.readAll();
+        }
+        ByteArray result = null;
+        for (ByteBuf b : arrays) {
+            if (result == null) {
+                result = b.chnl.readAll();
+            } else {
+                result = result.concat(b.chnl.readAll());
             }
         }
-        return array;
+        return result;
     }
 
     @Override
@@ -119,5 +131,10 @@ public class KCPHandler extends ArqUDPHandler {
     @Override
     public int clockInterval() {
         return opts.clockInterval;
+    }
+
+    @Override
+    public void close() {
+        kcp.release();
     }
 }

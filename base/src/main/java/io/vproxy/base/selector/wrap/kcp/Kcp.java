@@ -360,12 +360,15 @@ public class Kcp {
         release(rcvBuf);
         release(sndQueue);
         release(rcvQueue);
+        acklist = new int[8];
+        ackcount = 0;
     }
 
     private void release(List<Segment> segQueue) {
         for (Segment seg : segQueue) {
             seg.recycle(true);
         }
+        segQueue.clear();
     }
 
     private ByteBuf createFlushByteBuf() {
@@ -1220,6 +1223,11 @@ public class Kcp {
         }
 
         ackcount = 0;
+
+        // Release capacity retained by a previous ACK burst.
+        if (count == 0 && acklist.length > 1024) {
+            acklist = new int[1024];
+        }
 
         // probe window size (if remote window size equals zero)
         if (rmtWnd == 0) {

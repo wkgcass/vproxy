@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
+import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.LinkedList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -35,8 +35,10 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     private final WrappedSelector selector;
     private final ArqUDPInsideFDHandler fdHandler;
 
-    private final Deque<ByteBuffer> readBufs = new LinkedList<>(); // data for application level
-    private final Deque<ByteArrayChannel> writeBufs = new LinkedList<>(); // data to network level
+    private static final int READ_HIGH_WATERMARK = 1024 * 1024;
+    private int readBufferedBytes = 0;
+    private final Deque<ByteBuffer> readBufs = new ArrayDeque<>(); // data for application level
+    private final Deque<ByteArrayChannel> writeBufs = new ArrayDeque<>(); // data to network level
     private boolean notFullySent = false; // the flag indicating that it cannot send data
 
     private PeriodicEvent periodicEvent;
@@ -158,6 +160,9 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     @Override
     public int read(ByteBuffer dst) throws IOException {
         if (readBufs.isEmpty()) {
+            drainProtocolReceiveBuffer();
+        }
+        if (readBufs.isEmpty()) {
             if (fdHandler.isInvalid()) {
                 return -1;
             }
@@ -176,6 +181,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
         int oldPos = dst.position();
         int ret = Utils.writeFromFIFOQueueToBuffer(readBufs, dst);
+        readBufferedBytes -= ret;
 
         if (readingMirrorDataFactory.isEnabled()) {
             mirrorRead(dst, oldPos);
@@ -192,10 +198,28 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         });
 
         checkException();
+        if (readBufferedBytes <= READ_HIGH_WATERMARK / 2) {
+            drainProtocolReceiveBuffer();
+        }
         if (readBufs.isEmpty() && !fdHandler.isInvalid()) {
             cancelSelfFDReadable();
         }
         return ret;
+    }
+
+    private void queueReceived(ByteArray data) {
+        if (data == null || data.length() == 0) {
+            return;
+        }
+        readBufs.add(ByteBuffer.wrap(data.toJavaArray()));
+        readBufferedBytes += data.length();
+        setSelfFDReadable();
+    }
+
+    private void drainProtocolReceiveBuffer() throws IOException {
+        if (readBufferedBytes < READ_HIGH_WATERMARK) {
+            queueReceived(handler.receive(READ_HIGH_WATERMARK - readBufferedBytes));
+        }
     }
 
     public int writableLen() {
@@ -267,6 +291,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
     @Override
     public void close() throws IOException {
+        handler.close();
         fd.close();
     }
 
@@ -435,7 +460,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             // make a copy for data in tmp to make sure it will not be overwritten
             ByteArray b;
             try {
-                b = handler.parse(tmp);
+                b = handler.parse(tmp, Math.max(0, READ_HIGH_WATERMARK - readBufferedBytes));
             } catch (IOException e) {
                 setError(e);
                 Logger.error(LogType.CONN_ERROR, "parse kcp packet failed", e);
@@ -456,8 +481,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 return;
             }
             // record the result buffer
-            readBufs.add(ByteBuffer.wrap(b.toJavaArray()));
-            setSelfFDReadable();
+            queueReceived(b);
             watchInsideFDReadable();
         }
 

@@ -2,11 +2,19 @@ package io.vproxy.base.selector.wrap.kcp;
 
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.wrap.arqudp.ArqUDPBasedFDs;
+import io.vproxy.base.selector.wrap.udp.DatagramSocketFDWrapper;
+import io.vproxy.base.selector.wrap.udp.ServerDatagramFD;
 import io.vproxy.base.selector.wrap.udp.UDPFDs;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.FD;
 
 import java.io.IOException;
+import java.net.StandardSocketOptions;
 
 public class KCPFDs implements ArqUDPBasedFDs {
+    private static final int RCV_BUF = 2 * 1024 * 1024;
+
     private static final KCPFDs instanceFast4;
     private static final KCPFDs instanceFast3 = new KCPFDs(new KCPHandler.KCPOptions());
     private static final KCPFDs instanceFast2;
@@ -133,17 +141,23 @@ public class KCPFDs implements ArqUDPBasedFDs {
 
     @Override
     public KCPServerSocketFD openServerSocketFD(SelectorEventLoop loop) throws IOException {
-        return new KCPServerSocketFD(
-            udpFDs.openServerSocketFD(loop),
-            loop, opts
-        );
+        ServerDatagramFD fd = udpFDs.openServerSocketFD(loop);
+        setRcvBuf(fd);
+        return new KCPServerSocketFD(fd, loop, opts);
     }
 
     @Override
     public KCPSocketFD openSocketFD(SelectorEventLoop loop) throws IOException {
-        return new KCPSocketFD(
-            udpFDs.openSocketFD(loop),
-            loop, opts
-        );
+        DatagramSocketFDWrapper fd = udpFDs.openSocketFD(loop);
+        setRcvBuf(fd);
+        return new KCPSocketFD(fd, loop, opts);
+    }
+
+    private void setRcvBuf(FD fd) {
+        try {
+            fd.setOption(StandardSocketOptions.SO_RCVBUF, RCV_BUF);
+        } catch (IOException e) {
+            Logger.warn(LogType.SOCKET_ERROR, "setting SO_RCVBUF to " + RCV_BUF + " for " + fd + " failed: " + e);
+        }
     }
 }

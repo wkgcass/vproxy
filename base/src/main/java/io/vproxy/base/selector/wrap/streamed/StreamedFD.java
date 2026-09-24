@@ -28,6 +28,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
     private final StreamedFDHandler handler;
     private final boolean client;
     private final Deque<ByteBuffer> readableBuffers = new LinkedList<>();
+    private long readableBytes = 0;
     private State state = State.none;
     private boolean rst = false;
     private boolean soLinger0 = false;
@@ -243,6 +244,8 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
         int posBefore = dst.position();
         int n = Utils.writeFromFIFOQueueToBuffer(readableBuffers, dst);
+        readableBytes -= n;
+        handler.onStreamBufferedBytesChanged(this, -n, readableBytes);
 
         if (readingMirrorDataFactory.isEnabled()) {
             mirrorRead(dst, posBefore);
@@ -350,8 +353,16 @@ public class StreamedFD implements SocketFD, VirtualFD {
         release();
     }
 
-    private void release() {
+    void release() {
         readableBuffers.clear();
+        long released = readableBytes;
+        readableBytes = 0;
+        handler.onStreamBufferedBytesChanged(this, -released, 0);
+    }
+
+    void clearReadBuffer() {
+        readableBuffers.clear();
+        readableBytes = 0;
     }
 
     void inputData(ByteArray data) {
@@ -362,6 +373,8 @@ public class StreamedFD implements SocketFD, VirtualFD {
             return;
         }
         readableBuffers.add(ByteBuffer.wrap(data.toJavaArray()));
+        readableBytes += data.length();
+        handler.onStreamBufferedBytesChanged(this, data.length(), readableBytes);
         setReadable();
     }
 

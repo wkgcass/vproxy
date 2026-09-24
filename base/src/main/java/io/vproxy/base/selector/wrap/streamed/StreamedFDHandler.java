@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("UnusedReturnValue")
 public abstract class StreamedFDHandler implements Handler<SocketFD> {
@@ -42,6 +44,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     private TimerEvent handshakeTimeout = null;
     private final Map<Integer, StreamedFD> fdMap = new HashMap<>();
+    private final Set<StreamedFD> streamsOverReadHighWatermark = new HashSet<>();
 
     private GaugeF statisticsFdMapCount;
 
@@ -179,6 +182,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     }
 
     private final ByteBuffer readBuf = Utils.allocateByteBuffer(1024);
+    private static final int MAX_READ_BATCH_BYTES = 128 * 1024;
 
     private ByteArray read0() {
         ByteArray array = null;
@@ -213,6 +217,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             } else {
                 array = array.concat(a);
             }
+            if (array.length() >= MAX_READ_BATCH_BYTES) {
+                break;
+            }
         }
         return array;
     }
@@ -227,7 +234,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         if (cachedReceivedMessage == null) {
             cachedReceivedMessage = arr;
         } else {
-            cachedReceivedMessage = cachedReceivedMessage.concat(arr);
+            cachedReceivedMessage = cachedReceivedMessage.concatOrCopy(MAX_READ_BATCH_BYTES, arr);
         }
     }
 
@@ -322,7 +329,14 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     @Override
     public void readable(HandlerContext<SocketFD> ctx) {
+        if (transportReadPaused) {
+            return;
+        }
         read();
+        processReceivedMessages(ctx);
+    }
+
+    private void processReceivedMessages(HandlerContext<SocketFD> ctx) {
         if (cachedReceivedMessage == null) {
             // nothing read
             return;
@@ -334,11 +348,14 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             } else {
                 serverReadable(ctx);
             }
-            return;
+            // state may change, or may already have received some data after handshaking completed
+            if (state != 2 || cachedReceivedMessage == null) {
+                return;
+            }
         }
         assert state == 2 || state == -1;
 
-        while (true) {
+        while (!transportReadPaused) {
             int n;
             try {
                 if (client) {
@@ -365,6 +382,48 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
     }
 
+    private static final int STREAM_READ_BUFFER_HIGH_WATERMARK = 1024 * 1024;
+    private static final int CONNECTION_READ_BUFFER_HIGH_WATERMARK = 4 * 1024 * 1024;
+
+    private long totalBufferedBytes = 0;
+    private boolean transportReadPaused = false;
+    private boolean transportReadResumeScheduled = false;
+
+    final void onStreamBufferedBytesChanged(StreamedFD stream, long deltaBytes, long streamBufferedBytes) {
+        totalBufferedBytes += deltaBytes;
+        if (streamBufferedBytes >= STREAM_READ_BUFFER_HIGH_WATERMARK) {
+            streamsOverReadHighWatermark.add(stream);
+        } else if (streamBufferedBytes <= STREAM_READ_BUFFER_HIGH_WATERMARK / 2) {
+            streamsOverReadHighWatermark.remove(stream);
+        }
+        if (!transportReadPaused && (totalBufferedBytes >= CONNECTION_READ_BUFFER_HIGH_WATERMARK || !streamsOverReadHighWatermark.isEmpty())) {
+            transportReadPaused = true;
+            // Application PING replies may be queued behind the paused data.
+            for (TimerEvent timeout : keepaliveTimeouts.values()) {
+                timeout.cancel();
+            }
+            keepaliveTimeouts.clear();
+            loop.rmOps(fd, EventSet.read());
+        } else if (transportReadPaused && canResumeTransportRead() && !transportReadResumeScheduled) {
+            transportReadResumeScheduled = true;
+            // Resume on the loop to avoid reentering from application I/O.
+            loop.nextTick(() -> {
+                transportReadResumeScheduled = false;
+                if (!transportReadPaused || !canResumeTransportRead()) {
+                    return;
+                }
+                transportReadPaused = false;
+                lastReadableTimestamp = Config.currentTimestamp;
+                watchReadable();
+                readable(null);
+            });
+        }
+    }
+
+    private boolean canResumeTransportRead() {
+        return totalBufferedBytes <= CONNECTION_READ_BUFFER_HIGH_WATERMARK / 2 && streamsOverReadHighWatermark.isEmpty();
+    }
+
     private void clientWritable(@SuppressWarnings("unused") HandlerContext<SocketFD> ctx) {
         if (state == 0) {
             // everything wrote, which means handshake sent
@@ -389,6 +448,11 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // add readable and remove writable
             unwatchWritable("serverWritable");
             // no need to add op_read because it's unnecessary to be removed for servers
+
+            // may have some data when connection established ...
+            if (cachedReceivedMessage != null) {
+                processReceivedMessages(ctx);
+            }
         }
         // else will not be called
     }
@@ -657,6 +721,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         sfd.setState(StreamedFD.State.dead);
         sfd.setRst();
+        sfd.release();
         // need to send RST back
         addMessageToWrite(formatRST(streamId));
         return true;
@@ -807,16 +872,22 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             return;
         }
         // only send keepalive message if it's in idle
-        if (cachedMessageToWrite == null && messagesToWrite.isEmpty() && (Config.currentTimestamp - lastReadableTimestamp) > 5_000) {
+        if (!transportReadPaused && cachedMessageToWrite == null && messagesToWrite.isEmpty() && (Config.currentTimestamp - lastReadableTimestamp) > 5_000) {
             // send keepalive message
             long kId = ++nextKeepaliveId;
             // record with a timeout
             keepaliveTimeouts.put(kId, loop.delay(5_000, () -> {
+                keepaliveTimeouts.remove(kId);
+                if (transportReadPaused) {
+                    return;
+                }
+                if (Config.currentTimestamp - lastReadableTimestamp <= 5_000) {
+                    return; // Recent receive activity also proves the peer is alive.
+                }
                 if (keepaliveSuccessCount <= 0) {
                     fail(new IOException("keepalive response timeout"));
                 }
                 --keepaliveSuccessCount;
-                keepaliveTimeouts.remove(kId);
             }));
             // add to the first of the queue
             pushMessageToWrite(keepaliveMessage(kId, false));
@@ -932,9 +1003,18 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     final void clear() {
         for (StreamedFD streamedFD : fdMap.values()) {
             streamedFD.setState(StreamedFD.State.dead);
+            streamedFD.clearReadBuffer();
         }
+        streamsOverReadHighWatermark.clear();
+        totalBufferedBytes = 0;
+        transportReadPaused = false;
+        transportReadResumeScheduled = false;
         for (TimerEvent e : keepaliveTimeouts.values()) {
             e.cancel();
+        }
+        if (handshakeTimeout != null) {
+            handshakeTimeout.cancel();
+            handshakeTimeout = null;
         }
         cachedMessageToWrite = null;
         cachedReceivedMessage = null;

@@ -16,6 +16,14 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
         this.len = first.length() + second.length();
     }
 
+    public ByteArray getFirst() {
+        return first;
+    }
+
+    public ByteArray getSecond() {
+        return second;
+    }
+
     @Override
     public byte get(int idx) {
         checkBoundForOffset(idx);

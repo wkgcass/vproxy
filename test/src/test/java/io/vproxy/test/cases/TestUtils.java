@@ -2,7 +2,9 @@ package io.vproxy.test.cases;
 
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.bytearray.CompositeByteArray;
 import io.vproxy.base.util.bytearray.RandomAccessFileByteArray;
+import io.vproxy.base.util.bytearray.SimpleByteArray;
 import io.vproxy.base.util.file.MappedByteBufferLogger;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
@@ -28,6 +30,116 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.*;
 
 public class TestUtils {
+    @Test
+    public void compositeToNewJavaArrayHolderOffsets() {
+        ByteArray array = ByteArray.from(1, 2).concat(ByteArray.from(3, 4)).concat(ByteArray.from(5, 6));
+        for (int from = 0; from <= array.length(); ++from) {
+            for (int len = 0; len <= array.length() - from; ++len) {
+                byte[] holder = new byte[len + 4];
+                Arrays.fill(holder, (byte) -1);
+                array.sub(from, len).toNewJavaArray(holder, 2);
+                byte[] expected = new byte[holder.length];
+                Arrays.fill(expected, (byte) -1);
+                for (int i = 0; i < len; ++i) {
+                    expected[i + 2] = (byte) (from + i + 1);
+                }
+                assertArrayEquals(expected, holder);
+            }
+        }
+    }
+
+    @Test
+    public void concatOrCopy() {
+        var left = ByteArray.from(1, 2);
+        var right = ByteArray.from(3, 4);
+        var shared = left.concatOrCopy(0, right);
+        assertTrue(shared instanceof CompositeByteArray);
+        left.set(0, (byte) 5);
+        assertArrayEquals(new byte[]{5, 2, 3, 4}, shared.toJavaArray());
+
+        var copied = left.sub(0, 1).concatOrCopy(0, right);
+        assertTrue(copied instanceof SimpleByteArray);
+        left.set(0, (byte) 6);
+        right.set(0, (byte) 7);
+        assertArrayEquals(new byte[]{5, 3, 4}, copied.toJavaArray());
+
+        var empty = ByteArray.allocate(0);
+        assertSame(left, left.concatOrCopy(0, empty));
+        assertSame(right, empty.concatOrCopy(0, right));
+        assertSame(empty, empty.concatOrCopy(0, empty));
+        var one = ByteArray.from((byte) 42);
+        var zeroLimit = one.concatOrCopy(0, empty);
+        assertSame(one, zeroLimit);
+        one.set(0, (byte) 0);
+        assertEquals(0, zeroLimit.uint8(0));
+        try {
+            left.concatOrCopy(-1, right);
+            fail("negative limit should be rejected");
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+    }
+
+    @Test
+    public void concatOrCopySlices() {
+        var backing = ByteArray.from(0, 1, 2, 3).concat(ByteArray.from(4, 5, 6, 7));
+        var slice = backing.sub(3, 2); // crosses both composite children
+        var tail = ByteArray.from((byte) 8);
+        // Nine backing bytes minus three visible bytes wastes six bytes.
+        assertTrue(slice.concatOrCopy(6, tail) instanceof CompositeByteArray);
+        var copied = slice.concatOrCopy(5, tail);
+        assertTrue(copied instanceof SimpleByteArray);
+        assertArrayEquals(new byte[]{3, 4, 8}, copied.toJavaArray());
+        assertArrayEquals(new byte[]{8, 3, 4}, tail.concatOrCopy(5, slice).toJavaArray());
+        assertArrayEquals(new byte[]{5, 6, 8}, backing.sub(5, 2).concatOrCopy(5, tail).toJavaArray());
+        assertArrayEquals(new byte[]{1, 2, 8}, backing.sub(1, 2).concatOrCopy(5, tail).toJavaArray());
+        backing.set(3, (byte) 99);
+        assertArrayEquals(new byte[]{3, 4, 8}, copied.toJavaArray());
+
+        // Opaque wrappers are measured only by their visible length.
+        assertTrue(slice.unmodifiable().concatOrCopy(0, tail) instanceof CompositeByteArray);
+        assertTrue(slice.concatOrCopy(2, ByteArray.allocate(0)) instanceof SimpleByteArray);
+        assertTrue(ByteArray.allocate(0).concatOrCopy(2, slice) instanceof SimpleByteArray);
+    }
+
+    @Test
+    public void concatOrCopyNestedWithoutWaste() {
+        var empty = ByteArray.allocate(0);
+        ByteArray nested = new CompositeByteArray(ByteArray.from((byte) 1), empty);
+        var tail = ByteArray.from((byte) 2);
+        assertTrue(nested.concatOrCopy(0, tail) instanceof CompositeByteArray);
+        nested = new CompositeByteArray(nested, empty);
+        assertTrue(nested.concatOrCopy(0, tail) instanceof CompositeByteArray);
+
+        assertArrayEquals(new byte[]{1, 2}, nested.concatOrCopy(0, tail).toJavaArray());
+        assertArrayEquals(new byte[]{2, 1}, tail.concatOrCopy(0, nested).toJavaArray());
+    }
+
+    @Test
+    public void concatOrCopyNestedSliceAndLargeBacking() {
+        var empty = ByteArray.allocate(0);
+        var nested = new CompositeByteArray(new CompositeByteArray(ByteArray.from(1, 2), empty), empty);
+        var slice = nested.sub(1, 1);
+        var tail = ByteArray.from((byte) 3);
+        // Three backing bytes minus two visible bytes wastes one byte.
+        assertTrue(slice.concatOrCopy(1, tail) instanceof CompositeByteArray);
+        var copied = slice.concatOrCopy(0, tail);
+        assertTrue(copied instanceof SimpleByteArray);
+        assertArrayEquals(new byte[]{2, 3}, copied.toJavaArray());
+
+        // Model a large opaque backing without allocating gigabytes.
+        var huge = new SimpleByteArray(new byte[]{9}) {
+            @Override
+            public int length() {
+                return Integer.MAX_VALUE;
+            }
+        };
+        var tiny = huge.sub(0, 1);
+        assertArrayEquals(new byte[]{9, 3}, tiny.concatOrCopy(Integer.MAX_VALUE, tail).toJavaArray());
+        assertTrue(tiny.concatOrCopy(Integer.MAX_VALUE - 1, tail) instanceof CompositeByteArray);
+        assertTrue(tiny.concatOrCopy(Integer.MAX_VALUE - 2, tail) instanceof SimpleByteArray);
+    }
+
     @After
     public void tearDown() throws Exception {
         if (tempPath != null) {

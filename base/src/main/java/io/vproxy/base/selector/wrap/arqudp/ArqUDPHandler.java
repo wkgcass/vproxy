@@ -14,10 +14,13 @@ public abstract class ArqUDPHandler {
     }
 
     /**
-     * @param input the network level bytes
+     * @param input        the network level bytes
+     * @param receiveLimit the maximum bytes to return to the application level
      * @return the parsed bytes
      */
-    abstract public ByteArray parse(ByteArrayChannel input) throws IOException;
+    abstract public ByteArray parse(ByteArrayChannel input, int receiveLimit) throws IOException;
+
+    abstract public ByteArray receive(int receiveLimit) throws IOException;
 
     /**
      * @param input the application level bytes
@@ -29,4 +32,6 @@ public abstract class ArqUDPHandler {
     abstract public void clock(long ts) throws IOException;
 
     abstract public int clockInterval();
+
+    abstract public void close();
 }

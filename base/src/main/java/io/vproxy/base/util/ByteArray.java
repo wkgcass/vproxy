@@ -88,6 +88,43 @@ public interface ByteArray extends ToByteArray {
         return new CompositeByteArray(this, array);
     }
 
+    /**
+     * Concatenates without copying unless the sum of backing leaf lengths minus
+     * the concatenated length exceeds {@code wasteLimit}. Only CompositeByteArray and
+     * SubByteArray are traversed; other implementations are leaves of length().
+     * Slices count their entire source, and shared leaves are counted
+     * once per occurrence. Copying retains only the visible concatenated bytes.
+     *
+     * @param wasteLimit non-negative maximum number of wasted backing bytes
+     */
+    default ByteArray concatOrCopy(int wasteLimit, ByteArray arr) {
+        if (wasteLimit < 0) {
+            throw new IllegalArgumentException("wasteLimit must be non-negative");
+        }
+        int len = length() + arr.length();
+        ByteArray result = concat(arr);
+        if (remainingConcatBytes(result, (long) len + wasteLimit) >= 0) {
+            return result;
+        }
+
+        byte[] bytes = Utils.allocateByteArray(len);
+        toNewJavaArray(bytes, 0);
+        arr.toNewJavaArray(bytes, length());
+        return ByteArray.from(bytes);
+    }
+
+    // A negative result means that the backing byte budget was exceeded.
+    private static long remainingConcatBytes(ByteArray array, long remaining) {
+        if (array instanceof CompositeByteArray composite) {
+            remaining = remainingConcatBytes(composite.getFirst(), remaining);
+            return remaining < 0 ? -1 : remainingConcatBytes(composite.getSecond(), remaining);
+        }
+        if (array instanceof SubByteArray sub) {
+            return remainingConcatBytes(sub.source, remaining);
+        }
+        return remaining - array.length();
+    }
+
     default ByteArray concat(String str) {
         if (str.isEmpty())
             return this;
