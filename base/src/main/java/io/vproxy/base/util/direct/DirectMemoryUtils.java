@@ -4,6 +4,7 @@ import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.prometheus.Counter;
 import io.vproxy.base.prometheus.GaugeF;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.OS;
 import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
 import io.vproxy.base.util.unsafe.SunUnsafe;
 
@@ -14,25 +15,41 @@ public class DirectMemoryUtils {
     private DirectMemoryUtils() {
     }
 
+    // iOS hosts run under a tight process memory cap where
+    // the cache is fatal - allocate and immediately free there
+    private static final boolean POOL_DISABLED = OS.isIOS();
+
     private static final int BUF_POOL_SIZE = 128;
-    private static final ConcurrentObjectPool<DirectByteBuffer> _1 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _2 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _4 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _8 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _16 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _32 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _64 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _128 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _256 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _512 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _1024 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _2048 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _4096 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _8192 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _16384 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _24576 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _32768 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
-    private static final ConcurrentObjectPool<DirectByteBuffer> _65536 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+
+    // iOS hosts run under a tight process memory cap: do not even
+    // instantiate the pools there
+    private static ConcurrentObjectPool<DirectByteBuffer> pool() {
+        if (OS.isIOS()) {
+            return null;
+        }
+        return new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    }
+    private static long poolSize(ConcurrentObjectPool<DirectByteBuffer> pool) {
+        return pool == null ? 0 : pool.size();
+    }
+    private static final ConcurrentObjectPool<DirectByteBuffer> _1 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _2 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _4 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _8 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _16 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _32 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _64 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _128 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _256 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _512 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _1024 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _2048 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _4096 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _8192 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _16384 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _24576 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _32768 = pool();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _65536 = pool();
 
     private static final Counter directMemoryCacheMissCount = GlobalInspection.getInstance().addMetric(
         "direct_memory_cache_miss_count_total",
@@ -74,92 +91,92 @@ public class DirectMemoryUtils {
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "1"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _1.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_1))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "2"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _2.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_2))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "4"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _4.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_4))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "8"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _8.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_8))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "16"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _16.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_16))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "32"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _32.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_32))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "64"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _64.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_64))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "128"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _128.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_128))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "256"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _256.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_256))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "512"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _512.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_512))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "1024"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _1024.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_1024))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "2048"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _2048.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_2048))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "4096"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _4096.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_4096))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "8192"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _8192.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_8192))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "16384"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _16384.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_16384))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "24576"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _24576.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_24576))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "32768"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _32768.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_32768))
         );
         GlobalInspection.getInstance().addMetric(
             "cached_direct_memory_count_current",
             Map.of("type", "buffer", "size_in_bytes", "65536"),
-            (s, m) -> new GaugeF(s, m, () -> (long) _65536.size())
+            (s, m) -> new GaugeF(s, m, () -> (long) poolSize(_65536))
         );
     }
 
@@ -207,6 +224,9 @@ public class DirectMemoryUtils {
     }
 
     private static DirectByteBuffer getBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers) {
+        if (buffers == null) {
+            return null;
+        }
         DirectByteBuffer buf = buffers.poll();
         if (buf == null) {
             directMemoryCacheMissCount.incr(1);
@@ -260,6 +280,9 @@ public class DirectMemoryUtils {
     }
 
     private static boolean releaseBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers, DirectByteBuffer buf) {
+        if (buffers == null) {
+            return false;
+        }
         boolean ret = buffers.add(buf);
         if (ret) {
             directMemoryCacheStoredCount.incr(1);
@@ -271,7 +294,7 @@ public class DirectMemoryUtils {
 
     public static DirectByteBuffer allocateDirectBuffer(int size) {
         DirectByteBuffer directByteBuffer = getBufferCache(size);
-        if (directByteBuffer != null) {
+        if (!POOL_DISABLED && directByteBuffer != null) {
             assert Logger.lowLevelDebug("cached direct buffer retrieved: " + size);
             directByteBuffer.limit(directByteBuffer.capacity()).position(0);
             return directByteBuffer;
@@ -287,7 +310,7 @@ public class DirectMemoryUtils {
             assert Logger.lowLevelDebug("not direct buffer");
             return true; // return true because it does not need cleaning
         }
-        if (tryCache) {
+        if (tryCache && !POOL_DISABLED) {
             boolean succeeded = releaseBufferCache(buffer);
             if (succeeded) {
                 assert Logger.lowLevelDebug("direct buffer cached: " + buffer.capacity());

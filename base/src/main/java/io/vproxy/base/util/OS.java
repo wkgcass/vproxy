@@ -28,7 +28,10 @@ public class OS {
         String os = osname.toLowerCase();
         osLinux = os.contains("linux");
         osMac = os.contains("mac");
-        osIOS = os.contains("darwin");
+        // hosts embedding vproxy on iOS override os.name (the JVM reports
+        // "Darwin") so vproxy's Darwin code paths apply; they record the real
+        // platform in the vproxy_ios marker first (Utils convention)
+        osIOS = os.contains("darwin") || "true".equals(Utils.getSystemProperty("ios", "false"));
         osWin = os.contains("windows");
         var arch0 = System.getProperty("os.arch", "x86_64" /*most java users are x86_64*/);
         // fix java returned arch

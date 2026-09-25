@@ -2,6 +2,7 @@ package io.vproxy.app.app;
 
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.OS;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.thread.VProxyThread;
 
@@ -26,6 +27,10 @@ public class OOMHandler {
 
     public static void handleOOM() {
         if (oomThread != null) {
+            return;
+        }
+        if (OS.isIOS()) {
+            Logger.info(LogType.ALERT, "oom-handler skipped on iOS");
             return;
         }
         oomThread = VProxyThread.create(() -> {
