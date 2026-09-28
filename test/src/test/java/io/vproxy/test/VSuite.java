@@ -38,6 +38,7 @@ import org.junit.runners.Suite;
     TestH2StreamedEcho.class,
     TestArqStreamedLifecycle.class,
     TestDirectRelayAllocation.class,
+    TestAutoProxy.class,
     TestUtils.class,
     TestCommand.class,
     TestIssues.class,
