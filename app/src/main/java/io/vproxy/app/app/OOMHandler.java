@@ -30,7 +30,7 @@ public class OOMHandler {
             return;
         }
         if (OS.isIOS()) {
-            Logger.info(LogType.ALERT, "oom-handler skipped on iOS");
+            System.out.println("oom-handler skipped on iOS");
             return;
         }
         oomThread = VProxyThread.create(() -> {
