@@ -871,11 +871,11 @@ public class ConfigLoader {
             String regexp = line.substring(1, line.length() - 1);
             return new DomainChecker.PatternDomainChecker(Pattern.compile(regexp));
         } else if (line.startsWith("[") && line.endsWith("]")) {
-            final String abpfile = line.substring(1, line.length() - 1).trim();
+            final String autoProxyFile = line.substring(1, line.length() - 1).trim();
             String content;
-            if (abpfile.contains("://")) {
-                Logger.alert("getting abp from " + abpfile);
-                Promise<ByteArray> contentPromise = CoroutineHttp1ClientConnection.simpleGet(abpfile, true);
+            if (autoProxyFile.contains("://")) {
+                Logger.alert("getting auto proxy from " + autoProxyFile);
+                Promise<ByteArray> contentPromise = CoroutineHttp1ClientConnection.simpleGet(autoProxyFile, true);
                 ByteArray contentBytes;
                 try {
                     contentBytes = contentPromise.block();
@@ -887,10 +887,10 @@ public class ConfigLoader {
                 content = new String(contentBytes.toJavaArray());
                 content = Arrays.stream(content.split("\n")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.joining());
             } else {
-                String filename = Utils.filename(abpfile);
-                try (FileReader fileABP = new FileReader(filename)) {
+                String filename = Utils.filename(autoProxyFile);
+                try (FileReader fileAutoProxy = new FileReader(filename)) {
                     StringBuilder sb = new StringBuilder();
-                    BufferedReader br2 = new BufferedReader(fileABP);
+                    BufferedReader br2 = new BufferedReader(fileAutoProxy);
                     String line2;
                     while ((line2 = br2.readLine()) != null) {
                         sb.append(line2.trim());
@@ -899,9 +899,9 @@ public class ConfigLoader {
                 }
             }
 
-            ABP abp = new ABP(abpfile, false);
-            abp.addBase64(content);
-            return new DomainChecker.ABPDomainChecker(abp);
+            AutoProxy autoProxy = new AutoProxy(autoProxyFile, false);
+            autoProxy.addBase64(content);
+            return new DomainChecker.AutoProxyDomainChecker(autoProxy);
         } else if (Network.validNetworkStr(line)) {
             return new DomainChecker.NetworkChecker(Network.from(line));
         } else {

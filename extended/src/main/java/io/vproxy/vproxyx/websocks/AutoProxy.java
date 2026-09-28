@@ -7,10 +7,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
-/**
- * https://github.com/gfwlist/gfwlist/wiki/Syntax
- */
-public class ABP {
+public class AutoProxy {
     private final Set<Character> validSimpleRuleStart = new HashSet<>() {{
         for (int i = 'a'; i <= 'z'; ++i) {
             add((char) i);
@@ -22,17 +19,17 @@ public class ABP {
             add((char) i);
         }
     }};
-    private final String abpSource;
+    private final String autoProxySource;
     private final boolean defaultBlock;
     private final List<Function<String, Boolean>> checkers = new LinkedList<>();
 
-    public ABP(String abpSource, boolean defaultBlock) {
-        this.abpSource = abpSource;
+    public AutoProxy(String autoProxySource, boolean defaultBlock) {
+        this.autoProxySource = autoProxySource;
         this.defaultBlock = defaultBlock;
     }
 
-    public String getAbpSource() {
-        return abpSource;
+    public String getAutoProxySource() {
+        return autoProxySource;
     }
 
     public boolean block(String input) {
@@ -83,7 +80,7 @@ public class ABP {
         } else if (validSimpleRuleStart.contains(line.charAt(0))) {
             addSimpleRule(line);
         } else {
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "Unrecognized ABP rule: " + line);
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "Unrecognized auto proxy rule: " + line);
         }
     }
 
@@ -95,7 +92,7 @@ public class ABP {
         var addDot = "." + host;
         checkers.add((MatchingSpecificURI) input -> {
             if (input.equals(host) || (input.endsWith(addDot) && input.length() > addDot.length())) {
-                Logger.alert(input + " matches ABP matching specific uri rule: " + rule);
+                Logger.alert(input + " matches auto proxy matching specific uri rule: " + rule);
                 return true;
             }
             return null;
@@ -109,7 +106,7 @@ public class ABP {
         var host = extractHost(rule);
         checkers.add((MatchingFromBeginning) input -> {
             if (input.equals(host)) {
-                Logger.alert(input + " matches ABP matching from beginning rule: " + rule);
+                Logger.alert(input + " matches auto proxy matching from beginning rule: " + rule);
                 return true;
             }
             return null;
@@ -125,7 +122,7 @@ public class ABP {
             String[] protocols = new String[]{"", "http://", "https://"};
             for (String protocol : protocols) {
                 if (pattern.matcher(protocol + input).matches()) {
-                    Logger.alert(input + " matches ABP matching regexp rule: " + rule);
+                    Logger.alert(input + " matches auto proxy matching regexp rule: " + rule);
                     return true;
                 }
             }
@@ -141,7 +138,7 @@ public class ABP {
         var addDot = "." + host;
         checkers.add((WhitelistRuleMatchingSpecificURI) input -> {
             if (input.equals(host) || (input.endsWith(addDot) || input.length() > addDot.length())) {
-                assert Logger.lowLevelDebug(input + " matches ABP WHITELIST matching specific uri rule: " + rule);
+                assert Logger.lowLevelDebug(input + " matches auto proxy WHITELIST matching specific uri rule: " + rule);
                 return false;
             }
             return null;
@@ -155,7 +152,7 @@ public class ABP {
         var host = extractHost(rule);
         checkers.add((WhitelistMatchingFromBeginningRule) input -> {
             if (input.startsWith(host)) {
-                assert Logger.lowLevelDebug(input + " matches ABP WHITELIST matching from beginning rule: " + rule);
+                assert Logger.lowLevelDebug(input + " matches auto proxy WHITELIST matching from beginning rule: " + rule);
                 return false;
             }
             return null;
@@ -169,7 +166,7 @@ public class ABP {
         var host = extractHost(rule);
         checkers.add((WhitelistSimpleRule) input -> {
             if (input.contains(host)) {
-                assert Logger.lowLevelDebug(input + " matches ABP WHITELIST simple rule: " + rule);
+                assert Logger.lowLevelDebug(input + " matches auto proxy WHITELIST simple rule: " + rule);
                 return false;
             }
             return null;
@@ -185,7 +182,7 @@ public class ABP {
             String[] protocols = new String[]{"", "http://", "https://"};
             for (String protocol : protocols) {
                 if (pattern.matcher(protocol + input).matches()) {
-                    Logger.alert(input + " matches ABP WHITELIST regexp rule: " + rule);
+                    Logger.alert(input + " matches auto proxy WHITELIST regexp rule: " + rule);
                     return false;
                 }
             }
@@ -200,7 +197,7 @@ public class ABP {
         var host = extractHost(rule);
         checkers.add((WhitelistSuffixRule) input -> {
             if (input.endsWith(host)) {
-                Logger.alert(input + " matches ABP WHITELIST suffix rule: " + rule);
+                Logger.alert(input + " matches auto proxy WHITELIST suffix rule: " + rule);
                 return false;
             }
             return null;
@@ -214,7 +211,7 @@ public class ABP {
         var host = extractHost(rule);
         checkers.add((SuffixRule) input -> {
             if (input.endsWith(host)) {
-                Logger.alert(input + " matches ABP suffix rule: " + rule);
+                Logger.alert(input + " matches auto proxy suffix rule: " + rule);
                 return true;
             }
             return null;
@@ -228,7 +225,7 @@ public class ABP {
         var host = extractHost(rule);
         checkers.add((SimpleRule) input -> {
             if (input.contains(host)) {
-                Logger.alert(input + " matches ABP simple rule: " + rule);
+                Logger.alert(input + " matches auto proxy simple rule: " + rule);
                 return true;
             }
             return null;

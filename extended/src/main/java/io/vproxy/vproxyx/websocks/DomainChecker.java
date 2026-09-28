@@ -46,21 +46,21 @@ public interface DomainChecker {
         }
     }
 
-    class ABPDomainChecker implements DomainChecker {
-        public final ABP abp;
+    class AutoProxyDomainChecker implements DomainChecker {
+        public final AutoProxy autoProxy;
 
-        ABPDomainChecker(ABP abp) {
-            this.abp = abp;
+        AutoProxyDomainChecker(AutoProxy autoProxy) {
+            this.autoProxy = autoProxy;
         }
 
         @Override
         public boolean needProxy(String domain, int port) {
-            return abp.block(domain);
+            return autoProxy.block(domain);
         }
 
         @Override
         public String serialize() {
-            return "[" + abp.getAbpSource() + "]";
+            return "[" + autoProxy.getAutoProxySource() + "]";
         }
     }
 
