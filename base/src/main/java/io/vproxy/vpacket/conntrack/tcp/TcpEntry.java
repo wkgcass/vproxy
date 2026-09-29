@@ -5,6 +5,7 @@ import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.OS;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IPPort;
@@ -13,8 +14,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 public class TcpEntry implements WithUserData {
-    public static final int WMEM_MAX = 1048576; // 1MB, for high-latency BDP
-    public static final int RMEM_MAX = 1048576; // 1MB, for high-latency BDP
+    public static final int WMEM_MAX = OS.isIOS() ? 64 * 1024 : 1048576; // 1MB for high-latency BDP, 64K on iOS
+    public static final int RMEM_MAX = OS.isIOS() ? 64 * 1024 : 1048576;
     public static final int SND_MAX_MSS = 1400; // xdp frame size = 2048, hardware reserved = 256, headroom = 128, mac+ip+tcp_hdr=14+40+20
     public static final int RCV_MSS = 1400;
     public static final int MIN_MSS = 48; // same floor as Linux TCP_MIN_SND_MSS, prevents DoS via tiny-MSS

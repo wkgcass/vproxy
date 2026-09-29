@@ -1,5 +1,6 @@
 package io.vproxy.vfd;
 
+import io.vproxy.base.util.OS;
 import io.vproxy.base.util.Utils;
 
 public class VFDConfig {
@@ -13,8 +14,9 @@ public class VFDConfig {
     // -Dvfdtrace=1
     public static final boolean vfdtrace;
 
-    // -Daesetsize=131072
-    // the setsize for each libae aeEventLoop
+    // -DVPROXY_AE_SETSIZE=131072
+    // the setsize for each libae aeEventLoop; every slot pre-allocates an Att
+    // object, so iOS (tight memory cap) defaults to 2048
     public static final int aesetsize;
 
     static {
@@ -23,7 +25,8 @@ public class VFDConfig {
         String vfdtraceConf = Utils.getSystemProperty("vfd_trace", "0");
         vfdtrace = !vfdtraceConf.equals("0");
 
-        String aesetsizeStr = Utils.getSystemProperty("ae_setsize", "" + (128 * 1024));
+        int defaultSetsize = OS.isIOS() ? 2048 : 128 * 1024;
+        String aesetsizeStr = Utils.getSystemProperty("ae_setsize", "" + defaultSetsize);
         aesetsize = Integer.parseInt(aesetsizeStr);
     }
 }

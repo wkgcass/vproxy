@@ -9,6 +9,8 @@
 #   sudo bash misc/local-tcp-test/run_vpws_agent_test.sh
 # Env overrides:
 #   JAVA_BIN   jdk path (default: /home/*/jdks/jdk-*/bin/java, else java on PATH)
+#   JAVA_OPTS  extra jvm options, e.g. the tested low-memory combo:
+#              "-Xms20M -Xmx20M -Xmn6M -XX:+UseSerialGC -XX:MaxDirectMemorySize=15M -DVPROXY_IOS=true"
 #   TEST_URL   default https://www.youtube.com/
 set -u
 
@@ -93,7 +95,7 @@ fi
 echo "[run] starting agent (log: $LOG) ..."
 pkill -9 -f "[v]proxy.jar"
 sleep 1
-setsid nohup "$JAVA_BIN" -Deploy=WebSocksProxyAgent -Dvfd=posix \
+setsid nohup "$JAVA_BIN" ${JAVA_OPTS:-} -Deploy=WebSocksProxyAgent -Dvfd=posix \
   -Djava.library.path="$NATIVE" -jar "$JAR" "$CONF" > "$LOG" 2>&1 < /dev/null &
 
 # wait until the relay server is up (max ~20s)

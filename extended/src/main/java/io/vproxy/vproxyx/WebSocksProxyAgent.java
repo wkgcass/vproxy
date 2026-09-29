@@ -117,9 +117,6 @@ public class WebSocksProxyAgent {
             workers = 1; // restrict to one thread
         }
 
-        // initiate the acceptor event loop(s)
-        acceptor = new EventLoopGroup("acceptor-group");
-        acceptor.add("acceptor-loop");
         // initiate the worker event loop(s)
         // for quic, let the QuicRegistration init workers
         FDs quicFDs = null;
@@ -142,6 +139,17 @@ public class WebSocksProxyAgent {
         configProcessor = new ConfigProcessor(configLoader, worker, worker);
         configProcessor.setQuicFDs(quicFDs);
         configProcessor.parse();
+
+        // acceptor
+        boolean needAcceptor = configProcessor.getSocks5ListenPort() != 0
+            || configProcessor.getHttpConnectListenPort() != 0
+            || configProcessor.getSsListenPort() != 0
+            || configProcessor.getPacServerPort() != 0
+            || (configProcessor.isDirectRelay() && !configProcessor.isDirectRelayTunEnabled());
+        if (needAcceptor) {
+            acceptor = new EventLoopGroup("acceptor-group");
+            acceptor.add("acceptor-loop");
+        }
 
         assert Logger.lowLevelDebug("socks5 listen on " + configProcessor.getSocks5ListenPort());
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
