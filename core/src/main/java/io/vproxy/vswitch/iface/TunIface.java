@@ -39,10 +39,19 @@ public class TunIface extends Iface {
                     int localSideVrf,
                     MacAddress mac,
                     String postScript) {
+        this(dev, localSideVrf, mac, postScript, null);
+    }
+
+    public TunIface(String dev,
+                    int localSideVrf,
+                    MacAddress mac,
+                    String postScript,
+                    TapDatagramFD preOpenedTun) {
         this.dev = dev;
         this.localSideVrf = localSideVrf;
         this.mac = mac;
         this.postScript = postScript;
+        this.tun = preOpenedTun;
     }
 
     public TapDatagramFD getTun() {
@@ -87,7 +96,9 @@ public class TunIface extends Iface {
         bondLoop = params.loop;
         FDs fds = FDProvider.get().getProvided();
         FDsWithTap tapFDs = (FDsWithTap) fds;
-        tun = tapFDs.openTun(dev);
+        if (tun == null) {
+            tun = tapFDs.openTun(dev);
+        }
         try {
             if (tapFDs.tunNonBlockingSupported()) {
                 operateTun = tun;

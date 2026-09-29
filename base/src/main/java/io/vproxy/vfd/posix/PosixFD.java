@@ -113,10 +113,14 @@ public class PosixFD extends AbstractBaseFD implements FD {
             return;
         }
         closed = true;
+        closeFd();
+        super.close();
+    }
+
+    protected void closeFd() throws IOException {
         if (fd != -1) {
             posix.close(fd);
         }
-        super.close();
     }
 
     @Override

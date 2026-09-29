@@ -10,6 +10,7 @@ import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.MacAddress;
+import io.vproxy.vfd.TapDatagramFD;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
 
@@ -64,8 +65,7 @@ public class DirectRelayTunSetup {
                 network.declareLocalIpRange(v6range, localMac);
             }
 
-            // Receiving an externally supplied tun fd needs future infrastructure.
-            var tun = sw.addTun(dev, VRF, mac, postScript);
+            var tun = sw.addTun(dev, VRF, mac, postScript, p.tun);
             String realDev = tun.getTun().getTap().dev;
             Logger.alert("direct-relay userspace stack: tun device " + realDev + " created");
             Logger.alert("  ip addr add " + hostIp.formatToIPString() + "/" + v4range.getMask() + " dev " + realDev);
@@ -87,6 +87,7 @@ public class DirectRelayTunSetup {
         private Network v4range;
         private Network v6range;
         private String dev;
+        private TapDatagramFD tun;
         private MacAddress mac;
         private String postScript;
         private IP dnsIp;
@@ -111,6 +112,11 @@ public class DirectRelayTunSetup {
 
         public Params setDev(String dev) {
             this.dev = dev;
+            return this;
+        }
+
+        public Params setTun(TapDatagramFD tun) {
+            this.tun = tun;
             return this;
         }
 

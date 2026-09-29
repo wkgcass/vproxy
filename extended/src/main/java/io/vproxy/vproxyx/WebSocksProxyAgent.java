@@ -24,6 +24,8 @@ import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.MacAddress;
+import io.vproxy.vfd.TapDatagramFD;
+import io.vproxy.vfd.posix.PosixFDs;
 import io.vproxy.vproxyx.util.Browser;
 import io.vproxy.vproxyx.websocks.*;
 import io.vproxy.vproxyx.websocks.relay.DirectRelayTunSetup;
@@ -175,7 +177,14 @@ public class WebSocksProxyAgent {
         // maybe setup the userspace tcp/ip stack (tun device) for direct-relay
         // it must be created before the domain binders and the dns server
         if (configProcessor.isDirectRelayTunEnabled()) {
+            TapDatagramFD iosUtun = null;
+            var iosUtunFD = Utils.getSystemProperty("ios_utun_fd", "");
+            if (!iosUtunFD.isEmpty()) {
+                iosUtun = ((PosixFDs) FDProvider.get().getProvided()).wrapTun(
+                    Integer.parseInt(iosUtunFD), Utils.getSystemProperty("ios_utun_dev", ""), false);
+            }
             directRelayTunSetup = DirectRelayTunSetup.launch(new DirectRelayTunSetup.Params()
+                .setTun(iosUtun)
                 .setEventLoopGroup(worker)
                 .setV4Range(configProcessor.getDirectRelayIpRange())
                 .setV6Range(configProcessor.getDirectRelayIp6Range())

@@ -113,6 +113,23 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithOpts, FDsWithCoreAffini
         return new PosixTapDatagramFD(posix, info, true);
     }
 
+    public TapDatagramFD wrapTun(int fd, String devName, boolean manageFdClosing) {
+        if (manageFdClosing) {
+            return new PosixTapDatagramFD(posix, new TapInfo(devName, fd), true);
+        }
+        return new UnmanagedTunFD(posix, new TapInfo(devName, fd));
+    }
+
+    private static final class UnmanagedTunFD extends PosixTapDatagramFD {
+        private UnmanagedTunFD(Posix posix, TapInfo tap) {
+            super(posix, tap, true);
+        }
+
+        @Override
+        protected void closeFd() {
+        }
+    }
+
     @Override
     public boolean tunNonBlockingSupported() throws IOException {
         return posix.tunNonBlockingSupported();

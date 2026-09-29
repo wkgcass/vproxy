@@ -408,6 +408,10 @@ public class Switch {
     }
 
     public TunIface addTun(String dev, int vrf, MacAddress mac, String postScript) throws XException, IOException {
+        return addTun(dev, vrf, mac, postScript, null);
+    }
+
+    public TunIface addTun(String dev, int vrf, MacAddress mac, String postScript, TapDatagramFD preOpenedTun) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tun device");
@@ -418,7 +422,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tun is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TunIface iface = new TunIface(dev, vrf, mac, postScript);
+        TunIface iface = new TunIface(dev, vrf, mac, postScript, preOpenedTun);
         try {
             initIface(iface);
         } catch (Exception e) {
