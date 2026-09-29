@@ -3,7 +3,8 @@
 
 #include <pni.h>
 
-#if defined(__linux__) || defined(WIN32)
+#if defined(_WIN32) || \
+    (defined(__linux__) && defined(__GLIBC__) && !__GLIBC_PREREQ(2, 38))
 static inline void strlcpy(char *dst, const char *src, size_t size) {
     strncpy(dst, src, size);
     dst[size - 1] = '\0';
