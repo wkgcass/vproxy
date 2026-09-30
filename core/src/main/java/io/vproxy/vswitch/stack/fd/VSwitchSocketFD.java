@@ -1,6 +1,5 @@
 package io.vproxy.vswitch.stack.fd;
 
-import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.SocketFD;
@@ -149,12 +148,15 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         checkEntry();
         checkConnected();
 
+        if (dst.isReadOnly()) {
+            throw new java.nio.ReadOnlyBufferException();
+        }
         int len = dst.limit() - dst.position();
         if (len == 0) {
             return 0;
         }
-        ByteArray bytes = entry.receivingQueue.apiRead(len);
-        if (bytes == null) {
+        int read = entry.receivingQueue.apiRead(dst);
+        if (read == 0) {
             // maybe the connection is closed
             if (entry.getState().remoteClosed) {
                 return -1;
@@ -162,9 +164,6 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
             return 0;
         }
-        int read = bytes.length();
-        dst.put(bytes.toJavaArray());
-
         // handle events
         if (entry.receivingQueue.hasMoreDataToRead()) {
             setReadable();

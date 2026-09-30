@@ -175,7 +175,7 @@ public class TunIface extends Iface {
         assert Logger.lowLevelDebug(this + ".sendPacket(" + ipPkt + ")");
 
         sndBuf.position(0).limit(sndBuf.capacity());
-        var bytes = ipPkt.getRawPacket(0).toJavaArray();
+        var bytes = ipPkt.getRawPacket(0);
         if (requireAFHeader()) {
             if (ipPkt instanceof Ipv4Packet) {
                 sndBuf.putInt(Consts.AF_INET);
@@ -185,9 +185,9 @@ public class TunIface extends Iface {
         }
 
         statistics.incrTxPkts();
-        statistics.incrTxBytes(bytes.length);
+        statistics.incrTxBytes(bytes.length());
 
-        sndBuf.put(bytes);
+        bytes.byteBufferPut(sndBuf, 0, bytes.length());
         sndBuf.flip();
         try {
             sendPacket(sndBuf);

@@ -38,7 +38,7 @@ public class Timer {
 
     private void checkAndCancel() {
         long current = currentTimeMillis();
-        if (current - lastStart > timeout) {
+        if (current - lastStart >= timeout) {
             cancel();
             return;
         }
@@ -69,7 +69,7 @@ public class Timer {
             return;
         }
         long current = FDProvider.get().currentTimeMillis();
-        if (current - lastStart > timeout) {
+        if (current - lastStart >= timeout) {
             // should timeout immediately
             // run in next tick to prevent some concurrent modification on sets
             SelectorEventLoop currentLoop = SelectorEventLoop.current();

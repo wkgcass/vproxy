@@ -4,7 +4,6 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.ToByteArray;
 import io.vproxy.base.util.Utils;
 
-import java.util.Objects;
 
 public class MacAddress implements ToByteArray {
     public static final MacAddress ZERO = new MacAddress(new byte[]{0, 0, 0, 0, 0, 0});
@@ -122,7 +121,7 @@ public class MacAddress implements ToByteArray {
 
     @Override
     public int hashCode() {
-        return Objects.hash(value0, value1);
+        return 31 * (31 + value0) + value1;
     }
 
     @Override

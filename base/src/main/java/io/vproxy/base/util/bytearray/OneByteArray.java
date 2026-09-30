@@ -7,6 +7,11 @@ import java.nio.ByteBuffer;
 public class OneByteArray extends AbstractByteArray {
     private byte b;
 
+    @Override
+    boolean supportsDirectArrayCopy() {
+        return true;
+    }
+
     public OneByteArray() {
     }
 

@@ -175,7 +175,8 @@ public class TcpStack extends Node {
                     break;
                 case Consts.TCP_OPTION_WINDOW_SCALE:
                     int s = opt.getData().uint8(0);
-                    windowScale = 1 << s;
+                    // RFC 7323 caps the negotiated shift count at 14.
+                    windowScale = 1 << Math.min(s, 14);
                     break;
                 case Consts.TCP_OPTION_SACK_PERMITTED:
                     sackPermitted = true;
@@ -308,10 +309,14 @@ public class TcpStack extends Node {
             long ack = TcpUtils.extendSeq(pkb.tcp.sendingQueue.getLatestSeq(), tcpPkt.getAckNum());
             int window = tcpPkt.getWindow();
             long oldAckSeq = pkb.tcp.sendingQueue.getAckSeq();
+            int oldWindow = pkb.tcp.sendingQueue.getWindow();
             if (tcpStackDebugOn) {
                 Logger.alert("TCP ACK received: ack=" + ack + " oldAckSeq=" + oldAckSeq + " bytesInFlight=" + pkb.tcp.sendingQueue.getBytesInFlight() + " cwnd=" + pkb.tcp.sendingQueue.getCwnd() + " window=" + pkb.tcp.sendingQueue.getWindow());
             }
             pkb.tcp.sendingQueue.ack(ack, window);
+            if (pkb.tcp.sendingQueue.getWindow() > 0 || !pkb.tcp.sendingQueue.hasUnsentData()) {
+                cancelZeroWindowPersist(pkb.tcp);
+            }
             if (ack > oldAckSeq) {
                 // when new data is acked, immediately try to send more data
                 // rather than waiting for the retransmission timer to expire
@@ -322,6 +327,12 @@ public class TcpStack extends Node {
                     pkb.tcp.retransmissionTimer.cancel();
                     pkb.tcp.retransmissionTimer = null;
                 }
+                _tcpStartRetransmission(pkb.network, pkb.tcp);
+            } else if (pkb.tcp.sendingQueue.getWindow() > oldWindow) {
+                // A window update can reopen the send path without advancing ACK.
+                // Schedule ordinary transmission immediately instead of waiting for
+                // another duplicate ACK or the retransmission timer.
+                pkb.tcp.sendingQueue.resetDupAckCount();
                 _tcpStartRetransmission(pkb.network, pkb.tcp);
             } else {
                 List<SAckTuple> sackBlocks = null;
@@ -341,6 +352,11 @@ public class TcpStack extends Node {
                 if ((sackBlocks != null || tcpPkt.getData().length() == 0) && pkb.tcp.retransmissionTimer == null) {
                     _tcpStartRetransmission(pkb.network, pkb.tcp);
                 }
+            }
+            if (pkb.tcp.sendingQueue.getWindow() == 0 && pkb.tcp.sendingQueue.hasUnsentData()) {
+                startZeroWindowPersist(pkb.network, pkb.tcp);
+            } else {
+                cancelZeroWindowPersist(pkb.tcp);
             }
         }
         return false;
@@ -657,6 +673,11 @@ public class TcpStack extends Node {
     }
 
     private void transmitTcpPsh(VirtualNetwork network, TcpEntry tcp, RetransContext ctx) {
+        if (tcp.sendingQueue.getWindow() == 0 && tcp.sendingQueue.hasUnsentData()) {
+            startZeroWindowPersist(network, tcp);
+        } else {
+            cancelZeroWindowPersist(tcp);
+        }
         // handle retransmission congestion before fetching
         if (ctx.retransmissionCount > 0) {
             if (!ctx.isSpecialAck() && ctx.retransmissionCount >= 2) {
@@ -665,6 +686,12 @@ public class TcpStack extends Node {
                 tcp.sendingQueue.onLoss();
             }
         } else if (tcp.sendingQueue.getAvailableSendWindow() <= 0) {
+            if (tcp.sendingQueue.getWindow() == 0) {
+                var probe = tcp.sendingQueue.fetchZeroWindowProbe();
+                if (probe != null) {
+                    sendTcpZeroWindowProbe(network, tcp, probe);
+                }
+            }
             // keep the retransmission timer armed while data is in flight, or a lost ACK would stall the connection
             if (tcp.sendingQueue.getBytesInFlight() > 0 && tcp.retransmissionTimer == null) {
                 assert Logger.lowLevelDebug("send window exhausted, keeping the retransmission timer armed");
@@ -745,6 +772,47 @@ public class TcpStack extends Node {
         });
     }
 
+    private void startZeroWindowPersist(VirtualNetwork network, TcpEntry tcp) {
+        if (tcp.persistTimer != null || tcp.sendingQueue.getWindow() != 0 || !tcp.sendingQueue.hasUnsentData()) {
+            return;
+        }
+        int backoff = Math.min(tcp.persistProbeCount, 4);
+        int delay = Math.min(TcpEntry.RTO_MAX, TcpEntry.RTO_MIN << backoff);
+        tcp.persistTimer = sw.getSelectorEventLoop().delay(delay, () -> {
+            tcp.persistTimer = null;
+            if (tcp.getState() == TcpState.CLOSED || tcp.sendingQueue.getWindow() != 0 || !tcp.sendingQueue.hasUnsentData()) {
+                tcp.persistProbeCount = 0;
+                return;
+            }
+            var probe = tcp.sendingQueue.fetchZeroWindowProbe();
+            if (probe != null) {
+                sendTcpZeroWindowProbe(network, tcp, probe);
+            }
+            tcp.persistProbeCount = Math.min(tcp.persistProbeCount + 1, 4);
+            startZeroWindowPersist(network, tcp);
+        });
+    }
+
+    private void cancelZeroWindowPersist(TcpEntry tcp) {
+        if (tcp.persistTimer != null) {
+            tcp.persistTimer.cancel();
+            tcp.persistTimer = null;
+        }
+        tcp.persistProbeCount = 0;
+    }
+
+    private void sendTcpZeroWindowProbe(VirtualNetwork network, TcpEntry tcp, Segment probe) {
+        VProxyThread.current().newUuidDebugInfo();
+        TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
+        tcpPkt.setSeqNum(probe.seqBeginInclusive);
+        tcpPkt.setFlags(Consts.TCP_FLAGS_PSH | Consts.TCP_FLAGS_ACK);
+        tcpPkt.setData(probe.data);
+        tcp.receivingQueue.setLastSentAckSeq(tcp.receivingQueue.getExpectingSeq());
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, TcpUtils.buildIpResponse(tcp, tcpPkt));
+        pkb.tcp = tcp;
+        _output(pkb);
+    }
+
     private void afterTransmission(VirtualNetwork network, TcpEntry tcp) {
         assert Logger.lowLevelDebug("afterTransmission(" + network + "," + tcp + "," + ")");
 
@@ -822,6 +890,7 @@ public class TcpStack extends Node {
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
         pkb.tcp = tcp;
+        tcp.sendingQueue.markFinSent();
         _output(pkb);
     }
 

@@ -81,15 +81,21 @@ public class AESelector implements FDSelector {
         if (fdInfoList.isEmpty()) {
             return Collections.emptyList();
         }
-        clearPipeFD();
         selectedEntryList.clear();
-
+        boolean pipeReady = false;
         for (FDInfo res : fdInfoList) {
+            if (res.fd() == pipefd[0]) {
+                pipeReady = true;
+                continue;
+            }
             Att att = (Att) res.attachment();
             if (att.fd == null) // for the internal pipe fds
                 continue;
             int ev = res.events();
             selectedEntryList.add(att.fd, getJavaEvents(ev), att.att);
+        }
+        if (pipeReady) {
+            clearPipeFD();
         }
         return selectedEntryList;
     }
@@ -102,8 +108,9 @@ public class AESelector implements FDSelector {
 
     private void fillFDsList(int n) {
         for (int i = 0; i < n; ++i) {
-            int fd = fired.get(i).getFd();
-            int evt = fired.get(i).getMask();
+            AEFiredEvent event = fired.get(i);
+            int fd = event.getFd();
+            int evt = event.getMask();
             fdInfoList.add(fd, evt, attachments[fd]);
         }
     }

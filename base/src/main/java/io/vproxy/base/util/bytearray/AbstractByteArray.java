@@ -8,6 +8,20 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 public abstract class AbstractByteArray implements ByteArray {
+    boolean supportsDirectArrayCopy() {
+        return false;
+    }
+
+    boolean sharesBacking(SimpleByteArray target) {
+        return false;
+    }
+
+    void copyIntoSlow(ByteArray dst, int dstOff, int srcOff, int srcLen) {
+        for (int i = 0; i < srcLen; ++i) {
+            dst.set(dstOff + i, get(srcOff + i));
+        }
+    }
+
     public static final ByteArray EMPTY = new SimpleByteArray(Utils.getZeroLengthByteArray());
 
     protected void checkBoundForOffset(int off) {
@@ -20,14 +34,22 @@ public abstract class AbstractByteArray implements ByteArray {
     }
 
     protected void checkBoundForOffsetAndLength(int off, int len) {
-        if (len > 0) {
-            checkBoundForOffset(off);
-        }
         if (len < 0) {
             throw new IllegalArgumentException("len=" + len + " < 0");
         }
-        if (off > length() || off + len > length()) {
-            throw new ArrayIndexOutOfBoundsException("off=" + off + ", len=" + len + ", length=" + length());
+        if (len > 0) {
+            checkBoundForOffset(off);
+        }
+        int size = length();
+        if (off > size || (len > 0 && len > size - off)) {
+            throw new ArrayIndexOutOfBoundsException("off=" + off + ", len=" + len + ", length=" + size);
+        }
+    }
+
+    void writeMultiByteSlow(int offset, long value, int bytes, boolean reverse) {
+        for (int i = 0; i < bytes; ++i) {
+            int shift = (reverse ? i : bytes - i - 1) * 8;
+            set(offset + i, (byte) (value >>> shift));
         }
     }
 
@@ -72,9 +94,9 @@ public abstract class AbstractByteArray implements ByteArray {
     @Override
     public int hashCode() {
         final int len = length();
-        int ret = 0;
+        int ret = 0x811c9dc5;
         for (int i = 0; i < len; ++i) {
-            ret = (ret << 31) | get(i);
+            ret = (ret ^ (get(i) & 0xff)) * 0x01000193;
         }
         return ret;
     }

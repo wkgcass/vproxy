@@ -24,6 +24,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 @SuppressWarnings("rawtypes")
@@ -62,6 +63,8 @@ public class SelectorEventLoop implements AutoCloseable {
     private final InitOptions initOptions;
     private final TimeQueue<Runnable> timeQueue = TimeQueue.create();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger runOnLoopEventsCount = new AtomicInteger();
+    private final ArrayList<Runnable> timeEventsToRun = new ArrayList<>();
 
     private final Lock channelRegisteringLock = Lock.create();
     private final ConcurrentLinkedQueue<AddFdData> channelsToBeRegisteredStep1 = new ConcurrentLinkedQueue<>();
@@ -191,21 +194,25 @@ public class SelectorEventLoop implements AutoCloseable {
     }
 
     private void handleRunOnLoopEvents() {
-        int len = runOnLoopEvents.size();
+        int len = runOnLoopEventsCount.get();
         // only run available events when entering this function
         for (int i = 0; i < len; ++i) {
             Runnable r = runOnLoopEvents.poll();
+            if (r == null) {
+                break;
+            }
+            runOnLoopEventsCount.decrementAndGet();
             tryRunnable(r);
         }
     }
 
     private void handleTimeEvents() {
-        List<Runnable> toRun = new LinkedList<>();
+        timeEventsToRun.clear();
         while (timeQueue.nextTime(Config.currentTimestamp) == 0) {
             Runnable r = timeQueue.poll();
-            toRun.add(r);
+            timeEventsToRun.add(r);
         }
-        for (Runnable r : toRun) {
+        for (Runnable r : timeEventsToRun) {
             tryRunnable(r);
         }
     }
@@ -412,6 +419,7 @@ public class SelectorEventLoop implements AutoCloseable {
     @ThreadSafe
     public void nextTick(Runnable r) {
         runOnLoopEvents.add(r);
+        runOnLoopEventsCount.incrementAndGet();
         if (!needWake())
             return; // we do not need to wakeup because it's not started or is already waken up
         wakeup(); // wake the selector because new event is added

@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -95,7 +96,7 @@ public class TestTCP {
             12345);
         tcpEntry.setState(TcpState.ESTABLISHED);
         int mss = 1360;
-        tcpEntry.sendingQueue.init(mss, mss, 1); // window = mss, but ignored for send limiting
+        tcpEntry.sendingQueue.init(mss * 4, mss, 1);
 
         ByteArray bytes = rawPayload(mss * 4);
         ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
@@ -103,7 +104,7 @@ public class TestTCP {
         assertEquals(bytes.length(), n);
 
         var segments = tcpEntry.sendingQueue.fetch();
-        // cwnd starts at MAX_CWND, so all segments can be fetched
+        // The peer window and cwnd both allow the complete write.
         assertEquals(4, segments.size());
         var result = segments.get(0).data;
         for (int i = 1; i < segments.size(); i++) {
@@ -357,12 +358,12 @@ public class TestTCP {
         int smallWindow = 4096;
         tcpEntry.sendingQueue.init(smallWindow, mss, 1);
 
-        // available window = cwnd - bytesInFlight (window 不参与限制)
-        assertEquals(TcpEntry.INIT_CWND, tcpEntry.sendingQueue.getAvailableSendWindow());
+        // The advertised receive window limits new data even when cwnd is larger.
+        assertEquals(smallWindow, tcpEntry.sendingQueue.getAvailableSendWindow());
 
-        // 设置较大的 cwnd，不受 window 限制
+        // A larger cwnd cannot exceed the peer's advertised window.
         tcpEntry.sendingQueue.setCwnd(65535);
-        assertEquals(65535, tcpEntry.sendingQueue.getAvailableSendWindow());
+        assertEquals(smallWindow, tcpEntry.sendingQueue.getAvailableSendWindow());
 
         // 设置较小的 cwnd，cwnd 成为限制因素
         tcpEntry.sendingQueue.setCwnd(2048);
@@ -391,8 +392,7 @@ public class TestTCP {
         for (var s : segments) {
             totalFetched += s.data.length();
         }
-        // window 不参与限制，所有数据都可发送（受 cwnd 限制）
-        assertTrue("fetched data should not exceed cwnd", totalFetched <= TcpEntry.MAX_CWND);
+        assertEquals("new data must stay inside the peer window", smallWindow, totalFetched);
     }
 
     @Test
@@ -417,6 +417,162 @@ public class TestTCP {
         // 第二次 fetch 应返回空（bytesInFlight 已占满窗口）
         var seg2 = tcpEntry.sendingQueue.fetch();
         assertTrue("fetch should return empty when window exhausted", seg2.isEmpty());
+    }
+
+    @Test
+    public void fetchHonorsSubMssCwndAndWindowBudgets() {
+        TcpEntry tcpEntry = new TcpEntry(null, new IPPort("12.34.56.78", 1234), new IPPort("98.76.54.32", 5678), 12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1000;
+        tcpEntry.sendingQueue.init(2500, mss, 1);
+        tcpEntry.sendingQueue.setCwnd(500);
+        tcpEntry.sendingQueue.apiWrite(ByteBuffer.wrap(new byte[3000]));
+
+        var first = tcpEntry.sendingQueue.fetch();
+        assertEquals(1, first.size());
+        assertEquals(500, first.get(0).data.length());
+        assertEquals(500, tcpEntry.sendingQueue.getBytesInFlight());
+        assertTrue(tcpEntry.sendingQueue.fetch().isEmpty());
+
+        tcpEntry.sendingQueue.ack(first.get(0).seqEndExclusive, 2500);
+        tcpEntry.sendingQueue.setCwnd(3000);
+        var rest = tcpEntry.sendingQueue.fetch();
+        int bytes = 0;
+        for (var segment : rest) bytes += segment.data.length();
+        assertEquals(2500, bytes);
+        assertEquals(2500, tcpEntry.sendingQueue.getFetchSeq() - tcpEntry.sendingQueue.getAckSeq());
+    }
+
+    @Test
+    public void windowShrinkBlocksNewDataButAllowsRetransmissionWithoutInflightGrowth() {
+        TcpEntry tcpEntry = new TcpEntry(null, new IPPort("12.34.56.78", 1234), new IPPort("98.76.54.32", 5678), 12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int mss = 1000;
+        tcpEntry.sendingQueue.init(3000, mss, 1);
+        tcpEntry.sendingQueue.apiWrite(ByteBuffer.wrap(new byte[4000]));
+        var sent = tcpEntry.sendingQueue.fetch();
+        assertEquals(3000, tcpEntry.sendingQueue.getBytesInFlight());
+
+        // The peer shrinks its window to zero at the current cumulative ACK.
+        tcpEntry.sendingQueue.ack(tcpEntry.sendingQueue.getAckSeq(), 0);
+        assertTrue(tcpEntry.sendingQueue.fetch().isEmpty());
+        int flightBeforeRetransmit = tcpEntry.sendingQueue.getBytesInFlight();
+        var retransmit = tcpEntry.sendingQueue.fetch(true);
+        assertEquals(sent.size(), retransmit.size());
+        assertEquals(flightBeforeRetransmit, tcpEntry.sendingQueue.getBytesInFlight());
+
+        // ACK the data already in flight while the window remains closed.
+        tcpEntry.sendingQueue.ack(tcpEntry.sendingQueue.getFetchSeq(), 0);
+        assertEquals(0, tcpEntry.sendingQueue.getAvailableSendWindow());
+        // A window update reopens the right edge; the unsent tail can proceed.
+        tcpEntry.sendingQueue.ack(tcpEntry.sendingQueue.getAckSeq(), 1500);
+        var reopened = tcpEntry.sendingQueue.fetch();
+        int reopenedBytes = 0;
+        for (var segment : reopened) reopenedBytes += segment.data.length();
+        assertEquals(1000, reopenedBytes);
+    }
+
+    @Test
+    public void zeroWindowProbeIsOneByteAndDoesNotAdvanceNormalSendAccounting() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        var queue = tcpEntry.sendingQueue;
+        queue.init(0, 1000, 1, 3000);
+        queue.apiWrite(ByteBuffer.wrap(new byte[]{10, 20, 30, 40}));
+
+        assertTrue("ordinary sends stay blocked at rwnd=0", queue.fetch().isEmpty());
+        long nextBeforeProbe = queue.getFetchSeq();
+        Segment probe = queue.fetchZeroWindowProbe();
+        assertNotNull(probe);
+        assertEquals(1, probe.data.length());
+        assertEquals(nextBeforeProbe, probe.seqBeginInclusive);
+        assertEquals(nextBeforeProbe, queue.getFetchSeq());
+        assertEquals(0, queue.getBytesInFlight());
+
+        // A receiver may accept the probed byte while advertising an opened window.
+        queue.ack(nextBeforeProbe + 1, 100);
+        assertEquals(nextBeforeProbe + 1, queue.getAckSeq());
+        assertEquals(nextBeforeProbe + 1, queue.getFetchSeq());
+        assertEquals(3, queue.getCurrentSize());
+        assertEquals(100, queue.getWindow());
+    }
+
+    @Test
+    public void ackCannotAcknowledgeQueuedButUnsentBytesOrUpdateTheirWindow() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        var queue = tcpEntry.sendingQueue;
+        queue.init(1, 1000, 1, 3000);
+        queue.apiWrite(ByteBuffer.wrap(new byte[]{1, 2, 3, 4}));
+        assertEquals(1, queue.fetch().stream().mapToInt(s -> s.data.length()).sum());
+
+        long ackBefore = queue.getAckSeq();
+        long unsentEnd = queue.getLatestSeq();
+        queue.ack(unsentEnd, 10_000);
+        assertEquals(ackBefore, queue.getAckSeq());
+        assertEquals(1, queue.getWindow());
+        assertEquals(1, queue.getBytesInFlight());
+        assertEquals(4, queue.getCurrentSize());
+    }
+
+    @Test
+    public void cumulativeAckNotifiesWritableOnceAfterReleasingMultipleSegments() {
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        int[] writableCalls = {0};
+        tcpEntry.setConnectionHandler(new io.vproxy.vpacket.conntrack.tcp.ConnectionHandler() {
+            @Override
+            public void readable(TcpEntry entry) {
+            }
+
+            @Override
+            public void writable(TcpEntry entry) {
+                ++writableCalls[0];
+            }
+
+            @Override
+            public void destroy(TcpEntry entry) {
+            }
+        });
+        var queue = tcpEntry.sendingQueue;
+        queue.init(65535, 1000, 1, 3000);
+        queue.apiWrite(ByteBuffer.wrap(new byte[2500]));
+        assertEquals(3, queue.fetch().size());
+        queue.ack(queue.getLatestSeq(), 65535);
+        assertEquals(1, writableCalls[0]);
+        queue.ack(queue.getAckSeq(), 65535);
+        assertEquals("a duplicate ACK must not notify writable again", 1, writableCalls[0]);
+    }
+
+    @Test
+    public void partialAckTrimsQueueAndDoesNotRetransmitAcknowledgedPrefix() {
+        TcpEntry tcpEntry = new TcpEntry(null, new IPPort("12.34.56.78", 1234), new IPPort("98.76.54.32", 5678), 12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        tcpEntry.sendingQueue.init(3000, 1000, 1);
+        tcpEntry.sendingQueue.apiWrite(ByteBuffer.wrap(new byte[1000]));
+        var sent = tcpEntry.sendingQueue.fetch();
+        Segment original = sent.get(0);
+
+        tcpEntry.sendingQueue.ack(original.seqBeginInclusive + 400, 3000);
+        assertEquals(600, tcpEntry.sendingQueue.getCurrentSize());
+        assertEquals(600, tcpEntry.sendingQueue.getBytesInFlight());
+        var retransmit = tcpEntry.sendingQueue.fetch(true);
+        assertEquals(1, retransmit.size());
+        assertEquals(original.seqBeginInclusive + 400, retransmit.get(0).seqBeginInclusive);
+        assertEquals(600, retransmit.get(0).data.length());
+        assertEquals(600, tcpEntry.sendingQueue.getBytesInFlight());
     }
 
     // ===== RTT 估算与 RTO =====
@@ -519,22 +675,11 @@ public class TestTCP {
         assertTrue(sizeBefore > 0);
 
         var segments = tcpEntry.sendingQueue.fetch();
-        // ack(seq) 在 s.seqEndExclusive >= seq 时 break，不移除该段
-        // ack 第一个 segment 的 seqEndExclusive 会移除第一个 segment
-        // （因为第一个 segment 的 seqEndExclusive = seq，而第二个 segment 开始时 seqEndExclusive >= seq → break）
-        // 不对：第一个 segment [seq,seq+1360)，ack(1360) → seg0: 1360 >= 1360 → break，不移除任何段！
-        // ack 必须超过 seg0 的 seqEndExclusive 才能移除它
-        // ack(seg0.seqEndExclusive + 1) 但 seq > latestSeq 会触发 clamping
-        // 由于 latestSeq == 最后一个segment的seqEndExclusive，ack(latestSeq) 不触发 clamping
-        // ack(latestSeq) → seg0: 1360 >= latestSeq? 取决于latestSeq值
-        // 简单做法：ack 第一个segment的seqEndExclusive，检查 ackSeq 推进了即可
         long firstSegEnd = segments.get(0).seqEndExclusive;
         tcpEntry.sendingQueue.ack(firstSegEnd, 65535);
 
-        // ack(firstSegEnd): seg0 seqEndExclusive=firstSegEnd >= firstSegEnd → break，不移除任何段
-        // 这是 ack 语义：ack(seq) 表示 [ackSeq, seq) 已确认，但包含 seq 的段不被移除
-        // 验证 ackSeq 推进到 firstSegEnd
         assertEquals(firstSegEnd, tcpEntry.sendingQueue.getAckSeq());
+        assertEquals(sizeBefore - mss, tcpEntry.sendingQueue.getCurrentSize());
     }
 
     // ===== 接收队列高级测试 =====
@@ -563,6 +708,31 @@ public class TestTCP {
         assertEquals(expectSeqAfter, tcpEntry.receivingQueue.getExpectingSeq());
         // currentSize 不应翻倍
         assertEquals(bytes.length(), tcpEntry.receivingQueue.getCurrentSize());
+    }
+
+    @Test
+    public void receiveQueueCapsOversizedSegmentsAtItsConfiguredMemoryLimit() {
+        long seq = 12_345;
+        TcpEntry tcpEntry = new TcpEntry(
+            null,
+            new IPPort("12.34.56.78", 1234),
+            new IPPort("98.76.54.32", 5678),
+            seq - 1);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        byte[] oversized = new byte[TcpEntry.RMEM_MAX + 32];
+        Arrays.fill(oversized, (byte) 0x5a);
+
+        tcpEntry.receivingQueue.store(new Segment(seq, ByteArray.from(oversized)));
+        assertEquals(TcpEntry.RMEM_MAX, tcpEntry.receivingQueue.getCurrentSize());
+        assertEquals(seq + TcpEntry.RMEM_MAX, tcpEntry.receivingQueue.getExpectingSeq());
+        assertEquals(0, tcpEntry.receivingQueue.getWindow());
+
+        ByteBuffer read = ByteBuffer.allocate(16);
+        assertEquals(16, tcpEntry.receivingQueue.apiRead(read));
+        byte[] expected = new byte[16];
+        Arrays.fill(expected, (byte) 0x5a);
+        assertArrayEquals(expected, read.array());
+        assertEquals(TcpEntry.RMEM_MAX - 16, tcpEntry.receivingQueue.getCurrentSize());
     }
 
     @Test
@@ -619,6 +789,33 @@ public class TestTCP {
     }
 
     @Test
+    public void recvDirectBufferReadCoalescesSegmentsAndRetainsPartialTail() {
+        TcpEntry tcpEntry = new TcpEntry(null, new IPPort("12.34.56.78", 1234), new IPPort("98.76.54.32", 5678), 100);
+        tcpEntry.setState(TcpState.ESTABLISHED);
+        tcpEntry.receivingQueue.store(new Segment(101, ByteArray.from(1, 2, 3)));
+        tcpEntry.receivingQueue.store(new Segment(104, ByteArray.from(4, 5, 6, 7)));
+
+        ByteBuffer dst = ByteBuffer.allocate(5);
+        assertEquals(5, tcpEntry.receivingQueue.apiRead(dst));
+        assertEquals(5, dst.position());
+        assertArrayEquals(new byte[]{1, 2, 3, 4, 5}, dst.array());
+        assertEquals(2, tcpEntry.receivingQueue.getCurrentSize());
+
+        ByteBuffer readOnly = ByteBuffer.allocate(2).asReadOnlyBuffer();
+        try {
+            tcpEntry.receivingQueue.apiRead(readOnly);
+            fail("read-only destination must not consume queued data");
+        } catch (java.nio.ReadOnlyBufferException expected) {
+            assertEquals(2, tcpEntry.receivingQueue.getCurrentSize());
+        }
+
+        ByteBuffer tail = ByteBuffer.allocate(2);
+        assertEquals(2, tcpEntry.receivingQueue.apiRead(tail));
+        assertArrayEquals(new byte[]{6, 7}, tail.array());
+        assertEquals(0, tcpEntry.receivingQueue.getCurrentSize());
+    }
+
+    @Test
     public void recvWindowRestoresAfterRead() {
         int seqInit = 12345;
         TcpEntry tcpEntry = new TcpEntry(
@@ -662,24 +859,20 @@ public class TestTCP {
         ByteArray bytes = rawPayload(mss * 3);
         ByteBuffer buffer = ByteBuffer.wrap(bytes.toJavaArray());
         tcpEntry.sendingQueue.apiWrite(buffer);
+        tcpEntry.sendingQueue.fetch();
+        tcpEntry.sendingQueue.ack(tcpEntry.sendingQueue.getLatestSeq(), 65535);
 
-        // 模拟 FIN 已发送
+        // Model FIN only after all queued data has reached SND.NXT.
         tcpEntry.setState(TcpState.FIN_WAIT_1);
-        // incAllSeq 模拟 FIN 占用一个序列号
-        tcpEntry.sendingQueue.incAllSeq();
+        tcpEntry.sendingQueue.markFinSent();
 
-        // ack(seq) checks: state.finSent && seq >= latestSeq + 1
-        // latestSeq was incremented by 1 (for FIN), so ack at latestSeq + 1 = oldLatestSeq + 2
-        // but seq > latestSeq triggers the clamping logic BEFORE finSent check...
-        // Actually: finSent check is BEFORE clamping. So ack(latestSeq+1) should work.
         long latestSeq = tcpEntry.sendingQueue.getLatestSeq();
         tcpEntry.sendingQueue.ack(latestSeq + 1, 65535);
 
         assertTrue("FIN should be acked", tcpEntry.sendingQueue.ackOfFinReceived());
-        // After FIN acked, q.clear() is called, but currentSize is NOT explicitly reset
-        // Let's verify hasMoreData instead
         assertFalse("queue should be empty after FIN acked",
             tcpEntry.sendingQueue.hasMoreData());
+        assertEquals(0, tcpEntry.sendingQueue.getCurrentSize());
     }
 
     // ===== CUBIC 凸/凹区域行为 =====
@@ -776,18 +969,12 @@ public class TestTCP {
         var segments = tcpEntry.sendingQueue.fetch();
         assertEquals(4, segments.size());
 
-        // 逐个ACK前3个segment（ack(seg.seqEndExclusive) 会移除 seqEndExclusive < seg.seqEndExclusive 的段）
-        // 对于前3个segment，ack它们的seqEndExclusive会移除之前的所有段
-        for (int i = 0; i < segments.size() - 1; i++) {
+        // Each cumulative ACK removes all segments ending at or before its sequence.
+        for (int i = 0; i < segments.size(); i++) {
             tcpEntry.sendingQueue.ack(segments.get(i).seqEndExclusive, 65535);
         }
-        // 最后一个segment需要ack超过它的seqEndExclusive才能移除
-        // 因为 ack() 在 s.seqEndExclusive >= seq 时 break，不移除该段
-        long lastSeq = segments.get(segments.size() - 1).seqEndExclusive;
-        // 但由于 latestSeq == lastSeq，ack(lastSeq+1) 会被 clamp 到 latestSeq
-        // 所以最后一个segment无法通过ack移除，这是设计如此
-        // 验证 ackSeq 至少推进到了倒数第二个segment的end
-        assertTrue("ackSeq should advance", tcpEntry.sendingQueue.getAckSeq() >= segments.get(segments.size() - 2).seqEndExclusive);
+        assertEquals(segments.get(segments.size() - 1).seqEndExclusive, tcpEntry.sendingQueue.getAckSeq());
+        assertEquals(0, tcpEntry.sendingQueue.getCurrentSize());
     }
 
     @Test
@@ -846,12 +1033,14 @@ public class TestTCP {
         }
         assertEquals(bytes, accumulated);
 
-        // ack all but last segment (last segment won't be removed due to >= break)
-        for (int i = 0; i < segments.size() - 1; i++) {
-            tcpEntry.sendingQueue.ack(segments.get(i).seqEndExclusive, 65535);
+        // Cumulatively ACK all segments, including the final segment boundary.
+        for (var seg : segments) {
+            tcpEntry.sendingQueue.ack(seg.seqEndExclusive, 65535);
         }
-        // verify ackSeq advanced to second-to-last segment end
-        assertEquals(segments.get(segments.size() - 2).seqEndExclusive, tcpEntry.sendingQueue.getAckSeq());
+        assertEquals(0, tcpEntry.sendingQueue.getCurrentSize());
+        assertEquals(0, tcpEntry.sendingQueue.getBytesInFlight());
+        // The cumulative ACK must reach the end of the final segment.
+        assertEquals(segments.get(segments.size() - 1).seqEndExclusive, tcpEntry.sendingQueue.getAckSeq());
     }
 
     // ===== SACK 选择性重传 =====
@@ -1481,13 +1670,15 @@ public class TestTCP {
         Field latestSeq = TcpEntry.SendingQueue.class.getDeclaredField("latestSeq");
         Field ackSeq = TcpEntry.SendingQueue.class.getDeclaredField("ackSeq");
         Field fetchSeq = TcpEntry.SendingQueue.class.getDeclaredField("fetchSeq");
-        for (Field f : List.of(latestSeq, ackSeq, fetchSeq)) {
+        Field peerWindowRightEdge = TcpEntry.SendingQueue.class.getDeclaredField("peerWindowRightEdge");
+        for (Field f : List.of(latestSeq, ackSeq, fetchSeq, peerWindowRightEdge)) {
             f.setAccessible(true);
         }
         long base = W - 100;
         latestSeq.setLong(sq, base);
         ackSeq.setLong(sq, base);
         fetchSeq.setLong(sq, base);
+        peerWindowRightEdge.setLong(sq, base + 65535);
 
         // write 5000 bytes -> segments [base, base+5000)
         int wrote = sq.apiWrite(ByteBuffer.allocate(5000));
