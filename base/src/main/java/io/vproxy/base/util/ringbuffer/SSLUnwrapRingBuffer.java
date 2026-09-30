@@ -34,6 +34,18 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     private final MirrorDataFactory plainMirrorDataFactory;
     private final MirrorDataFactory encryptedMirrorDataFactory;
 
+    /** Diagnostic only: expected bytes of the first buffered TLS record,
+     * including its header. Does not authenticate or expose record contents.
+     * 0 means empty, -1 incomplete header, -2 an unrecognized header. */
+    public int pendingTlsRecordLength() {
+        if (encryptedBufferForInput.used() == 0) return 0;
+        byte[] bytes = encryptedBufferForInput.getBytes();
+        if (bytes.length < 5) return -1;
+        int type = bytes[0] & 0xff;
+        if (type < 20 || type > 24 || bytes[1] != 3) return -2;
+        return 5 + ((bytes[3] & 0xff) << 8) + (bytes[4] & 0xff);
+    }
+
     // for client
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSLEngine engine,

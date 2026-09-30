@@ -14,6 +14,7 @@ import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
+import io.vproxy.base.util.ringbuffer.AbstractUnwrapRingBuffer;
 import io.vproxy.base.util.ringbuffer.ProxyOutputRingBuffer;
 import io.vproxy.base.util.ringbuffer.SSLUtils;
 import io.vproxy.base.util.ringbuffer.ssl.SSL;
@@ -33,11 +34,24 @@ public class Proxy {
     private static final boolean TCP_DIAGNOSTICS_ENABLED = "on".equals(Utils.getSystemProperty("tcp_stack_diag", "off"));
 
     private static void logSessionDiagnostic(String event, ConnectionHandlerContext ctx, Session session) {
+        logSessionDiagnostic(event, ctx, session, null);
+    }
+
+    private static void logSessionDiagnostic(String event, ConnectionHandlerContext ctx, Session session, IOException err) {
         if (!TCP_DIAGNOSTICS_ENABLED) return;
         Connection active = session.active;
         Connection passive = session.passive;
         String side = ctx.connection == active ? "active" : "passive";
         Logger.alert("[TCP-DIAG] proxy event=" + event + " side=" + side + " session=" + session.id()
+            + (err == null ? "" : " exception=" + err.getClass().getName() + " reason="
+                + (err.getMessage() == null ? "unknown" : Utils.isReset(err) ? "reset"
+                   : Utils.isBrokenPipe(err) ? "broken-pipe" : Utils.isSSLEngineClosed(err) ? "ssl-engine-closed"
+                   : err instanceof java.net.SocketTimeoutException ? "timeout" : "other"))
+            + (err != null && passive.getInBuffer() instanceof AbstractUnwrapRingBuffer unwrap
+                ? " passivePendingPlain=" + unwrap.pendingPlaintextBytes()
+                    + " passivePendingEncrypted=" + unwrap.pendingEncryptedBytes()
+                    + (unwrap instanceof io.vproxy.base.util.ringbuffer.SSLUnwrapRingBuffer ssl
+                        ? " passivePendingTlsRecordLength=" + ssl.pendingTlsRecordLength() : "") : "")
             + " active(remoteClosed=" + active.isRemoteClosed() + ",closed=" + active.isClosed()
             + ",writeClosed=" + active.isWriteClosed() + ",in=" + active.getInBuffer().used()
             + ",out=" + active.getOutBuffer().used() + ")"
@@ -408,7 +422,7 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            logSessionDiagnostic("exception", ctx, session);
+            logSessionDiagnostic("exception", ctx, session, err);
             String side = (session.active == ctx.connection) ? "active" : "passive";
             if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
@@ -505,7 +519,7 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            logSessionDiagnostic("connectable-exception", ctx, session);
+            logSessionDiagnostic("connectable-exception", ctx, session, err);
             String side = (session.active == ctx.connection) ? "active" : "passive";
             if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);

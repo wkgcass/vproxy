@@ -4,6 +4,10 @@ import io.vproxy.base.Config;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteBufferEx;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.ringbuffer.AbstractUnwrapByteBufferRingBuffer;
+import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.bytearray.ByteArrayBuilder;
@@ -17,6 +21,9 @@ import io.vproxy.vpacket.conntrack.tcp.TcpUtils;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.SwitchDelegate;
 import io.vproxy.vswitch.VirtualNetwork;
+import io.vproxy.vswitch.stack.fd.VSwitchFDContext;
+import io.vproxy.vswitch.stack.fd.VSwitchFDs;
+import io.vproxy.vswitch.stack.fd.VSwitchSocketFD;
 import io.vproxy.vswitch.node.*;
 import io.vproxy.vproxyx.websocks.AgentDNSServer;
 import io.vproxy.vproxyx.websocks.ConfigLoader;
@@ -24,6 +31,8 @@ import io.vproxy.vproxyx.websocks.ConfigProcessor;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,6 +42,176 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.*;
 
 public class TestPerformanceRegressions {
+    @Test
+    public void destroyedTcpWithPendingOutputReportsFailureInsteadOfZeroWrite() throws Exception {
+        try (var fixture = new StackFixture()) {
+            var ctx = new VSwitchFDContext(fixture.delegate, fixture.network);
+            var fd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), fixture.tcp) {};
+            var output = RingBuffer.allocate(8);
+            output.storeBytesFrom(ByteBuffer.wrap(new byte[]{1, 2, 3, 4}));
+            fixture.tcp.destroy();
+            assertTrue("entry destruction wakes the still-open fd", fd.isOpen());
+            try {
+                output.writeTo(fd);
+                fail("a destroyed transport must fail, not return zero and remain writable");
+            } catch (IOException expected) {
+                assertEquals("unwritten output stays owned by the caller", 4, output.used());
+            } finally {
+                output.clean();
+            }
+        }
+    }
+
+    @Test
+    public void closingDestroyedTcpDoesNotRestartQueuedOutput() throws Exception {
+        try (var fixture = new StackFixture()) {
+            var restarted = new AtomicBoolean();
+            fixture.delegate.scheduler.graph.addNode(new TcpStack(fixture.delegate) {
+                @Override
+                public void tcpStartRetransmission(VirtualNetwork network, TcpEntry tcp) {
+                    restarted.set(true);
+                }
+            });
+            var ctx = new VSwitchFDContext(fixture.delegate, fixture.network);
+            var fd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), fixture.tcp) {};
+            fixture.tcp.sendingQueue.init(1000, 1000, 1);
+            assertEquals(4, fixture.tcp.sendingQueue.apiWrite(ByteBuffer.wrap(new byte[]{1, 2, 3, 4})));
+            assertTrue(fixture.tcp.sendingQueue.hasMoreData());
+            fixture.tcp.destroy();
+            fd.close();
+            assertFalse(fd.isOpen());
+            assertFalse("closing a reset transport must not restart retransmission", restarted.get());
+            assertEquals(TcpState.CLOSED, fixture.tcp.getState());
+            assertNull(fixture.tcp.retransmissionTimer);
+        }
+    }
+
+    @Test
+    public void transportResetDoesNotDiscardDecodedBytesUnderBackpressure() throws Exception {
+        decodedBytesDrainBeforeTransportEnd(true);
+    }
+
+    @Test
+    public void transportEofDoesNotCloseBeforeDecodedBytesDrain() throws Exception {
+        decodedBytesDrainBeforeTransportEnd(false);
+    }
+
+    private void decodedBytesDrainBeforeTransportEnd(boolean fails) throws Exception {
+        // A transparent decoder isolates the transport/staging contract from
+        // TLS: all staged bytes stand for already authenticated plaintext.
+        var sharedPlainBuffer = RingBuffer.allocate(8);
+        var unwrap = new AbstractUnwrapByteBufferRingBuffer(sharedPlainBuffer) {
+            @Override
+            protected void handleEncryptedBuffer(ByteBufferEx input, boolean[] underflow,
+                                                  boolean[] errored, IOException[] exception) {
+                ByteBuffer decoded = ByteBuffer.allocate(input.limit() - input.position());
+                decoded.put(input.realBuffer()).flip();
+                recordIntermediateBuffer(decoded);
+            }
+        };
+        var reset = new IOException("Connection reset by peer");
+        int[] reads = {0};
+        ReadableByteStream source = dst -> {
+            if (reads[0] == 64) {
+                if (fails) throw reset;
+                return -1;
+            }
+            int n = Math.min(dst.remaining(), 64 - reads[0]);
+            for (int i = 0; i < n; ++i) dst.put((byte) reads[0]++);
+            return n;
+        };
+        try {
+            assertEquals(64, unwrap.storeBytesFrom(source));
+            assertEquals(64, unwrap.pendingPlaintextBytes());
+            var received = new ByteArrayOutputStream();
+            for (int step = 0; step < 64 && unwrap.pendingPlaintextBytes() != 0; ++step) {
+                assertEquals("do not read a failed transport again", 0, unwrap.storeBytesFrom(source));
+                int[] budget = {2};
+                // Proxy consumes this shared buffer directly, rather than
+                // through the unwrap facade. Its writable edges must resume
+                // staging and eventually make the terminal result observable.
+                sharedPlainBuffer.writeTo(src -> {
+                    int n = Math.min(src.remaining(), budget[0]);
+                    for (int i = 0; i < n; ++i) received.write(src.get());
+                    budget[0] -= n;
+                    return n;
+                });
+            }
+            byte[] expected = new byte[64];
+            for (int i = 0; i < expected.length; ++i) expected[i] = (byte) i;
+            assertArrayEquals(expected, received.toByteArray());
+            assertEquals(0, unwrap.pendingPlaintextBytes());
+            try {
+                int result = unwrap.storeBytesFrom(source);
+                if (fails) fail("transport reset must be reported after the decoded data drains");
+                assertEquals(-1, result);
+            } catch (IOException e) {
+                assertTrue(fails);
+                assertSame(reset, e);
+            }
+        } finally {
+            unwrap.clean();
+        }
+    }
+
+    @Test
+    public void resetAfterWrappedReadDecodesTheCommittedFirstPart() throws Exception {
+        var plain = RingBuffer.allocate(8);
+        var unwrap = new AbstractUnwrapByteBufferRingBuffer(plain) {
+            @Override
+            protected void handleEncryptedBuffer(ByteBufferEx input, boolean[] underflow,
+                                                  boolean[] errored, IOException[] exception) {
+                if (input.limit() - input.position() < 4) {
+                    // A decoder may suspend without requesting defragmentation.
+                    errored[0] = true;
+                    return;
+                }
+                byte[] block = new byte[4];
+                input.get(block, 0, block.length);
+                recordIntermediateBuffer(ByteBuffer.wrap(block));
+            }
+        };
+        var reset = new IOException("Connection reset by peer");
+        int[] phase = {0};
+        ReadableByteStream source = dst -> {
+            switch (phase[0]++) {
+                case 0:
+                    dst.put(new byte[]{0, 1, 2, 3, 4, 5});
+                    return 6;
+                case 1:
+                    return 0;
+                case 2:
+                    assertEquals(2, dst.remaining());
+                    dst.put(new byte[]{6, 7});
+                    return 2;
+                default:
+                    throw reset;
+            }
+        };
+        try {
+            assertEquals(6, unwrap.storeBytesFrom(source));
+            assertEquals(4, unwrap.pendingPlaintextBytes());
+            assertEquals(2, unwrap.pendingEncryptedBytes());
+            assertEquals(2, unwrap.storeBytesFrom(source));
+            assertEquals(8, unwrap.pendingPlaintextBytes());
+            var received = new ByteArrayOutputStream();
+            plain.writeTo(src -> {
+                int n = src.remaining();
+                while (src.hasRemaining()) received.write(src.get());
+                return n;
+            });
+            assertArrayEquals(new byte[]{0, 1, 2, 3, 4, 5, 6, 7}, received.toByteArray());
+            try {
+                unwrap.storeBytesFrom(source);
+                fail("saved reset must be reported");
+            } catch (IOException e) {
+                assertSame(reset, e);
+            }
+        } finally {
+            unwrap.clean();
+        }
+    }
+
     @Test
     public void rotationsPreserveCapturedMutableRanges() {
         for (boolean prepend : new boolean[]{false, true}) {
@@ -258,13 +437,14 @@ public class TestPerformanceRegressions {
         final TcpEntry tcp = new TcpEntry(null, new IPPort("192.168.1.2", 1234), new IPPort("192.168.1.1", 80), 12345);
         final VirtualNetwork network;
         final CapturingStack stack;
+        final SwitchDelegate delegate;
         StackFixture() throws Exception {
             var constructor = SwitchDelegate.class.getDeclaredConstructors()[0];
             constructor.setAccessible(true);
             Object[] args = new Object[constructor.getParameterCount()];
             args[1] = new NodeGraphScheduler(new NodeGraph());
             args[6] = (SwitchDelegate.GetSelectorEventLoop) () -> loop;
-            var delegate = (SwitchDelegate) constructor.newInstance(args);
+            delegate = (SwitchDelegate) constructor.newInstance(args);
             network = new VirtualNetwork(delegate, 1, loop.ensureNetEventLoop(), Network.from("192.168.1.0/24"), null, 30000, 30000, null);
             stack = new CapturingStack(delegate);
             tcp.setState(TcpState.ESTABLISHED);

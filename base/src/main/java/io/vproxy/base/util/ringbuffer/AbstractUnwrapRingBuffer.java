@@ -32,6 +32,18 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     private boolean triggerWritable = false;
 
     private IOException exceptionToThrow = null;
+    private boolean transportEnded = false;
+    private IOException transportException = null;
+
+    private boolean hasPendingPlaintext() {
+        return plainBufferForApp.used() != 0 || !intermediateBuffers.isEmpty();
+    }
+
+    private int transportEndResult() throws IOException {
+        if (hasPendingPlaintext()) return 0;
+        if (transportException != null) throw transportException;
+        return -1;
+    }
 
     public AbstractUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp) {
         this.plainBufferForApp = plainBufferForApp;
@@ -51,16 +63,32 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     @Override
     public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         checkException();
+        if (transportEnded) return transportEndResult();
         int len = 0;
         while (true) {
-            int read = encryptedBufferForInput.storeBytesFrom(channel);
+            int read;
+            int bufferedBeforeRead = encryptedBufferForInput.used();
+            try {
+                read = encryptedBufferForInput.storeBytesFrom(channel);
+            } catch (IOException e) {
+                // Decoded bytes may still be in the app buffer and staging.
+                // Reporting the reset now makes Proxy release those buffers.
+                transportEnded = true;
+                transportException = e;
+                // A wrapped ring can commit its first contiguous read before
+                // the second read fails. Decode those committed bytes too.
+                len += encryptedBufferForInput.used() - bufferedBeforeRead;
+                generalUnwrap();
+                return len != 0 ? len : transportEndResult();
+            }
             if (read == 0) {
                 break; // maybe the buffer is full
             }
             if (read == -1) {
+                transportEnded = true;
                 assert Logger.lowLevelDebug("reading from remote return -1");
                 if (len == 0) {
-                    return -1;
+                    return transportEndResult();
                 } else {
                     break;
                 }
@@ -93,6 +121,19 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
 
     protected int intermediateBufferCount() {
         return intermediateBuffers.size();
+    }
+
+    /** Authenticated/decoded bytes still awaiting consumption, including staging. */
+    public int pendingPlaintextBytes() {
+        int bytes = plainBufferForApp.used();
+        for (ByteBufferRingBuffer buf : intermediateBuffers) {
+            bytes += buf.used();
+        }
+        return bytes;
+    }
+
+    public int pendingEncryptedBytes() {
+        return encryptedBufferForInput.used();
     }
 
     protected ByteBuffer getTemporaryBuffer(int cap) {
@@ -225,6 +266,14 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
 
     @Override
     public int free() {
+        if (transportEnded) {
+            // Stop polling the failed/EOF fd while staging drains. Removing
+            // the final staged buffer triggers writable, which re-enables
+            // READ so the connection can observe the saved terminal result.
+            // Keep READ enabled while only the shared plain buffer remains:
+            // its final byte does not necessarily generate a writable edge.
+            return intermediateBuffers.isEmpty() ? 1 : 0;
+        }
         // whether have space to store data is determined by network input buffer
         return encryptedBufferForInput.free();
     }

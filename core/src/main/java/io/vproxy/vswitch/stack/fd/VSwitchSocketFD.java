@@ -189,6 +189,13 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         checkEntry();
         checkConnected();
         checkFin();
+        // A reset/timeout destroys the TCP entry before the owner closes this
+        // virtual fd. destroy() wakes writable so pending output can observe
+        // the failure. Returning zero here would keep OP_WRITE ready forever
+        // and can prevent a full input buffer from observing EOF as well.
+        if (entry.getState() == TcpState.CLOSED) {
+            throw new IOException("Connection reset by peer");
+        }
 
         int len = src.limit() - src.position();
         if (len == 0) {
@@ -235,7 +242,10 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
         cancelReadable();
         cancelWritable();
-        if (entry == null) {
+        if (entry == null || entry.getState() == TcpState.CLOSED) {
+            // A destroyed entry has already been removed and its timers
+            // cancelled. Queued output cannot be drained on that transport;
+            // restarting it would resurrect the entry as SYN_SENT.
             return;
         }
 
