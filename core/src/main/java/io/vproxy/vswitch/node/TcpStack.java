@@ -318,6 +318,11 @@ public class TcpStack extends Node {
 
         if (tcpPkt.isAck()) {
             long ack = TcpUtils.extendSeq(pkb.tcp.sendingQueue.getLatestSeq(), tcpPkt.getAckNum());
+            // Reject invalid ACKs before they can reset loss-recovery timers or
+            // count toward fast retransmit. The payload can still be processed.
+            if (!pkb.tcp.sendingQueue.isAckAcceptable(ack)) {
+                return false;
+            }
             int window = tcpPkt.getWindow();
             long oldAckSeq = pkb.tcp.sendingQueue.getAckSeq();
             int oldWindow = pkb.tcp.sendingQueue.getWindow();
@@ -329,7 +334,7 @@ public class TcpStack extends Node {
                 pkb.tcp.diagnosticAcknowledged(pkb.tcp.sendingQueue.getAckSeq(),
                     Math.max(0, pkb.tcp.sendingQueue.getAckSeq() - oldAckSeq));
             }
-            if (pkb.tcp.sendingQueue.getWindow() > 0 || !pkb.tcp.sendingQueue.hasUnsentData()) {
+            if (!needsZeroWindowPersist(pkb.tcp)) {
                 cancelZeroWindowPersist(pkb.tcp);
             }
             if (ack > oldAckSeq) {
@@ -349,7 +354,8 @@ public class TcpStack extends Node {
                 // another duplicate ACK or the retransmission timer.
                 pkb.tcp.sendingQueue.resetDupAckCount();
                 _tcpStartRetransmission(pkb.network, pkb.tcp);
-            } else {
+            } else if (pkb.tcp.sendingQueue.getWindow() > 0
+                && pkb.tcp.sendingQueue.getBytesInFlight() > 0) {
                 List<SAckTuple> sackBlocks = null;
                 if (pkb.tcp.isRemoteSackPermitted()) {
                     sackBlocks = parseSackBlocks(pkb.tcp, tcpPkt);
@@ -369,7 +375,7 @@ public class TcpStack extends Node {
                     _tcpStartRetransmission(pkb.network, pkb.tcp);
                 }
             }
-            if (pkb.tcp.sendingQueue.getWindow() == 0 && pkb.tcp.sendingQueue.hasUnsentData()) {
+            if (needsZeroWindowPersist(pkb.tcp)) {
                 startZeroWindowPersist(pkb.network, pkb.tcp);
             } else {
                 cancelZeroWindowPersist(pkb.tcp);
@@ -697,7 +703,7 @@ public class TcpStack extends Node {
     }
 
     private void transmitTcpPsh(VirtualNetwork network, TcpEntry tcp, RetransContext ctx) {
-        if (tcp.sendingQueue.getWindow() == 0 && tcp.sendingQueue.hasUnsentData()) {
+        if (needsZeroWindowPersist(tcp)) {
             startZeroWindowPersist(network, tcp);
         } else {
             cancelZeroWindowPersist(tcp);
@@ -710,12 +716,8 @@ public class TcpStack extends Node {
                 tcp.sendingQueue.onLoss();
             }
         } else if (tcp.sendingQueue.getAvailableSendWindow() <= 0) {
-            if (tcp.sendingQueue.getWindow() == 0) {
-                var probe = tcp.sendingQueue.fetchZeroWindowProbe();
-                if (probe != null) {
-                    sendTcpZeroWindowProbe(network, tcp, probe);
-                }
-            }
+            // Persist probes are sent only by the backoff timer. Sending one
+            // here would answer each zero-window ACK with another probe.
             // keep the retransmission timer armed while data is in flight, or a lost ACK would stall the connection
             if (tcp.sendingQueue.getBytesInFlight() > 0 && tcp.retransmissionTimer == null) {
                 assert Logger.lowLevelDebug("send window exhausted, keeping the retransmission timer armed");
@@ -726,7 +728,8 @@ public class TcpStack extends Node {
         }
         List<Segment> segments = tcp.sendingQueue.fetch(ctx.retransmissionCount > 0);
         if (segments.isEmpty()) { // no data to send, check FIN
-            if (tcp.sendingQueue.needToSendFin()) {
+            if (tcp.sendingQueue.needToSendFin() && !tcp.sendingQueue.hasUnsentData()
+                && tcp.sendingQueue.getAvailableSendWindow() > 0) {
                 assert Logger.lowLevelDebug("need to send FIN");
                 // fall through
             } else if (tcp.sendingQueue.getBytesInFlight() > 0) {
@@ -798,8 +801,13 @@ public class TcpStack extends Node {
         });
     }
 
+    private boolean needsZeroWindowPersist(TcpEntry tcp) {
+        return tcp.sendingQueue.getWindow() == 0
+            && (tcp.sendingQueue.hasUnsentData() || tcp.sendingQueue.needToSendFin());
+    }
+
     private void startZeroWindowPersist(VirtualNetwork network, TcpEntry tcp) {
-        if (tcp.persistTimer != null || tcp.sendingQueue.getWindow() != 0 || !tcp.sendingQueue.hasUnsentData()) {
+        if (tcp.persistTimer != null || !needsZeroWindowPersist(tcp)) {
             return;
         }
         int backoff = Math.min(tcp.persistProbeCount, 4);
@@ -808,7 +816,7 @@ public class TcpStack extends Node {
         tcp.persistTimer = sw.getSelectorEventLoop().delay(delay, () -> {
             if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticPersistTimer(expectedAt, Config.currentTimestamp);
             tcp.persistTimer = null;
-            if (tcp.getState() == TcpState.CLOSED || tcp.sendingQueue.getWindow() != 0 || !tcp.sendingQueue.hasUnsentData()) {
+            if (tcp.getState() == TcpState.CLOSED || !needsZeroWindowPersist(tcp)) {
                 tcp.persistProbeCount = 0;
                 return;
             }
@@ -845,7 +853,7 @@ public class TcpStack extends Node {
     private void afterTransmission(VirtualNetwork network, TcpEntry tcp) {
         assert Logger.lowLevelDebug("afterTransmission(" + network + "," + tcp + "," + ")");
 
-        if (tcp.requireClosing()) {
+        if (tcp.requireClosing() && !tcp.sendingQueue.hasMoreData()) {
             assert Logger.lowLevelDebug("need to be closed");
             _resetTcpConnection(network, tcp, "application-close-after-drain");
         }

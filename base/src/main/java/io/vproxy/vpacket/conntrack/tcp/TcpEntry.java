@@ -338,6 +338,10 @@ public class TcpEntry implements WithUserData {
             this.peerWindowRightEdge = ack + this.window;
         }
 
+        public boolean isAckAcceptable(long seq) {
+            return seq >= ackSeq && seq <= maxAckableSequence();
+        }
+
         private long maxAckableSequence() {
             long max = fetchSeq;
             if (zeroWindowProbeSeq == fetchSeq) {
@@ -353,12 +357,14 @@ public class TcpEntry implements WithUserData {
             this.latestSeq += 1;
             this.ackSeq += 1;
             this.fetchSeq += 1;
+            this.peerWindowRightEdge += 1;
         }
 
         public void decAllSeq() {
             this.latestSeq -= 1;
             this.ackSeq -= 1;
             this.fetchSeq -= 1;
+            this.peerWindowRightEdge -= 1;
         }
 
         public boolean hasMoreSpace() {
@@ -479,11 +485,17 @@ public class TcpEntry implements WithUserData {
          * Returns one unsent byte as a TCP persist probe while the peer has
          * advertised a zero window. It deliberately does not advance SND.NXT
          * or consume congestion-window accounting; ordinary fetch() remains
-         * blocked until a window update arrives.
+         * blocked until a window update arrives. If only FIN remains, use an
+         * empty probe at SND.NXT - 1 to recover a lost window update.
          */
         public Segment fetchZeroWindowProbe() {
-            if (window != 0 || fetchSeq >= latestSeq) {
+            if (window != 0) {
                 return null;
+            }
+            if (fetchSeq >= latestSeq) {
+                // FIN also needs a window slot. An empty probe just before
+                // SND.NXT solicits a window update without sending FIN early.
+                return needToSendFin() ? new Segment(fetchSeq - 1, ByteArray.allocate(0)) : null;
             }
             for (Segment segment : q) {
                 if (segment.seqBeginInclusive <= fetchSeq && fetchSeq < segment.seqEndExclusive) {
@@ -581,7 +593,7 @@ public class TcpEntry implements WithUserData {
                 return;
             }
 
-            if (seq < ackSeq || seq > maxAckableSequence()) {
+            if (!isAckAcceptable(seq)) {
                 return;
             }
 

@@ -286,6 +286,27 @@ public class TestDirectRelayAllocation {
                 assertEquals(firstResult.get(), cachedResult.get());
                 assertEquals("normalized cache hit must not issue another HTTP request", 1, requestCount.get());
 
+                // Simulate a caller that observed a cache miss, was paused,
+                // and reaches admission only after the first request completes.
+                // Admission must recheck the cache under the in-flight lock.
+                var requestMethod = AgentDNSServer.class.getDeclaredMethod("requestAndGetResult",
+                    ServerGroup.class, String.class, String.class, int.class, Callback.class);
+                requestMethod.setAccessible(true);
+                var stateLockField = AgentDNSServer.class.getDeclaredField("dnsStateLock");
+                stateLockField.setAccessible(true);
+                Object stateLock = stateLockField.get(dns);
+                AtomicReference<IP> delayedCallerResult = new AtomicReference<>();
+                var callbackHeldLock = new java.util.concurrent.atomic.AtomicBoolean();
+                requestMethod.invoke(dns, serverGroup, "resolver", "example.test", 0, new Callback<IP, UnknownHostException>() {
+                    @Override protected void onSucceeded(IP value) {
+                        callbackHeldLock.set(Thread.holdsLock(stateLock));
+                        delayedCallerResult.set(value);
+                    }
+                    @Override protected void onFailed(UnknownHostException err) { resolveError.set(err); }
+                });
+                assertEquals("a completed query must not be restarted after a racing miss", firstResult.get(), delayedCallerResult.get());
+                assertFalse("cache-hit callback must run outside dnsStateLock", callbackHeldLock.get());
+
                 CountDownLatch failedCallbacks = new CountDownLatch(2);
                 AtomicInteger failedCount = new AtomicInteger();
                 AtomicReference<Throwable> requestFailure = new AtomicReference<>();

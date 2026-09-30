@@ -110,7 +110,7 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
     @Override
     public long updateChecksum(long state, int off, int len) {
         checkBoundForOffsetAndLength(off, len);
-        int sum = (int) (state >> 9);
+        long sum = state >> 9;
         boolean pending = ((state >>> 8) & 1) != 0;
         int high = (int) (state & 0xff);
         int i = off;
@@ -132,7 +132,12 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
             high = seg.get(ValueLayout.JAVA_BYTE, i) & 0xff;
             pending = true;
         }
-        return ((long) sum << 9) | (pending ? 1L << 8 : 0) | high;
+        // Keep the state bounded across leaves, including leaves smaller than
+        // one folding batch. Otherwise many small leaves can overflow a later
+        // int accumulator even though each individual leaf is short.
+        sum = (sum & 0xffff) + (sum >>> 16);
+        sum = (sum & 0xffff) + (sum >>> 16);
+        return (sum << 9) | (pending ? 1L << 8 : 0) | high;
     }
 
     @Override

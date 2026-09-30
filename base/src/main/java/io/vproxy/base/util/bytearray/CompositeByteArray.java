@@ -9,6 +9,7 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
     private final ByteArray second;
     private final int firstLen;
     private final int len;
+    private final int depth;
     private final boolean backingSizeStable;
     private final long stableBackingSize;
 
@@ -24,10 +25,10 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
         int firstDepth = first.treeDepth();
         int secondDepth = second.treeDepth();
         if (firstDepth > secondDepth + 1 && first instanceof CompositeByteArray composite) {
-            return rebalance(composite.first, join(composite.second, second));
+            return rebalance(composite.firstRange(), join(composite.secondRange(), second));
         }
         if (secondDepth > firstDepth + 1 && second instanceof CompositeByteArray composite) {
-            return rebalance(join(first, composite.first), composite.second);
+            return rebalance(join(first, composite.firstRange()), composite.secondRange());
         }
         return new CompositeByteArray(first, second);
     }
@@ -36,22 +37,22 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
         int firstDepth = first.treeDepth();
         int secondDepth = second.treeDepth();
         if (firstDepth > secondDepth + 1 && first instanceof CompositeByteArray left) {
-            if (left.first.treeDepth() >= left.second.treeDepth()) {
-                return new CompositeByteArray(left.first, new CompositeByteArray(left.second, second));
+            if (left.firstRange().treeDepth() >= left.secondRange().treeDepth()) {
+                return new CompositeByteArray(left.firstRange(), new CompositeByteArray(left.secondRange(), second));
             }
-            if (left.second instanceof CompositeByteArray middle) {
+            if (left.secondRange() instanceof CompositeByteArray middle) {
                 return new CompositeByteArray(
-                    new CompositeByteArray(left.first, middle.first),
-                    new CompositeByteArray(middle.second, second));
+                    new CompositeByteArray(left.firstRange(), middle.firstRange()),
+                    new CompositeByteArray(middle.secondRange(), second));
             }
         } else if (secondDepth > firstDepth + 1 && second instanceof CompositeByteArray right) {
-            if (right.second.treeDepth() >= right.first.treeDepth()) {
-                return new CompositeByteArray(new CompositeByteArray(first, right.first), right.second);
+            if (right.secondRange().treeDepth() >= right.firstRange().treeDepth()) {
+                return new CompositeByteArray(new CompositeByteArray(first, right.firstRange()), right.secondRange());
             }
-            if (right.first instanceof CompositeByteArray middle) {
+            if (right.firstRange() instanceof CompositeByteArray middle) {
                 return new CompositeByteArray(
-                    new CompositeByteArray(first, middle.first),
-                    new CompositeByteArray(middle.second, right.second));
+                    new CompositeByteArray(first, middle.firstRange()),
+                    new CompositeByteArray(middle.secondRange(), right.secondRange()));
             }
         }
         return new CompositeByteArray(first, second);
@@ -62,8 +63,20 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
         this.second = second;
         this.firstLen = first.length();
         this.len = Math.addExact(firstLen, second.length());
+        this.depth = 1 + Math.max(first.treeDepth(), second.treeDepth());
         this.backingSizeStable = first.retainedBackingSizeIsStable() && second.retainedBackingSizeIsStable();
-        this.stableBackingSize = first.retainedBackingSize() + second.retainedBackingSize();
+        this.stableBackingSize = backingSizeStable ? first.retainedBackingSize() + second.retainedBackingSize() : 0;
+    }
+
+    // A growing leaf must not extend its visible range when a rotation
+    // rebuilds this node. sub() preserves sharing of the captured prefix.
+    private ByteArray firstRange() {
+        return first.length() == firstLen ? first : first.sub(0, firstLen);
+    }
+
+    private ByteArray secondRange() {
+        int secondLen = len - firstLen;
+        return second.length() == secondLen ? second : second.sub(0, secondLen);
     }
 
     public ByteArray getFirst() {
@@ -102,7 +115,7 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public int treeDepth() {
-        return 1 + Math.max(first.treeDepth(), second.treeDepth());
+        return depth;
     }
 
     @Override

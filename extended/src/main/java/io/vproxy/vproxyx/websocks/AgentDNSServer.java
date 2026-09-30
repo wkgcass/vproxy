@@ -133,7 +133,9 @@ public class AgentDNSServer extends DNSServer {
         NetEventLoop thisLoop = loop;
         loop.getSelectorEventLoop().delay(5 * 60_000, () -> {
             if (loop == thisLoop) {
-                cache.clear();
+                synchronized (dnsStateLock) {
+                    cache.clear();
+                }
             }
             clearCacheTask();
         });
@@ -362,10 +364,16 @@ public class AgentDNSServer extends DNSServer {
         }
         CacheKey key = cacheKey(domain, serverGroupName, family);
         InFlight callbacks;
+        IP cached;
         String overloadError = null;
         synchronized (dnsStateLock) {
+            // A previous query may have completed since the caller's cache
+            // lookup. Recheck atomically with admission to the in-flight map.
+            cached = getFromCache(key);
             InFlight current = inFlight.get(key);
-            if (current != null) {
+            if (cached != null) {
+                callbacks = null;
+            } else if (current != null) {
                 if (inFlightWaiterCount >= MAX_DNS_INFLIGHT_WAITERS) {
                     overloadError = "too many DNS resolve waiters";
                     callbacks = null;
@@ -383,6 +391,10 @@ public class AgentDNSServer extends DNSServer {
                 inFlight.put(key, callbacks);
                 ++inFlightWaiterCount;
             }
+        }
+        if (cached != null) {
+            cb.succeeded(cached);
+            return;
         }
         if (overloadError != null) {
             cb.failed(new UnknownHostException(overloadError));

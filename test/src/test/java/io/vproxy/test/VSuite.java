@@ -24,6 +24,7 @@ import org.junit.runners.Suite;
     TestPcap.class,
     TestRouteTable.class,
     TestTCP.class,
+    TestPerformanceRegressions.class,
     TestHttpServer.class,
     TestHttpClient.class,
     TestNetServerClient.class,
