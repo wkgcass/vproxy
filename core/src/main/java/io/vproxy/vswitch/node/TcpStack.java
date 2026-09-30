@@ -1,9 +1,11 @@
 package io.vproxy.vswitch.node;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.commons.graph.GraphBuilder;
 import io.vproxy.vpacket.AbstractIpPacket;
@@ -20,6 +22,8 @@ import static io.vproxy.base.util.Logger.tcpStackDebugOn;
 
 @SuppressWarnings("ConstantConditions")
 public class TcpStack extends Node {
+    private static final boolean TCP_DIAGNOSTICS_ENABLED = "on".equals(Utils.getSystemProperty("tcp_stack_diag", "off"));
+
     private final SwitchDelegate sw;
     private final NodeEgress tcpReset = new NodeEgress("tcp-reset");
     private final NodeEgress l4output = new NodeEgress("l4-output");
@@ -264,6 +268,7 @@ public class TcpStack extends Node {
         parent.synBacklog.remove(pkb.tcp);
         if (parent.backlog.size() >= TcpListenEntry.MAX_BACKLOG_SIZE) {
             assert Logger.lowLevelDebug("backlog is full, resetting connection");
+            pkb.tcp.diagnosticCloseReason("accept-backlog-full");
             pkb.tcp.destroy();
             pkb.network.conntrack.removeTcp(pkb.tcp.remote, pkb.tcp.local);
             return _returnnext(pkb, tcpReset);
@@ -282,6 +287,12 @@ public class TcpStack extends Node {
         var expect = pkb.tcp.receivingQueue.getExpectingSeq();
         var seq = TcpUtils.extendSeq(expect, tcpPkt.getSeqNum());
         var read = pkb.tcp.receivingQueue.getReadSeq();
+        if (TCP_DIAGNOSTICS_ENABLED) {
+            var receivedData = tcpPkt.getData();
+            pkb.tcp.diagnosticReceived(seq, receivedData == null ? 0 : receivedData.length());
+            if (tcpPkt.isFin()) pkb.tcp.diagnosticReceivedFin();
+            if (tcpPkt.isRst()) pkb.tcp.diagnosticReceivedRst();
+        }
         if (tcpPkt.isFin()) {
             if (seq != read) {
                 assert Logger.lowLevelDebug("data not fully consumed yet but received FIN");
@@ -314,6 +325,10 @@ public class TcpStack extends Node {
                 Logger.alert("TCP ACK received: ack=" + ack + " oldAckSeq=" + oldAckSeq + " bytesInFlight=" + pkb.tcp.sendingQueue.getBytesInFlight() + " cwnd=" + pkb.tcp.sendingQueue.getCwnd() + " window=" + pkb.tcp.sendingQueue.getWindow());
             }
             pkb.tcp.sendingQueue.ack(ack, window);
+            if (TCP_DIAGNOSTICS_ENABLED) {
+                pkb.tcp.diagnosticAcknowledged(pkb.tcp.sendingQueue.getAckSeq(),
+                    Math.max(0, pkb.tcp.sendingQueue.getAckSeq() - oldAckSeq));
+            }
             if (pkb.tcp.sendingQueue.getWindow() > 0 || !pkb.tcp.sendingQueue.hasUnsentData()) {
                 cancelZeroWindowPersist(pkb.tcp);
             }
@@ -346,7 +361,8 @@ public class TcpStack extends Node {
                     int dupCount = pkb.tcp.sendingQueue.incrementDupAckCount();
                     if (dupCount >= 3) {
                         pkb.tcp.sendingQueue.resetDupAckCount();
-                        transmitTcpPsh(pkb.network, pkb.tcp, new RetransContext().retransmissionCount(1));
+                        transmitTcpPsh(pkb.network, pkb.tcp,
+                            new RetransContext().retransmissionCount(1).fastRetransmit());
                     }
                 }
                 if ((sackBlocks != null || tcpPkt.getData().length() == 0) && pkb.tcp.retransmissionTimer == null) {
@@ -475,6 +491,7 @@ public class TcpStack extends Node {
         }
         if (pkb.tcp.sendingQueue.ackOfFinReceived()) {
             assert Logger.lowLevelDebug("FIN acked in LAST_ACK, connection fully closed");
+            pkb.tcp.diagnosticCloseReason("fin-acked");
             pkb.tcp.setState(TcpState.CLOSED);
             pkb.tcp.destroy();
             pkb.network.conntrack.removeTcp(pkb.tcp.remote, pkb.tcp.local);
@@ -502,7 +519,10 @@ public class TcpStack extends Node {
         }
         final TcpEntry tcp = pkb.tcp;
         final VirtualNetwork network = pkb.network;
+        long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + TcpEntry.TIME_WAIT_TIMEOUT_MS : 0;
         tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(TcpEntry.TIME_WAIT_TIMEOUT_MS, () -> {
+            if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticTimeWaitTimer(expectedAt, Config.currentTimestamp);
+            tcp.diagnosticCloseReason("time-wait-expired");
             tcp.setState(TcpState.CLOSED);
             tcp.destroy();
             network.conntrack.removeTcp(tcp.remote, tcp.local);
@@ -538,7 +558,11 @@ public class TcpStack extends Node {
         if (tcp.isRemoteSackPermitted() && tcp.receivingQueue.hasOutOfOrderData()) {
             delayedAckTimeout = TcpEntry.DELAYED_ACK_TIMEOUT_FOR_SACK;
         }
-        tcp.delayedAckTimer = sw.getSelectorEventLoop().delay(delayedAckTimeout, () -> sendAck(network, tcp));
+        long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + delayedAckTimeout : 0;
+        tcp.delayedAckTimer = sw.getSelectorEventLoop().delay(delayedAckTimeout, () -> {
+            if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticDelayedAckTimer(expectedAt, Config.currentTimestamp);
+            sendAck(network, tcp);
+        });
     }
 
     public void tcpAck(VirtualNetwork network, TcpEntry tcp) {
@@ -645,7 +669,7 @@ public class TcpStack extends Node {
         // check whether need to reset the connection because of too many retransmits
         if (tcp.requireClosing() && ctx.retransmissionCount > TcpEntry.MAX_RETRANSMISSION_AFTER_CLOSING) {
             assert Logger.lowLevelDebug("conn " + tcp + " is closed due to too many retransmission after closing");
-            _resetTcpConnection(network, tcp);
+            _resetTcpConnection(network, tcp, "closing-retransmission-limit");
             return;
         }
 
@@ -653,7 +677,7 @@ public class TcpStack extends Node {
         var timedOutSeg = tcp.sendingQueue.checkRetransmissionTimeout();
         if (timedOutSeg != null) {
             Logger.error(LogType.SYS_ERROR, "Broken Pipe: segment [" + timedOutSeg.seqBeginInclusive + ", " + timedOutSeg.seqEndExclusive + ") retransmission timeout after " + TcpEntry.RETRANSMISSION_TIMEOUT_MS + "ms for " + tcp);
-            _resetTcpConnection(network, tcp);
+            _resetTcpConnection(network, tcp, "segment-retransmission-timeout");
             return;
         }
 
@@ -745,7 +769,7 @@ public class TcpStack extends Node {
                 tcp.delayedAckTimer = null;
             }
             for (var s : segments) {
-                sendTcpPsh(network, tcp, s);
+                sendTcpPsh(network, tcp, s, ctx);
             }
         }
         ctx.resetSpecialAck();
@@ -766,7 +790,9 @@ public class TcpStack extends Node {
         if (tcp.retransmissionTimer != null) {
             tcp.retransmissionTimer.cancel();
         }
+        long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + finalDelay : 0;
         tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(finalDelay, () -> {
+            if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticRetransmitTimer(expectedAt, Config.currentTimestamp);
             ctx.retransmissionCount++;
             transmitTcp(network, tcp, ctx);
         });
@@ -778,7 +804,9 @@ public class TcpStack extends Node {
         }
         int backoff = Math.min(tcp.persistProbeCount, 4);
         int delay = Math.min(TcpEntry.RTO_MAX, TcpEntry.RTO_MIN << backoff);
+        long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + delay : 0;
         tcp.persistTimer = sw.getSelectorEventLoop().delay(delay, () -> {
+            if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticPersistTimer(expectedAt, Config.currentTimestamp);
             tcp.persistTimer = null;
             if (tcp.getState() == TcpState.CLOSED || tcp.sendingQueue.getWindow() != 0 || !tcp.sendingQueue.hasUnsentData()) {
                 tcp.persistProbeCount = 0;
@@ -803,6 +831,7 @@ public class TcpStack extends Node {
 
     private void sendTcpZeroWindowProbe(VirtualNetwork network, TcpEntry tcp, Segment probe) {
         VProxyThread.current().newUuidDebugInfo();
+        if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticPersistProbe(probe.data.length());
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
         tcpPkt.setSeqNum(probe.seqBeginInclusive);
         tcpPkt.setFlags(Consts.TCP_FLAGS_PSH | Consts.TCP_FLAGS_ACK);
@@ -818,12 +847,20 @@ public class TcpStack extends Node {
 
         if (tcp.requireClosing()) {
             assert Logger.lowLevelDebug("need to be closed");
-            _resetTcpConnection(network, tcp);
+            _resetTcpConnection(network, tcp, "application-close-after-drain");
         }
     }
 
     private void _resetTcpConnection(VirtualNetwork network, TcpEntry tcp) {
+        _resetTcpConnection(network, tcp, "explicit-reset");
+    }
+
+    private void _resetTcpConnection(VirtualNetwork network, TcpEntry tcp, String reason) {
         assert Logger.lowLevelDebug("resetTcpConnection(" + network + "," + tcp + "," + ")");
+        if (TCP_DIAGNOSTICS_ENABLED) {
+            tcp.diagnosticCloseReason(reason);
+            tcp.diagnosticSentRst();
+        }
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, TcpUtils.buildIpResponse(tcp, TcpUtils.buildRstResponse(tcp)));
         pkb.tcp = tcp;
@@ -850,11 +887,18 @@ public class TcpStack extends Node {
         _output(pkb);
     }
 
-    private void sendTcpPsh(VirtualNetwork network, TcpEntry tcp, Segment s) {
+    private void sendTcpPsh(VirtualNetwork network, TcpEntry tcp, Segment s, RetransContext ctx) {
         VProxyThread.current().newUuidDebugInfo();
         assert Logger.lowLevelDebug("sendTcpPsh(" + network + "," + tcp + "," + s + ")");
         if (tcpStackDebugOn) {
             Logger.alert("TCP PSH sent: seq=" + s.seqBeginInclusive + " len=" + s.data.length() + " expectAck=" + (s.seqBeginInclusive + s.data.length()));
+        }
+        if (TCP_DIAGNOSTICS_ENABLED) {
+            String retransmissionReason = null;
+            if (ctx.retransmissionCount > 0) {
+                retransmissionReason = ctx.sackRetransmit ? "sack" : ctx.fastRetransmit ? "fast" : "rto";
+            }
+            tcp.diagnosticSent(s.seqBeginInclusive, s.data.length(), retransmissionReason);
         }
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
@@ -882,6 +926,7 @@ public class TcpStack extends Node {
     private void sendTcpFin(VirtualNetwork network, TcpEntry tcp) {
         VProxyThread.current().newUuidDebugInfo();
         assert Logger.lowLevelDebug("sendTcpFin(" + network + "," + tcp + ")");
+        if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticSentFin();
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
         tcpPkt.setSeqNum(tcp.sendingQueue.getFetchSeq());

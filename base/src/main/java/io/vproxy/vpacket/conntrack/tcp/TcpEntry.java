@@ -47,6 +47,7 @@ public class TcpEntry implements WithUserData {
 
     public final SendingQueue sendingQueue;
     public final ReceivingQueue receivingQueue;
+    final TcpConnectionDiagnostics diagnostics;
 
     public TimerEvent retransmissionTimer = null;
     public TimerEvent persistTimer = null;
@@ -68,6 +69,7 @@ public class TcpEntry implements WithUserData {
         this.state = TcpState.CLOSED;
         this.sendingQueue = new SendingQueue(new Random().nextInt(TCP_SEQ_RAND) + TCP_SEQ_INIT_MIN);
         this.receivingQueue = new ReceivingQueue(seq == 0 ? 0 : seq + 1 /* the sequence is syn_packet.seq + 1 */);
+        this.diagnostics = TcpConnectionDiagnostics.enabled() ? new TcpConnectionDiagnostics() : null;
         this.synBacklogTimestamp = Config.currentTimestamp;
     }
 
@@ -76,6 +78,7 @@ public class TcpEntry implements WithUserData {
         this.local = local;
         this.sendingQueue = null;
         this.receivingQueue = null;
+        this.diagnostics = null;
         this.state = TcpState.CLOSED;
     }
 
@@ -109,7 +112,11 @@ public class TcpEntry implements WithUserData {
     }
 
     public void destroy() {
+        TcpState oldState = state;
         state = TcpState.CLOSED;
+        if (diagnostics != null) {
+            diagnostics.reportOnce(this, oldState);
+        }
         if (retransmissionTimer != null) {
             retransmissionTimer.cancel();
             retransmissionTimer = null;
@@ -146,6 +153,62 @@ public class TcpEntry implements WithUserData {
                 connectionHandler.writable(this);
             }
         }
+    }
+
+    public boolean diagnosticsEnabled() {
+        return diagnostics != null;
+    }
+
+    public void diagnosticReceived(long seq, int bytes) {
+        if (diagnostics != null) diagnostics.received(this, seq, bytes);
+    }
+
+    public void diagnosticSent(long seq, int bytes, String retransmissionReason) {
+        if (diagnostics != null) diagnostics.sent(this, seq, bytes, retransmissionReason);
+    }
+
+    public void diagnosticAcknowledged(long ackSeq, long bytes) {
+        if (diagnostics != null) diagnostics.acknowledged(this, ackSeq, bytes);
+    }
+
+    public void diagnosticPersistProbe(int bytes) {
+        if (diagnostics != null) diagnostics.persistProbe(this, bytes);
+    }
+
+    public void diagnosticReceivedFin() {
+        if (diagnostics != null) diagnostics.receivedFin();
+    }
+
+    public void diagnosticSentFin() {
+        if (diagnostics != null) diagnostics.sentFin();
+    }
+
+    public void diagnosticReceivedRst() {
+        if (diagnostics != null) diagnostics.receivedRst();
+    }
+
+    public void diagnosticSentRst() {
+        if (diagnostics != null) diagnostics.sentRst();
+    }
+
+    public void diagnosticCloseReason(String reason) {
+        if (diagnostics != null) diagnostics.closeReason(reason);
+    }
+
+    public void diagnosticRetransmitTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_RETRANSMIT, expectedAt, actualAt);
+    }
+
+    public void diagnosticPersistTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_PERSIST, expectedAt, actualAt);
+    }
+
+    public void diagnosticDelayedAckTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_DELAYED_ACK, expectedAt, actualAt);
+    }
+
+    public void diagnosticTimeWaitTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_TIME_WAIT, expectedAt, actualAt);
     }
 
     public int getPshMultiplier(int dataSize) {

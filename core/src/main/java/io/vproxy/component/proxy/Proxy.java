@@ -30,6 +30,22 @@ import java.util.Collection;
  * the session operations will always be handled in the same event loop
  */
 public class Proxy {
+    private static final boolean TCP_DIAGNOSTICS_ENABLED = "on".equals(Utils.getSystemProperty("tcp_stack_diag", "off"));
+
+    private static void logSessionDiagnostic(String event, ConnectionHandlerContext ctx, Session session) {
+        if (!TCP_DIAGNOSTICS_ENABLED) return;
+        Connection active = session.active;
+        Connection passive = session.passive;
+        String side = ctx.connection == active ? "active" : "passive";
+        Logger.alert("[TCP-DIAG] proxy event=" + event + " side=" + side + " session=" + session.id()
+            + " active(remoteClosed=" + active.isRemoteClosed() + ",closed=" + active.isClosed()
+            + ",writeClosed=" + active.isWriteClosed() + ",in=" + active.getInBuffer().used()
+            + ",out=" + active.getOutBuffer().used() + ")"
+            + " passive(remoteClosed=" + passive.isRemoteClosed() + ",closed=" + passive.isClosed()
+            + ",writeClosed=" + passive.isWriteClosed() + ",in=" + passive.getInBuffer().used()
+            + ",out=" + passive.getOutBuffer().used() + ")");
+    }
+
     private static void utilCloseConnection(Connection connection) {
         assert Logger.lowLevelDebug("close connection " + connection);
         connection.closeKeepBuffers();
@@ -392,6 +408,7 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
+            logSessionDiagnostic("exception", ctx, session);
             String side = (session.active == ctx.connection) ? "active" : "passive";
             if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
@@ -404,6 +421,7 @@ public class Proxy {
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
+            logSessionDiagnostic("remote-closed", ctx, session);
             assert Logger.lowLevelDebug("now the connection sent FIN, we should close output for the passive one");
             // now the active connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
@@ -425,6 +443,7 @@ public class Proxy {
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
+            logSessionDiagnostic("closed", ctx, session);
             assert Logger.lowLevelDebug("now the connection is closed, we should close the session");
             // now the active connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
@@ -439,6 +458,7 @@ public class Proxy {
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
+            logSessionDiagnostic("removed", ctx, session);
             utilCloseSessionAndReleaseBuffers(session);
         }
     }
@@ -485,6 +505,7 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
+            logSessionDiagnostic("connectable-exception", ctx, session);
             String side = (session.active == ctx.connection) ? "active" : "passive";
             if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
@@ -506,6 +527,7 @@ public class Proxy {
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
+            logSessionDiagnostic("remote-closed", ctx, session);
             assert Logger.lowLevelDebug("now the passive connection is closed, we should close output of the active one");
             // now the passive connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
@@ -526,6 +548,7 @@ public class Proxy {
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
+            logSessionDiagnostic("closed", ctx, session);
             assert Logger.lowLevelDebug("now the passive connection is closed, we should close the session");
             // now the passive connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
@@ -539,6 +562,7 @@ public class Proxy {
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
+            logSessionDiagnostic("removed", ctx, session);
             utilCloseSessionAndReleaseBuffers(session);
             sessions.remove(session); // remove the session record
         }

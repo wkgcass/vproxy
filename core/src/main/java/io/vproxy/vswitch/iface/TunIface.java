@@ -17,6 +17,8 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class TunIface extends Iface {
+    private static final boolean TCP_DIAGNOSTICS_ENABLED = "on".equals(Utils.getSystemProperty("tcp_stack_diag", "off"));
+
     private final ByteArray icmpPingPayloadPrefix = ByteArray.from("vpsstunarp");
     private final ByteArray icmpPingPayloadPlaceHolder = ByteArray.from("macadd"); // 6 bytes mac of the original req pkt
     private final ByteArray icmpPingOtherPart = ByteArray.from("id").concat(ByteArray.from(0, 0))
@@ -32,6 +34,8 @@ public class TunIface extends Iface {
 
     private AbstractDatagramFD<?> operateTun;
     protected SelectorEventLoop bondLoop;
+
+    private final TunReadDiagnostics tunReadDiagnostics = TCP_DIAGNOSTICS_ENABLED ? new TunReadDiagnostics() : null;
 
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
@@ -377,22 +381,30 @@ public class TunIface extends Iface {
 
         @Override
         public void readable(HandlerContext<AbstractDatagramFD<?>> ctx) {
-            while (true) {
-                VProxyThread.current().newUuidDebugInfo();
+            TunReadDiagnostics diagnostics = tunReadDiagnostics;
+            long startedAt = diagnostics == null ? 0 : System.nanoTime();
+            int packets = 0;
+            try {
+                while (true) {
+                    VProxyThread.current().newUuidDebugInfo();
 
-                int position = PRESERVED_LEN - (OS.isMac() ? 4 : 0);
-                rcvBuf.limit(TOTAL_LEN).position(position);
-                try {
-                    ctx.getChannel().read(rcvBuf);
-                } catch (IOException e) {
-                    Logger.error(LogType.CONN_ERROR, "tun device " + tunDatagramFD + " got error when reading", e);
-                    return;
+                    int position = PRESERVED_LEN - (OS.isMac() ? 4 : 0);
+                    rcvBuf.limit(TOTAL_LEN).position(position);
+                    try {
+                        ctx.getChannel().read(rcvBuf);
+                    } catch (IOException e) {
+                        Logger.error(LogType.CONN_ERROR, "tun device " + tunDatagramFD + " got error when reading", e);
+                        return;
+                    }
+                    if (rcvBuf.position() == position) {
+                        break; // nothing read, quit loop
+                    }
+                    PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVrf, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
+                    receivedPacket(pkb);
+                    ++packets;
                 }
-                if (rcvBuf.position() == position) {
-                    break; // nothing read, quit loop
-                }
-                PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVrf, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
-                receivedPacket(pkb);
+            } finally {
+                if (diagnostics != null) diagnostics.record(packets, System.nanoTime() - startedAt);
             }
         }
 
@@ -422,5 +434,28 @@ public class TunIface extends Iface {
 
         received(pkb);
         callback.alertPacketsArrive(TunIface.this);
+    }
+
+    private static final class TunReadDiagnostics {
+        private long callbacks;
+        private long packets;
+        private long elapsedNanos;
+        private int maxPacketsPerCallback;
+        private long maxCallbackNanos;
+        private int reportCount;
+
+        void record(int packetCount, long nanos) {
+            ++callbacks;
+            packets += packetCount;
+            elapsedNanos += nanos;
+            maxPacketsPerCallback = Math.max(maxPacketsPerCallback, packetCount);
+            maxCallbackNanos = Math.max(maxCallbackNanos, nanos);
+            if (callbacks % 1024 == 0 && reportCount < 32) {
+                ++reportCount;
+                Logger.alert("[TCP-DIAG] tun=" + callbacks + " readableCallbacks packets=" + packets
+                    + " avgPackets=" + packets / callbacks + " maxPacketsPerCallback=" + maxPacketsPerCallback
+                    + " avgCallbackNs=" + elapsedNanos / callbacks + " maxCallbackNs=" + maxCallbackNanos);
+            }
+        }
     }
 }

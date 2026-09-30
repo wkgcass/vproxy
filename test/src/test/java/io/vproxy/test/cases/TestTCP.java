@@ -1,12 +1,14 @@
 package io.vproxy.test.cases;
 
 import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.conntrack.tcp.SAckTuple;
 import io.vproxy.vpacket.conntrack.tcp.Segment;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.vpacket.conntrack.tcp.TcpUtils;
+import io.vproxy.base.util.log.LogHandler;
 import io.vproxy.vpacket.TcpPacket;
 import io.vproxy.base.util.Consts;
 import org.junit.Test;
@@ -1706,5 +1708,56 @@ public class TestTCP {
         var retrans = sq.fetch(true);
         assertEquals(1, retrans.size());
         assertEquals(base + 2800, retrans.get(0).seqBeginInclusive);
+    }
+
+    @Test
+    public void tcpConnectionDiagnosticsAreOptInAndBoundedToOneCloseSummary() {
+        String property = "io.vproxy.TcpStackDiag";
+        String oldValue = System.getProperty(property);
+        List<String> summaries = new java.util.ArrayList<>();
+        LogHandler logHandler = record -> {
+            if (record.content.startsWith("[TCP-DIAG] close=")) summaries.add(record.content);
+        };
+        Logger.logDispatcher.addLogHandler(logHandler);
+        try {
+            System.setProperty(property, "off");
+            var disabled = new TcpEntry(null,
+                new IPPort("12.34.56.78", 1234), new IPPort("98.76.54.32", 5678), 12345);
+            assertFalse(disabled.diagnosticsEnabled());
+
+            System.setProperty(property, "on");
+            var enabled = new TcpEntry(null,
+                new IPPort("12.34.56.78", 1234), new IPPort("98.76.54.32", 5678), 12345);
+            enabled.setState(TcpState.ESTABLISHED);
+            enabled.sendingQueue.init(1024, 256, 1);
+            assertTrue(enabled.diagnosticsEnabled());
+
+            enabled.diagnosticReceived(100, 40);
+            enabled.diagnosticSent(200, 40, "fast");
+            enabled.diagnosticAcknowledged(240, 40);
+            enabled.diagnosticPersistProbe(1);
+            enabled.diagnosticReceivedFin();
+            enabled.diagnosticSentFin();
+            enabled.diagnosticReceivedRst();
+            enabled.diagnosticSentRst();
+            enabled.diagnosticRetransmitTimer(100, 113);
+            enabled.diagnosticPersistTimer(200, 207);
+            enabled.diagnosticDelayedAckTimer(300, 302);
+            enabled.diagnosticTimeWaitTimer(400, 405);
+            enabled.diagnosticCloseReason("diagnostic-test");
+            enabled.destroy();
+            enabled.destroy(); // reporting is once per connection
+            assertEquals(1, summaries.size());
+            assertTrue(summaries.get(0).contains("close=diagnostic-test"));
+            assertTrue(summaries.get(0).contains("rtoTimerLateMs=1:avg=13:max=13"));
+            assertTrue(summaries.get(0).contains("RSTout=1"));
+        } finally {
+            Logger.logDispatcher.removeLogHandler(logHandler);
+            if (oldValue == null) {
+                System.clearProperty(property);
+            } else {
+                System.setProperty(property, oldValue);
+            }
+        }
     }
 }
