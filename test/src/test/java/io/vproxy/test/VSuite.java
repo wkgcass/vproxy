@@ -33,6 +33,7 @@ import org.junit.runners.Suite;
     TestEventLoopDiagnostics.class,
     TestConnectionReadFairness.class,
     TestConnectionReadBackpressure.class,
+    TestDecoderErrorNotification.class,
     TestHttpServer.class,
     TestHttpClient.class,
     TestNetServerClient.class,

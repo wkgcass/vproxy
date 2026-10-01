@@ -33,6 +33,20 @@ public class Connection implements NetFlowRecorder {
     // the inBuffer might be full, and we need to handle writable event
     class InBufferETHandler implements RingBufferETHandler {
         @Override
+        public void exception(RingBuffer source, IOException error) {
+            var eventLoop = _eventLoop;
+            var cctx = _cctx;
+            if (closed || eventLoop == null || cctx == null || source != inBuffer) return;
+            // Closing synchronously here could free a decoder's buffers while
+            // it is still operating. Also reject delivery to a replaced input
+            // or a later registration of the same connection.
+            eventLoop.getSelectorEventLoop().nextTick(() -> {
+                if (closed || _eventLoop != eventLoop || _cctx != cctx || inBuffer != source) return;
+                NetEventLoopUtils.callExceptionEvent(cctx, error);
+            });
+        }
+
+        @Override
         public void readableET() {
             // ignore the event
             assert Logger.lowLevelNetDebug("readableET triggered (do nothing) " + Connection.this);
@@ -417,6 +431,12 @@ public class Connection implements NetFlowRecorder {
         _cctx = cctx;
     }
 
+    void checkInputBufferException() {
+        var input = inBuffer;
+        var error = input.getException();
+        if (error != null) inBufferETHandler.exception(input, error);
+    }
+
     public NetEventLoop getEventLoop() {
         return _eventLoop;
     }
@@ -527,6 +547,7 @@ public class Connection implements NetFlowRecorder {
         // assign buffers
         this.inBuffer = in;
         this.outBuffer = out;
+        checkInputBufferException();
     }
 
     public void runNoQuickWrite(Consumer<Connection> r) {

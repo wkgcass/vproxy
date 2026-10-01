@@ -61,6 +61,11 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     }
 
     @Override
+    public IOException getException() {
+        return exceptionToThrow;
+    }
+
+    @Override
     public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         checkException();
         if (transportEnded) return transportEndResult();
@@ -231,6 +236,8 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
                     if (ex[0] != null) {
                         assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
                         exceptionToThrow = ex[0];
+                        triggerException(ex[0]);
+                        return;
                     }
                     if (errored[0]) {
                         return; // exit if error occurred

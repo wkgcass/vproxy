@@ -104,6 +104,14 @@ public interface RingBuffer {
 
     int capacity();
 
+    /**
+     * A saved fatal buffer error for a newly attached owner. Transport errors
+     * that still require draining buffered data must not be returned here.
+     */
+    default IOException getException() {
+        return null;
+    }
+
     default byte[] getBytes() {
         throw new UnsupportedOperationException();
     }

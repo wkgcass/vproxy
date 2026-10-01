@@ -104,6 +104,7 @@ public class NetEventLoop {
         // now the connection is added into event loop
         // we set the close timer
         selectorEventLoop.runOnLoop(() -> NetEventLoopUtils.resetCloseTimeout(att));
+        connection.checkInputBufferException();
     }
 
     @ThreadSafe
