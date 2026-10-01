@@ -24,6 +24,7 @@ import org.junit.runners.Suite;
     TestPcap.class,
     TestRouteTable.class,
     TestTCP.class,
+    TestTcpReset.class,
     TestPerformanceRegressions.class,
     TestSendingQueueCursor.class,
     TestReceivingQueueRetention.class,

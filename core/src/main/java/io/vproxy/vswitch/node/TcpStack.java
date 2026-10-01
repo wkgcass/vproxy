@@ -53,6 +53,11 @@ public class TcpStack extends Node {
     @Override
     protected HandleResult handle(PacketBuffer pkb, NodeGraphScheduler scheduler) {
         var tcp = pkb.tcp;
+        // RST is terminal control, not an ACK/data/FIN segment. Validate it
+        // before normal state handlers can acknowledge or queue its contents.
+        if (pkb.tcpPkt.isRst()) {
+            return handleTcpReset(pkb);
+        }
         if (pkb.debugger.isDebugOn()) {
             pkb.debugger.line(d -> d.append("tcp state ").append(tcp.getState()));
         }
@@ -84,6 +89,47 @@ public class TcpStack extends Node {
                 }
                 return _returndrop(pkb);
         }
+    }
+
+    private HandleResult handleTcpReset(PacketBuffer pkb) {
+        var tcp = pkb.tcp;
+        var packet = pkb.tcpPkt;
+        if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticReceivedRst();
+        if (tcp.getState() == TcpState.CLOSED || tcp.getState() == TcpState.TIME_WAIT) {
+            // Never answer a reset. Keep TIME_WAIT's protection against old
+            // duplicate segments (RFC 1337); do not restart or shorten it.
+            return _return(HandleResult.STOLEN, pkb);
+        }
+        if (tcp.getState() == TcpState.SYN_SENT) {
+            // This stack sends only SYN in SYN_SENT and keeps the sequence
+            // immediately after that SYN in ackSeq. No peer SEQ is known yet.
+            if (!packet.isAck() || TcpUtils.extendSeq(tcp.sendingQueue.getAckSeq(),
+                packet.getAckNum()) != tcp.sendingQueue.getAckSeq()) {
+                return _return(HandleResult.STOLEN, pkb);
+            }
+        } else {
+            long next = tcp.receivingQueue.getExpectingSeq();
+            long seq = TcpUtils.extendSeq(next, packet.getSeqNum());
+            if (seq != next) {
+                // RFC 5961 / RFC 9293: an in-window, non-exact reset gets a
+                // challenge ACK; an out-of-window reset is silently ignored.
+                if (seq > next && seq - next < tcp.receivingQueue.getWindow()) {
+                    sendAck(pkb.network, tcp);
+                }
+                return _return(HandleResult.STOLEN, pkb);
+            }
+        }
+        var parent = tcp.getParent();
+        if (parent != null) {
+            parent.synBacklog.remove(tcp);
+            parent.backlog.remove(tcp);
+        }
+        tcp.diagnosticCloseReason("peer-reset");
+        // Remove the old tuple before notifying user code: destroy callbacks
+        // may immediately create a replacement connection with the same tuple.
+        pkb.network.conntrack.removeTcp(tcp.remote, tcp.local);
+        tcp.destroy();
+        return _return(HandleResult.STOLEN, pkb);
     }
 
     private TcpPacket buildSyn(TcpEntry tcp) {
@@ -291,7 +337,6 @@ public class TcpStack extends Node {
             var receivedData = tcpPkt.getData();
             pkb.tcp.diagnosticReceived(seq, receivedData == null ? 0 : receivedData.length());
             if (tcpPkt.isFin()) pkb.tcp.diagnosticReceivedFin();
-            if (tcpPkt.isRst()) pkb.tcp.diagnosticReceivedRst();
         }
         if (tcpPkt.isFin()) {
             if (seq != read) {

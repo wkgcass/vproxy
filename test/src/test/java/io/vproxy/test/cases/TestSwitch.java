@@ -571,6 +571,67 @@ public class TestSwitch {
         assertEquals(seq + 1 /*+ 1 to ack the syn packet*/, tcp.getAckNum());
     }
 
+    @Test(timeout = 10_000)
+    public void peerResetStopsQueuedOutputAndAllowsTupleReuse() throws Exception {
+        var network = sw.getNetwork(1);
+        String peerMac = "aa:bb:cc:dd:ee:00";
+        String localMac = "00:00:00:00:00:01";
+        for (boolean ipv6 : new boolean[]{false, true}) {
+            String peer = ipv6 ? "fd00::1:0" : "192.168.1.0";
+            String local = ipv6 ? "fd00::1:c6" : "192.168.1.198";
+            network.ips.add(IP.from(local), new MacAddress(localMac), new Annotations());
+            network.arpTable.record(new MacAddress(peerMac), IP.from(peer));
+            network.macTable.record(new MacAddress(peerMac), eth0);
+            var remote = new IPPort(peer, 45678);
+            var target = new IPPort(local, 8443);
+            try (var server = network.fds().openServerSocketFD()) {
+                server.bind(target);
+                eth0.injectPacket(buildTcp(peerMac, peer, remote.getPort(), localMac, local, target.getPort(), 100));
+                var synAck = (TcpPacket) ((AbstractIpPacket) waitForPacket(eth0).pkt.getPacket()).getPacket();
+                assertEquals(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK, synAck.getFlags());
+                var ack = buildTcp(peerMac, peer, remote.getPort(), localMac, local, target.getPort(), 101, Consts.TCP_FLAGS_ACK);
+                ((TcpPacket) ((AbstractIpPacket) ack.getPacket()).getPacket()).setAckNum(synAck.getSeqNum() + 1);
+                eth0.injectPacket(ack);
+                long deadline = System.nanoTime() + 2_000_000_000L;
+                io.vproxy.vfd.SocketFD accepted;
+                while ((accepted = server.accept()) == null && System.nanoTime() < deadline) Thread.sleep(5);
+                assertNotNull(accepted);
+                assertEquals(4, accepted.write(java.nio.ByteBuffer.wrap(new byte[]{1,2,3,4})));
+                var sent = (TcpPacket) ((AbstractIpPacket) waitForPacket(eth0).pkt.getPacket()).getPacket();
+                assertArrayEquals(new byte[]{1,2,3,4}, sent.getData().toJavaArray());
+                var reset = buildTcp(peerMac, peer, remote.getPort(), localMac, local, target.getPort(), 101,
+                    Consts.TCP_FLAGS_RST | Consts.TCP_FLAGS_ACK);
+                ((TcpPacket) ((AbstractIpPacket) reset.getPacket()).getPacket()).setAckNum(sent.getSeqNum() + 4);
+                eth0.injectPacket(reset);
+                var input = java.nio.ByteBuffer.allocate(1);
+                int read;
+                deadline = System.nanoTime() + 2_000_000_000L;
+                while ((read = accepted.read(input)) == 0 && System.nanoTime() < deadline) Thread.sleep(5);
+                assertEquals("real packet graph must terminate the accepted transport", -1, read);
+                try {
+                    accepted.write(java.nio.ByteBuffer.wrap(new byte[]{9}));
+                    fail("peer reset must reject new output");
+                } catch (java.io.IOException expected) { }
+                accepted.close();
+                assertNull(network.conntrack.lookupTcp(remote, target));
+
+                // A reset for the removed tuple must be silent. A following
+                // SYN is a processing barrier and must receive the first reply.
+                eth0.injectPacket(reset.copy());
+                eth0.injectPacket(buildTcp(peerMac, peer, remote.getPort(), localMac, local, target.getPort(), 1000));
+                var nextSynAck = (TcpPacket) ((AbstractIpPacket) waitForPacket(eth0).pkt.getPacket()).getPacket();
+                assertEquals(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK, nextSynAck.getFlags());
+                var halfOpenReset = buildTcp(peerMac, peer, remote.getPort(), localMac, local, target.getPort(), 1001, Consts.TCP_FLAGS_RST);
+                eth0.injectPacket(halfOpenReset);
+                deadline = System.nanoTime() + 2_000_000_000L;
+                while (network.conntrack.lookupTcp(remote, target) != null && System.nanoTime() < deadline) Thread.sleep(5);
+                assertNull(network.conntrack.lookupTcp(remote, target));
+                assertTrue(network.conntrack.lookupTcpListen(target).synBacklog.isEmpty());
+                assertNull(eth0.poll());
+            }
+        }
+    }
+
     @Test
     public void tcpRstV6() throws Exception {
         var net1 = sw.getNetwork(1);
