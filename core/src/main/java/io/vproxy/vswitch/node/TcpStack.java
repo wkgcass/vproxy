@@ -401,7 +401,7 @@ public class TcpStack extends Node {
         if (data != null && data.length() > 0) {
             // PSH is only a hint, data must be accepted regardless of the flag
             long seq = TcpUtils.extendSeq(pkb.tcp.receivingQueue.getExpectingSeq(), tcpPkt.getSeqNum());
-            pkb.tcp.receivingQueue.store(new Segment(seq, data.copy()));
+            pkb.tcp.receivingQueue.storeCopied(seq, data);
             _tcpAck(pkb.network, pkb.tcp);
         }
         if (tcpPkt.isFin()) {

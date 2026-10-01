@@ -7,6 +7,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.OS;
 import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.bytearray.SimpleByteArray;
 import io.vproxy.base.util.misc.WithUserData;
 import io.vproxy.vfd.IPPort;
 
@@ -873,6 +874,12 @@ public class TcpEntry implements WithUserData {
         }
     }
 
+    private static final class CopiedReceiveSegment extends Segment {
+        private CopiedReceiveSegment(long seq, ByteArray data) {
+            super(seq, data);
+        }
+    }
+
     public class ReceivingQueue {
         private final ArrayDeque<Segment> q = new ArrayDeque<>();
         private final TreeMap<Long, Segment> oooBuffer = new TreeMap<>();
@@ -884,6 +891,12 @@ public class TcpEntry implements WithUserData {
         private int window = RMEM_MAX;
         private int windowScale = 64;
         private boolean oooGapFilled = false;
+        // Queue-owned head storage is stable. Query its backing only once per
+        // head, rather than through several virtual calls on every small read.
+        private long copiedHeadBacking = 0;
+        // A private copied head can advance without allocating a SubByteArray
+        // and Segment per read. Legacy shared input keeps offset zero.
+        private int copiedHeadOffset = 0;
 
         public ReceivingQueue(long seq) {
             this.expectingSeq = seq;
@@ -910,9 +923,30 @@ public class TcpEntry implements WithUserData {
             return !q.isEmpty();
         }
 
+        /**
+         * Copy a packet payload into queue-owned storage. The caller may reuse
+         * its input immediately. Unlike store(Segment), this opt-in path may
+         * compact unread slices. When all input uses this entry point, queued
+         * backing is bounded by four times the queued logical bytes (excluding
+         * views already returned to users). Mixing legacy shared input disables
+         * compaction of any segment that includes that shared input.
+         * Returned ByteArray views remain valid over their visible range, but
+         * do not promise shared backing with a subsequently compacted tail.
+         */
+        public void storeCopied(long seq, ByteArray data) {
+            store(new CopiedReceiveSegment(seq, data.copy()));
+        }
+
         public void store(Segment segment) {
             if (state.remoteClosed) {
                 Logger.error(LogType.IMPROPER_USE, "FIN received but is still storing data");
+                return;
+            }
+            int payloadLength = segment.data.length();
+            // Empty payloads are not data or SACK ranges. In particular, do not
+            // allow arbitrary future sequence numbers to fill the OOO map
+            // without consuming any of the logical receive-memory budget.
+            if (payloadLength == 0) {
                 return;
             }
             int available = RMEM_MAX - currentSize - oooSize;
@@ -920,31 +954,39 @@ public class TcpEntry implements WithUserData {
                 // memory is full
                 return;
             }
-            if (segment.data.length() > available) {
-                // Keep both the logical receive queue and retained packet backing
-                // within RMEM_MAX; the unaccepted suffix will be retransmitted.
-                byte[] prefix = Utils.allocateByteArray(available);
-                segment.data.byteBufferPut(ByteBuffer.wrap(prefix), 0, available);
-                segment = new Segment(segment.seqBeginInclusive, ByteArray.from(prefix));
-            }
-
             long segBegin = segment.seqBeginInclusive;
-            long segEnd = segment.seqEndExclusive;
-
             // entirely before expectingSeq - already received
-            if (segEnd <= expectingSeq) {
+            if (segment.seqEndExclusive <= expectingSeq) {
                 return;
+            }
+            ByteArray data = segment.data;
+            if (segBegin < expectingSeq) {
+                // Trim duplicates before applying the free-byte limit. Otherwise
+                // a duplicate prefix can consume that limit and lose a new tail.
+                int trim = (int) (expectingSeq - segBegin);
+                payloadLength -= trim;
+                data = data.sub(trim, payloadLength);
+                segBegin = expectingSeq;
+            }
+            // OOO payload occupies sequence space as well as physical memory.
+            // Keep it within readSeq + RMEM_MAX so holes always have space to
+            // be filled; a full OOO map must not close the window on its gap.
+            long offset = segBegin - readSeq;
+            if (offset < 0 || offset >= RMEM_MAX) {
+                return;
+            }
+            int limit = (int) Math.min(available, RMEM_MAX - offset);
+            if (payloadLength > limit) {
+                // The unaccepted suffix will be retransmitted.
+                byte[] prefix = Utils.allocateByteArray(limit);
+                data.byteBufferPut(ByteBuffer.wrap(prefix), 0, limit);
+                data = ByteArray.from(prefix);
             }
 
             // starts at or before expectingSeq - can add to ready queue directly
             if (segBegin <= expectingSeq) {
-                ByteArray data = segment.data;
-                if (segBegin < expectingSeq) {
-                    int trim = (int) (expectingSeq - segBegin);
-                    data = data.sub(trim, data.length() - trim);
-                }
-                // the caller hands over a private copy of the payload
-                q.add(new Segment(expectingSeq, data));
+                q.add(receiveSegment(expectingSeq, data,
+                    segment instanceof CopiedReceiveSegment, segment));
                 expectingSeq += data.length();
                 currentSize += data.length();
 
@@ -965,13 +1007,28 @@ public class TcpEntry implements WithUserData {
             }
 
             // out of order (segBegin > expectingSeq) - buffer for later
-            bufferOOOSegment(segment);
+            bufferOOOSegment(segment, segBegin, data);
         }
 
-        private void bufferOOOSegment(Segment segment) {
-            long begin = segment.seqBeginInclusive;
-            long end = segment.seqEndExclusive;
-            ByteArray data = segment.data;
+        private Segment receiveSegment(long seq, ByteArray data, boolean copied, Segment original) {
+            if (!copied) {
+                return new Segment(seq, data);
+            }
+            // Check only views/composites. A private SimpleByteArray already
+            // has backing == length. Quarter-size compaction bounds retained
+            // payload and amortizes repeated partial reads geometrically.
+            if (!(data instanceof SimpleByteArray) && data.retainedBackingSize() > data.length() * 4L) {
+                data = data.copy();
+            }
+            if (original.seqBeginInclusive == seq && original.data == data) {
+                return original;
+            }
+            return new CopiedReceiveSegment(seq, data);
+        }
+
+        private void bufferOOOSegment(Segment segment, long begin, ByteArray data) {
+            long end = begin + data.length();
+            boolean copied = segment instanceof CopiedReceiveSegment;
 
             // check for overlap with segment that starts before our begin
             Map.Entry<Long, Segment> floor = oooBuffer.floorEntry(begin);
@@ -989,6 +1046,7 @@ public class TcpEntry implements WithUserData {
                     int overlapFromNew = (int) (fs.seqEndExclusive - begin);
                     ByteArray tailFromNew = data.sub(overlapFromNew, data.length() - overlapFromNew);
                     data = fs.data.concat(tailFromNew);
+                    copied &= fs instanceof CopiedReceiveSegment;
                     begin = fs.seqBeginInclusive;
                 }
             }
@@ -1008,12 +1066,13 @@ public class TcpEntry implements WithUserData {
                     int overlapInExisting = (int) (end - cs.seqBeginInclusive);
                     ByteArray tailFromExisting = cs.data.sub(overlapInExisting, cs.data.length() - overlapInExisting);
                     data = data.concat(tailFromExisting);
+                    copied &= cs instanceof CopiedReceiveSegment;
                     end = cs.seqEndExclusive;
                 }
                 // if cs.seqEndExclusive <= end, it's fully contained, already removed
             }
 
-            Segment merged = new Segment(begin, data);
+            Segment merged = receiveSegment(begin, data, copied, segment);
             oooBuffer.put(begin, merged);
             oooSize += data.length();
             resetWindow();
@@ -1040,8 +1099,8 @@ public class TcpEntry implements WithUserData {
                     int trim = (int) (expectingSeq - s.seqBeginInclusive);
                     data = data.sub(trim, data.length() - trim);
                 }
-                // the ooo segment is discarded right after, its buffer can be reused directly
-                q.add(new Segment(expectingSeq, data));
+                q.add(receiveSegment(expectingSeq, data,
+                    s instanceof CopiedReceiveSegment, s));
                 expectingSeq += data.length();
                 currentSize += data.length();
             }
@@ -1054,8 +1113,8 @@ public class TcpEntry implements WithUserData {
                 return null;
             }
             Segment first = q.peekFirst();
-            if (first.data.length() >= len) {
-                ByteArray result = first.data.sub(0, len);
+            if (first.data.length() - copiedHeadOffset >= len) {
+                ByteArray result = first.data.sub(copiedHeadOffset, len);
                 consumeReadBytes(len);
                 resetWindow();
                 return result;
@@ -1068,8 +1127,8 @@ public class TcpEntry implements WithUserData {
             int written = 0;
             while (written < len) {
                 Segment segment = q.peekFirst();
-                int n = Math.min(len - written, segment.data.length());
-                segment.data.sub(0, n).toNewJavaArray(bytes, written);
+                int n = Math.min(len - written, segment.data.length() - copiedHeadOffset);
+                segment.data.sub(copiedHeadOffset, n).toNewJavaArray(bytes, written);
                 consumeReadBytes(n);
                 written += n;
             }
@@ -1093,8 +1152,8 @@ public class TcpEntry implements WithUserData {
             int remaining = len;
             while (remaining > 0) {
                 Segment segment = q.peekFirst();
-                int n = Math.min(remaining, segment.data.length());
-                segment.data.byteBufferPut(dst, 0, n);
+                int n = Math.min(remaining, segment.data.length() - copiedHeadOffset);
+                segment.data.byteBufferPut(dst, copiedHeadOffset, n);
                 consumeReadBytes(n);
                 remaining -= n;
             }
@@ -1105,17 +1164,42 @@ public class TcpEntry implements WithUserData {
         private void consumeReadBytes(int len) {
             while (len > 0) {
                 Segment segment = q.peekFirst();
-                int segmentLen = segment.data.length();
+                int segmentLen = segment.data.length() - copiedHeadOffset;
                 int consumed = Math.min(len, segmentLen);
-                q.pollFirst();
-                currentSize -= consumed;
                 if (consumed == segmentLen) {
+                    q.pollFirst();
+                    currentSize -= consumed;
                     readSeq = segment.seqEndExclusive;
+                    copiedHeadBacking = 0;
+                    copiedHeadOffset = 0;
+                } else if (segment instanceof CopiedReceiveSegment) {
+                    int offset = copiedHeadOffset + consumed;
+                    int remainingLen = segmentLen - consumed;
+                    long backing = copiedHeadBacking == 0 ? segment.data.retainedBackingSize() : copiedHeadBacking;
+                    if (backing > remainingLen * 4L) {
+                        ByteArray data = segment.data.sub(offset, remainingLen).copy();
+                        var remaining = new CopiedReceiveSegment(segment.seqBeginInclusive + offset, data);
+                        // Commit only after the compacted payload/metadata exists.
+                        q.pollFirst();
+                        q.addFirst(remaining);
+                        copiedHeadOffset = 0;
+                        copiedHeadBacking = remainingLen;
+                    } else {
+                        copiedHeadOffset = offset;
+                        copiedHeadBacking = backing;
+                    }
+                    currentSize -= consumed;
+                    readSeq = segment.seqBeginInclusive + offset;
                 } else {
-                    var remaining = new Segment(segment.seqBeginInclusive + consumed,
-                        segment.data.sub(consumed, segmentLen - consumed));
+                    int remainingLen = segmentLen - consumed;
+                    ByteArray data = segment.data.sub(consumed, remainingLen);
+                    var remaining = new Segment(segment.seqBeginInclusive + consumed, data);
+                    // Commit after the remaining payload/metadata is built.
+                    q.pollFirst();
+                    currentSize -= consumed;
                     q.addFirst(remaining);
                     readSeq = remaining.seqBeginInclusive;
+                    copiedHeadBacking = 0;
                 }
                 len -= consumed;
             }
