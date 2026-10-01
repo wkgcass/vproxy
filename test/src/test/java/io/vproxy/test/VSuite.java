@@ -30,6 +30,7 @@ import org.junit.runners.Suite;
     TestReceivingQueueRetention.class,
     TestTunReadFairness.class,
     TestTunReadDiagnostics.class,
+    TestTunWriteDiagnostics.class,
     TestEventLoopDiagnostics.class,
     TestConnectionReadFairness.class,
     TestConnectionReadBackpressure.class,
