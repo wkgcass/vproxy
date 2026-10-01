@@ -273,6 +273,9 @@ public class TcpEntry implements WithUserData {
         }
 
         private final ArrayDeque<Segment> q = new ArrayDeque<>();
+        // References to q's not-fully-sent segments. ACK/SACK/retransmission
+        // keep using q; ordinary sends avoid walking its sent prefix again.
+        private final ArrayDeque<Segment> unsent = new ArrayDeque<>(8);
         private int currentSize = 0;
         private long latestSeq;
         private long ackSeq;
@@ -407,7 +410,9 @@ public class TcpEntry implements WithUserData {
             buffer.get(bytes);
             var data = ByteArray.from(bytes);
 
-            q.add(new Segment(latestSeq, data));
+            Segment segment = new Segment(latestSeq, data);
+            q.add(segment);
+            unsent.add(segment);
             latestSeq += data.length();
             currentSize += data.length();
             return len;
@@ -430,7 +435,13 @@ public class TcpEntry implements WithUserData {
             long oldFetchSeq = fetchSeq;
             long newFetchEnd = fetchSeq;
 
-            for (var s : q) {
+            // The common single-segment case needs no iterator allocation.
+            // Keep cursor removal after the complete fetch has succeeded.
+            Segment single = !isRetransmit && unsent.size() == 1 ? unsent.peekFirst() : null;
+            Iterator<Segment> iterator = single != null ? null : (isRetransmit ? q : unsent).iterator();
+            while (single != null || (iterator != null && iterator.hasNext())) {
+                Segment s = single != null ? single : iterator.next();
+                single = null;
                 if (s.sacked) {
                     continue;
                 }
@@ -476,9 +487,16 @@ public class TcpEntry implements WithUserData {
                 int newBytes = (int) (newFetchEnd - oldFetchSeq);
                 bytesInFlight += newBytes;
                 fetchSeq = newFetchEnd;
+                if (!isRetransmit) discardSentPrefix();
             }
 
             return ret;
+        }
+
+        private void discardSentPrefix() {
+            while (!unsent.isEmpty() && unsent.peekFirst().seqEndExclusive <= fetchSeq) {
+                unsent.pollFirst();
+            }
         }
 
         /**
@@ -605,10 +623,12 @@ public class TcpEntry implements WithUserData {
                 finAcked = true;
                 bytesInFlight = 0;
                 q.clear();
+                unsent.clear();
                 currentSize = 0;
                 return;
             }
-            if (zeroWindowProbeSeq == fetchSeq && seq > fetchSeq) {
+            boolean advancedByProbe = zeroWindowProbeSeq == fetchSeq && seq > fetchSeq;
+            if (advancedByProbe) {
                 fetchSeq = zeroWindowProbeSeq + 1;
                 zeroWindowProbeSeq = -1;
             } else if (window > 0) {
@@ -641,6 +661,7 @@ public class TcpEntry implements WithUserData {
                     }
                     currentSize -= s.data.length();
                     q.pollFirst();
+                    if (unsent.peekFirst() == s) unsent.pollFirst();
                     becameWritable = true;
                 } else {
                     // Trim a partially acknowledged head so its consumed prefix no
@@ -661,11 +682,20 @@ public class TcpEntry implements WithUserData {
                             remaining.sacked = s.sacked;
                         }
                         q.addFirst(remaining);
+                        // A partial segment can have both sent and unsent
+                        // bytes. Keep the cursor on q's replacement object.
+                        if (unsent.peekFirst() == s) {
+                            unsent.pollFirst();
+                            unsent.addFirst(remaining);
+                        }
                         becameWritable = true;
                     }
                     break;
                 }
             }
+            // Acknowledging a zero-window probe can advance fetchSeq without
+            // an ordinary fetch. Update the cursor before writable reentry.
+            if (advancedByProbe) discardSentPrefix();
             if (becameWritable && connectionHandler != null) {
                 connectionHandler.writable(TcpEntry.this);
             }
