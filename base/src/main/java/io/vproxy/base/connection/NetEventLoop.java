@@ -342,14 +342,17 @@ class HandlerForConnection implements Handler<SocketFD> {
         if (cctx.connection.isClosed()) {
             return; // prevent the condition that the connection closed during the handling of another event
         }
-        // reset close timer because now it's active (will read some data)
-        NetEventLoopUtils.resetCloseTimeout(cctx);
-
         RingBuffer inBuffer = cctx.connection.getInBuffer();
         if (inBuffer.free() == 0) {
-            Logger.shouldNotHappen("the connection has no space to store data");
+            // Buffer sharing/replacement and decoder callbacks can leave a
+            // selected READ after the input becomes full. Suspend transport
+            // reads until the buffer's writable edge re-arms them; retaining
+            // level-triggered interest here spins without making progress.
+            ctx.rmOps(EventSet.read());
             return;
         }
+        // A blocked input is not activity and must not keep postponing timeout.
+        NetEventLoopUtils.resetCloseTimeout(cctx);
         assert Logger.lowLevelDebug("before calling storeBytesFrom: inBuffer.used() = " + cctx.connection.getInBuffer().used());
         int read;
         try {
@@ -522,7 +525,9 @@ class HandlerForConnectableConnection extends HandlerForConnection {
             return;
         }
 
-        EventSet ops = EventSet.read();
+        // The connected callback may fill or replace the input ring.
+        EventSet ops = cctx.connection.getInBuffer().free() > 0
+            ? EventSet.read() : EventSet.none();
         if (cctx.connection.getOutBuffer().used() > 0) {
             ops = ops.combine(EventSet.write());
         }
