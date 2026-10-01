@@ -362,6 +362,8 @@ public class TunIface extends Iface {
     private class TunHandler implements Handler<AbstractDatagramFD<?>> {
         private static final int TOTAL_LEN = SwitchUtils.TOTAL_RCV_BUF_LEN;
         private static final int PRESERVED_LEN = SwitchUtils.RCV_HEAD_PRESERVE_LEN;
+        private static final int MAX_READ_PACKETS = 32;
+        private static final long MAX_READ_NANOS = 8_000_000;
 
         private final TunIface iface = TunIface.this;
         private final TapDatagramFD tunDatagramFD = TunIface.this.tun;
@@ -382,7 +384,8 @@ public class TunIface extends Iface {
         @Override
         public void readable(HandlerContext<AbstractDatagramFD<?>> ctx) {
             TunReadDiagnostics diagnostics = tunReadDiagnostics;
-            long startedAt = diagnostics == null ? 0 : System.nanoTime();
+            FDs clock = ctx.getEventLoop().fds;
+            long startedAt = clock.nanoTime();
             int packets = 0;
             try {
                 while (true) {
@@ -402,9 +405,16 @@ public class TunIface extends Iface {
                     PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVrf, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
                     receivedPacket(pkb);
                     ++packets;
+                    // Native TUN read interest and the blocking wrapper are level
+                    // triggered. Unread packets stay ready for the next poll;
+                    // yielding here lets the loop run its timers and other FDs.
+                    // Finish a packet before yielding, including a slow packet.
+                    if (packets >= MAX_READ_PACKETS || clock.nanoTime() - startedAt >= MAX_READ_NANOS) {
+                        break;
+                    }
                 }
             } finally {
-                if (diagnostics != null) diagnostics.record(packets, System.nanoTime() - startedAt);
+                if (diagnostics != null) diagnostics.record(packets, clock.nanoTime() - startedAt);
             }
         }
 
