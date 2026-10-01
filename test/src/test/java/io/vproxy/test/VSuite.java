@@ -28,6 +28,7 @@ import org.junit.runners.Suite;
     TestSendingQueueCursor.class,
     TestReceivingQueueRetention.class,
     TestTunReadFairness.class,
+    TestTunReadDiagnostics.class,
     TestHttpServer.class,
     TestHttpClient.class,
     TestNetServerClient.class,

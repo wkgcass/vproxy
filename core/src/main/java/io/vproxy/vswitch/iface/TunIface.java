@@ -387,6 +387,9 @@ public class TunIface extends Iface {
             FDs clock = ctx.getEventLoop().fds;
             long startedAt = clock.nanoTime();
             int packets = 0;
+            long bytes = 0;
+            boolean budgetYield = false;
+            boolean readError = false;
             try {
                 while (true) {
                     VProxyThread.current().newUuidDebugInfo();
@@ -396,6 +399,7 @@ public class TunIface extends Iface {
                     try {
                         ctx.getChannel().read(rcvBuf);
                     } catch (IOException e) {
+                        readError = true;
                         Logger.error(LogType.CONN_ERROR, "tun device " + tunDatagramFD + " got error when reading", e);
                         return;
                     }
@@ -405,16 +409,21 @@ public class TunIface extends Iface {
                     PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVrf, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
                     receivedPacket(pkb);
                     ++packets;
+                    if (diagnostics != null) bytes += Math.max(0, rcvBuf.position() - PRESERVED_LEN);
                     // Native TUN read interest and the blocking wrapper are level
                     // triggered. Unread packets stay ready for the next poll;
                     // yielding here lets the loop run its timers and other FDs.
                     // Finish a packet before yielding, including a slow packet.
                     if (packets >= MAX_READ_PACKETS || clock.nanoTime() - startedAt >= MAX_READ_NANOS) {
+                        budgetYield = true;
                         break;
                     }
                 }
             } finally {
-                if (diagnostics != null) diagnostics.record(packets, clock.nanoTime() - startedAt);
+                if (diagnostics != null) {
+                    long now = clock.nanoTime();
+                    diagnostics.record(packets, bytes, now - startedAt, now, budgetYield, readError);
+                }
             }
         }
 
@@ -447,25 +456,67 @@ public class TunIface extends Iface {
     }
 
     private static final class TunReadDiagnostics {
+        private static final long REPORT_INTERVAL_NANOS = 15_000_000_000L;
         private long callbacks;
         private long packets;
+        private long bytes;
         private long elapsedNanos;
         private int maxPacketsPerCallback;
+        private long maxBytesPerCallback;
         private long maxCallbackNanos;
+        private long budgetYields;
+        private long readErrors;
+        // Cumulative wall durations, with fixed logarithmic microsecond buckets.
+        // There are no retained packet, FD, or connection references.
+        private final long[] callbackHistogram = new long[32];
         private int reportCount;
+        private long lastReportedAt;
 
-        void record(int packetCount, long nanos) {
+        void record(int packetCount, long byteCount, long nanos, long now, boolean budgetYield, boolean readError) {
+            nanos = Math.max(0, nanos);
             ++callbacks;
             packets += packetCount;
+            bytes += byteCount;
             elapsedNanos += nanos;
             maxPacketsPerCallback = Math.max(maxPacketsPerCallback, packetCount);
+            maxBytesPerCallback = Math.max(maxBytesPerCallback, byteCount);
             maxCallbackNanos = Math.max(maxCallbackNanos, nanos);
-            if (callbacks % 1024 == 0 && reportCount < 32) {
-                ++reportCount;
-                Logger.alert("[TCP-DIAG] tun=" + callbacks + " readableCallbacks packets=" + packets
-                    + " avgPackets=" + packets / callbacks + " maxPacketsPerCallback=" + maxPacketsPerCallback
-                    + " avgCallbackNs=" + elapsedNanos / callbacks + " maxCallbackNs=" + maxCallbackNanos);
+            if (budgetYield) ++budgetYields;
+            if (readError) ++readErrors;
+            int bucket = 0;
+            long bound = 1000;
+            while (bucket < callbackHistogram.length - 1 && nanos > bound) {
+                ++bucket;
+                bound <<= 1;
             }
+            ++callbackHistogram[bucket];
+            // Low-rate sessions must produce evidence too. Output stays capped;
+            // monotonic subtraction also handles nanoTime's signed wraparound.
+            if (reportCount < 32 && ((reportCount == 0 && packetCount > 0)
+                || (reportCount > 0 && now - lastReportedAt >= REPORT_INTERVAL_NANOS))) {
+                ++reportCount;
+                lastReportedAt = now;
+                Logger.alert("[TCP-DIAG] tun=" + callbacks + " readableCallbacks packets=" + packets
+                    + " bytes=" + bytes + " budgetYields=" + budgetYields + " readErrors=" + readErrors
+                    + " avgPackets=" + packets / callbacks + " maxPacketsPerCallback=" + maxPacketsPerCallback
+                    + " maxBytesPerCallback=" + maxBytesPerCallback
+                    + " avgCallbackNs=" + elapsedNanos / callbacks + " maxCallbackNs=" + maxCallbackNanos
+                    + " p95CallbackNsUpperBound=" + percentileUpperBound(95)
+                    + " p99CallbackNsUpperBound=" + percentileUpperBound(99));
+            }
+        }
+
+        private long percentileUpperBound(int percentile) {
+            if (callbacks == 0) return 0;
+            long rank = (callbacks * percentile + 99) / 100;
+            long count = 0;
+            for (int i = 0; i < callbackHistogram.length; ++i) {
+                count += callbackHistogram[i];
+                if (count >= rank) {
+                    return i == callbackHistogram.length - 1 ? Long.MAX_VALUE : 1000L << i;
+                }
+            }
+            return Long.MAX_VALUE;
         }
     }
 }
