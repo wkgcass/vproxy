@@ -4,6 +4,7 @@ import io.vproxy.base.Config;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
+import io.vproxy.vpacket.conntrack.tcp.ConnectionHandler;
 import org.junit.After;
 import org.junit.Test;
 import java.nio.ByteBuffer;
@@ -76,7 +77,19 @@ public class TestSendingQueueAge {
     }
 
     private static Map<?, ?> histories(TcpEntry.SendingQueue q) throws ReflectiveOperationException {
-        return (Map<?, ?>) field(q, "partialFirstSentRanges");
+        Object tail = field(q, "partialFirstSentRanges");
+        if (tail == null) return null;
+        var snapshot = new java.util.IdentityHashMap<Object, Object>();
+        var visited = new java.util.IdentityHashMap<Object, Boolean>();
+        Object first = field(tail, "next");
+        Object entry = first;
+        do {
+            assertNull("metadata entries must not repeat before the head", visited.put(entry, true));
+            assertNull("one entry per segment", snapshot.put(field(entry, "segment"), entry));
+            entry = field(entry, "next");
+        } while (entry != first);
+        assertTrue(visited.containsKey(tail));
+        return snapshot;
     }
 
     private static int ranges(Object history) throws ReflectiveOperationException {
@@ -209,6 +222,67 @@ public class TestSendingQueueAge {
         Config.currentTimestamp = 25999;
         assertNull(q.checkRetransmissionTimeout());
         Config.currentTimestamp = 26000;
+        assertNotNull(q.checkRetransmissionTimeout());
+    }
+
+    @Test public void historyFifoSkipsWholeSentSegmentsBetweenEntries() throws Exception {
+        var q = queue(); long origin = q.getAckSeq();
+        q.ack(origin, 1000); fetch(q, 1000);
+        for (int i = 1; i <= 2; ++i) {
+            Config.currentTimestamp = 1000 + i * 100;
+            q.ack(origin, 1000 + i * 500); fetch(q, 500);
+        }
+        Config.currentTimestamp = 1300;
+        q.ack(origin, 3000); fetch(q, 1000);
+        for (int i = 1; i <= 2; ++i) {
+            Config.currentTimestamp = 1300 + i * 100;
+            q.ack(origin, 3000 + i * 500); fetch(q, 500);
+        }
+        assertEquals(2, histories(q).size());
+        q.ack(origin + 1000, 3000);
+        assertEquals(2, histories(q).size());
+        q.ack(origin + 2000, 2000);
+        assertEquals(1, histories(q).size());
+        q.ack(origin + 3000, 1000);
+        assertEquals(1, histories(q).size());
+        q.ack(origin + 3500, 500);
+        assertNull(histories(q));
+        Config.currentTimestamp = 16499;
+        assertNull(q.checkRetransmissionTimeout());
+        Config.currentTimestamp = 16500;
+        assertNotNull(q.checkRetransmissionTimeout());
+    }
+
+    @Test public void partialAckReentryCanAppendNewHistoryAfterReplacingHead() throws Exception {
+        var q = queue(); long origin = q.getAckSeq(); laterSuffix(q, origin);
+        var tcp = (TcpEntry) field(q, "this$0");
+        tcp.setConnectionHandler(new ConnectionHandler() {
+            boolean called;
+            public void readable(TcpEntry entry) {}
+            public void destroy(TcpEntry entry) {}
+            public void writable(TcpEntry entry) {
+                if (called) return;
+                called = true;
+                Config.currentTimestamp = 12000;
+                q.ack(origin + 250, 1500); fetch(q, 750);
+                Config.currentTimestamp = 12500;
+                q.ack(origin + 250, 1750); fetch(q, 250);
+            }
+        });
+        q.ack(origin + 250, 750);
+        assertEquals(2, histories(q).size());
+        Config.currentTimestamp = 16000;
+        assertNotNull(q.checkRetransmissionTimeout());
+        q.ack(origin + 1000, 1000);
+        Config.currentTimestamp = 26999;
+        assertNull(q.checkRetransmissionTimeout());
+        Config.currentTimestamp = 27000;
+        assertNotNull(q.checkRetransmissionTimeout());
+        q.ack(origin + 1750, 250);
+        assertNull(histories(q));
+        Config.currentTimestamp = 27499;
+        assertNull(q.checkRetransmissionTimeout());
+        Config.currentTimestamp = 27500;
         assertNotNull(q.checkRetransmissionTimeout());
     }
 }

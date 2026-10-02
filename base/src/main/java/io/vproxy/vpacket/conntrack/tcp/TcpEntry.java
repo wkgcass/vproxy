@@ -279,7 +279,9 @@ public class TcpEntry implements WithUserData {
         private final ArrayDeque<Segment> unsent = new ArrayDeque<>(8);
         // Only segments first sent in multiple clock ticks need range history.
         // Keep this off Segment: receive segments and full-MSS sends need none.
-        private IdentityHashMap<Segment, FirstSentRanges> partialFirstSentRanges;
+        // First sends progress forwards; ACKs remove a prefix. A circular
+        // FIFO needs only its tail pointer, without a map or backing table.
+        private FirstSentRanges partialFirstSentRanges;
 
         private static class FirstSentRange {
             long endExclusive;
@@ -293,10 +295,13 @@ public class TcpEntry implements WithUserData {
         }
 
         private static class FirstSentRanges {
+            Segment segment;
+            FirstSentRanges next;
             FirstSentRange first;
             FirstSentRange last;
 
-            FirstSentRanges(long endExclusive, long time) {
+            FirstSentRanges(Segment segment, long endExclusive, long time) {
+                this.segment = segment;
                 first = last = new FirstSentRange(endExclusive, time);
             }
 
@@ -535,35 +540,49 @@ public class TcpEntry implements WithUserData {
 
         private void recordAdditionalFirstSend(Segment s, long from, long to) {
             long now = Config.currentTimestamp;
-            FirstSentRanges ranges = partialFirstSentRanges == null ? null : partialFirstSentRanges.get(s);
-            if (ranges == null) {
+            FirstSentRanges ranges = partialFirstSentRanges;
+            if (ranges == null || ranges.segment != s) {
                 if (now == s.firstSentTime) return;
                 // from is the end of the single previously sent range. Each
                 // appended range contains at least one newly transmitted byte,
                 // so live range/entry counts remain bounded by queued WMEM.
-                ranges = new FirstSentRanges(from, s.firstSentTime);
-                if (partialFirstSentRanges == null) partialFirstSentRanges = new IdentityHashMap<>();
-                partialFirstSentRanges.put(s, ranges);
+                assert partialFirstSentRanges == null
+                    || partialFirstSentRanges.segment.seqEndExclusive <= s.seqBeginInclusive;
+                ranges = new FirstSentRanges(s, from, s.firstSentTime);
+                if (partialFirstSentRanges == null) {
+                    ranges.next = ranges;
+                } else {
+                    ranges.next = partialFirstSentRanges.next;
+                    partialFirstSentRanges.next = ranges;
+                }
+                partialFirstSentRanges = ranges;
             }
             ranges.append(to, now);
         }
 
-        private FirstSentRanges removeFirstSentRanges(Segment s) {
-            if (partialFirstSentRanges == null) return null;
-            FirstSentRanges ranges = partialFirstSentRanges.remove(s);
-            if (partialFirstSentRanges.isEmpty()) partialFirstSentRanges = null;
-            return ranges;
+        private void removeFirstSentRanges(Segment s) {
+            FirstSentRanges first = partialFirstSentRanges.next;
+            if (first.segment != s) return;
+            if (first == partialFirstSentRanges) {
+                partialFirstSentRanges = null;
+            } else {
+                partialFirstSentRanges.next = first.next;
+            }
         }
 
         private void transferFirstSentRanges(Segment s, Segment remaining, long ack) {
-            FirstSentRanges ranges = partialFirstSentRanges.remove(s);
-            if (ranges != null && ack < fetchSeq) {
+            FirstSentRanges ranges = partialFirstSentRanges.next;
+            if (ranges.segment != s) return;
+            if (ack < fetchSeq) {
                 ranges.trim(ack);
                 remaining.firstSentTime = ranges.first.time;
                 remaining.lastSendTime = ranges.first.time;
-                if (ranges.first.next != null) partialFirstSentRanges.put(remaining, ranges);
+                if (ranges.first.next != null) {
+                    ranges.segment = remaining;
+                    return;
+                }
             }
-            if (partialFirstSentRanges.isEmpty()) partialFirstSentRanges = null;
+            removeFirstSentRanges(s);
         }
 
         private void discardSentPrefix() {
