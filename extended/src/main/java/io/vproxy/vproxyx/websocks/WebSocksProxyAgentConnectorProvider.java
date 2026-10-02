@@ -170,7 +170,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         // 4: preserved for socks5 auth result
         // 5: expecting socks5 connect result first 4 bytes
         // 6: expecting socks5 connect result
-        // 7: done
+        // 7: terminal (success or failure)
         private int step = 0;
         private HttpRespParser httpRespParser;
         private ByteArrayChannel webSocketFrame;
@@ -195,28 +195,33 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         private void utilAlertFail(ConnectionHandlerContext ctx) {
-            providedCallback.accept(null);
-            ctx.connection.close();
+            if (step == 7) return;
+            // Complete before calling user code: it may re-enter this handler.
+            step = 7;
+            try {
+                providedCallback.accept(null);
+            } finally {
+                ctx.connection.close();
+            }
         }
 
         @Override
         public void connected(ConnectableConnectionHandlerContext ctx) {
+            if (step == 7) return;
             if (!usePooledConnection) {
                 // start handshaking if the connection is not pooled
-                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass, isEncrypted);
-
                 step = 1;
                 httpRespParser = new HttpRespParser(new HttpRespParser.Params().setHeadersOnly(true));
+                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass, isEncrypted);
             } else {
                 // otherwise, send the WebSocket frame
                 sendWebSocketFrame(ctx);
-
-                step = 2;
             }
         }
 
         @Override
         public void readable(ConnectionHandlerContext ctx) {
+            if (step == 7) return;
             if (step == 1) {
                 CommonProcess.parseUpgradeResp(ctx, httpRespParser,
                     /* fail */ msg -> utilAlertFail(ctx),
@@ -407,6 +412,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             if (strictMode) {
                 assert Logger.lowLevelDebug("strictMode is on, send socks5 connect here");
                 sendSocks5Connect(ctx);
+                if (step == 7) return;
             }
 
             // make buffer for incoming data
@@ -465,6 +471,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         private void done(ConnectionHandlerContext ctx) {
+            if (step == 7) return;
             assert Logger.lowLevelDebug("handshake operation done " + ctx.connection + ", providedCallback = " + providedCallback);
             step = 7;
 
@@ -488,18 +495,21 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
+            if (step == 7) return;
             Logger.error(LogType.CONN_ERROR, "connection " + ctx.connection + " got exception", err);
             utilAlertFail(ctx);
         }
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
+            if (step == 7) return;
             ctx.connection.close();
             closed(ctx);
         }
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
+            if (step == 7) return;
             Logger.warn(LogType.CONN_ERROR, "connection " + ctx.connection + " closed, so the proxy cannot establish");
             utilAlertFail(ctx);
         }

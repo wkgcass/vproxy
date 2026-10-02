@@ -51,6 +51,7 @@ import org.junit.runners.Suite;
     TestArqStreamedLifecycle.class,
     TestDirectRelayAllocation.class,
     TestRelayConnectLifecycle.class,
+    TestAgentConnectLifecycle.class,
     TestAutoProxy.class,
     TestUtils.class,
     TestCommand.class,
