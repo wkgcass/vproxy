@@ -50,6 +50,7 @@ import org.junit.runners.Suite;
     TestH2StreamedEcho.class,
     TestArqStreamedLifecycle.class,
     TestDirectRelayAllocation.class,
+    TestRelayConnectLifecycle.class,
     TestAutoProxy.class,
     TestUtils.class,
     TestCommand.class,
