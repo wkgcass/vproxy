@@ -1,7 +1,9 @@
 package io.vproxy.base.component.pool;
 
 import io.vproxy.base.connection.*;
+import io.vproxy.base.selector.PeriodicEvent;
 import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
@@ -82,6 +84,8 @@ public class ConnectionPool {
     private final PoolConnHandler poolConnHandler = new PoolConnHandler();
     private boolean isPendingProviding = false;
     private boolean needToFillByWatermark = false;
+    private PeriodicEvent keepaliveEvent;
+    private TimerEvent fillEvent;
 
     private final int idleTimeoutInPool;
     private final int idleTimeoutOutOfPool;
@@ -120,8 +124,8 @@ public class ConnectionPool {
 
         loop.getSelectorEventLoop().runOnLoop(this::fill);
         // run keepalive
-        if (params.keepaliveInterval > 0) {
-            loop.getSelectorEventLoop().period(params.keepaliveInterval, this::keepalive);
+        if (params.keepaliveInterval > 0 && !isClosed) {
+            keepaliveEvent = loop.getSelectorEventLoop().period(params.keepaliveInterval, this::keepalive);
         }
     }
 
@@ -154,7 +158,21 @@ public class ConnectionPool {
             return;
         }
 
-        ConnectableConnection conn = handler.provide(loop);
+        // User callbacks may synchronously remove a connection or close the
+        // pool. Mark the attempt pending before entering user code.
+        isPendingProviding = true;
+        ConnectableConnection conn;
+        try {
+            conn = handler.provide(loop);
+        } catch (RuntimeException | Error e) {
+            isPendingProviding = false;
+            throw e;
+        }
+        if (isClosed) {
+            isPendingProviding = false;
+            if (conn != null) conn.close();
+            return;
+        }
         if (conn == null) {
             assert Logger.lowLevelDebug("the user code refuse to provide a connection to the pool");
         } else if (conn.getEventLoop() == null) {
@@ -174,12 +192,12 @@ public class ConnectionPool {
 
         // fix the delay to 1 second, the delay is not important
         // we just don't want to make too many connections at the same time
-        loop.getSelectorEventLoop().delay(1_000, () -> {
+        fillEvent = loop.getSelectorEventLoop().delay(1_000, () -> {
+            fillEvent = null;
             isPendingProviding = false;
             assert Logger.lowLevelDebug("pool delay triggers");
             fill();
         });
-        isPendingProviding = true;
     }
 
     private void _add(ConnWrap w) {
@@ -219,11 +237,14 @@ public class ConnectionPool {
     }
 
     private void keepalive() {
+        if (isClosed) return;
         for (ConnWrap w : connections) {
             if (w.isHandshaking)
                 continue;
             assert Logger.lowLevelDebug("try to run keepalive for " + w.conn);
             handler.keepalive(w.conn);
+            // A callback may close the pool and clear the list.
+            if (isClosed) return;
         }
     }
 
@@ -247,6 +268,10 @@ public class ConnectionPool {
         loop.getSelectorEventLoop().runOnLoop(() -> {
 
             // here is in the connection pool event loop
+            if (isClosed) {
+                callerLoop.runOnLoop(() -> cb.accept(null));
+                return;
+            }
 
             ConnWrap firstPolled = connections.poll();
             ConnWrap w = firstPolled;
@@ -341,15 +366,26 @@ public class ConnectionPool {
         }
         isClosed = true;
         if (loop.getSelectorEventLoop().isClosed()) {
-            for (var c : connections) {
-                c.conn.close();
-            }
+            releasePool();
         } else {
-            loop.getSelectorEventLoop().runOnLoop(() -> {
-                for (var c : connections) {
-                    c.conn.close();
-                }
-            });
+            loop.getSelectorEventLoop().runOnLoop(this::releasePool);
+        }
+    }
+
+    private void releasePool() {
+        if (keepaliveEvent != null) {
+            keepaliveEvent.cancel();
+            keepaliveEvent = null;
+        }
+        if (fillEvent != null) {
+            fillEvent.cancel();
+            fillEvent = null;
+        }
+        isPendingProviding = false;
+        // Remove ownership before closing: callbacks may re-enter the pool.
+        ConnWrap connection;
+        while ((connection = connections.poll()) != null) {
+            connection.conn.close();
         }
     }
 }
