@@ -1,9 +1,12 @@
 package io.vproxy.test.cases;
 
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.ConnectionOpts;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Network;
+import io.vproxy.base.util.RingBuffer;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.jdk.ChannelFDs;
 import io.vproxy.vpacket.TcpPacket;
@@ -22,6 +25,84 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 
 public class TestTcpReset {
+    @Test
+    public void shutdownOutputAfterResetDoesNotRestartTransport() throws Exception {
+        try (var f = new Fixture(false, false, 12345)) {
+            var ctx = new VSwitchFDContext(f.delegate, f.network);
+            var fd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), f.tcp) {};
+            f.receive(Consts.TCP_FLAGS_RST, f.tcp.receivingQueue.getExpectingSeq(), 0, new byte[0]);
+            assertNull(f.network.conntrack.lookupTcp(f.tcp.remote, f.tcp.local));
+            for (int i = 0; i < 2; ++i) {
+                try { fd.shutdownOutput(); fail("reset output shutdown must fail"); }
+                catch (IOException expected) { }
+                assertEquals(TcpState.CLOSED, f.tcp.getState());
+                assertNull(f.tcp.retransmissionTimer);
+                assertTrue("shutdown must not emit a new SYN", f.stack.output.isEmpty());
+                f.assertTimersRemoved();
+            }
+            fd.close();
+        }
+    }
+
+    @Test
+    public void shutdownOutputAfterDestroyDoesNotRestartTransport() throws Exception {
+        try (var f = new Fixture(false, false, 12345)) {
+            var ctx = new VSwitchFDContext(f.delegate, f.network);
+            var fd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), f.tcp) {};
+            f.armTimers();
+            f.network.conntrack.removeTcp(f.tcp.remote, f.tcp.local);
+            f.tcp.destroy();
+            try { fd.shutdownOutput(); fail("destroyed output shutdown must fail"); }
+            catch (IOException expected) { }
+            assertEquals(TcpState.CLOSED, f.tcp.getState());
+            assertNull(f.tcp.retransmissionTimer);
+            assertNull(f.tcp.persistTimer);
+            assertNull(f.tcp.delayedAckTimer);
+            assertTrue(f.stack.output.isEmpty());
+            f.assertTimersRemoved();
+            fd.close();
+        }
+    }
+
+    @Test
+    public void connectionCloseWriteAfterResetDoesNotRestartTransport() throws Exception {
+        try (var f = new Fixture(false, false, 12345)) {
+            var ctx = new VSwitchFDContext(f.delegate, f.network);
+            var fd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), f.tcp) {};
+            var connection = Connection.wrap(fd, ConnectionOpts.getDefault(),
+                RingBuffer.allocate(64), RingBuffer.allocate(64));
+            try {
+                f.receive(Consts.TCP_FLAGS_RST, f.tcp.receivingQueue.getExpectingSeq(), 0, new byte[0]);
+                connection.closeWrite();
+                assertTrue(connection.isRealWriteClosed());
+                assertEquals(TcpState.CLOSED, f.tcp.getState());
+                assertNull(f.tcp.retransmissionTimer);
+                assertTrue(f.stack.output.isEmpty());
+                f.assertTimersRemoved();
+            } finally {
+                connection.close();
+            }
+        }
+    }
+
+    @Test
+    public void normalShutdownOutputStillSendsFin() throws Exception {
+        for (var state : List.of(TcpState.ESTABLISHED, TcpState.CLOSE_WAIT)) {
+            try (var f = new Fixture(false, false, 12345)) {
+                var ctx = new VSwitchFDContext(f.delegate, f.network);
+                var fd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), f.tcp) {};
+                f.tcp.setState(state);
+                fd.shutdownOutput();
+                assertEquals(state == TcpState.ESTABLISHED ? TcpState.FIN_WAIT_1 : TcpState.CLOSING,
+                    f.tcp.getState());
+                assertEquals(1, f.stack.output.size());
+                assertTrue((f.stack.output.getFirst().tcpPkt.getFlags() & Consts.TCP_FLAGS_FIN) != 0);
+                assertNotNull(f.tcp.retransmissionTimer);
+                fd.close();
+            }
+        }
+    }
+
     @Test
     public void exactResetClosesSynchronizedStatesAndCancelsAllTimers() throws Exception {
         for (TcpState state : List.of(TcpState.ESTABLISHED, TcpState.FIN_WAIT_1,
