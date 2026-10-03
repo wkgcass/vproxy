@@ -3,12 +3,22 @@
 
 #include <pni.h>
 
-#if defined(_WIN32) || \
-    (defined(__linux__) && defined(__GLIBC__) && !__GLIBC_PREREQ(2, 38))
+#if defined(_WIN32)
+#define VPROXY_STRLCPY_COMPAT
+#elif defined(__linux__) && defined(__GLIBC__)
+// Function-like macros are expanded even in a false && expression.
+// Keep the glibc version check inside its own platform branch.
+#if !__GLIBC_PREREQ(2, 38)
+#define VPROXY_STRLCPY_COMPAT
+#endif
+#endif
+
+#ifdef VPROXY_STRLCPY_COMPAT
 static inline void strlcpy(char *dst, const char *src, size_t size) {
     strncpy(dst, src, size);
     dst[size - 1] = '\0';
 }
+#undef VPROXY_STRLCPY_COMPAT
 #endif
 
 static inline int throwUnsupportedOperationException(void* env, char* message) {
