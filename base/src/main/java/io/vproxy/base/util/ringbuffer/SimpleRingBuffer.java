@@ -243,8 +243,14 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         operating = false;
         notFirstOperator = false;
 
-        handler.removeAll(handlerToRemove);
-        handler.addAll(handlerToAdd);
+        if (!handlerToRemove.isEmpty()) {
+            handler.removeAll(handlerToRemove);
+            handlerToRemove.clear();
+        }
+        if (!handlerToAdd.isEmpty()) {
+            handler.addAll(handlerToAdd);
+            handlerToAdd.clear();
+        }
     }
 
     @Override
@@ -334,13 +340,16 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             assert Logger.lowLevelNetDebug("after operate write out, sPos=" + sPos);
 
             operatingBuffer = false;
-            if (triggerWritable) {
-                assert Logger.lowLevelNetDebug("trigger writable for " + handler.size() + " times");
-                for (RingBufferETHandler aHandler : handler) {
-                    aHandler.writableET();
+            try {
+                if (triggerWritable) {
+                    assert Logger.lowLevelNetDebug("trigger writable for " + handler.size() + " times");
+                    for (RingBufferETHandler aHandler : handler) {
+                        aHandler.writableET();
+                    }
                 }
+            } finally {
+                resetFirst(firstOperator);
             }
-            resetFirst(firstOperator);
         }
     }
 
@@ -419,13 +428,16 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             assert Logger.lowLevelNetDebug("after operate store in, ePos=" + ePos);
 
             operatingBuffer = false;
-            if (triggerReadable) {
-                assert Logger.lowLevelNetDebug("trigger readable for " + handler.size() + " times");
-                for (RingBufferETHandler aHandler : handler) {
-                    aHandler.readableET();
+            try {
+                if (triggerReadable) {
+                    assert Logger.lowLevelNetDebug("trigger readable for " + handler.size() + " times");
+                    for (RingBufferETHandler aHandler : handler) {
+                        aHandler.readableET();
+                    }
                 }
+            } finally {
+                resetFirst(firstOperator);
             }
-            resetFirst(firstOperator);
         }
     }
 

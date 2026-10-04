@@ -104,12 +104,15 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
             try {
                 _generalWrap();
             } finally {
-                if (triggerReadable) {
-                    triggerReadable = false;
-                    triggerReadable();
+                try {
+                    if (triggerReadable) {
+                        triggerReadable = false;
+                        triggerReadable();
+                    }
+                } finally {
+                    assert Logger.lowLevelDebug("generalWrap is not operating now");
+                    setOperating(false);
                 }
-                assert Logger.lowLevelDebug("generalWrap is not operating now");
-                setOperating(false);
             }
             if (exceptionToThrow != null) {
                 return;
