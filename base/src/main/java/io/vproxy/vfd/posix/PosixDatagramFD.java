@@ -124,6 +124,9 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
         if (!bond) {
             throw new IOException("not bond");
         }
+        if (buf.isReadOnly()) {
+            throw new IllegalArgumentException("read-only destination buffer");
+        }
         int off = 0;
         int len = buf.limit() - buf.position();
         boolean needCopy = false;

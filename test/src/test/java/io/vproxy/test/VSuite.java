@@ -27,6 +27,7 @@ import org.junit.runners.Suite;
     TestTcpReset.class,
     TestPerformanceRegressions.class,
     TestRingBufferHandlerLifecycle.class,
+    TestReadOnlyFD.class,
     TestSendingQueueCursor.class,
     TestSendingQueueAge.class,
     TestReceivingQueueRetention.class,

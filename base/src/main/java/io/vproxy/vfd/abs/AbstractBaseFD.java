@@ -68,6 +68,9 @@ public abstract class AbstractBaseFD implements FD {
     }
 
     protected int utilRead(ByteBuffer dst, ReadFunc f) throws IOException {
+        if (dst.isReadOnly()) {
+            throw new IllegalArgumentException("read-only destination buffer");
+        }
         int off = 0;
         int len = dst.limit() - dst.position();
         ByteBuffer directBuffer;
