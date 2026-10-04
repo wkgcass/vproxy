@@ -70,6 +70,18 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
                 fd = createIPv6FD();
                 ipv4 = false;
             }
+            try {
+                finishConfigAfterFDCreated();
+            } catch (IOException | RuntimeException e) {
+                int failedFD = fd;
+                fd = -1;
+                try {
+                    posix.close(failedFD);
+                } catch (IOException | RuntimeException closeError) {
+                    if (closeError != e) e.addSuppressed(closeError);
+                }
+                throw e;
+            }
         }
         if (ipv4) {
             if (!(remote.getAddress() instanceof IPv4)) {
