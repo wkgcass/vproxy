@@ -2,6 +2,8 @@ package io.vproxy.test.cases;
 
 import io.vproxy.base.connection.Connection;
 import io.vproxy.base.connection.ConnectionOpts;
+import io.vproxy.base.connection.ConnectionHandlerContext;
+import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
@@ -14,6 +16,9 @@ import io.vproxy.vpacket.conntrack.tcp.*;
 import io.vproxy.vswitch.*;
 import io.vproxy.vswitch.node.*;
 import io.vproxy.vswitch.stack.fd.*;
+import io.vproxy.component.proxy.Proxy;
+import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.component.proxy.Session;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -25,6 +30,75 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 
 public class TestTcpReset {
+    @Test
+    public void proxyEofAfterResetDoesNotRestartEitherDirection() throws Exception {
+        for (boolean activeEof : new boolean[]{false, true}) {
+            for (boolean pending : new boolean[]{false, true}) {
+                proxyEof(activeEof, pending, true);
+            }
+        }
+    }
+
+    @Test
+    public void proxyEofDefersFinUntilPendingTailDrainsInEitherDirection() throws Exception {
+        for (boolean activeEof : new boolean[]{false, true}) proxyEof(activeEof, true, false);
+    }
+
+    // Drive real Proxy handlers with controlled EOF/RST ordering on one stack.
+    // Drain the ring explicitly to model the later output-drained notification.
+    private void proxyEof(boolean activeEof, boolean pending, boolean reset) throws Exception {
+        try (var f = new Fixture(false, false, 12345)) {
+            var ctx = new VSwitchFDContext(f.delegate, f.network);
+            var targetFd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), f.tcp) {};
+            var senderEntry = f.network.conntrack.createTcp(null,
+                new IPPort("192.0.2.2", 1235), new IPPort("192.0.2.1", 80), 23456);
+            senderEntry.setState(TcpState.ESTABLISHED);
+            senderEntry.sendingQueue.init(65535, 1400, 1);
+            var senderFd = new VSwitchSocketFD(ctx, new VSwitchFDs(ctx), senderEntry) {};
+            var target = Connection.wrap(targetFd, ConnectionOpts.getDefault(), RingBuffer.allocate(64), RingBuffer.allocate(64));
+            var sender = Connection.wrap(senderFd, ConnectionOpts.getDefault(), RingBuffer.allocate(64), RingBuffer.allocate(64));
+            var session = activeEof ? new Session(sender, target) : new Session(target, sender);
+            try {
+                byte[] tail = {7, 8, 9, 10};
+                if (pending) assertEquals(tail.length, target.getOutBuffer().storeBytesFrom(ByteBuffer.wrap(tail)));
+                if (reset) f.receive(Consts.TCP_FLAGS_RST, f.tcp.receivingQueue.getExpectingSeq(), 0, new byte[0]);
+                io.vproxy.base.connection.ConnectionHandler handler;
+                if (activeEof) {
+                    handler = new Proxy.SessionConnectionHandler(session);
+                } else {
+                    var type = Class.forName("io.vproxy.component.proxy.Proxy$SessionConnectableConnectionHandler");
+                    var ctor = type.getDeclaredConstructor(Proxy.class, Session.class);
+                    ctor.setAccessible(true);
+                    handler = (io.vproxy.base.connection.ConnectionHandler) ctor.newInstance(new Proxy(new ProxyNetConfig(), _ -> {}), session);
+                }
+                var ctor = ConnectionHandlerContext.class.getDeclaredConstructor(NetEventLoop.class,
+                    Connection.class, Object.class, io.vproxy.base.connection.ConnectionHandler.class);
+                ctor.setAccessible(true);
+                handler.remoteClosed(ctor.newInstance(f.loop.ensureNetEventLoop(), sender, null, handler));
+                assertTrue(target.isWriteClosed());
+                if (pending) {
+                    assertFalse("FIN must wait for pending output", target.isRealWriteClosed());
+                    assertTrue(f.stack.output.isEmpty());
+                    ByteBuffer drained = ByteBuffer.allocate(tail.length);
+                    assertEquals(tail.length, target.getOutBuffer().writeTo(drained));
+                    assertArrayEquals(tail, drained.array());
+                    target.closeWrite();
+                }
+                assertTrue(target.isRealWriteClosed());
+                if (reset) {
+                    assertEquals(TcpState.CLOSED, f.tcp.getState());
+                    assertNull(f.tcp.retransmissionTimer);
+                    assertTrue("EOF propagation must not restart a reset transport", f.stack.output.isEmpty());
+                    f.assertTimersRemoved();
+                } else {
+                    assertEquals(TcpState.FIN_WAIT_1, f.tcp.getState());
+                    assertEquals(1, f.stack.output.size());
+                    assertTrue((f.stack.output.getFirst().tcpPkt.getFlags() & Consts.TCP_FLAGS_FIN) != 0);
+                }
+            } finally { session.close(); }
+        }
+    }
+
     @Test
     public void shutdownOutputAfterResetDoesNotRestartTransport() throws Exception {
         try (var f = new Fixture(false, false, 12345)) {
