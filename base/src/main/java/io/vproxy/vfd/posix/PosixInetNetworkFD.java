@@ -52,6 +52,10 @@ public class PosixInetNetworkFD extends PosixNetworkFD {
         remote = l4addr;
     }
 
+    protected void invalidateLocalAddress() {
+        local = null;
+    }
+
     public IPPort getLocalAddress() throws IOException {
         checkFD();
         if (local == null) {

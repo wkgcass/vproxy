@@ -37,23 +37,48 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
         if (bond) {
             throw new IOException("is already bond");
         }
-        int port = l4addr.getPort();
+        boolean useIPv4;
         if (l4addr.getAddress() instanceof IPv4) {
-            fd = posix.createIPv4UdpFD();
-            finishConfigAfterFDCreated();
-            ipv4 = true;
-            int ipv4 = IP.ipv4Bytes2Int(l4addr.getAddress().getAddress());
-            posix.bindIPv4(fd, ipv4, port);
+            useIPv4 = true;
         } else if (l4addr.getAddress() instanceof IPv6) {
-            fd = posix.createIPv6UdpFD();
-            finishConfigAfterFDCreated();
-            ipv4 = false;
-            String ipv6 = ((IPv6) l4addr.getAddress()).formatToIPStringWithoutBrackets();
-            posix.bindIPv6(fd, ipv6, port);
+            useIPv4 = false;
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());
         }
+        if (fd == -1) {
+            fd = useIPv4 ? createIPv4FD() : createIPv6FD();
+            ipv4 = useIPv4;
+            finishDatagramConfig();
+        } else if (ipv4 != useIPv4) {
+            throw new IOException("unsupported address for this fd: " + l4addr);
+        }
+        // A failed bind or a previous send may already own a configured socket.
+        // Retain it, including its options, rather than losing its descriptor.
+        int port = l4addr.getPort();
+        if (useIPv4) {
+            int ipv4 = IP.ipv4Bytes2Int(l4addr.getAddress().getAddress());
+            posix.bindIPv4(fd, ipv4, port);
+        } else {
+            String ipv6 = ((IPv6) l4addr.getAddress()).formatToIPStringWithoutBrackets();
+            posix.bindIPv6(fd, ipv6, port);
+        }
+        invalidateLocalAddress();
         bond = true;
+    }
+
+    private void finishDatagramConfig() throws IOException {
+        try {
+            finishConfigAfterFDCreated();
+        } catch (IOException | RuntimeException e) {
+            int failedFD = fd;
+            fd = -1;
+            try {
+                posix.close(failedFD);
+            } catch (IOException | RuntimeException closeError) {
+                if (closeError != e) e.addSuppressed(closeError);
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -70,18 +95,7 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
                 fd = createIPv6FD();
                 ipv4 = false;
             }
-            try {
-                finishConfigAfterFDCreated();
-            } catch (IOException | RuntimeException e) {
-                int failedFD = fd;
-                fd = -1;
-                try {
-                    posix.close(failedFD);
-                } catch (IOException | RuntimeException closeError) {
-                    if (closeError != e) e.addSuppressed(closeError);
-                }
-                throw e;
-            }
+            finishDatagramConfig();
         }
         if (ipv4) {
             if (!(remote.getAddress() instanceof IPv4)) {
@@ -114,6 +128,13 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
                 String ip = ((IPv6) remote.getAddress()).formatToIPStringWithoutBrackets();
                 n = posix.sendtoIPv6(fd, directBuffer, off, len, ip, port);
             }
+            if (!bond && len > 0) {
+                invalidateLocalAddress();
+                // A successful send implicitly binds the socket. A zero return
+                // means would-block; check whether the kernel assigned a port.
+                // The native zero-length send is a no-op and stays unbound.
+                bond = n > 0 || getLocalAddress().getPort() != 0;
+            }
         } finally {
             if (needCopy) { // src was fully read
                 if (n < len) {
@@ -133,7 +154,7 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
     public IPPort receive(ByteBuffer buf) throws IOException {
         checkFD();
         checkNotClosed();
-        if (!bond) {
+        if (!bond && !connected) {
             throw new IOException("not bond");
         }
         if (buf.isReadOnly()) {

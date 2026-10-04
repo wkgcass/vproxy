@@ -29,6 +29,7 @@ import org.junit.runners.Suite;
     TestRingBufferHandlerLifecycle.class,
     TestReadOnlyFD.class,
     TestDatagramDeferredConfig.class,
+    TestDatagramLifecycle.class,
     TestSendingQueueCursor.class,
     TestSendingQueueAge.class,
     TestReceivingQueueRetention.class,
