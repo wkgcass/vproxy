@@ -1,6 +1,7 @@
 package io.vproxy.test.cases;
 
 import io.vproxy.base.selector.wrap.VirtualFD;
+import io.vproxy.base.selector.wrap.WritableAware;
 import io.vproxy.base.selector.wrap.WrappedSelector;
 import io.vproxy.vfd.*;
 import io.vproxy.vfd.jdk.ChannelFDs;
@@ -39,8 +40,9 @@ public class TestSelectorResultLifecycle {
         boolean open = true;
         Runnable beforeSelect = () -> { };
         IOException failure;
+        Collection<SelectedEntry> results = List.of();
         public boolean isOpen() { return open; }
-        public Collection<SelectedEntry> select() throws IOException { beforeSelect.run(); if (failure != null) throw failure; return List.of(); }
+        public Collection<SelectedEntry> select() throws IOException { beforeSelect.run(); if (failure != null) throw failure; return results; }
         public Collection<SelectedEntry> selectNow() throws IOException { return select(); }
         public Collection<SelectedEntry> select(long millis) throws IOException { return select(); }
         public void wakeup() { }
@@ -155,4 +157,69 @@ public class TestSelectorResultLifecycle {
             cleared(selected);
         }
     }
+    private static class Aware extends Input implements WritableAware {
+        Runnable action = () -> { };
+        public void writable() { action.run(); }
+    }
+    @Test
+    public void unusedTailIsReleasedBeforeWritableCallbacksEvenOnFailure() throws Exception {
+        for (boolean failCallback : new boolean[]{false, true}) try (var selector = new WrappedSelector(new EmptySelector())) {
+            var active = new Aware();
+            List<Input> removed = new ArrayList<>();
+            selector.register(active, EventSet.readwrite(), active); selector.registerVirtualWritable(active);
+            for (int i = 0; i < 100; ++i) {
+                var fd = new Input(); removed.add(fd); selector.register(fd, EventSet.read(), fd); selector.registerVirtualReadable(fd);
+            }
+            var previous = selector.selectNow().toArray(SelectedEntry[]::new);
+            for (var fd : removed) selector.remove(fd);
+            var error = new IllegalStateException("controlled writable callback failure");
+            int[] calls = {0};
+            active.action = () -> {
+                ++calls[0];
+                // The first prototype is reused for the only current entry.
+                assertSame(active, previous[0].fd());
+                for (int i = 1; i < previous.length; ++i) cleared(previous[i]);
+                if (failCallback) throw error;
+            };
+            if (failCallback) {
+                try { selector.selectNow(); fail("expected callback error"); } catch (IllegalStateException e) { assertSame(error, e); }
+            } else {
+                var selected = selector.selectNow(); assertEquals(1, selected.size()); assertSame(active, selected.iterator().next().fd());
+            }
+            assertEquals(1, calls[0]);
+        }
+    }
+    @Test
+    public void collectingFailureStillReleasesUnusedTail() throws Exception {
+        class Fallible extends Input {
+            boolean failHash;
+            @Override public int hashCode() { if (failHash) throw new IllegalStateException("controlled collection failure"); return 12345; }
+        }
+        try (var selector = new WrappedSelector(new EmptySelector())) {
+            var fd = new Fallible(); selector.register(fd, EventSet.read(), new Object()); selector.registerVirtualReadable(fd);
+            var previous = selector.selectNow().iterator().next(); fd.failHash = true;
+            try { selector.selectNow(); fail("expected collection error"); } catch (IllegalStateException e) { assertEquals("controlled collection failure", e.getMessage()); }
+            cleared(previous);
+            fd.failHash = false; assertEquals(1, selector.selectNow().size());
+        }
+    }
+    @Test
+    public void realSelectionCanRefillClearedTailWithoutChangingVirtualBatch() throws Exception {
+        var underlying = new EmptySelector();
+        try (var selector = new WrappedSelector(underlying)) {
+            var active = new Input(); selector.register(active, EventSet.read(), active); selector.registerVirtualReadable(active);
+            List<Input> removed = new ArrayList<>();
+            for (int i = 0; i < 50; ++i) { var fd = new Input(); removed.add(fd); selector.register(fd, EventSet.read(), fd); selector.registerVirtualReadable(fd); }
+            var previous = selector.selectNow().toArray(SelectedEntry[]::new);
+            for (var fd : removed) selector.remove(fd);
+            var real = new Hybrid(new Input()); var marker = new Object();
+            underlying.beforeSelect = () -> { for (int i = 1; i < previous.length; ++i) cleared(previous[i]); };
+            underlying.results = List.of(new SelectedEntry().set(real, EventSet.write(), marker));
+            var selected = selector.selectNow().toArray(SelectedEntry[]::new); assertEquals(2, selected.length);
+            assertSame(active, selected[0].fd()); assertSame(active, selected[0].attachment()); assertEquals(EventSet.read(), selected[0].ready());
+            assertSame(real, selected[1].fd()); assertSame(marker, selected[1].attachment()); assertEquals(EventSet.write(), selected[1].ready());
+            for (int i = 2; i < previous.length; ++i) cleared(previous[i]);
+        }
+    }
+
 }

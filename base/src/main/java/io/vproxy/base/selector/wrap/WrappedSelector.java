@@ -58,6 +58,10 @@ public class WrappedSelector implements FDSelector {
     private final Map[] virtualMaps = new Map[]{virtualSocketFDs, hybridSocketFDs};
 
     private void calcVirtual() {
+        int previousSize = selectedEntryList.size();
+        // Reused active slots will be overwritten by collection. Release only
+        // the unused tail before callbacks or a real selector can wait.
+        selectedEntryList.setSize(0);
         virtualWritableCallbacks.clear();
         try (var unused = VIRTUAL_LOCK.lock()) {
             for (FD fd : readableFired) {
@@ -67,6 +71,11 @@ public class WrappedSelector implements FDSelector {
                 if (!readableFired.contains(fd)) {
                     collectVirtual(fd, false, true);
                 }
+            }
+        } finally {
+            int currentSize = selectedEntryList.size();
+            for (int i = currentSize; i < previousSize; ++i) {
+                selectedEntryList.get(i).set(null, null, null);
             }
         }
         for (WritableAware callback : virtualWritableCallbacks) {
@@ -111,8 +120,6 @@ public class WrappedSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        selectedEntryList.clear();
-
         calcVirtual();
         if (selectedEntryList.isEmpty()) {
             handleRealSelect(selector.select());
@@ -125,8 +132,6 @@ public class WrappedSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
-        selectedEntryList.clear();
-
         calcVirtual();
         handleRealSelect(selector.selectNow());
         return selectedEntryList;
@@ -135,8 +140,6 @@ public class WrappedSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
-        selectedEntryList.clear();
-
         calcVirtual();
         if (selectedEntryList.isEmpty()) {
             handleRealSelect(selector.select(millis));
