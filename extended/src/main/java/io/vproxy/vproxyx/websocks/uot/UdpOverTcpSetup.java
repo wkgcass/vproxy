@@ -33,19 +33,10 @@ public class UdpOverTcpSetup {
     // installUotFilter: whether to install the UdpOverTcpPacketFilter; set to false for unet
     public static FDs setup(boolean client, int port, String nicname, EventLoopGroup elg, boolean installUotFilter) throws Exception {
         var nic = selectNic(nicname);
-        setupNicQueues(nicname);
         var localMac = new MacAddress(nic.getHardwareAddress());
         var ips = nic.getInterfaceAddresses();
         var localIp4 = getIPv4(ips);
         var localIp6 = getIPv6(ips);
-
-        Switch sw = new Switch("uot",
-            new IPPort("255.255.255.255:0"),
-            elg, 300_000, 4 * 3600 * 1000,
-            SecurityGroup.denyAll());
-        sw.defaultIfaceParams.setBaseMTU(-1);
-        sw.defaultIfaceParams.setFloodAllowed(false);
-        sw.start();
 
         IP ip4 = IP.from(localIp4.getAddress().getAddress());
         Network v4net = Network.eraseToNetwork(ip4, localIp4.getNetworkPrefixLength());
@@ -56,18 +47,29 @@ public class UdpOverTcpSetup {
             v6net = Network.eraseToNetwork(ip6, localIp6.getNetworkPrefixLength());
         }
 
+        // Resolve gateways before allocating the switch or changing NIC queues.
+        // A neighbor still being resolved must not leave a partially started switch.
+        Tuple<MacAddress, IP> v4gw = getIPv4GW(v4net);
+        Tuple<MacAddress, IP> v6gw = null;
+        if (v6net != null) {
+            v6gw = getIPv6GW(v6net);
+        }
+
+        setupNicQueues(nicname);
+        Switch sw = new Switch("uot",
+            new IPPort("255.255.255.255:0"),
+            elg, 300_000, 4 * 3600 * 1000,
+            SecurityGroup.denyAll());
+        sw.defaultIfaceParams.setBaseMTU(-1);
+        sw.defaultIfaceParams.setFloodAllowed(false);
+        sw.start();
+
         var network = sw.addNetwork(1, v4net, v6net, null);
         network.addIp(ip4, localMac, null);
         Logger.alert("handling " + ip4.formatToIPString() + " :: " + localMac + " on " + nicname);
         if (ip6 != null) {
             network.addIp(ip6, localMac, null);
             Logger.alert("handling " + ip6.formatToIPString() + " :: " + localMac + " on " + nicname);
-        }
-
-        Tuple<MacAddress, IP> v4gw = getIPv4GW(v4net);
-        Tuple<MacAddress, IP> v6gw = null;
-        if (v6net != null) {
-            v6gw = getIPv6GW(v6net);
         }
 
         network.routeTable.addRule(new RouteTable.RouteRule("gw", Network.from("0.0.0.0/0"), v4gw.right));
@@ -198,7 +200,7 @@ public class UdpOverTcpSetup {
         if (ipRouteGetResult.exitCode != 0) {
             throw new Exception("unable to find default route (" + routeCmd + "): " + ipRouteGetResult.stderr.trim());
         }
-        String[] entries = ipRouteGetResult.stdout.trim().split(" ");
+        String[] entries = ipRouteGetResult.stdout.trim().split("\\s+");
         String gw = null;
         for (int i = 0; i < entries.length; ++i) {
             if (entries[i].equals("via")) {
@@ -217,27 +219,27 @@ public class UdpOverTcpSetup {
             throw new Exception("gateway " + gw + " is not contained in network " + net);
         }
 
-        Utils.execute(pingCmd.apply(gw), true); // ignore error in this step
-
-        var ipNeighShowResult = Utils.execute(neighCmd.apply(gw), true);
-        if (ipNeighShowResult.exitCode != 0) {
-            throw new Exception("unable to find mac of " + gw + ": " + ipNeighShowResult.stderr.trim());
-        }
-        entries = ipNeighShowResult.stdout.split(" ");
-        String mac = null;
-        for (int i = 0; i < entries.length; ++i) {
-            if (entries[i].equals("lladdr")) {
-                if (entries.length <= i + 1) {
-                    throw new Exception("invalid output of ip neigh show command: " + ipNeighShowResult.stdout);
+        String lastNeighborOutput = "";
+        // One ping may finish before ARP/NDP has retried a lost solicitation.
+        // Keep startup bounded; each probe retains its existing -c 1 -W 1 limit.
+        for (int attempt = 0; attempt < 3; ++attempt) {
+            Utils.execute(pingCmd.apply(gw), true); // ICMP need not be permitted
+            var ipNeighShowResult = Utils.execute(neighCmd.apply(gw), true);
+            if (ipNeighShowResult.exitCode != 0) {
+                throw new Exception("unable to find mac of " + gw + ": " + ipNeighShowResult.stderr.trim());
+            }
+            lastNeighborOutput = ipNeighShowResult.stdout;
+            entries = lastNeighborOutput.trim().split("\\s+");
+            for (int i = 0; i < entries.length; ++i) {
+                if (entries[i].equals("lladdr")) {
+                    if (entries.length <= i + 1) {
+                        throw new Exception("invalid output of ip neigh show command: " + lastNeighborOutput);
+                    }
+                    return new Tuple<>(new MacAddress(entries[i + 1]), ip);
                 }
-                mac = entries[i + 1];
-                break;
             }
         }
-        if (mac == null) {
-            throw new Exception("gateway mac not found: " + ipNeighShowResult.stdout);
-        }
-        return new Tuple<>(new MacAddress(mac), ip);
+        throw new Exception("gateway mac not found: " + lastNeighborOutput);
     }
 
     private static Tuple<MacAddress, IP> getIPv4GW(Network v4net) throws Exception {
