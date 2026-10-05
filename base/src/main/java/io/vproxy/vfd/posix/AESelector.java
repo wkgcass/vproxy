@@ -81,7 +81,6 @@ public class AESelector implements FDSelector {
         if (fdInfoList.isEmpty()) {
             return Collections.emptyList();
         }
-        selectedEntryList.clear();
         boolean pipeReady = false;
         for (FDInfo res : fdInfoList) {
             if (res.fd() == pipefd[0]) {
@@ -119,6 +118,7 @@ public class AESelector implements FDSelector {
     @Override
     public Collection<SelectedEntry> select() throws IOException {
         checkOpen();
+        selectedEntryList.clear();
         fdInfoList.clear();
         int n = posix.aeApiPoll(ae, 24 * 60 * 60 * 1000);
         fillFDsList(n);
@@ -129,6 +129,7 @@ public class AESelector implements FDSelector {
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
         checkOpen();
+        selectedEntryList.clear();
         fdInfoList.clear();
         int n = posix.aeApiPollNow(ae);
         fillFDsList(n);
@@ -139,6 +140,7 @@ public class AESelector implements FDSelector {
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
         checkOpen();
+        selectedEntryList.clear();
         fdInfoList.clear();
         int n;
         if (millis <= 0) {

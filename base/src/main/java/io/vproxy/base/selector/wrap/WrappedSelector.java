@@ -4,7 +4,7 @@ import io.vproxy.base.util.Lock;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.objectpool.GarbageFree;
-import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.vfd.posix.SelectedEntryPrototypeObjectList;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.util.*;
 
 public class WrappedSelector implements FDSelector {
     private final FDSelector selector;
-    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
+    private final SelectedEntryPrototypeObjectList selectedEntryList = new SelectedEntryPrototypeObjectList(128, SelectedEntry::new);
 
     private static class REntry {
         EventSet watchedEvents;
