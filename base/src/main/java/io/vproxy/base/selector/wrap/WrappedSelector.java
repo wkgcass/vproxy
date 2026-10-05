@@ -40,7 +40,6 @@ public class WrappedSelector implements FDSelector {
     private final Map<VirtualFD, FD> virtual2hybridMap = new HashMap<>();
     private final Set<FD> readableFired = new HashSet<>();
     private final Set<FD> writableFired = new HashSet<>();
-    private final Set<FD> virtualReadyFds = new HashSet<>();
     private final List<WritableAware> virtualWritableCallbacks = new ArrayList<>();
     private final Lock SELECTOR_OPERATION_LOCK = Lock.create();
     private volatile boolean closed;
@@ -61,32 +60,40 @@ public class WrappedSelector implements FDSelector {
     private void calcVirtual() {
         virtualWritableCallbacks.clear();
         try (var unused = VIRTUAL_LOCK.lock()) {
-            virtualReadyFds.clear();
-            virtualReadyFds.addAll(readableFired);
-            virtualReadyFds.addAll(writableFired);
-            for (FD fd : virtualReadyFds) {
-                REntry entry = fd instanceof VirtualFD
-                    ? virtualSocketFDs.get((VirtualFD) fd)
-                    : hybridSocketFDs.get(fd);
-                if (entry == null) {
-                    continue;
-                }
-                boolean readable = entry.watchedEvents.have(Event.READABLE) && readableFired.contains(fd);
-                boolean writable = entry.watchedEvents.have(Event.WRITABLE) && writableFired.contains(fd);
-                if (readable && writable) {
-                    selectedEntryList.add().set(fd, EventSet.readwrite(), entry.attachment);
-                } else if (readable) {
-                    selectedEntryList.add().set(fd, EventSet.read(), entry.attachment);
-                } else if (writable) {
-                    selectedEntryList.add().set(fd, EventSet.write(), entry.attachment);
-                }
-                if (writable && fd instanceof WritableAware aware) {
-                    virtualWritableCallbacks.add(aware);
+            for (FD fd : readableFired) {
+                collectVirtual(fd, true, writableFired.contains(fd));
+            }
+            for (FD fd : writableFired) {
+                if (!readableFired.contains(fd)) {
+                    collectVirtual(fd, false, true);
                 }
             }
         }
         for (WritableAware callback : virtualWritableCallbacks) {
             callback.writable();
+        }
+    }
+
+    // Called only while holding VIRTUAL_LOCK; callbacks run after both sets
+    // have been collected, so callback changes cannot invalidate iteration.
+    private void collectVirtual(FD fd, boolean readFired, boolean writeFired) {
+        REntry entry = fd instanceof VirtualFD
+            ? virtualSocketFDs.get((VirtualFD) fd)
+            : hybridSocketFDs.get(fd);
+        if (entry == null) {
+            return;
+        }
+        boolean readable = readFired && entry.watchedEvents.have(Event.READABLE);
+        boolean writable = writeFired && entry.watchedEvents.have(Event.WRITABLE);
+        if (readable && writable) {
+            selectedEntryList.add().set(fd, EventSet.readwrite(), entry.attachment);
+        } else if (readable) {
+            selectedEntryList.add().set(fd, EventSet.read(), entry.attachment);
+        } else if (writable) {
+            selectedEntryList.add().set(fd, EventSet.write(), entry.attachment);
+        }
+        if (writable && fd instanceof WritableAware aware) {
+            virtualWritableCallbacks.add(aware);
         }
     }
 
@@ -350,7 +357,6 @@ public class WrappedSelector implements FDSelector {
             virtual2hybridMap.clear();
             readableFired.clear();
             writableFired.clear();
-            virtualReadyFds.clear();
         }
         selector.close();
     }

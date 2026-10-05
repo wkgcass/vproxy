@@ -37,6 +37,7 @@ import org.junit.runners.Suite;
     TestTunReadDiagnostics.class,
     TestTunWriteDiagnostics.class,
     TestEventLoopDiagnostics.class,
+    TestVirtualReadySelection.class,
     TestConnectionReadFairness.class,
     TestConnectionReadBackpressure.class,
     TestDecoderErrorNotification.class,
