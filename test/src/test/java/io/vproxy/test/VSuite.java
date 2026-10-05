@@ -48,6 +48,7 @@ import org.junit.runners.Suite;
     TestUtilities.class,
     TestByteArrayBuilder.class,
     TestSwitch.class,
+    io.vproxy.vswitch.iface.TestXdpPacketCopy.class,
     TestFlowParser.class,
     TestFlowGen.class,
     TestVPWSAgentConfig.class,

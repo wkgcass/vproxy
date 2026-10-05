@@ -6,6 +6,7 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.bytearray.CompositeByteArray;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.pni.Allocator;
 import io.vproxy.pni.array.PointerArray;
@@ -163,7 +164,7 @@ public class XDPIface extends Iface {
             statistics.incrCsumSkip();
         }
         var segBuf = MemorySegment.ofAddress(chunk.getUmem().getBuffer().address() + pktaddr).reinterpret(pktData.length());
-        pktData.copyInto(ByteArray.from(segBuf), 0, 0, pktData.length());
+        copyPacketData(pktData, segBuf);
 
         sendingChunkPointers.set(sendingChunkSize++, chunk.MEMORY);
 
@@ -174,6 +175,17 @@ public class XDPIface extends Iface {
         // ensure the packet is transmitted
         if (!pkb.ifaceInput) {
             completeTx();
+        }
+    }
+
+    // The caller owns a newly fetched TX chunk, separate from the live packet.
+    // Composite.copyInto falls back to per-byte access for native targets.
+    // Keep the existing flat/native path, whose small-copy costs are lower.
+    static void copyPacketData(ByteArray pktData, MemorySegment target) {
+        if (pktData instanceof CompositeByteArray) {
+            pktData.byteBufferPut(target.asByteBuffer(), 0, pktData.length());
+        } else {
+            pktData.copyInto(ByteArray.from(target), 0, 0, pktData.length());
         }
     }
 
