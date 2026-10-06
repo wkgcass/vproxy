@@ -15,6 +15,12 @@ public class DirectByteBuffer extends ByteBufferEx {
         this.seg = MemorySegment.ofBuffer(buffer);
     }
 
+    // Cached storage already has its full-capacity view. Only the lease is new.
+    DirectByteBuffer(ByteBuffer buffer, MemorySegment segment) {
+        super(buffer);
+        this.seg = segment;
+    }
+
     @Override
     public ByteBuffer realBuffer() {
         if (cleaned) {

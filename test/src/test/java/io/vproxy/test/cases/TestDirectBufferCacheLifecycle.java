@@ -5,6 +5,7 @@ import io.vproxy.base.util.direct.DirectByteBuffer;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
 import org.junit.Test;
 
+import java.lang.foreign.ValueLayout;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -92,6 +93,10 @@ public class TestDirectBufferCacheLifecycle {
                 assertEquals(0, buffer.position());
                 assertEquals(64, buffer.limit());
                 assertEquals(64, buffer.getMemorySegment().byteSize());
+                buffer.getMemorySegment().set(ValueLayout.JAVA_BYTE, 63, (byte) 0x5a);
+                assertEquals((byte) 0x5a, buffer.realBuffer().get(63));
+                buffer.realBuffer().put(62, (byte) 0x37);
+                assertEquals((byte) 0x37, buffer.getMemorySegment().get(ValueLayout.JAVA_BYTE, 62));
             }
             independent(live);
             for (var buffer : warm) buffer.clean(false);
