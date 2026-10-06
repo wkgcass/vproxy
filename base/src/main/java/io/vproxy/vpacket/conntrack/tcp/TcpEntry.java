@@ -51,6 +51,7 @@ public class TcpEntry implements WithUserData {
     final TcpConnectionDiagnostics diagnostics;
 
     public TimerEvent retransmissionTimer = null;
+    public TimerEvent sackRetransmissionTimer = null;
     public TimerEvent persistTimer = null;
     public TimerEvent delayedAckTimer = null;
     public int persistProbeCount = 0;
@@ -121,6 +122,10 @@ public class TcpEntry implements WithUserData {
         if (retransmissionTimer != null) {
             retransmissionTimer.cancel();
             retransmissionTimer = null;
+        }
+        if (sackRetransmissionTimer != null) {
+            sackRetransmissionTimer.cancel();
+            sackRetransmissionTimer = null;
         }
         if (persistTimer != null) {
             persistTimer.cancel();

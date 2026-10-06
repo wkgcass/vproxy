@@ -33,6 +33,7 @@ import org.junit.runners.Suite;
     TestSendingQueueCursor.class,
     TestSendingQueueAge.class,
     TestSackRenegingRecovery.class,
+    TestTcpRtoOwnership.class,
     TestReceivingQueueRetention.class,
     TestTunReadFairness.class,
     TestTunReadDiagnostics.class,

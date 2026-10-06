@@ -97,18 +97,16 @@ public class TestSackRenegingRecovery {
     }
 
     @Test
-    public void armedSackTimerKeepsItsTypeAfterContextFlagsReset() throws Exception {
+    public void sackOutputKeepsTheOrdinaryTimeoutArmed() throws Exception {
         try (var f = new Fixture(3000)) {
+            var ordinaryTimer = f.tcp.retransmissionTimer;
             f.startSackRepair();
             f.fireNextTimer();
             f.assertData(0, 1000);
-            // Bypass ACK dispatch here to retain the *same* timer/context that
-            // output just reset. Its scheduled SACK callback must stay selective.
+            assertSame(ordinaryTimer, f.tcp.retransmissionTimer);
+            // Bypass ACK dispatch to exercise the unchanged ordinary deadline.
             f.tcp.sendingQueue.ack(f.origin + 1000, 3000);
             f.stack.packets.clear();
-            f.fireNextTimer();
-            f.assertData(1000, 1000);
-            // The following ordinary timeout must recover the reneged suffix.
             f.fireNextTimer();
             f.assertData(1000, 3000);
         }
@@ -119,8 +117,6 @@ public class TestSackRenegingRecovery {
         try (var f = new Fixture(3000)) {
             f.startSackRepair();
             f.tcp.sendingQueue.ack(f.origin + 1000, 3000);
-            f.fireNextTimer();
-            f.assertData(1000, 1000);
             f.fireNextTimer();
             f.assertData(1000, 1000);
             f.fireNextTimer();
@@ -195,6 +191,10 @@ public class TestSackRenegingRecovery {
                 }
             }
             tcp.sendingQueue.init(window, 1000, 1);
+            // Let the 100ms selective repair fire before the ordinary timeout.
+            var rtoField = tcp.sendingQueue.getClass().getDeclaredField("rto");
+            rtoField.setAccessible(true);
+            rtoField.setLong(tcp.sendingQueue, 1000);
             for (int i = 0; i < data.length; i++) data[i] = (byte) (i * 31 + (i >>> 8));
             assertEquals(data.length, tcp.sendingQueue.apiWrite(ByteBuffer.wrap(data)));
             origin = tcp.sendingQueue.getAckSeq();
