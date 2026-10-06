@@ -39,6 +39,7 @@ import org.junit.runners.Suite;
     TestEventLoopDiagnostics.class,
     TestVirtualReadySelection.class,
     TestSelectorResultLifecycle.class,
+    TestDirectBufferCacheLifecycle.class,
     TestConnectionReadFairness.class,
     TestConnectionReadBackpressure.class,
     TestDecoderErrorNotification.class,

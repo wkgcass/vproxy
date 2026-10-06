@@ -23,33 +23,33 @@ public class DirectMemoryUtils {
 
     // iOS hosts run under a tight process memory cap: do not even
     // instantiate the pools there
-    private static ConcurrentObjectPool<DirectByteBuffer> pool() {
+    private static ConcurrentObjectPool<ByteBuffer> pool() {
         if (OS.isIOS()) {
             return null;
         }
         return new ConcurrentObjectPool<>(BUF_POOL_SIZE);
     }
-    private static long poolSize(ConcurrentObjectPool<DirectByteBuffer> pool) {
+    private static long poolSize(ConcurrentObjectPool<ByteBuffer> pool) {
         return pool == null ? 0 : pool.size();
     }
-    private static final ConcurrentObjectPool<DirectByteBuffer> _1 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _2 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _4 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _8 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _16 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _32 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _64 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _128 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _256 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _512 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _1024 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _2048 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _4096 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _8192 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _16384 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _24576 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _32768 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _65536 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _1 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _2 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _4 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _8 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _16 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _32 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _64 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _128 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _256 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _512 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _1024 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _2048 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _4096 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _8192 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _16384 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _24576 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _32768 = pool();
+    private static final ConcurrentObjectPool<ByteBuffer> _65536 = pool();
 
     private static final Counter directMemoryCacheMissCount = GlobalInspection.getInstance().addMetric(
         "direct_memory_cache_miss_count_total",
@@ -180,7 +180,7 @@ public class DirectMemoryUtils {
         );
     }
 
-    private static DirectByteBuffer getBufferCache(int size) {
+    private static ByteBuffer getBufferCache(int size) {
         switch (size) {
             case 1:
                 return getBufferCache(_1);
@@ -223,11 +223,11 @@ public class DirectMemoryUtils {
         }
     }
 
-    private static DirectByteBuffer getBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers) {
+    private static ByteBuffer getBufferCache(ConcurrentObjectPool<ByteBuffer> buffers) {
         if (buffers == null) {
             return null;
         }
-        DirectByteBuffer buf = buffers.poll();
+        ByteBuffer buf = buffers.poll();
         if (buf == null) {
             directMemoryCacheMissCount.incr(1);
         } else {
@@ -279,11 +279,11 @@ public class DirectMemoryUtils {
         }
     }
 
-    private static boolean releaseBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers, DirectByteBuffer buf) {
+    private static boolean releaseBufferCache(ConcurrentObjectPool<ByteBuffer> buffers, DirectByteBuffer buf) {
         if (buffers == null) {
             return false;
         }
-        boolean ret = buffers.add(buf);
+        boolean ret = buffers.add(buf.realBuffer());
         if (ret) {
             directMemoryCacheStoredCount.incr(1);
         } else {
@@ -293,11 +293,11 @@ public class DirectMemoryUtils {
     }
 
     public static DirectByteBuffer allocateDirectBuffer(int size) {
-        DirectByteBuffer directByteBuffer = getBufferCache(size);
+        ByteBuffer directByteBuffer = getBufferCache(size);
         if (!POOL_DISABLED && directByteBuffer != null) {
             assert Logger.lowLevelDebug("cached direct buffer retrieved: " + size);
             directByteBuffer.limit(directByteBuffer.capacity()).position(0);
-            return directByteBuffer;
+            return new DirectByteBuffer(directByteBuffer);
         }
         ByteBuffer buf = ByteBuffer.allocateDirect(size);
         GlobalInspection.getInstance().directBufferAllocate(buf.capacity());
@@ -314,7 +314,9 @@ public class DirectMemoryUtils {
             boolean succeeded = releaseBufferCache(buffer);
             if (succeeded) {
                 assert Logger.lowLevelDebug("direct buffer cached: " + buffer.capacity());
-                return false;
+                // The cache owns the backing buffer now. Retire this handle
+                // so repeated clean cannot return a live borrower to the pool.
+                return true;
             }
         }
         assert Logger.lowLevelDebug("is direct buffer, do clean");
