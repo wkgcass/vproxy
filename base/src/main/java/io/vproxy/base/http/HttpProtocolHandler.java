@@ -3,8 +3,8 @@ package io.vproxy.base.http;
 import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.nio.ByteArrayChannel;
+
+import java.nio.charset.StandardCharsets;
 
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {
     private final HttpReqParser.Params params;
@@ -20,6 +20,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
 
     @Override
     public void readable(ProtocolHandlerContext<HttpContext> ctx) {
+        if (ctx.data.terminated) return;
         if (ctx.data.parser == null) {
             ctx.data.parser = new HttpReqParser(params);
         }
@@ -38,25 +39,29 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
     }
 
     protected void sendError(ProtocolHandlerContext<HttpContext> ctx, String errMsg) {
-        // flush all input data
-        if (ctx.inBuffer.used() > 0) {
-            byte[] foo = Utils.allocateByteArray(ctx.inBuffer.used());
-            ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(foo);
-            while (ctx.inBuffer.used() != 0) {
-                chnl.reset();
-                ctx.inBuffer.writeTo(chnl);
-            }
-        }
+        int status = ctx.data.parser == null ? 400 : ctx.data.parser.getErrorStatusCode();
+        ctx.data.terminated = true;
+        ctx.data.parser = null;
+        ctx.data.result = null;
+        ctx.inBuffer.clear();
 
         // send back error response
-        String htmlErrMsg = "<html><body><h1>" + errMsg + "</h1></body></html>\r\n";
+        String htmlErrMsg = "<html><body><h1>" + errMsg.replace("&", "&amp;")
+            .replace("<", "&lt;").replace(">", "&gt;") + "</h1></body></html>\r\n";
+        String reason = switch (status) {
+            case 414 -> "URI Too Long";
+            case 431 -> "Request Header Fields Too Large";
+            default -> "Bad Request";
+        };
         String sendBack = "" +
-            "HTTP/1.1 400 Bad Request\r\n" +
-            "Connection: Keep-Alive\r\n" + // we want to keep the connection open anyway
-            "Content-Length: " + htmlErrMsg.length() + "\r\n" +
+            "HTTP/1.1 " + status + " " + reason + "\r\n" +
+            "Connection: close\r\n" +
+            "Content-Type: text/html; charset=utf-8\r\n" +
+            "Content-Length: " + htmlErrMsg.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
             "\r\n" +
             htmlErrMsg;
-        ctx.write(sendBack.getBytes());
+        ctx.write(sendBack.getBytes(StandardCharsets.UTF_8));
+        ctx.closeAfterFlush();
     }
 
     protected abstract void request(ProtocolHandlerContext<HttpContext> ctx);
@@ -78,6 +83,6 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
     @Override
     public boolean closeOnRemoval(ProtocolHandlerContext<HttpContext> ctx) {
         // true if data is not initialized or parse not done
-        return ctx.data == null || ctx.data.parser != null;
+        return ctx.data == null || ctx.data.terminated || ctx.data.parser != null;
     }
 }

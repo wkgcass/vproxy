@@ -17,6 +17,7 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
 
     @Override
     public void readable(ConnectionHandlerContext ctx) {
+        if (pctx.isClosing()) return;
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
         handler.readable(pctx);
     }

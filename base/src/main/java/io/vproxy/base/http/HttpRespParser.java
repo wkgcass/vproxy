@@ -97,6 +97,7 @@ public class HttpRespParser extends AbstractParser<Response> implements IHttpPar
 
         int newState;
         try {
+            helper.beforeHeaderByte(state, b);
             if (state == 0 || (22 <= state && state <= 24)) {
                 newState = handlers[state].handle(b);
             } else {
@@ -174,5 +175,10 @@ public class HttpRespParser extends AbstractParser<Response> implements IHttpPar
         public Params setHeadersOnly(boolean headersOnly) {
             return (Params) super.setHeadersOnly(headersOnly);
         }
+
+        @Override public Params setMaxInitialLineBytes(int value) { return (Params) super.setMaxInitialLineBytes(value); }
+        @Override public Params setMaxHeaderLineBytes(int value) { return (Params) super.setMaxHeaderLineBytes(value); }
+        @Override public Params setMaxHeaderBytes(int value) { return (Params) super.setMaxHeaderBytes(value); }
+        @Override public Params setMaxHeaderCount(int value) { return (Params) super.setMaxHeaderCount(value); }
     }
 }

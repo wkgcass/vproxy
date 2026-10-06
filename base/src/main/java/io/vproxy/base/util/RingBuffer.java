@@ -10,6 +10,10 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 public interface RingBuffer {
+    /** Includes staged output that a transforming buffer has not exposed on the wire yet. */
+    default boolean hasPendingWrite() {
+        return used() != 0;
+    }
     SimpleRingBuffer EMPTY_BUFFER = allocate(0);
 
     static SimpleRingBuffer allocateDirect(int cap) {

@@ -82,7 +82,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         private final Supplier<ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>>> rootCtxGetter;
 
         protected WebSocksHttpProtocolHandler(Supplier<ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>>> rootCtxGetter) {
-            super(new HttpReqParser.Params().setHeadersOnly(true));
+            super(new HttpReqParser.Params().setHeadersOnly(true)
+                .setMaxInitialLineBytes(8192).setMaxHeaderLineBytes(8192)
+                .setMaxHeaderBytes(32768).setMaxHeaderCount(128));
             this.rootCtxGetter = rootCtxGetter;
         }
 

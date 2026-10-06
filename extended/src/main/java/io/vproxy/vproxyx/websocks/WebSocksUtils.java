@@ -120,58 +120,30 @@ public class WebSocksUtils {
             String headerKey = header.key.trim();
             String headerVal = header.value.trim();
             if (headerKey.equalsIgnoreCase("upgrade")) {
-                if (headerVal.equals("websocket")) {
-                    foundUpgrade = true;
-                    if (foundSec && foundConnection) {
-                        break;
-                    }
-                } else {
-                    // invalid
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                        "invalid header Upgrade: " + headerVal);
+                foundUpgrade |= containsToken(headerVal, "websocket");
+            } else if (headerKey.equalsIgnoreCase("connection")) {
+                foundConnection |= containsToken(headerVal, "upgrade");
+            } else if (headerKey.equalsIgnoreCase(isClient ? "sec-websocket-accept" : "sec-websocket-key")) {
+                if (foundSec) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "duplicate header " + headerKey);
                     return false;
                 }
-            } else if (headerKey.equalsIgnoreCase(
-                isClient ? "sec-websocket-accept" : "sec-websocket-key"
-            )) {
                 boolean pass;
                 if (isClient) {
-                    // the client uses the same key for each connection
-                    // so the result should be the same as well
-                    // copied from rfc 6455
+                    // The current client uses the RFC example nonce on each connection.
                     pass = headerVal.equals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
                 } else {
-                    // the server should check the base64 string
                     try {
-                        Base64.getDecoder().decode(headerVal);
-                        pass = true;
+                        pass = Base64.getDecoder().decode(headerVal).length == 16;
                     } catch (IllegalArgumentException e) {
                         pass = false;
                     }
                 }
-                if (pass) {
-                    foundSec = true;
-                    if (foundUpgrade && foundConnection) {
-                        break;
-                    }
-                } else {
-                    // invalid
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                        "invalid header " + headerKey + ": " + headerVal);
+                if (!pass) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "invalid header " + headerKey);
                     return false;
                 }
-            } else if (headerKey.equalsIgnoreCase("connection")) {
-                if (headerVal.equalsIgnoreCase("Upgrade")) {
-                    foundConnection = true;
-                    if (foundSec && foundUpgrade) {
-                        break;
-                    }
-                } else {
-                    // invalid
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                        "invalid header Connection: " + headerVal);
-                    return false;
-                }
+                foundSec = true;
             }
         }
         for (Header header : headers) {
@@ -192,6 +164,21 @@ public class WebSocksUtils {
             return false;
         }
         return true;
+    }
+
+    private static boolean containsToken(String value, String expected) {
+        for (String token : value.split(",")) {
+            token = token.trim();
+            if (token.length() != expected.length()) continue;
+            boolean match = true;
+            for (int i = 0; i < token.length(); i++) {
+                char c = token.charAt(i);
+                if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+                if (c != expected.charAt(i)) { match = false; break; }
+            }
+            if (match) return true;
+        }
+        return false;
     }
 
     private static volatile SSLContext sslContext;
