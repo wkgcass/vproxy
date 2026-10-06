@@ -380,7 +380,11 @@ public class TestPerformanceRegressions {
                 new io.vproxy.vpacket.conntrack.tcp.SAckTuple(start, start + 1000)));
             int sent = fixture.stack.packets.size();
             fixture.fireNextTimer((int) fixture.tcp.sendingQueue.getRto());
-            assertEquals("SACKed prefix must not allow FIN ahead of the unsent suffix", sent, fixture.stack.packets.size());
+            assertEquals("RTO must recover the SACKed prefix", sent + 1, fixture.stack.packets.size());
+            var retransmission = fixture.stack.packets.getLast().tcpPkt;
+            assertFalse("untransmitted suffix must still precede FIN", retransmission.isFin());
+            assertEquals(start & 0xffffffffL, retransmission.getSeqNum());
+            assertEquals(1000, retransmission.getData().length());
             fixture.ack(start + 1000, 2000);
             assertEquals(start + 3000, fixture.tcp.sendingQueue.getFetchSeq());
             fixture.ack(start + 3000, 2000);

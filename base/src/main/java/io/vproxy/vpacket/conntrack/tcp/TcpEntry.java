@@ -698,6 +698,18 @@ public class TcpEntry implements WithUserData {
             }
         }
 
+        /**
+         * SACK is advisory: the peer may discard data it previously reported.
+         * Ordinary retransmission timeouts must therefore make every outstanding
+         * segment eligible again (RFC 2018 section 5). Fast SACK recovery keeps
+         * its scoreboard until an actual timeout occurs.
+         */
+        public void clearSackOnRetransmissionTimeout() {
+            for (var segment : q) {
+                segment.sacked = false;
+            }
+        }
+
         public void ack(long seq, int window) {
             if (finAcked) { // nothing to do because the output is completely shutdown
                 return;

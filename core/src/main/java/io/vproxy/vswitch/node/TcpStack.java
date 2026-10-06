@@ -839,10 +839,22 @@ public class TcpStack extends Node {
             tcp.retransmissionTimer.cancel();
         }
         long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + finalDelay : 0;
+        // The context is reused and its special-ACK flags are reset after output.
+        // Classify this timer when it is armed, rather than when it fires.
+        boolean sackRepair = ctx.sackRetransmit;
         tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(finalDelay, () -> {
             if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticRetransmitTimer(expectedAt, Config.currentTimestamp);
+            if (!sackRepair) {
+                tcp.sendingQueue.clearSackOnRetransmissionTimeout();
+            }
             ctx.retransmissionCount++;
-            transmitTcp(network, tcp, ctx);
+            try {
+                transmitTcp(network, tcp, ctx);
+            } finally {
+                // Empty fetches return before transmitTcpPsh's normal reset. Do
+                // not let an all-SACKed queue rearm short SACK timers forever.
+                ctx.resetSpecialAck();
+            }
         });
     }
 

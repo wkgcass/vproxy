@@ -32,6 +32,7 @@ import org.junit.runners.Suite;
     TestDatagramLifecycle.class,
     TestSendingQueueCursor.class,
     TestSendingQueueAge.class,
+    TestSackRenegingRecovery.class,
     TestReceivingQueueRetention.class,
     TestTunReadFairness.class,
     TestTunReadDiagnostics.class,
