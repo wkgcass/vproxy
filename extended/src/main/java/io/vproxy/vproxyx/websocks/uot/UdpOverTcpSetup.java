@@ -52,7 +52,7 @@ public class UdpOverTcpSetup {
         Tuple<MacAddress, IP> v4gw = getIPv4GW(v4net);
         Tuple<MacAddress, IP> v6gw = null;
         if (v6net != null) {
-            v6gw = getIPv6GW(v6net);
+            v6gw = getIPv6GW(v6net, nicname);
         }
 
         setupNicQueues(nicname);
@@ -215,7 +215,10 @@ public class UdpOverTcpSetup {
             throw new Exception("gateway not found: " + ipRouteGetResult.stdout);
         }
         IP ip = IP.from(gw);
-        if (!net.contains(ip)) {
+        // IPv6 routers commonly use a link-local next hop, independently
+        // of the interface's global prefix (RFC 4861). IPv4 and off-prefix
+        // global IPv6 gateways retain their existing validation.
+        if (!net.contains(ip) && !(net.getIp() instanceof IPv6 && ip.isLinkLocalAddress())) {
             throw new Exception("gateway " + gw + " is not contained in network " + net);
         }
 
@@ -248,9 +251,12 @@ public class UdpOverTcpSetup {
             ip -> "ip neigh show " + ip);
     }
 
-    private static Tuple<MacAddress, IP> getIPv6GW(Network v6net) throws Exception {
-        return getIPvXGW(v6net, "ip -6 route get 2606:4700:4700::1111",
-            ip -> "ping6 -c 1 -W 1 " + ip,
-            ip -> "ip -6 neigh show " + ip);
+    private static Tuple<MacAddress, IP> getIPv6GW(Network v6net, String nicname) throws Exception {
+        // A link-local address is scoped to a link. Resolve the route and
+        // neighbor on the selected NIC, even when several NICs use IPv6.
+        String nic = "'" + nicname.replace("'", "'\\''") + "'";
+        return getIPvXGW(v6net, "ip -6 route get 2606:4700:4700::1111 oif " + nic,
+            ip -> "ping6 -I " + nic + " -c 1 -W 1 " + ip,
+            ip -> "ip -6 neigh show to " + ip + " dev " + nic);
     }
 }

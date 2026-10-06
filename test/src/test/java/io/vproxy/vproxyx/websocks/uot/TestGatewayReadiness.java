@@ -31,7 +31,11 @@ public class TestGatewayReadiness {
         final Function<String, String> neighbor;
 
         Fixture(boolean ipv6, int readyAfter) throws Exception {
-            gateway = ipv6 ? "fd00:250::1" : "10.250.0.1";
+            this(ipv6, ipv6 ? "fd00:250::1" : "10.250.0.1", readyAfter);
+        }
+
+        Fixture(boolean ipv6, String gateway, int readyAfter) throws Exception {
+            this.gateway = gateway;
             network = Network.from(ipv6 ? "fd00:250::/64" : "10.250.0.0/24");
             route = "printf '%s\\n' " + quote("destination via " + gateway + " dev test");
             ping = ip -> "printf x >> " + quote(probes.toString());
@@ -46,6 +50,48 @@ public class TestGatewayReadiness {
 
         public void close() throws Exception {
             Files.delete(probes);
+        }
+    }
+
+    @Test
+    public void linkLocalIpv6GatewayWorksOutsideTheGlobalPrefix() throws Exception {
+        for (int readyAfter : new int[]{1, 3}) {
+            try (var f = new Fixture(true, "fe80::8e60:4fff:fead:4c42", readyAfter)) {
+                var result = resolve(f, f.route, f.neighbor);
+                assertEquals(IP.from(f.gateway), result.right);
+                assertEquals(new MacAddress("02:00:00:00:00:01"), result.left);
+                assertEquals(readyAfter, f.probes());
+            }
+        }
+    }
+
+    @Test
+    public void offPrefixGlobalAndWrongFamilyGatewaysStillFailBeforeProbing() throws Exception {
+        for (boolean ipv6 : new boolean[]{false, true}) {
+            for (String gateway : new String[]{"fd00:251::1", "10.251.0.1", "ff02::1", "::"}) {
+                try (var f = new Fixture(ipv6, gateway, 1)) {
+                    try {
+                        resolve(f, f.route, f.neighbor);
+                        fail("invalid gateway must be rejected: " + gateway);
+                    } catch (Exception e) {
+                        assertTrue(e.getMessage(), e.getMessage().contains("not contained"));
+                    }
+                    assertEquals(0, f.probes());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void ipv4NetworkDoesNotAcceptLinkLocalIpv6Gateway() throws Exception {
+        try (var f = new Fixture(false, "fe80::1", 1)) {
+            try {
+                resolve(f, f.route, f.neighbor);
+                fail("IPv4 network cannot use an IPv6 gateway");
+            } catch (Exception e) {
+                assertTrue(e.getMessage(), e.getMessage().contains("not contained"));
+            }
+            assertEquals(0, f.probes());
         }
     }
 
