@@ -170,12 +170,15 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         try {
             _generalUnwrap();
         } finally {
-            if (triggerWritable) {
-                triggerWritable = false;
-                triggerWritable();
+            try {
+                if (triggerWritable) {
+                    triggerWritable = false;
+                    triggerWritable();
+                }
+            } finally {
+                assert Logger.lowLevelDebug("generalUnwrap is not operating now");
+                setOperating(false);
             }
-            assert Logger.lowLevelDebug("generalUnwrap is not operating now");
-            setOperating(false);
         }
     }
 

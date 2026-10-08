@@ -106,6 +106,9 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         checkEntry();
         checkConnected();
         checkFin();
+        if (entry.getState() == TcpState.CLOSED) {
+            throw new IOException("Connection reset by peer");
+        }
 
         fin = true;
         if (entry.getState() == TcpState.ESTABLISHED) {

@@ -20,16 +20,130 @@ import io.vproxy.vswitch.RouteTable;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.iface.ProgramIface;
 import io.vproxy.vswitch.plugin.FilterResult;
+import io.vproxy.vswitch.iface.Iface;
+import io.vproxy.vswitch.VirtualNetwork;
+import io.vproxy.vproxyx.websocks.relay.DirectRelayTunSetup;
 import io.vproxy.vswitch.util.SwitchUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
 public class TestSwitch {
+    @Test(timeout = 10_000)
+    public void persistentNeighborsSkipRefreshButExpiringNeighborsStillProbe() throws Exception {
+        var network = sw.getNetwork(1);
+        var mac = new MacAddress("02:00:00:00:00:03");
+        var host = IP.from("192.168.1.1");
+        network.addIp(IP.from("192.168.1.53"), new MacAddress("02:00:00:00:00:02"), null);
+        var refresh = Switch.class.getDeclaredMethod("refreshCache");
+        refresh.setAccessible(true);
+        var ready = new CompletableFuture<Void>();
+        network.conntrack.loop.runOnLoop(() -> {
+            try {
+                network.macTable.record(mac, eth0, true);
+                network.arpTable.record(mac, host, true);
+                refresh.invoke(sw);
+                assertNull("persistent neighbors need no refresh probe", eth0.poll());
+                assertNull(eth1.poll());
+                assertNull(eth2.poll());
+                assertNull(eth3.poll());
+                network.clearCache();
+                network.macTable.record(mac, eth0);
+                network.arpTable.record(mac, host);
+                var start = io.vproxy.base.util.Timer.class.getDeclaredField("lastStart");
+                start.setAccessible(true);
+                var entry = network.arpTable.listEntries().iterator().next();
+                start.setLong(entry, io.vproxy.vfd.FDProvider.get().currentTimeMillis() - entry.getTimeout() + 1000);
+                refresh.invoke(sw);
+                assertNotNull("expiring learned neighbor must still be refreshed", eth0.poll());
+                ready.complete(null);
+            } catch (Throwable t) { ready.completeExceptionally(t); }
+        });
+        ready.get(3, TimeUnit.SECONDS);
+    }
+
+    @Test(timeout = 10_000)
+    public void dedicatedTunHostNeighborsDeliverFirstUdpReplyInBothFamilies() throws Exception {
+        var network = sw.getNetwork(1);
+        var hostMac = new MacAddress("02:00:00:00:00:03");
+        var localMac = new MacAddress("02:00:00:00:00:02");
+        var host4 = IP.from("192.168.1.1");
+        var host6 = IP.from("fd00::1:1");
+        initializeTunNeighbors(network, hostMac, host4, host6);
+        network.addIp(IP.from("192.168.1.53"), localMac, null);
+        network.addIp(IP.from("fd00::1:53"), localMac, null);
+        byte[] payload = {1, 2, 3, 4};
+        for (boolean ipv6 : new boolean[]{false, true}) {
+            IP local = IP.from(ipv6 ? "fd00::1:53" : "192.168.1.53");
+            IP host = ipv6 ? host6 : host4;
+            try (var socket = network.fds().openDatagramFD()) {
+                socket.bind(new IPPort(local, 53));
+                socket.send(ByteBuffer.wrap(payload), new IPPort(host, 12345));
+                var packet = waitForPacket(eth0).pkt;
+                assertEquals(hostMac, packet.getDst());
+                var ip = (AbstractIpPacket) packet.getPacket();
+                assertEquals(local, ip.getSrc());
+                assertEquals(host, ip.getDst());
+                assertTrue("first reply must be UDP, not neighbor discovery", ip.getPacket() instanceof UdpPacket);
+                var udp = (UdpPacket) ip.getPacket();
+                assertEquals(53, udp.getSrcPort());
+                assertEquals(12345, udp.getDstPort());
+                assertArrayEquals(payload, udp.getData().getRawPacket(0).toJavaArray());
+                assertNull("no ARP/NDP broadcast", eth1.poll());
+                assertNull(eth2.poll());
+                assertNull(eth3.poll());
+            }
+        }
+        assertEquals(2, network.arpTable.listEntries().size());
+        for (var entry : network.arpTable.listEntries()) assertEquals(-1, entry.getTimeout());
+        assertEquals(1, network.macTable.listEntries().size());
+        assertEquals(-1, network.macTable.listEntries().iterator().next().getTimeout());
+        var cleared = new CompletableFuture<Void>();
+        network.conntrack.loop.runOnLoop(() -> {
+            network.macTable.disconnect(eth0);
+            network.arpTable.clearCache();
+            cleared.complete(null);
+        });
+        cleared.get(3, TimeUnit.SECONDS);
+        assertNull(network.macTable.lookup(hostMac));
+        assertNull(network.arpTable.lookup(host4));
+        assertNull(network.arpTable.lookup(host6));
+    }
+
+    @Test(timeout = 10_000)
+    public void dedicatedTunV4OnlyHasOneHostNeighbor() throws Exception {
+        var network = sw.getNetwork(1);
+        var mac = new MacAddress("02:00:00:00:00:03");
+        var host = IP.from("192.168.1.1");
+        initializeTunNeighbors(network, mac, host, null);
+        assertEquals(mac, network.arpTable.lookup(host));
+        assertEquals(1, network.arpTable.listEntries().size());
+        assertNull(network.arpTable.lookup(IP.from("fd00::1:1")));
+    }
+
+    private void initializeTunNeighbors(VirtualNetwork network, MacAddress mac, IP host4, IP host6) throws Exception {
+        var method = DirectRelayTunSetup.class.getDeclaredMethod("initializeHostNeighbors",
+            VirtualNetwork.class, Iface.class, MacAddress.class, IP.class, IP.class);
+        method.setAccessible(true);
+        var ready = new CompletableFuture<Void>();
+        network.conntrack.loop.runOnLoop(() -> {
+            try {
+                method.invoke(null, network, eth0, mac, host4, host6);
+                ready.complete(null);
+            } catch (Throwable t) {
+                ready.completeExceptionally(t);
+            }
+        });
+        ready.get(3, TimeUnit.SECONDS);
+    }
+
     @Test(timeout = 10_000)
     public void transparentIpRange() throws Exception {
         var network = sw.getNetwork(1);

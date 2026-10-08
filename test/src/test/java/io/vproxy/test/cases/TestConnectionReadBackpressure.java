@@ -49,6 +49,9 @@ public class TestConnectionReadBackpressure {
         IOException lastException;
         boolean completedConnect;
         Fixture(boolean wrapped, boolean connecting, boolean pendingOutput) throws Exception {
+            // Registration on a stopped loop can run immediately. Use the
+            // fixture clock before creating its idle timeout, not wall time.
+            Config.currentTimestamp = clock.currentTimeMillis();
             loop.setBeforePoll(() -> 0);
             decoder = wrapped ? new Decoder(plain) : null;
             in = wrapped ? decoder : plain;

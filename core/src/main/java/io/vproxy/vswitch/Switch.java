@@ -248,12 +248,12 @@ public class Switch {
     private void refreshCache() {
         for (VirtualNetwork t : networks.values()) {
             for (ArpTable.ArpEntry arp : t.arpTable.listEntries()) {
-                if (arp.getTTL() < ArpTable.ARP_REFRESH_CACHE_BEFORE_TTL_TIME) {
+                if (arp.getTimeout() != -1 && arp.getTTL() < ArpTable.ARP_REFRESH_CACHE_BEFORE_TTL_TIME) {
                     refreshArpCache(t, arp.ip, arp.mac);
                 }
             }
             for (MacTable.MacEntry macEntry : t.macTable.listEntries()) {
-                if (macEntry.getTTL() < MacTable.MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME) {
+                if (macEntry.getTimeout() != -1 && macEntry.getTTL() < MacTable.MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME) {
                     var set = t.arpTable.lookupByMac(macEntry.mac);
                     if (set != null) {
                         set.stream().findAny().ifPresent(arp -> refreshArpCache(t, arp.ip, arp.mac));

@@ -21,8 +21,14 @@ public abstract class AbstractRingBuffer implements RingBuffer {
 
     protected void setOperating(boolean operating) {
         if (this.operating && !operating) {
-            handler.removeAll(handlerToRemove);
-            handler.addAll(handlerToAdd);
+            if (!handlerToRemove.isEmpty()) {
+                handler.removeAll(handlerToRemove);
+                handlerToRemove.clear();
+            }
+            if (!handlerToAdd.isEmpty()) {
+                handler.addAll(handlerToAdd);
+                handlerToAdd.clear();
+            }
         }
         this.operating = operating;
     }

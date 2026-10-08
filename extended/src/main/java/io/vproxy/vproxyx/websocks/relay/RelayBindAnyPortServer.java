@@ -95,6 +95,7 @@ public class RelayBindAnyPortServer {
         @Override
         public ProtocolHandler<Tuple<Void, Callback<Connector, IOException>>> handler() {
             return new ProtocolHandler<>() {
+                private boolean started = false;
                 private boolean finished = false;
                 private boolean done = false;
 
@@ -105,6 +106,12 @@ public class RelayBindAnyPortServer {
 
                 @Override
                 public void readable(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx) {
+                    if (started || finished) {
+                        return;
+                    }
+                    // More frontend data can arrive while provide is pending.
+                    // Claim the attempt before either lookup or user callbacks.
+                    started = true;
                     var l4addr = ctx.connection.getLocal();
                     var port = l4addr.getPort();
                     var l3addr = l4addr.getAddress();
@@ -121,17 +128,18 @@ public class RelayBindAnyPortServer {
                     connectorProvider.provide(ctx.connection, AddressType.domain, hostname, port, connector -> {
                         assert Logger.lowLevelDebug("relay-bind-any-port-server got a connector: " + connector + ", finished?: " + finished);
 
+                        if (finished) {
+                            if (connector != null) {
+                                connector.close();
+                            }
+                            return;
+                        }
                         if (connector == null) {
                             assert Logger.lowLevelDebug("no available remote server connector for now");
                             finished = true;
                             ctx.data.right.failed(new IOException("no available remote server connector"));
                             return;
                         }
-                        if (finished) {
-                            connector.close();
-                            return;
-                        }
-
                         assert Logger.lowLevelDebug("relay-bind-any-port-server is going to make a callback");
                         finished = true;
                         done = true;

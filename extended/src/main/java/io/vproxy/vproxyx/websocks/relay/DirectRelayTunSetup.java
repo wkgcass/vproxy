@@ -4,6 +4,7 @@ import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Network;
+import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vfd.FDs;
 import io.vproxy.vfd.IP;
@@ -13,6 +14,7 @@ import io.vproxy.vfd.MacAddress;
 import io.vproxy.vfd.TapDatagramFD;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
+import io.vproxy.vswitch.iface.Iface;
 
 import java.util.HashSet;
 
@@ -66,6 +68,19 @@ public class DirectRelayTunSetup {
             }
 
             var tun = sw.addTun(dev, VRF, mac, postScript, p.tun);
+            // This dedicated point-to-point TUN has a known kernel peer.
+            // Without its mapping the first reply is replaced with an ARP/NDP
+            // probe (encoded as ICMP on TUN), losing the first DNS answer.
+            BlockCallback<Void, RuntimeException> neighborsReady = new BlockCallback<>();
+            network.conntrack.loop.runOnLoop(() -> {
+                try {
+                    initializeHostNeighbors(network, tun, mac, hostIp, hostIp6);
+                    neighborsReady.succeeded();
+                } catch (RuntimeException e) {
+                    neighborsReady.failed(e);
+                }
+            });
+            neighborsReady.block();
             String realDev = tun.getTun().getTap().dev;
             Logger.alert("direct-relay userspace stack: tun device " + realDev + " created");
             Logger.alert("  ip addr add " + hostIp.formatToIPString() + "/" + v4range.getMask() + " dev " + realDev);
@@ -79,6 +94,17 @@ public class DirectRelayTunSetup {
         } catch (Exception e) {
             sw.destroy();
             throw e;
+        }
+    }
+
+    private static void initializeHostNeighbors(VirtualNetwork network, Iface tun,
+                                               MacAddress hostMac, IP hostIp, IP hostIp6) {
+        // Fixed-size mappings live with this dedicated network; normal learning
+        // does not expire them, and switch/network destruction clears them.
+        network.macTable.record(hostMac, tun, true);
+        network.arpTable.record(hostMac, hostIp, true);
+        if (hostIp6 != null) {
+            network.arpTable.record(hostMac, hostIp6, true);
         }
     }
 
