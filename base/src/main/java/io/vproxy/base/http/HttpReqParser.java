@@ -19,6 +19,11 @@ public class HttpReqParser extends AbstractParser<Request> implements IHttpParse
     private final HttpParserHelper helper;
     private RequestBuilder req;
     private final Params params;
+    private int errorStatusCode = 400;
+
+    public int getErrorStatusCode() {
+        return errorStatusCode;
+    }
 
     public HttpReqParser() {
         this(new Params());
@@ -76,6 +81,7 @@ public class HttpReqParser extends AbstractParser<Request> implements IHttpParse
 
         int newState;
         try {
+            helper.beforeHeaderByte(state, b);
             if (state <= 3) {
                 newState = handlers[state].handle(b);
             } else {
@@ -83,6 +89,7 @@ public class HttpReqParser extends AbstractParser<Request> implements IHttpParse
             }
         } catch (Exception e) {
             errorMessage = e.getMessage();
+            if (e instanceof HttpParserLimitException limit) errorStatusCode = limit.statusCode;
             return -1;
         }
         if (newState == 0) {
@@ -158,5 +165,10 @@ public class HttpReqParser extends AbstractParser<Request> implements IHttpParse
         public Params setHeadersOnly(boolean headersOnly) {
             return (Params) super.setHeadersOnly(headersOnly);
         }
+
+        @Override public Params setMaxInitialLineBytes(int value) { return (Params) super.setMaxInitialLineBytes(value); }
+        @Override public Params setMaxHeaderLineBytes(int value) { return (Params) super.setMaxHeaderLineBytes(value); }
+        @Override public Params setMaxHeaderBytes(int value) { return (Params) super.setMaxHeaderBytes(value); }
+        @Override public Params setMaxHeaderCount(int value) { return (Params) super.setMaxHeaderCount(value); }
     }
 }

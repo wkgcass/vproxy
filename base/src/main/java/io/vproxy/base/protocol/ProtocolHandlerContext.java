@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class ProtocolHandlerContext<T> {
     private final ConcurrentLinkedQueue<ByteArray> bytesSeq = new ConcurrentLinkedQueue<>();
     private ByteArrayChannel chnl = null; // the helper channel to write into out buffer
+    private boolean closing;
+    private boolean closeCheckScheduled;
     public final String connectionId;
     public final Connection connection;
     // make inBuffer public for user code to read
@@ -36,14 +38,21 @@ public class ProtocolHandlerContext<T> {
     }
 
     void doWrite() {
+        if (connection.isClosed()) {
+            bytesSeq.clear();
+            chnl = null;
+            return;
+        }
         assert Logger.lowLevelDebug("#" + hashCode() + " ::: doWrite with chnl=" + (chnl == null ? "null" : "used=" + chnl.used()) + ", bytesSeq.size=" + bytesSeq.size());
 
         // doWrite() should consider ET writable handler
 
         if (chnl != null && chnl.used() == 0)
             chnl = null; // remove channel if nothing to write
-        if (chnl == null && bytesSeq.isEmpty())
+        if (chnl == null && bytesSeq.isEmpty()) {
+            closeIfFlushed();
             return; // nothing to write
+        }
         if (chnl == null) {
             ByteArray bytes = bytesSeq.poll();
             assert bytes != null; // it only removes in one thread, so, no concurrency
@@ -78,6 +87,29 @@ public class ProtocolHandlerContext<T> {
             chnl = ByteArrayChannel.fromFull(bytes);
             // let it loop
         }
+        closeIfFlushed();
+    }
+
+    /** Called from a protocol callback on the connection loop, after its final write. */
+    public void closeAfterFlush() {
+        closing = true;
+        loop.getSelectorEventLoop().runOnLoop(this::doWrite);
+    }
+
+    public boolean isClosing() {
+        return closing;
+    }
+
+    private void closeIfFlushed() {
+        if (!closing || closeCheckScheduled || chnl != null || !bytesSeq.isEmpty() || outBuffer.hasPendingWrite()) return;
+        // Writable callbacks can reenter from inside a wrapping buffer operation.
+        // Close on the next loop batch so the operation can finish before clean().
+        closeCheckScheduled = true;
+        loop.getSelectorEventLoop().nextTick(() -> {
+            closeCheckScheduled = false;
+            if (!connection.isClosed() && chnl == null && bytesSeq.isEmpty() && !outBuffer.hasPendingWrite())
+                connection.close();
+        });
     }
 
     public void write(byte[] data) {
@@ -85,6 +117,7 @@ public class ProtocolHandlerContext<T> {
     }
 
     public void write(ByteArray bytes) {
+        if (closing) return;
         if (connection.isClosed()) {
             Logger.error(LogType.IMPROPER_USE, "connection " + connection + " is already closed but still trying to write data");
             return;
@@ -98,6 +131,7 @@ public class ProtocolHandlerContext<T> {
 
     public void readable() {
         loop.getSelectorEventLoop().runOnLoop(() -> {
+            if (closing) return;
             if (inBuffer.used() == 0)
                 return; // do nothing if cannot read
             handler.readable(this);

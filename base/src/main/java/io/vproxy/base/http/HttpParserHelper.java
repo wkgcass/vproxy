@@ -113,6 +113,11 @@ public abstract class HttpParserHelper {
         public boolean segmentedParsing = false;
         public boolean buildResult = true;
         public boolean headersOnly = false;
+        // Zero preserves the unrestricted parser API. Budgets include wire CR/LF.
+        public int maxInitialLineBytes;
+        public int maxHeaderLineBytes;
+        public int maxHeaderBytes;
+        public int maxHeaderCount;
 
         public Params() {
         }
@@ -121,6 +126,10 @@ public abstract class HttpParserHelper {
             this.segmentedParsing = that.segmentedParsing;
             this.buildResult = that.buildResult;
             this.headersOnly = that.headersOnly;
+            this.maxInitialLineBytes = nonNegative(that.maxInitialLineBytes);
+            this.maxHeaderLineBytes = nonNegative(that.maxHeaderLineBytes);
+            this.maxHeaderBytes = nonNegative(that.maxHeaderBytes);
+            this.maxHeaderCount = nonNegative(that.maxHeaderCount);
         }
 
         public Params setSegmentedParsing(boolean segmentedParsing) {
@@ -135,6 +144,31 @@ public abstract class HttpParserHelper {
 
         public Params setHeadersOnly(boolean headersOnly) {
             this.headersOnly = headersOnly;
+            return this;
+        }
+
+        private static int nonNegative(int value) {
+            if (value < 0) throw new IllegalArgumentException("HTTP parser limit must be nonnegative");
+            return value;
+        }
+
+        public Params setMaxInitialLineBytes(int value) {
+            maxInitialLineBytes = nonNegative(value);
+            return this;
+        }
+
+        public Params setMaxHeaderLineBytes(int value) {
+            maxHeaderLineBytes = nonNegative(value);
+            return this;
+        }
+
+        public Params setMaxHeaderBytes(int value) {
+            maxHeaderBytes = nonNegative(value);
+            return this;
+        }
+
+        public Params setMaxHeaderCount(int value) {
+            maxHeaderCount = nonNegative(value);
             return this;
         }
     }
@@ -153,6 +187,25 @@ public abstract class HttpParserHelper {
     private int bufOffset;
     private HeaderBuilder trailer;
     private List<HeaderBuilder> trailers;
+    private int initialLineBytes, headerLineBytes, headerBytes, headerCount;
+
+    void beforeHeaderByte(int state, byte b) throws HttpParserLimitException {
+        if (state == 0) {
+            initialLineBytes = headerLineBytes = headerBytes = headerCount = 0;
+        }
+        boolean initial = state <= 3 || (state >= 22 && state <= 24);
+        if (!initial && (state < 4 || state > 8)) return; // body/chunks/trailers are independent
+        if (params.maxHeaderBytes > 0 && headerBytes++ >= params.maxHeaderBytes)
+            throw new HttpParserLimitException(431, "HTTP header section exceeds byte limit");
+        if (initial) {
+            if (params.maxInitialLineBytes > 0 && initialLineBytes++ >= params.maxInitialLineBytes)
+                throw new HttpParserLimitException(414, "HTTP initial line exceeds byte limit");
+        } else {
+            if (params.maxHeaderLineBytes > 0 && headerLineBytes++ >= params.maxHeaderLineBytes)
+                throw new HttpParserLimitException(431, "HTTP header line exceeds byte limit");
+            if (b == '\n') headerLineBytes = 0;
+        }
+    }
 
     HttpParserHelper(Params params) {
         this.params = new Params(params);
@@ -237,6 +290,8 @@ public abstract class HttpParserHelper {
     }
 
     private int state8(byte b) throws Exception {
+        if (header != null && params.maxHeaderCount > 0 && headerCount++ >= params.maxHeaderCount)
+            throw new HttpParserLimitException(431, "HTTP header count exceeds limit");
         if (headers == null) {
             headers = new LinkedList<>();
             getHttpEntity().headers = headers;

@@ -258,6 +258,12 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     }
 
     @Override
+    public boolean hasPendingWrite() {
+        return plainBufferForApp.used() != 0 || !intermediateBuffers.isEmpty()
+            || encryptedBufferForOutput.used() != 0;
+    }
+
+    @Override
     public int capacity() {
         // the capacity would be exactly the same for plain and encrypted buffers
         return plainBufferForApp.capacity();

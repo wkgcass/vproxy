@@ -6,6 +6,7 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.ByteBufferEx;
 import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.ringbuffer.AbstractUnwrapByteBufferRingBuffer;
 import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.base.util.Consts;
@@ -42,6 +43,80 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.*;
 
 public class TestPerformanceRegressions {
+    @Test
+    public void memorySegmentChecksumMatchesIndependentWordsAcrossLanesAndFragments() throws Exception {
+        var random = new java.util.Random(0x5041434b45444cL);
+        try (var arena = java.lang.foreign.Arena.ofConfined()) {
+            byte[] bytes = new byte[65544];
+            random.nextBytes(bytes);
+            var nativeBytes = arena.allocate(bytes.length, 1);
+            nativeBytes.copyFrom(java.lang.foreign.MemorySegment.ofArray(bytes));
+            for (var segment : new java.lang.foreign.MemorySegment[]{
+                java.lang.foreign.MemorySegment.ofArray(bytes), nativeBytes, nativeBytes.asReadOnly()}) {
+                for (int offset = 0; offset < 8; ++offset) {
+                    for (int length : new int[]{0, 1, 2, 3, 7, 8, 9, 15, 16, 17, 20, 40, 64, 1500, 65535}) {
+                        for (int seed : new int[]{0, 0xffff, 0x1ffff}) {
+                            int expected = referenceChecksumWords(bytes, offset, length, seed);
+                            var array = ByteArray.from(segment.asSlice(offset, length));
+                            assertEquals(length == 0 ? seed : expected,
+                                Utils.calculateChecksumIntermediate(seed, array, length));
+                            long state = (long) seed << 9;
+                            int position = 0;
+                            while (position < length) {
+                                int n = Math.min(length - position, random.nextInt(17) + 1);
+                                state = array.updateChecksum(state, position, n);
+                                // A zero-length fragment must preserve the
+                                // odd-byte state before the next real fragment.
+                                state = array.updateChecksum(state, position + n, 0);
+                                position += n;
+                            }
+                            long sum = state >> 9;
+                            if ((state & 256) != 0) sum += (state & 255) << 8;
+                            while (sum > 65535) sum = (sum & 65535) + (sum >>> 16);
+                            assertEquals(expected, sum);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static int referenceChecksumWords(byte[] bytes, int offset, int length, int seed) {
+        long sum = seed;
+        for (int i = 0; i < length; i += 2) {
+            sum += (bytes[offset + i] & 255) << 8;
+            if (i + 1 < length) sum += bytes[offset + i + 1] & 255;
+            sum = (sum & 65535) + (sum >>> 16);
+        }
+        while (sum > 65535) sum = (sum & 65535) + (sum >>> 16);
+        return (int) sum;
+    }
+
+    @Test
+    public void memorySegmentChecksumKeepsScopeAndThreadChecks() throws Exception {
+        var arena = java.lang.foreign.Arena.ofConfined();
+        var array = ByteArray.from(arena.allocate(32));
+        var failure = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        Thread worker = new Thread(() -> {
+            try {
+                array.updateChecksum(0, 0, 32);
+            } catch (Throwable e) {
+                failure.set(e);
+            }
+        });
+        worker.start();
+        worker.join(1000);
+        assertFalse(worker.isAlive());
+        assertTrue(failure.get() instanceof java.lang.WrongThreadException);
+        arena.close();
+        try {
+            array.updateChecksum(0, 0, 32);
+            fail("closed native scope must remain inaccessible");
+        } catch (IllegalStateException expected) {
+            // Both paths still use the standard checked MemorySegment access.
+        }
+    }
+
     @Test
     public void destroyedTcpWithPendingOutputReportsFailureInsteadOfZeroWrite() throws Exception {
         try (var fixture = new StackFixture()) {
@@ -380,7 +455,11 @@ public class TestPerformanceRegressions {
                 new io.vproxy.vpacket.conntrack.tcp.SAckTuple(start, start + 1000)));
             int sent = fixture.stack.packets.size();
             fixture.fireNextTimer((int) fixture.tcp.sendingQueue.getRto());
-            assertEquals("SACKed prefix must not allow FIN ahead of the unsent suffix", sent, fixture.stack.packets.size());
+            assertEquals("RTO must recover the SACKed prefix", sent + 1, fixture.stack.packets.size());
+            var retransmission = fixture.stack.packets.getLast().tcpPkt;
+            assertFalse("untransmitted suffix must still precede FIN", retransmission.isFin());
+            assertEquals(start & 0xffffffffL, retransmission.getSeqNum());
+            assertEquals(1000, retransmission.getData().length());
             fixture.ack(start + 1000, 2000);
             assertEquals(start + 3000, fixture.tcp.sendingQueue.getFetchSeq());
             fixture.ack(start + 3000, 2000);

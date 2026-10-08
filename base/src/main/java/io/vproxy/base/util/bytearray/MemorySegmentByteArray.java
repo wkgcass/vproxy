@@ -120,6 +120,20 @@ public class MemorySegmentByteArray extends AbstractByteArray implements ByteArr
             pending = false;
         }
         int words = 0;
+        // One checked, unaligned FFM access supplies four network-order words.
+        // Keep the short tail and odd-byte streaming state identical to the
+        // scalar path; no temporary array or unchecked native access is used.
+        while (end - i >= Long.BYTES) {
+            long packed = seg.get(LONG_BIG_ENDIAN, i);
+            sum += (packed >>> 48) + ((packed >>> 32) & 0xffff)
+                + ((packed >>> 16) & 0xffff) + (packed & 0xffff);
+            i += Long.BYTES;
+            words += 4;
+            if (words == 16384) {
+                sum = (sum & 0xffff) + (sum >>> 16);
+                words = 0;
+            }
+        }
         while (i + 1 < end) {
             sum += seg.get(SHORT_BIG_ENDIAN, i) & 0xffff;
             i += 2;

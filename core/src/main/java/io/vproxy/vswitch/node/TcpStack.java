@@ -387,6 +387,7 @@ public class TcpStack extends Node {
                 // rather than waiting for the retransmission timer to expire
                 // parse CWND option only when ack num increased
                 pkb.tcp.sendingQueue.resetDupAckCount();
+                cancelSackRetransmit(pkb.tcp);
                 // cancel existing retransmission timer; we'll send fresh now
                 if (pkb.tcp.retransmissionTimer != null) {
                     pkb.tcp.retransmissionTimer.cancel();
@@ -564,6 +565,7 @@ public class TcpStack extends Node {
 
     private void scheduleTimeWaitClose(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("scheduleTimeWaitClose for " + pkb.tcp);
+        cancelSackRetransmit(pkb.tcp);
         if (pkb.tcp.retransmissionTimer != null) {
             pkb.tcp.retransmissionTimer.cancel();
             pkb.tcp.retransmissionTimer = null;
@@ -689,11 +691,33 @@ public class TcpStack extends Node {
 
     private void startSackRetransmit(VirtualNetwork network, TcpEntry tcp, List<SAckTuple> sackBlocks) {
         tcp.sendingQueue.markSackRetransmitSegments(sackBlocks);
-        if (tcp.retransmissionTimer != null) {
-            tcp.retransmissionTimer.cancel();
-            tcp.retransmissionTimer = null;
+        // Keep one repair pending without postponing the cumulative-ACK RTO.
+        // Continued feedback must not prevent recovery if the peer reneges.
+        if (tcp.sackRetransmissionTimer != null) {
+            return;
         }
-        setRetransmitTimer(network, tcp, new RetransContext().sackRetransmit().retransmissionCount(1));
+        long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + TcpEntry.RTO_MIN : 0;
+        tcp.sackRetransmissionTimer = sw.getSelectorEventLoop().delay(TcpEntry.RTO_MIN, () -> {
+            tcp.sackRetransmissionTimer = null;
+            if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticRetransmitTimer(expectedAt, Config.currentTimestamp);
+            if (tcp.getState() == TcpState.CLOSED || tcp.getState() == TcpState.TIME_WAIT
+                || tcp.sendingQueue.getBytesInFlight() == 0) {
+                return;
+            }
+            var ctx = new RetransContext().sackRetransmit().retransmissionCount(1);
+            try {
+                transmitTcp(network, tcp, ctx);
+            } finally {
+                ctx.resetSpecialAck();
+            }
+        });
+    }
+
+    private void cancelSackRetransmit(TcpEntry tcp) {
+        if (tcp.sackRetransmissionTimer != null) {
+            tcp.sackRetransmissionTimer.cancel();
+            tcp.sackRetransmissionTimer = null;
+        }
     }
 
     private void _tcpStartRetransmission(VirtualNetwork network, TcpEntry tcp) {
@@ -710,11 +734,6 @@ public class TcpStack extends Node {
         assert Logger.lowLevelDebug("transmitTcp(" + network + "," + tcp + ")");
         if (tcpStackDebugOn) {
             Logger.alert("transmit tcp lastBeginSeq=" + ctx.lastBeginSeq + ", retransmissionCount=" + ctx.retransmissionCount);
-        }
-
-        if (tcp.retransmissionTimer != null) { // reset timer
-            tcp.retransmissionTimer.cancel();
-            tcp.retransmissionTimer = null;
         }
 
         // check whether need to reset the connection because of too many retransmits
@@ -787,6 +806,7 @@ public class TcpStack extends Node {
             } else {
                 // nothing to send and nothing in flight
                 assert Logger.lowLevelDebug("no need to retransmit after " + ctx.retransmissionCount + " time(s)");
+                cancelSackRetransmit(tcp);
                 if (tcp.retransmissionTimer != null) {
                     tcp.retransmissionTimer.cancel();
                     tcp.retransmissionTimer = null;
@@ -824,25 +844,28 @@ public class TcpStack extends Node {
     }
 
     private void setRetransmitTimer(VirtualNetwork network, TcpEntry tcp, RetransContext ctx) {
-        long delay;
-        if (ctx.sackRetransmit) {
-            delay = TcpEntry.RTO_MIN; // fixed 100ms for SACK retransmit
-        } else {
-            delay = tcp.sendingQueue.getRto() << ctx.retransmissionCount;
-            if (delay <= 0 || delay > TcpEntry.RTO_MAX) { // overflow or exceeds maximum
-                delay = TcpEntry.RTO_MAX;
-            }
+        if (tcp.retransmissionTimer != null) {
+            return;
+        }
+        long delay = tcp.sendingQueue.getRto() << ctx.retransmissionCount;
+        if (delay <= 0 || delay > TcpEntry.RTO_MAX) { // overflow or exceeds maximum
+            delay = TcpEntry.RTO_MAX;
         }
         assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
         final int finalDelay = (int) delay;
-        if (tcp.retransmissionTimer != null) {
-            tcp.retransmissionTimer.cancel();
-        }
         long expectedAt = TCP_DIAGNOSTICS_ENABLED ? Config.currentTimestamp + finalDelay : 0;
         tcp.retransmissionTimer = sw.getSelectorEventLoop().delay(finalDelay, () -> {
+            tcp.retransmissionTimer = null;
             if (TCP_DIAGNOSTICS_ENABLED) tcp.diagnosticRetransmitTimer(expectedAt, Config.currentTimestamp);
+            cancelSackRetransmit(tcp);
+            tcp.sendingQueue.clearSackOnRetransmissionTimeout();
+            ctx.resetSpecialAck();
             ctx.retransmissionCount++;
-            transmitTcp(network, tcp, ctx);
+            try {
+                transmitTcp(network, tcp, ctx);
+            } finally {
+                ctx.resetSpecialAck();
+            }
         });
     }
 

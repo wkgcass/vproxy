@@ -51,6 +51,7 @@ public class TcpEntry implements WithUserData {
     final TcpConnectionDiagnostics diagnostics;
 
     public TimerEvent retransmissionTimer = null;
+    public TimerEvent sackRetransmissionTimer = null;
     public TimerEvent persistTimer = null;
     public TimerEvent delayedAckTimer = null;
     public int persistProbeCount = 0;
@@ -121,6 +122,10 @@ public class TcpEntry implements WithUserData {
         if (retransmissionTimer != null) {
             retransmissionTimer.cancel();
             retransmissionTimer = null;
+        }
+        if (sackRetransmissionTimer != null) {
+            sackRetransmissionTimer.cancel();
+            sackRetransmissionTimer = null;
         }
         if (persistTimer != null) {
             persistTimer.cancel();
@@ -695,6 +700,18 @@ public class TcpEntry implements WithUserData {
                 // roll forward
                 currSAckBlock = sackIte.hasNext() ? sackIte.next() : null;
                 moveQIteNext = false; // 当前segment还要再和新的sack进行对比处理
+            }
+        }
+
+        /**
+         * SACK is advisory: the peer may discard data it previously reported.
+         * Ordinary retransmission timeouts must therefore make every outstanding
+         * segment eligible again (RFC 2018 section 5). Fast SACK recovery keeps
+         * its scoreboard until an actual timeout occurs.
+         */
+        public void clearSackOnRetransmissionTimeout() {
+            for (var segment : q) {
+                segment.sacked = false;
             }
         }
 
