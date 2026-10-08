@@ -104,6 +104,7 @@ public class NetEventLoop {
         // now the connection is added into event loop
         // we set the close timer
         selectorEventLoop.runOnLoop(() -> NetEventLoopUtils.resetCloseTimeout(att));
+        connection.checkInputBufferException();
     }
 
     @ThreadSafe
@@ -292,11 +293,12 @@ class NetEventLoopUtils {
         assert Logger.lowLevelDebug("do reset timeout for " + conn);
 
         final int timeout = conn.isConnected() ? conn.timeout : conn.connectTimeout;
+        long lastTimestamp = conn.idleLastTimestamp();
         int delay;
-        if (conn.lastTimestamp == 0) {
+        if (lastTimestamp == 0) {
             delay = timeout;
         } else {
-            delay = (int) (timeout - (Config.currentTimestamp - conn.lastTimestamp));
+            delay = (int) (timeout - (Config.currentTimestamp - lastTimestamp));
         }
         if (delay < 0) {
             Logger.shouldNotHappen("the delay is invalid, timeout = " + timeout + ", current = " + Config.currentTimestamp + ", last = " + conn.lastTimestamp);
@@ -304,9 +306,12 @@ class NetEventLoopUtils {
         }
         assert Logger.lowLevelDebug("the delay for " + conn + " is " + delay);
         conn.closeTimeout = loop.getSelectorEventLoop().delay(delay, () -> {
-            // check current timestamp
-            int delta = (int) (Config.currentTimestamp - conn.lastTimestamp);
-            if (delta > timeout) {
+            // The connection may have completed while this timer was queued.
+            // A delayed connect timer must then use the established idle
+            // deadline, including when the callback itself runs late.
+            int currentTimeout = conn.isConnected() ? conn.timeout : conn.connectTimeout;
+            int delta = (int) (Config.currentTimestamp - conn.idleLastTimestamp());
+            if (delta > currentTimeout) {
                 assert Logger.lowLevelDebug("timeout triggered: " + conn);
                 callExceptionEvent(ctx, new SocketTimeoutException("timeout by timer: " + ctx.connection));
             } else {
@@ -342,14 +347,17 @@ class HandlerForConnection implements Handler<SocketFD> {
         if (cctx.connection.isClosed()) {
             return; // prevent the condition that the connection closed during the handling of another event
         }
-        // reset close timer because now it's active (will read some data)
-        NetEventLoopUtils.resetCloseTimeout(cctx);
-
         RingBuffer inBuffer = cctx.connection.getInBuffer();
         if (inBuffer.free() == 0) {
-            Logger.shouldNotHappen("the connection has no space to store data");
+            // Buffer sharing/replacement and decoder callbacks can leave a
+            // selected READ after the input becomes full. Suspend transport
+            // reads until the buffer's writable edge re-arms them; retaining
+            // level-triggered interest here spins without making progress.
+            ctx.rmOps(EventSet.read());
             return;
         }
+        // A blocked input is not activity and must not keep postponing timeout.
+        NetEventLoopUtils.resetCloseTimeout(cctx);
         assert Logger.lowLevelDebug("before calling storeBytesFrom: inBuffer.used() = " + cctx.connection.getInBuffer().used());
         int read;
         try {
@@ -522,7 +530,9 @@ class HandlerForConnectableConnection extends HandlerForConnection {
             return;
         }
 
-        EventSet ops = EventSet.read();
+        // The connected callback may fill or replace the input ring.
+        EventSet ops = cctx.connection.getInBuffer().free() > 0
+            ? EventSet.read() : EventSet.none();
         if (cctx.connection.getOutBuffer().used() > 0) {
             ops = ops.combine(EventSet.write());
         }

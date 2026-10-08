@@ -36,6 +36,7 @@ public class TunIface extends Iface {
     protected SelectorEventLoop bondLoop;
 
     private final TunReadDiagnostics tunReadDiagnostics = TCP_DIAGNOSTICS_ENABLED ? new TunReadDiagnostics() : null;
+    private final TunWriteDiagnostics tunWriteDiagnostics;
 
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
@@ -56,6 +57,8 @@ public class TunIface extends Iface {
         this.mac = mac;
         this.postScript = postScript;
         this.tun = preOpenedTun;
+        this.tunWriteDiagnostics = "on".equals(Utils.getSystemProperty("tun_write_diag", "off"))
+            ? new TunWriteDiagnostics(dev) : null;
     }
 
     public TapDatagramFD getTun() {
@@ -206,7 +209,29 @@ public class TunIface extends Iface {
     }
 
     protected void sendPacket(ByteBuffer data) throws IOException {
-        operateTun.write(data);
+        int before = data.position();
+        int limit = data.limit();
+        int expected = limit - before;
+        int written = -1;
+        boolean error = true;
+        try {
+            written = operateTun.write(data);
+            error = false;
+        } finally {
+            TunWriteDiagnostics diagnostics = tunWriteDiagnostics;
+            if (diagnostics != null) {
+                long now = bondLoop == null ? System.nanoTime() : bondLoop.fds.nanoTime();
+                diagnostics.record(expected, written, data.position() - before,
+                    data.limit() != limit, error, now);
+            }
+        }
+        if (written != expected || data.position() - before != expected || data.limit() != limit) {
+            // A TUN write represents one datagram, including its Darwin AF
+            // header. Retrying only a partial tail would create a malformed
+            // second packet. Keep the existing drop policy, but count the
+            // failed attempt instead of silently reporting no transmit error.
+            statistics.incrTxErr();
+        }
     }
 
     private boolean handleArpOrNdpOutput(PacketBuffer pkb) {
@@ -336,6 +361,7 @@ public class TunIface extends Iface {
             return;
         }
         super.destroy();
+        if (tunWriteDiagnostics != null) tunWriteDiagnostics.finish();
         if (operateTun != null) {
             try {
                 bondLoop.remove(operateTun);
@@ -453,6 +479,71 @@ public class TunIface extends Iface {
 
         received(pkb);
         callback.alertPacketsArrive(TunIface.this);
+    }
+
+    private static final class TunWriteDiagnostics {
+        private static final long REPORT_INTERVAL_NANOS = 15_000_000_000L;
+        private final String dev;
+        private long calls;
+        private long attemptedBytes;
+        private long returnedBytes;
+        private long unwrittenBytes;
+        private long complete;
+        private long zero;
+        private long partial;
+        private long errors;
+        private long inconsistent;
+        private long errorAdvancedBytes;
+        private int reportCount;
+        private long lastReportedAt;
+        private boolean finished;
+
+        TunWriteDiagnostics(String dev) { this.dev = dev; }
+
+        void record(int expected, int written, int advanced, boolean changedLimit, boolean error, long now) {
+            ++calls;
+            attemptedBytes += expected; // includes any AF header
+            if (error) {
+                ++errors;
+                // An exception cannot prove how many bytes the kernel accepted.
+                errorAdvancedBytes += Math.max(0, advanced);
+            } else {
+                if (written >= 0 && written <= expected) returnedBytes += written;
+                if (!changedLimit && written == expected && advanced == expected) {
+                    ++complete;
+                } else if (!changedLimit && written == 0 && advanced == 0) {
+                    ++zero;
+                    unwrittenBytes += expected;
+                } else if (!changedLimit && written > 0 && written < expected && advanced == written) {
+                    ++partial;
+                    unwrittenBytes += expected - written;
+                } else {
+                    ++inconsistent;
+                }
+            }
+            // Reserve one of the 32 records for a final shutdown summary.
+            // nanoTime subtraction also handles signed clock wraparound.
+            if (!finished && reportCount < 31 && (reportCount == 0 || now - lastReportedAt >= REPORT_INTERVAL_NANOS)) {
+                lastReportedAt = now;
+                report(false);
+            }
+        }
+
+        void finish() {
+            if (finished) return;
+            finished = true;
+            if (calls != 0) report(true);
+        }
+
+        private void report(boolean last) {
+            ++reportCount;
+            Logger.alert("[TUN-WRITE-DIAG] dev=" + dev + " final=" + last
+                + " reportEpochMs=" + System.currentTimeMillis()
+                + " calls=" + calls + " attemptedBytes=" + attemptedBytes + " returnedBytes=" + returnedBytes
+                + " complete=" + complete + " zero=" + zero + " partial=" + partial
+                + " errors=" + errors + " inconsistent=" + inconsistent
+                + " unwrittenBytes=" + unwrittenBytes + " errorAdvancedBytes=" + errorAdvancedBytes);
+        }
     }
 
     private static final class TunReadDiagnostics {

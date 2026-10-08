@@ -2,7 +2,10 @@ package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.RingBufferETHandler;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,6 +36,18 @@ public abstract class AbstractRingBuffer implements RingBuffer {
     protected void triggerWritable() {
         for (RingBufferETHandler aHandler : handler) {
             aHandler.writableET();
+        }
+    }
+
+    protected void triggerException(IOException error) {
+        // Error delivery is rare. A snapshot allows observers to change their
+        // registration; one failing observer must not hide the fatal error.
+        for (RingBufferETHandler h : getHandlers()) {
+            try {
+                h.exception(this, error);
+            } catch (Throwable t) {
+                Logger.error(LogType.IMPROPER_USE, "exception thrown in ring buffer error handler", t);
+            }
         }
     }
 

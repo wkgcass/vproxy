@@ -38,13 +38,27 @@ public class TcpReset extends Node {
         // so we can only use the fields in the received packet
 
         var inputTcpPkt = pkb.tcpPkt;
+        if (inputTcpPkt.isRst()) {
+            // A reset cannot elicit another reset (RFC 9293 section 3.10.7.1).
+            return _return(HandleResult.STOLEN, pkb);
+        }
 
         TcpPacket respondTcp = new TcpPacket();
         respondTcp.setSrcPort(inputTcpPkt.getDstPort());
         respondTcp.setDstPort(inputTcpPkt.getSrcPort());
-        respondTcp.setSeqNum(inputTcpPkt.getAckNum());
-        respondTcp.setAckNum(inputTcpPkt.getSeqNum() + (inputTcpPkt.isSyn() ? 1 : 0));
-        respondTcp.setFlags(Consts.TCP_FLAGS_RST | Consts.TCP_FLAGS_ACK);
+        if (inputTcpPkt.isAck()) {
+            respondTcp.setSeqNum(inputTcpPkt.getAckNum());
+            respondTcp.setFlags(Consts.TCP_FLAGS_RST);
+        } else {
+            var data = inputTcpPkt.getData();
+            long length = (data == null ? 0 : data.length())
+                + (inputTcpPkt.isSyn() ? 1 : 0) + (inputTcpPkt.isFin() ? 1 : 0);
+            respondTcp.setSeqNum(0);
+            // Packet objects may hold extended sequence values; serialization
+            // already writes the low 32 bits, as for ordinary ACK responses.
+            respondTcp.setAckNum(inputTcpPkt.getSeqNum() + length);
+            respondTcp.setFlags(Consts.TCP_FLAGS_RST | Consts.TCP_FLAGS_ACK);
+        }
         respondTcp.setWindow(0);
 
         AbstractIpPacket ipPkt;

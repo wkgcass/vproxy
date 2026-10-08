@@ -9,6 +9,9 @@ public class Session {
     public Session(Connection active, Connection passive) {
         this.active = active;
         this.passive = passive;
+        // Either side can be idle while its response is still draining through
+        // the other side. The timeout belongs to the whole relay session.
+        active.shareIdleTimeoutWith(passive);
     }
 
     public boolean isClosed() {

@@ -277,6 +277,48 @@ public class TcpEntry implements WithUserData {
         // References to q's not-fully-sent segments. ACK/SACK/retransmission
         // keep using q; ordinary sends avoid walking its sent prefix again.
         private final ArrayDeque<Segment> unsent = new ArrayDeque<>(8);
+        // Only segments first sent in multiple clock ticks need range history.
+        // Keep this off Segment: receive segments and full-MSS sends need none.
+        // First sends progress forwards; ACKs remove a prefix. A circular
+        // FIFO needs only its tail pointer, without a map or backing table.
+        private FirstSentRanges partialFirstSentRanges;
+
+        private static class FirstSentRange {
+            long endExclusive;
+            final long time;
+            FirstSentRange next;
+
+            FirstSentRange(long endExclusive, long time) {
+                this.endExclusive = endExclusive;
+                this.time = time;
+            }
+        }
+
+        private static class FirstSentRanges {
+            Segment segment;
+            FirstSentRanges next;
+            FirstSentRange first;
+            FirstSentRange last;
+
+            FirstSentRanges(Segment segment, long endExclusive, long time) {
+                this.segment = segment;
+                first = last = new FirstSentRange(endExclusive, time);
+            }
+
+            void append(long endExclusive, long time) {
+                if (last.time == time) {
+                    last.endExclusive = endExclusive;
+                } else {
+                    last = last.next = new FirstSentRange(endExclusive, time);
+                }
+            }
+
+            void trim(long ack) {
+                while (first.next != null && ack >= first.endExclusive) {
+                    first = first.next;
+                }
+            }
+        }
         private int currentSize = 0;
         private long latestSeq;
         private long ackSeq;
@@ -481,6 +523,8 @@ public class TcpEntry implements WithUserData {
                     long now = Config.currentTimestamp;
                     s.firstSentTime = now;
                     s.lastSendTime = now;
+                } else {
+                    recordAdditionalFirstSend(s, from, to);
                 }
             }
 
@@ -492,6 +536,53 @@ public class TcpEntry implements WithUserData {
             }
 
             return ret;
+        }
+
+        private void recordAdditionalFirstSend(Segment s, long from, long to) {
+            long now = Config.currentTimestamp;
+            FirstSentRanges ranges = partialFirstSentRanges;
+            if (ranges == null || ranges.segment != s) {
+                if (now == s.firstSentTime) return;
+                // from is the end of the single previously sent range. Each
+                // appended range contains at least one newly transmitted byte,
+                // so live range/entry counts remain bounded by queued WMEM.
+                assert partialFirstSentRanges == null
+                    || partialFirstSentRanges.segment.seqEndExclusive <= s.seqBeginInclusive;
+                ranges = new FirstSentRanges(s, from, s.firstSentTime);
+                if (partialFirstSentRanges == null) {
+                    ranges.next = ranges;
+                } else {
+                    ranges.next = partialFirstSentRanges.next;
+                    partialFirstSentRanges.next = ranges;
+                }
+                partialFirstSentRanges = ranges;
+            }
+            ranges.append(to, now);
+        }
+
+        private void removeFirstSentRanges(Segment s) {
+            FirstSentRanges first = partialFirstSentRanges.next;
+            if (first.segment != s) return;
+            if (first == partialFirstSentRanges) {
+                partialFirstSentRanges = null;
+            } else {
+                partialFirstSentRanges.next = first.next;
+            }
+        }
+
+        private void transferFirstSentRanges(Segment s, Segment remaining, long ack) {
+            FirstSentRanges ranges = partialFirstSentRanges.next;
+            if (ranges.segment != s) return;
+            if (ack < fetchSeq) {
+                ranges.trim(ack);
+                remaining.firstSentTime = ranges.first.time;
+                remaining.lastSendTime = ranges.first.time;
+                if (ranges.first.next != null) {
+                    ranges.segment = remaining;
+                    return;
+                }
+            }
+            removeFirstSentRanges(s);
         }
 
         private void discardSentPrefix() {
@@ -625,6 +716,7 @@ public class TcpEntry implements WithUserData {
                 bytesInFlight = 0;
                 q.clear();
                 unsent.clear();
+                partialFirstSentRanges = null;
                 currentSize = 0;
                 return;
             }
@@ -662,6 +754,7 @@ public class TcpEntry implements WithUserData {
                     }
                     currentSize -= s.data.length();
                     q.pollFirst();
+                    if (partialFirstSentRanges != null) removeFirstSentRanges(s);
                     if (unsent.peekFirst() == s) unsent.pollFirst();
                     becameWritable = true;
                 } else {
@@ -682,6 +775,7 @@ public class TcpEntry implements WithUserData {
                             remaining.retransmitted = s.retransmitted;
                             remaining.sacked = s.sacked;
                         }
+                        if (partialFirstSentRanges != null) transferFirstSentRanges(s, remaining, seq);
                         q.addFirst(remaining);
                         // A partial segment can have both sent and unsent
                         // bytes. Keep the cursor on q's replacement object.

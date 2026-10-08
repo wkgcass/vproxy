@@ -1,5 +1,6 @@
 package io.vproxy.base.connection;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
@@ -32,6 +33,20 @@ public class Connection implements NetFlowRecorder {
 
     // the inBuffer might be full, and we need to handle writable event
     class InBufferETHandler implements RingBufferETHandler {
+        @Override
+        public void exception(RingBuffer source, IOException error) {
+            var eventLoop = _eventLoop;
+            var cctx = _cctx;
+            if (closed || eventLoop == null || cctx == null || source != inBuffer) return;
+            // Closing synchronously here could free a decoder's buffers while
+            // it is still operating. Also reject delivery to a replaced input
+            // or a later registration of the same connection.
+            eventLoop.getSelectorEventLoop().nextTick(() -> {
+                if (closed || _eventLoop != eventLoop || _cctx != cctx || inBuffer != source) return;
+                NetEventLoopUtils.callExceptionEvent(cctx, error);
+            });
+        }
+
         @Override
         public void readableET() {
             // ignore the event
@@ -150,6 +165,7 @@ public class Connection implements NetFlowRecorder {
     // fields for closing the connection
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
     long lastTimestamp;
+    private IdleActivity idleActivity;
     int timeout;
     int connectTimeout;
 
@@ -228,6 +244,7 @@ public class Connection implements NetFlowRecorder {
 
     @Override
     public void incFromRemoteBytes(long bytes) {
+        recordIdleActivity(bytes);
         fromRemoteBytes += bytes;
         for (NetFlowRecorder nfr : netFlowRecorders) {
             nfr.incFromRemoteBytes(bytes);
@@ -236,12 +253,45 @@ public class Connection implements NetFlowRecorder {
 
     @Override
     public void incToRemoteBytes(long bytes) {
+        recordIdleActivity(bytes);
         toRemoteBytes += bytes;
         for (NetFlowRecorder nfr : netFlowRecorders) {
             nfr.incToRemoteBytes(bytes);
         }
     }
     // --- END statistics ---
+
+    private static class IdleActivity {
+        long lastTimestamp;
+    }
+
+    /**
+     * Share established-connection idle activity for a relay on the same event
+     * loop. Only positive transport I/O advances the shared timestamp; pending
+     * buffers and readiness alone do not. Connect deadlines remain independent.
+     * Call once before registering the relay connections.
+     */
+    public void shareIdleTimeoutWith(Connection other) {
+        if (other == this || idleActivity != null || other.idleActivity != null) {
+            throw new IllegalStateException("connection already has shared idle activity");
+        }
+        var activity = new IdleActivity();
+        activity.lastTimestamp = Math.max(lastTimestamp, other.lastTimestamp);
+        idleActivity = activity;
+        other.idleActivity = activity;
+    }
+
+    private void recordIdleActivity(long bytes) {
+        if (bytes > 0 && idleActivity != null && isConnected()) {
+            idleActivity.lastTimestamp = Config.currentTimestamp;
+        }
+    }
+
+    long idleLastTimestamp() {
+        // A shared relay timestamp must never postpone an unfinished connect.
+        return idleActivity != null && isConnected()
+            ? Math.max(lastTimestamp, idleActivity.lastTimestamp) : lastTimestamp;
+    }
 
     // NOTE: this is not thread safe
     public void addNetFlowRecorder(NetFlowRecorder nfr) {
@@ -417,6 +467,12 @@ public class Connection implements NetFlowRecorder {
         _cctx = cctx;
     }
 
+    void checkInputBufferException() {
+        var input = inBuffer;
+        var error = input.getException();
+        if (error != null) inBufferETHandler.exception(input, error);
+    }
+
     public NetEventLoop getEventLoop() {
         return _eventLoop;
     }
@@ -527,6 +583,7 @@ public class Connection implements NetFlowRecorder {
         // assign buffers
         this.inBuffer = in;
         this.outBuffer = out;
+        checkInputBufferException();
     }
 
     public void runNoQuickWrite(Consumer<Connection> r) {

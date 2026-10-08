@@ -122,6 +122,9 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
     public boolean finishConnect() throws IOException {
         checkNotClosed();
         checkEntry();
+        if (entry.getState() == TcpState.CLOSED) {
+            throw new IOException("Connection reset by peer");
+        }
         if (entry.getState() == TcpState.ESTABLISHED) {
             connected = true;
             return true;
@@ -176,7 +179,11 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         }
 
         // need to send ack
-        ctx.tcpStack.tcpAck(ctx.network, entry);
+        // Committed input may drain after a reset, but the destroyed transport
+        // must not acquire another delayed ACK timer or emit more packets.
+        if (entry.getState() != TcpState.CLOSED) {
+            ctx.tcpStack.tcpAck(ctx.network, entry);
+        }
         // reset window
         entry.receivingQueue.resetWindow();
 
