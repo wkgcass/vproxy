@@ -8,6 +8,7 @@ import io.vproxy.base.selector.wrap.WrappedSelector;
 import io.vproxy.base.util.Lock;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.anno.Blocking;
 import io.vproxy.base.util.anno.ThreadSafe;
 import io.vproxy.base.util.callback.Callback;
@@ -61,6 +62,8 @@ public class SelectorEventLoop implements AutoCloseable {
     public final WrappedSelector selector;
     public final FDs fds;
     private final InitOptions initOptions;
+    private final EventLoopDiagnostics diagnostics = "on".equals(Utils.getSystemProperty("selector_diag", "off"))
+        ? new EventLoopDiagnostics() : null;
     private final TimeQueue<Runnable> timeQueue = TimeQueue.create();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final AtomicInteger runOnLoopEventsCount = new AtomicInteger();
@@ -202,7 +205,8 @@ public class SelectorEventLoop implements AutoCloseable {
                 break;
             }
             runOnLoopEventsCount.decrementAndGet();
-            tryRunnable(r);
+            if (diagnostics == null) tryRunnable(r);
+            else runMeasuredRunnable(r, EventLoopDiagnostics.TASK);
         }
     }
 
@@ -213,7 +217,17 @@ public class SelectorEventLoop implements AutoCloseable {
             timeEventsToRun.add(r);
         }
         for (Runnable r : timeEventsToRun) {
-            tryRunnable(r);
+            if (diagnostics == null) tryRunnable(r);
+            else runMeasuredRunnable(r, EventLoopDiagnostics.TIMER);
+        }
+    }
+
+    private void runMeasuredRunnable(Runnable runnable, int kind) {
+        long startedAt = fds.nanoTime();
+        try {
+            tryRunnable(runnable);
+        } finally {
+            diagnostics.record(kind, runnable, fds.nanoTime() - startedAt);
         }
     }
 
@@ -238,39 +252,52 @@ public class SelectorEventLoop implements AutoCloseable {
                 EventSet readyOps = key.ready();
                 // handle read first because it's most likely to happen
                 if (readyOps.have(Event.READABLE)) {
-                    assert Logger.lowLevelDebug("firing readable for " + channel);
-                    if (channel instanceof ServerSocketFD) {
-                        // OP_ACCEPT
-                        try {
-                            handler.accept(ctxReuse0);
-                        } catch (Throwable t) {
-                            Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
+                    long startedAt = diagnostics == null ? 0 : fds.nanoTime();
+                    try {
+                        assert Logger.lowLevelDebug("firing readable for " + channel);
+                        if (channel instanceof ServerSocketFD) {
+                            // OP_ACCEPT
+                            try {
+                                handler.accept(ctxReuse0);
+                            } catch (Throwable t) {
+                                Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
+                            }
+                        } else {
+                            try {
+                                handler.readable(ctxReuse0);
+                            } catch (Throwable t) {
+                                Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
+                            }
                         }
-                    } else {
-                        try {
-                            handler.readable(ctxReuse0);
-                        } catch (Throwable t) {
-                            Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
-                        }
+                    } finally {
+                        if (diagnostics != null) diagnostics.record(
+                            channel instanceof ServerSocketFD ? EventLoopDiagnostics.ACCEPT : EventLoopDiagnostics.READ,
+                            handler, fds.nanoTime() - startedAt);
                     }
                 }
                 // read and write may happen in the same loop round
                 if (readyOps.have(Event.WRITABLE)) {
                     assert Logger.lowLevelDebug("firing writable for " + channel);
                     if (channel instanceof SocketFD) {
-                        if (registerData.connected) {
-                            try {
-                                handler.writable(ctxReuse0);
-                            } catch (Throwable t) {
-                                Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
+                        long startedAt = diagnostics == null ? 0 : fds.nanoTime();
+                        int kind = registerData.connected ? EventLoopDiagnostics.WRITE : EventLoopDiagnostics.CONNECT;
+                        try {
+                            if (registerData.connected) {
+                                try {
+                                    handler.writable(ctxReuse0);
+                                } catch (Throwable t) {
+                                    Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
+                                }
+                            } else {
+                                registerData.connected = true;
+                                try {
+                                    handler.connected(ctxReuse0);
+                                } catch (Throwable t) {
+                                    Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
+                                }
                             }
-                        } else {
-                            registerData.connected = true;
-                            try {
-                                handler.connected(ctxReuse0);
-                            } catch (Throwable t) {
-                                Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
-                            }
+                        } finally {
+                            if (diagnostics != null) diagnostics.record(kind, handler, fds.nanoTime() - startedAt);
                         }
                     }
                 }
@@ -324,6 +351,7 @@ public class SelectorEventLoop implements AutoCloseable {
         int maxSleepMillis = runBeforePoll();
 
         final Collection<SelectedEntry> selected;
+        long selectStartedAt = diagnostics == null ? 0 : fds.nanoTime();
         try {
             if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty() && maxSleepMillis < 0) {
                 selected = selector.select(); // let it sleep
@@ -346,6 +374,8 @@ public class SelectorEventLoop implements AutoCloseable {
             // let's ignore this exception and continue
             // if it's closed, the next loop will not run
             return 0;
+        } finally {
+            if (diagnostics != null) diagnostics.record(EventLoopDiagnostics.SELECT, selector, fds.nanoTime() - selectStartedAt);
         }
 
         if (runAfterPoll()) {
@@ -367,6 +397,7 @@ public class SelectorEventLoop implements AutoCloseable {
                 doHandling(keys);
             }
         }
+        if (diagnostics != null) diagnostics.report(fds.nanoTime());
         return 0;
     }
 
@@ -692,7 +723,12 @@ public class SelectorEventLoop implements AutoCloseable {
         var beforePollCallback = this.beforePollCallback;
         if (beforePollCallback == null)
             return -1;
-        return beforePollCallback.run();
+        long startedAt = diagnostics == null ? 0 : fds.nanoTime();
+        try {
+            return beforePollCallback.run();
+        } finally {
+            if (diagnostics != null) diagnostics.record(EventLoopDiagnostics.BEFORE_POLL, beforePollCallback, fds.nanoTime() - startedAt);
+        }
     }
 
     public void setBeforePoll(BeforePollCallback cb) {
@@ -713,7 +749,12 @@ public class SelectorEventLoop implements AutoCloseable {
         var selector = this.selector.getSelector();
         var num = selector.getFiredExtraNum();
         var arr = selector.getFiredExtra();
-        return afterPollCallback.run(num, arr);
+        long startedAt = diagnostics == null ? 0 : fds.nanoTime();
+        try {
+            return afterPollCallback.run(num, arr);
+        } finally {
+            if (diagnostics != null) diagnostics.record(EventLoopDiagnostics.AFTER_POLL, afterPollCallback, fds.nanoTime() - startedAt);
+        }
     }
 
     public void setAfterPoll(AfterPollCallback cb) {

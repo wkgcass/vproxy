@@ -9,6 +9,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.OS;
 import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
 import io.vproxy.base.util.anno.ThreadSafe;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.*;
@@ -24,6 +25,24 @@ public class NetEventLoop {
     private static final HandlerForConnectableConnection handlerForConnectableConnection = new HandlerForConnectableConnection();
 
     private final SelectorEventLoop selectorEventLoop;
+    static final int MAX_TRANSPORT_READ_BYTES = 32 * 1024;
+    private final BoundedReadableByteStream readStream = new BoundedReadableByteStream();
+
+    int readToBuffer(RingBuffer buffer, SocketFD channel) throws IOException {
+        // Ring input may repeatedly decode and refill while the transport stays
+        // readable. Cap the whole callback, including all contiguous reads.
+        // Read interest is level triggered; unread transport data remains ready.
+        BoundedReadableByteStream stream = readStream;
+        // A custom synchronous stream can re-enter another read on this loop.
+        // Keep nested quotas independent; the common path reuses one object.
+        if (stream.isInUse()) stream = new BoundedReadableByteStream();
+        stream.reset(channel, MAX_TRANSPORT_READ_BYTES);
+        try {
+            return buffer.storeBytesFrom(stream);
+        } finally {
+            stream.release();
+        }
+    }
 
     public NetEventLoop(SelectorEventLoop selectorEventLoop) {
         this.selectorEventLoop = selectorEventLoop;
@@ -326,14 +345,21 @@ class HandlerForConnection implements Handler<SocketFD> {
         // reset close timer because now it's active (will read some data)
         NetEventLoopUtils.resetCloseTimeout(cctx);
 
-        if (cctx.connection.getInBuffer().free() == 0) {
+        RingBuffer inBuffer = cctx.connection.getInBuffer();
+        if (inBuffer.free() == 0) {
             Logger.shouldNotHappen("the connection has no space to store data");
             return;
         }
         assert Logger.lowLevelDebug("before calling storeBytesFrom: inBuffer.used() = " + cctx.connection.getInBuffer().used());
         int read;
         try {
-            read = cctx.connection.getInBuffer().storeBytesFrom(ctx.getChannel());
+            // A standard small ring is already bounded by its capacity.
+            // Wrappers and subclasses may refill while decoding/staging.
+            if (inBuffer.getClass() == SimpleRingBuffer.class && inBuffer.capacity() <= NetEventLoop.MAX_TRANSPORT_READ_BYTES) {
+                read = inBuffer.storeBytesFrom(ctx.getChannel());
+            } else {
+                read = cctx.eventLoop.readToBuffer(inBuffer, ctx.getChannel());
+            }
         } catch (IOException e) {
             NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
