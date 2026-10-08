@@ -562,6 +562,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 engine = WebSocksUtils.createEngine(hostname, connector.remote.getPort());
             }
             SSLParameters params = new SSLParameters();
+            if (OS.isIOS()) {
+                params.setProtocols(new String[]{"TLSv1.2"});
+                params.setCipherSuites(new String[]{
+                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                });
+            }
             {
                 params.setApplicationProtocols(new String[]{"http/1.1"});
                 if (hostname != null) {
