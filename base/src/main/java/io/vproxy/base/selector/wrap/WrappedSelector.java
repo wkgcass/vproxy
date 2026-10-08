@@ -4,7 +4,7 @@ import io.vproxy.base.util.Lock;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.objectpool.GarbageFree;
-import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.vfd.posix.SelectedEntryPrototypeObjectList;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.util.*;
 
 public class WrappedSelector implements FDSelector {
     private final FDSelector selector;
-    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
+    private final SelectedEntryPrototypeObjectList selectedEntryList = new SelectedEntryPrototypeObjectList(128, SelectedEntry::new);
 
     private static class REntry {
         EventSet watchedEvents;
@@ -40,7 +40,6 @@ public class WrappedSelector implements FDSelector {
     private final Map<VirtualFD, FD> virtual2hybridMap = new HashMap<>();
     private final Set<FD> readableFired = new HashSet<>();
     private final Set<FD> writableFired = new HashSet<>();
-    private final Set<FD> virtualReadyFds = new HashSet<>();
     private final List<WritableAware> virtualWritableCallbacks = new ArrayList<>();
     private final Lock SELECTOR_OPERATION_LOCK = Lock.create();
     private volatile boolean closed;
@@ -59,34 +58,51 @@ public class WrappedSelector implements FDSelector {
     private final Map[] virtualMaps = new Map[]{virtualSocketFDs, hybridSocketFDs};
 
     private void calcVirtual() {
+        int previousSize = selectedEntryList.size();
+        // Reused active slots will be overwritten by collection. Release only
+        // the unused tail before callbacks or a real selector can wait.
+        selectedEntryList.setSize(0);
         virtualWritableCallbacks.clear();
         try (var unused = VIRTUAL_LOCK.lock()) {
-            virtualReadyFds.clear();
-            virtualReadyFds.addAll(readableFired);
-            virtualReadyFds.addAll(writableFired);
-            for (FD fd : virtualReadyFds) {
-                REntry entry = fd instanceof VirtualFD
-                    ? virtualSocketFDs.get((VirtualFD) fd)
-                    : hybridSocketFDs.get(fd);
-                if (entry == null) {
-                    continue;
+            for (FD fd : readableFired) {
+                collectVirtual(fd, true, writableFired.contains(fd));
+            }
+            for (FD fd : writableFired) {
+                if (!readableFired.contains(fd)) {
+                    collectVirtual(fd, false, true);
                 }
-                boolean readable = entry.watchedEvents.have(Event.READABLE) && readableFired.contains(fd);
-                boolean writable = entry.watchedEvents.have(Event.WRITABLE) && writableFired.contains(fd);
-                if (readable && writable) {
-                    selectedEntryList.add().set(fd, EventSet.readwrite(), entry.attachment);
-                } else if (readable) {
-                    selectedEntryList.add().set(fd, EventSet.read(), entry.attachment);
-                } else if (writable) {
-                    selectedEntryList.add().set(fd, EventSet.write(), entry.attachment);
-                }
-                if (writable && fd instanceof WritableAware aware) {
-                    virtualWritableCallbacks.add(aware);
-                }
+            }
+        } finally {
+            int currentSize = selectedEntryList.size();
+            for (int i = currentSize; i < previousSize; ++i) {
+                selectedEntryList.get(i).set(null, null, null);
             }
         }
         for (WritableAware callback : virtualWritableCallbacks) {
             callback.writable();
+        }
+    }
+
+    // Called only while holding VIRTUAL_LOCK; callbacks run after both sets
+    // have been collected, so callback changes cannot invalidate iteration.
+    private void collectVirtual(FD fd, boolean readFired, boolean writeFired) {
+        REntry entry = fd instanceof VirtualFD
+            ? virtualSocketFDs.get((VirtualFD) fd)
+            : hybridSocketFDs.get(fd);
+        if (entry == null) {
+            return;
+        }
+        boolean readable = readFired && entry.watchedEvents.have(Event.READABLE);
+        boolean writable = writeFired && entry.watchedEvents.have(Event.WRITABLE);
+        if (readable && writable) {
+            selectedEntryList.add().set(fd, EventSet.readwrite(), entry.attachment);
+        } else if (readable) {
+            selectedEntryList.add().set(fd, EventSet.read(), entry.attachment);
+        } else if (writable) {
+            selectedEntryList.add().set(fd, EventSet.write(), entry.attachment);
+        }
+        if (writable && fd instanceof WritableAware aware) {
+            virtualWritableCallbacks.add(aware);
         }
     }
 
@@ -104,8 +120,6 @@ public class WrappedSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        selectedEntryList.clear();
-
         calcVirtual();
         if (selectedEntryList.isEmpty()) {
             handleRealSelect(selector.select());
@@ -118,8 +132,6 @@ public class WrappedSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
-        selectedEntryList.clear();
-
         calcVirtual();
         handleRealSelect(selector.selectNow());
         return selectedEntryList;
@@ -128,8 +140,6 @@ public class WrappedSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
-        selectedEntryList.clear();
-
         calcVirtual();
         if (selectedEntryList.isEmpty()) {
             handleRealSelect(selector.select(millis));
@@ -350,7 +360,6 @@ public class WrappedSelector implements FDSelector {
             virtual2hybridMap.clear();
             readableFired.clear();
             writableFired.clear();
-            virtualReadyFds.clear();
         }
         selector.close();
     }

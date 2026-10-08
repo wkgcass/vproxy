@@ -2,7 +2,7 @@ package io.vproxy.vfd.jdk;
 
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.objectpool.GarbageFree;
-import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.vfd.posix.SelectedEntryPrototypeObjectList;
 import io.vproxy.vfd.*;
 
 import java.io.IOException;
@@ -20,7 +20,7 @@ public class ChannelSelector implements FDSelector {
         }
     }
 
-    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
+    private final SelectedEntryPrototypeObjectList selectedEntryList = new SelectedEntryPrototypeObjectList(128, SelectedEntry::new);
 
     private final Selector selector;
 
@@ -35,8 +35,6 @@ public class ChannelSelector implements FDSelector {
 
     private Collection<SelectedEntry> getSelectionEntries(int cnt) {
         if (cnt == 0) return Collections.emptySet();
-
-        selectedEntryList.clear();
 
         Set<SelectionKey> set = selector.selectedKeys();
         Iterator<SelectionKey> keys = set.iterator();
@@ -57,6 +55,7 @@ public class ChannelSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
+        selectedEntryList.clear();
         int n = selector.select();
         return getSelectionEntries(n);
     }
@@ -64,6 +63,7 @@ public class ChannelSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
+        selectedEntryList.clear();
         int n = selector.selectNow();
         return getSelectionEntries(n);
     }
@@ -71,6 +71,7 @@ public class ChannelSelector implements FDSelector {
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
+        selectedEntryList.clear();
         int n = selector.select(millis);
         return getSelectionEntries(n);
     }

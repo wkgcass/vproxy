@@ -8,6 +8,7 @@ import io.vproxy.base.util.OS;
 import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
 import io.vproxy.base.util.unsafe.SunUnsafe;
 
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -21,35 +22,56 @@ public class DirectMemoryUtils {
 
     private static final int BUF_POOL_SIZE = 128;
 
+    // Storage metadata survives cache transfers; borrower handles never do.
+    // The segment was created over the full allocation before any cursor changes.
+    private static final class CachedBuffer {
+        final ByteBuffer buffer;
+        final MemorySegment segment;
+
+        CachedBuffer(DirectByteBuffer owner) {
+            buffer = owner.realBuffer();
+            segment = owner.getMemorySegment();
+        }
+    }
+
+    private static final class CachedLease extends DirectByteBuffer {
+        final CachedBuffer storage;
+
+        CachedLease(CachedBuffer storage) {
+            super(storage.buffer, storage.segment);
+            this.storage = storage;
+        }
+    }
+
     // iOS hosts run under a tight process memory cap: do not even
     // instantiate the pools there
-    private static ConcurrentObjectPool<DirectByteBuffer> pool() {
+    private static ConcurrentObjectPool<CachedBuffer> pool() {
         if (OS.isIOS()) {
             return null;
         }
         return new ConcurrentObjectPool<>(BUF_POOL_SIZE);
     }
-    private static long poolSize(ConcurrentObjectPool<DirectByteBuffer> pool) {
+    private static long poolSize(ConcurrentObjectPool<CachedBuffer> pool) {
         return pool == null ? 0 : pool.size();
     }
-    private static final ConcurrentObjectPool<DirectByteBuffer> _1 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _2 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _4 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _8 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _16 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _32 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _64 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _128 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _256 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _512 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _1024 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _2048 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _4096 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _8192 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _16384 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _24576 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _32768 = pool();
-    private static final ConcurrentObjectPool<DirectByteBuffer> _65536 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _1 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _2 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _4 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _8 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _16 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _32 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _64 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _128 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _256 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _512 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _1024 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _2048 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _4096 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _8192 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _16384 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _24576 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _32768 = pool();
+    private static final ConcurrentObjectPool<CachedBuffer> _65536 = pool();
 
     private static final Counter directMemoryCacheMissCount = GlobalInspection.getInstance().addMetric(
         "direct_memory_cache_miss_count_total",
@@ -180,7 +202,7 @@ public class DirectMemoryUtils {
         );
     }
 
-    private static DirectByteBuffer getBufferCache(int size) {
+    private static CachedBuffer getBufferCache(int size) {
         switch (size) {
             case 1:
                 return getBufferCache(_1);
@@ -223,11 +245,11 @@ public class DirectMemoryUtils {
         }
     }
 
-    private static DirectByteBuffer getBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers) {
+    private static CachedBuffer getBufferCache(ConcurrentObjectPool<CachedBuffer> buffers) {
         if (buffers == null) {
             return null;
         }
-        DirectByteBuffer buf = buffers.poll();
+        CachedBuffer buf = buffers.poll();
         if (buf == null) {
             directMemoryCacheMissCount.incr(1);
         } else {
@@ -279,11 +301,12 @@ public class DirectMemoryUtils {
         }
     }
 
-    private static boolean releaseBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers, DirectByteBuffer buf) {
+    private static boolean releaseBufferCache(ConcurrentObjectPool<CachedBuffer> buffers, DirectByteBuffer buf) {
         if (buffers == null) {
             return false;
         }
-        boolean ret = buffers.add(buf);
+        CachedBuffer storage = buf instanceof CachedLease lease ? lease.storage : new CachedBuffer(buf);
+        boolean ret = buffers.add(storage);
         if (ret) {
             directMemoryCacheStoredCount.incr(1);
         } else {
@@ -293,11 +316,11 @@ public class DirectMemoryUtils {
     }
 
     public static DirectByteBuffer allocateDirectBuffer(int size) {
-        DirectByteBuffer directByteBuffer = getBufferCache(size);
-        if (!POOL_DISABLED && directByteBuffer != null) {
+        CachedBuffer cached = getBufferCache(size);
+        if (!POOL_DISABLED && cached != null) {
             assert Logger.lowLevelDebug("cached direct buffer retrieved: " + size);
-            directByteBuffer.limit(directByteBuffer.capacity()).position(0);
-            return directByteBuffer;
+            cached.buffer.limit(cached.buffer.capacity()).position(0);
+            return new CachedLease(cached);
         }
         ByteBuffer buf = ByteBuffer.allocateDirect(size);
         GlobalInspection.getInstance().directBufferAllocate(buf.capacity());
@@ -314,7 +337,9 @@ public class DirectMemoryUtils {
             boolean succeeded = releaseBufferCache(buffer);
             if (succeeded) {
                 assert Logger.lowLevelDebug("direct buffer cached: " + buffer.capacity());
-                return false;
+                // The cache owns the backing buffer now. Retire this handle
+                // so repeated clean cannot return a live borrower to the pool.
+                return true;
             }
         }
         assert Logger.lowLevelDebug("is direct buffer, do clean");
