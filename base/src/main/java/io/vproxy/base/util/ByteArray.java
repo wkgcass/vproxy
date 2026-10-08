@@ -79,13 +79,18 @@ public interface ByteArray extends ToByteArray {
         return SubByteArray.sub(this, fromInclusive, len);
     }
 
+    /**
+     * Concatenates two visible ranges while retaining their backing storage.
+     * CompositeByteArray captures the child lengths at this call; subsequent
+     * growth of a mutable child remains visible only within its captured range.
+     */
     default ByteArray concat(ByteArray array) {
         if (array.length() == 0) {
             return this;
         }
         if (length() == 0)
             return array;
-        return new CompositeByteArray(this, array);
+        return CompositeByteArray.concatBalanced(this, array);
     }
 
     /**
@@ -101,9 +106,9 @@ public interface ByteArray extends ToByteArray {
         if (wasteLimit < 0) {
             throw new IllegalArgumentException("wasteLimit must be non-negative");
         }
-        int len = length() + arr.length();
+        int len = Math.addExact(length(), arr.length());
         ByteArray result = concat(arr);
-        if (remainingConcatBytes(result, (long) len + wasteLimit) >= 0) {
+        if (result.retainedBackingSize() <= (long) len + wasteLimit) {
             return result;
         }
 
@@ -113,16 +118,23 @@ public interface ByteArray extends ToByteArray {
         return ByteArray.from(bytes);
     }
 
-    // A negative result means that the backing byte budget was exceeded.
-    private static long remainingConcatBytes(ByteArray array, long remaining) {
-        if (array instanceof CompositeByteArray composite) {
-            remaining = remainingConcatBytes(composite.getFirst(), remaining);
-            return remaining < 0 ? -1 : remainingConcatBytes(composite.getSecond(), remaining);
-        }
-        if (array instanceof SubByteArray sub) {
-            return remainingConcatBytes(sub.source, remaining);
-        }
-        return remaining - array.length();
+    /**
+     * Number of backing bytes retained by this visible value under concatOrCopy's
+     * accounting rules. SubByteArray counts its full source; opaque wrappers count
+     * only their visible length. Mutable-length implementations report instability.
+     */
+    default long retainedBackingSize() {
+        return length();
+    }
+
+    /** Whether retainedBackingSize remains valid for the lifetime of this object. */
+    default boolean retainedBackingSizeIsStable() {
+        return true;
+    }
+
+    /** Internal structural depth used to keep concatenation trees bounded. */
+    default int treeDepth() {
+        return 1;
     }
 
     default ByteArray concat(String str) {
@@ -228,6 +240,52 @@ public interface ByteArray extends ToByteArray {
 
     default int uint8(int offset) {
         return get(offset) & 0xff;
+    }
+
+    /**
+     * Add a visible range to the Internet checksum accumulator. The low eight
+     * bits of {@code state} hold a pending odd byte and bit 8 records whether
+     * that byte is present; the signed value above bit 8 is the running sum.
+     * Implementations with contiguous storage override this to process words
+     * directly. This method is primarily for checksum implementations.
+     */
+    default long updateChecksum(long state, int off, int len) {
+        checkRange(off, len, length());
+        long sum = state >> 9;
+        boolean pending = ((state >>> 8) & 1) != 0;
+        int high = (int) (state & 0xff);
+        int end = off + len;
+        for (int i = off; i < end; ++i) {
+            int b = get(i) & 0xff;
+            if (pending) {
+                sum += (high << 8) | b;
+                pending = false;
+                if (sum >= 0x7fff0000) {
+                    sum = (sum & 0xffff) + (sum >>> 16);
+                }
+            } else {
+                high = b;
+                pending = true;
+            }
+        }
+        // Keep the state bounded across leaves, including leaves smaller than
+        // one folding batch. Otherwise many small leaves can overflow a later
+        // int accumulator even though each individual leaf is short.
+        sum = (sum & 0xffff) + (sum >>> 16);
+        sum = (sum & 0xffff) + (sum >>> 16);
+        return (sum << 9) | (pending ? 1L << 8 : 0) | high;
+    }
+
+    private static void checkRange(int off, int len, int size) {
+        if (off < 0) {
+            throw new IllegalArgumentException("off=" + off + " < 0");
+        }
+        if (len < 0) {
+            throw new IllegalArgumentException("len=" + len + " < 0");
+        }
+        if (off > size || len > size - off) {
+            throw new ArrayIndexOutOfBoundsException("off=" + off + ", len=" + len + ", length=" + size);
+        }
     }
 
     default long uint8long(int offset) {

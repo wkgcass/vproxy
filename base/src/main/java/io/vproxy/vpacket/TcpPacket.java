@@ -407,19 +407,7 @@ public class TcpPacket extends TransportPacket {
     }
 
     private ByteArray buildCommonPart() {
-        ByteArray base = ByteArray.allocate(20);
-        base.int16(0, srcPort);
-        base.int16(2, dstPort);
-        base.int32(4, (int) seqNum);
-        base.int32(8, (int) ackNum);
-        // build dataOffset + reserved + flags later
-        // we need to calculate the dataOffset after tcp options are generated
-        base.int16(14, window);
-        // build checksum in later functions
-        base.int16(18, urgentPointer);
-
-        // build options
-        ByteArray optBytes = null;
+        int optionsLen = 0;
         if (options != null && !options.isEmpty()) {
             if (options.get(options.size() - 1).kind != Consts.TCP_OPTION_END) {
                 var end = new TcpOption(this);
@@ -427,36 +415,28 @@ public class TcpPacket extends TransportPacket {
                 options.add(end);
             }
             for (var o : options) {
-                var b = o.getRawPacket(0);
-                if (optBytes == null) {
-                    optBytes = b;
-                } else {
-                    optBytes = optBytes.concat(b);
-                }
+                optionsLen = Math.addExact(optionsLen, o.getRawPacket(0).length());
             }
         }
-        if (optBytes != null) {
-            base = base.concat(optBytes);
-        }
-
-        // build data offset and padding
-        int padding = 0;
-        int off = 20;
-        if (optBytes != null) {
-            int len = optBytes.length();
-            int mod = len % 4;
-            if (mod != 0) {
-                padding = 4 - mod;
-            }
-            off += len + padding;
-        }
-        dataOffset = off;
+        int padding = (4 - optionsLen % 4) % 4;
+        dataOffset = 20 + optionsLen + padding;
         int dataOffsetReservedFlags = ((dataOffset / 4) << 12) | flags;
+        ByteArray base = ByteArray.allocate(dataOffset);
+        base.int16(0, srcPort);
+        base.int16(2, dstPort);
+        base.int32(4, (int) seqNum);
+        base.int32(8, (int) ackNum);
         base.int16(12, dataOffsetReservedFlags);
-
-        // add padding
-        if (padding != 0) {
-            base = base.concat(ByteArray.allocate(padding));
+        base.int16(14, window);
+        // checksum bytes 16-17 stay zero
+        base.int16(18, urgentPointer);
+        if (optionsLen > 0) {
+            int off = 20;
+            for (var option : options) {
+                ByteArray optionBytes = option.getRawPacket(0);
+                optionBytes.toNewJavaArray(base.toJavaArray(), off);
+                off += optionBytes.length();
+            }
         }
 
         if (data == null || data.length() == 0) {
@@ -470,10 +450,9 @@ public class TcpPacket extends TransportPacket {
         var common = buildCommonPart();
 
         var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_TCP, common.length());
-        var toCalculate = pseudo.concat(common);
 
         if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
-            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+            checksum = Utils.calculateChecksum(pseudo, common);
 
             // build checksum
             common.int16(16, checksum);
@@ -490,8 +469,7 @@ public class TcpPacket extends TransportPacket {
     protected void updateChecksumWithIPv4(Ipv4Packet ipv4) {
         raw.pktBuf.int16(16, 0);
         var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_TCP, raw.pktBuf.length());
-        var toCalculate = pseudo.concat(raw.pktBuf);
-        var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+        var cksum = Utils.calculateChecksum(pseudo, raw.pktBuf);
 
         checksum = cksum;
         raw.pktBuf.int16(16, cksum);
@@ -503,10 +481,9 @@ public class TcpPacket extends TransportPacket {
         var common = buildCommonPart();
 
         var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_TCP, common.length());
-        var toCalculate = pseudo.concat(common);
 
         if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
-            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+            checksum = Utils.calculateChecksum(pseudo, common);
 
             // build checksum
             common.int16(16, checksum);
@@ -523,8 +500,7 @@ public class TcpPacket extends TransportPacket {
     protected void updateChecksumWithIPv6(Ipv6Packet ipv6) {
         raw.pktBuf.int16(16, 0);
         var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_TCP, raw.pktBuf.length());
-        var toCalculate = pseudo.concat(raw.pktBuf);
-        var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+        var cksum = Utils.calculateChecksum(pseudo, raw.pktBuf);
 
         checksum = cksum;
         raw.pktBuf.int16(16, cksum);

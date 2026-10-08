@@ -28,14 +28,32 @@ public class PacketDataBuffer {
     // pre-rendered repeating pattern block (a whole number of cycles). ip/udp/tcp length fields
     // are 16-bit, so any single pad is <= 65535 < PAD_BLOCK_LEN and is filled with one arraycopy.
     private static final int PAD_BLOCK_LEN = 6 * 10923; // 65538, smallest multiple of 6 > 65535
-    private static final byte[] PADDING_BLOCK = buildPaddingBlock();
+    private static volatile byte[] paddingBlock;
 
     private static byte[] buildPaddingBlock() {
         byte[] b = new byte[PAD_BLOCK_LEN];
         for (int i = 0; i < PAD_BLOCK_LEN; i++) {
-            b[i] = TRUNCATED_PAD_SEQ[i % TRUNCATED_PAD_SEQ.length];
+            b[i] = PAD_PATTERN[i % PAD_PATTERN.length];
         }
         return b;
+    }
+
+    private static final byte[] PAD_PATTERN = {
+        (byte) 0xFF, (byte) 0xFE, (byte) 0xFD, (byte) 0xFC, (byte) 0xFB, (byte) 0xFA
+    };
+
+    private static byte[] paddingBlock() {
+        byte[] block = paddingBlock;
+        if (block == null) {
+            synchronized (PacketDataBuffer.class) {
+                block = paddingBlock;
+                if (block == null) {
+                    block = buildPaddingBlock();
+                    paddingBlock = block;
+                }
+            }
+        }
+        return block;
     }
 
     public PacketDataBuffer(ByteArray fullbuf, int pktOff, int pad) {
@@ -128,7 +146,7 @@ public class PacketDataBuffer {
         int off = 0;
         while (off < padLen) {
             int n = Math.min(PAD_BLOCK_LEN, padLen - off);
-            System.arraycopy(PADDING_BLOCK, 0, arr, have + off, n);
+            System.arraycopy(paddingBlock(), 0, arr, have + off, n);
             off += n;
         }
         return ByteArray.from(arr);

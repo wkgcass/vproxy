@@ -6,6 +6,7 @@ public class TimeElemImpl<T> implements TimeElem<T> {
     public final long triggerTime;
     public final T elem;
     private final TimeQueueImpl<T> queue;
+    int heapIndex = -1;
 
     TimeElemImpl(long triggerTime, T elem, TimeQueueImpl<T> queue) {
         this.triggerTime = triggerTime;
@@ -19,6 +20,6 @@ public class TimeElemImpl<T> implements TimeElem<T> {
     }
 
     public void removeSelf() {
-        queue.queue.remove(this);
+        queue.remove(this);
     }
 }

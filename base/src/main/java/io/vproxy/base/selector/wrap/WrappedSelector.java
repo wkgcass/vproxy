@@ -9,6 +9,7 @@ import io.vproxy.vfd.*;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 
 public class WrappedSelector implements FDSelector {
@@ -39,7 +40,10 @@ public class WrappedSelector implements FDSelector {
     private final Map<VirtualFD, FD> virtual2hybridMap = new HashMap<>();
     private final Set<FD> readableFired = new HashSet<>();
     private final Set<FD> writableFired = new HashSet<>();
+    private final Set<FD> virtualReadyFds = new HashSet<>();
+    private final List<WritableAware> virtualWritableCallbacks = new ArrayList<>();
     private final Lock SELECTOR_OPERATION_LOCK = Lock.create();
+    private volatile boolean closed;
 
     public WrappedSelector(FDSelector selector) {
         this.selector = selector;
@@ -55,51 +59,34 @@ public class WrappedSelector implements FDSelector {
     private final Map[] virtualMaps = new Map[]{virtualSocketFDs, hybridSocketFDs};
 
     private void calcVirtual() {
-        //noinspection unused
+        virtualWritableCallbacks.clear();
         try (var unused = VIRTUAL_LOCK.lock()) {
-            //noinspection rawtypes
-            for (Map map : virtualMaps) {
-                for (Object o : map.entrySet()) {
-                    //noinspection rawtypes
-                    Map.Entry e = (Map.Entry) o;
-                    FD fd = (FD) e.getKey();
-                    REntry entry = (REntry) e.getValue();
-
-                    boolean readable = false;
-                    boolean writable = false;
-                    if (entry.watchedEvents.have(Event.READABLE)) {
-                        if (readableFired.contains(fd)) {
-                            assert Logger.lowLevelDebug("fire readable for " + fd);
-                            readable = true;
-                        }
-                    }
-                    if (entry.watchedEvents.have(Event.WRITABLE)) {
-                        if (writableFired.contains(fd)) {
-                            assert Logger.lowLevelDebug("fire writable for " + fd);
-                            writable = true;
-                        }
-                    }
-                    EventSet eventSet;
-                    if (readable && writable) {
-                        eventSet = EventSet.readwrite();
-                    } else if (readable) {
-                        eventSet = EventSet.read();
-                    } else if (writable) {
-                        eventSet = EventSet.write();
-                    } else {
-                        eventSet = null;
-                    }
-                    if (eventSet != null) {
-                        selectedEntryList.add().set(fd, eventSet, entry.attachment);
-                    }
-
-                    if (writable) {
-                        if (fd instanceof WritableAware) {
-                            ((WritableAware) fd).writable();
-                        }
-                    }
+            virtualReadyFds.clear();
+            virtualReadyFds.addAll(readableFired);
+            virtualReadyFds.addAll(writableFired);
+            for (FD fd : virtualReadyFds) {
+                REntry entry = fd instanceof VirtualFD
+                    ? virtualSocketFDs.get((VirtualFD) fd)
+                    : hybridSocketFDs.get(fd);
+                if (entry == null) {
+                    continue;
+                }
+                boolean readable = entry.watchedEvents.have(Event.READABLE) && readableFired.contains(fd);
+                boolean writable = entry.watchedEvents.have(Event.WRITABLE) && writableFired.contains(fd);
+                if (readable && writable) {
+                    selectedEntryList.add().set(fd, EventSet.readwrite(), entry.attachment);
+                } else if (readable) {
+                    selectedEntryList.add().set(fd, EventSet.read(), entry.attachment);
+                } else if (writable) {
+                    selectedEntryList.add().set(fd, EventSet.write(), entry.attachment);
+                }
+                if (writable && fd instanceof WritableAware aware) {
+                    virtualWritableCallbacks.add(aware);
                 }
             }
+        }
+        for (WritableAware callback : virtualWritableCallbacks) {
+            callback.writable();
         }
     }
 
@@ -163,9 +150,13 @@ public class WrappedSelector implements FDSelector {
     @Override
     public boolean isRegistered(FD fd) {
         if (fd instanceof VirtualFD) {
-            return virtualSocketFDs.containsKey(fd);
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                return virtualSocketFDs.containsKey(fd);
+            }
         } else if (fd.real() instanceof VirtualFD) {
-            return hybridSocketFDs.containsKey(fd);
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                return hybridSocketFDs.containsKey(fd);
+            }
         } else {
             return selector.isRegistered(fd);
         }
@@ -183,6 +174,7 @@ public class WrappedSelector implements FDSelector {
             assert Logger.lowLevelDebug("register virtual fd to selector");
             //noinspection unused
             try (var unused = VIRTUAL_LOCK.lock()) {
+                if (closed) throw new ClosedSelectorException();
                 virtualSocketFDs.put((VirtualFD) fd, new REntry(ops, registerData));
             }
             ((VirtualFD) fd).onRegister();
@@ -190,6 +182,7 @@ public class WrappedSelector implements FDSelector {
             assert Logger.lowLevelDebug("register hybrid fd to selector");
             //noinspection unused
             try (var unused = VIRTUAL_LOCK.lock()) {
+                if (closed) throw new ClosedSelectorException();
                 hybridSocketFDs.put(fd, new REntry(ops, registerData));
                 virtual2hybridMap.put((VirtualFD) fd.real(), fd);
             }
@@ -204,15 +197,19 @@ public class WrappedSelector implements FDSelector {
     public void remove(FD fd) {
         assert Logger.lowLevelDebug("remove fd from selector " + fd);
         if (fd instanceof VirtualFD) {
-            virtualSocketFDs.remove(fd);
-            readableFired.remove(fd);
-            writableFired.remove(fd);
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                virtualSocketFDs.remove(fd);
+                readableFired.remove(fd);
+                writableFired.remove(fd);
+            }
             ((VirtualFD) fd).onRemove();
         } else if (fd.real() instanceof VirtualFD) {
-            hybridSocketFDs.remove(fd);
-            virtual2hybridMap.remove((VirtualFD) fd.real());
-            readableFired.remove(fd);
-            writableFired.remove(fd);
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                hybridSocketFDs.remove(fd);
+                virtual2hybridMap.remove((VirtualFD) fd.real());
+                readableFired.remove(fd);
+                writableFired.remove(fd);
+            }
             ((VirtualFD) fd.real()).onRemove();
         } else {
             selector.remove(fd);
@@ -225,10 +222,13 @@ public class WrappedSelector implements FDSelector {
             ops = ops.combine(EventSet.write());
         }
         if (fd instanceof VirtualFD) {
-            if (virtualSocketFDs.containsKey(fd)) {
-                virtualSocketFDs.get(fd).watchedEvents = ops;
-            } else {
-                throw new CancelledKeyExceptionWithInfo(fd.toString());
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                if (closed) throw new ClosedSelectorException();
+                if (virtualSocketFDs.containsKey(fd)) {
+                    virtualSocketFDs.get(fd).watchedEvents = ops;
+                } else {
+                    throw new CancelledKeyExceptionWithInfo(fd.toString());
+                }
             }
         } else {
             modify0(fd, ops);
@@ -237,10 +237,13 @@ public class WrappedSelector implements FDSelector {
 
     public void modify0(FD fd, EventSet ops) {
         if (fd.real() instanceof VirtualFD) {
-            if (hybridSocketFDs.containsKey(fd)) {
-                hybridSocketFDs.get(fd).watchedEvents = ops;
-            } else {
-                throw new CancelledKeyExceptionWithInfo(fd.toString());
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                if (closed) throw new ClosedSelectorException();
+                if (hybridSocketFDs.containsKey(fd)) {
+                    hybridSocketFDs.get(fd).watchedEvents = ops;
+                } else {
+                    throw new CancelledKeyExceptionWithInfo(fd.toString());
+                }
             }
         } else {
             selector.modify(fd, ops);
@@ -249,20 +252,22 @@ public class WrappedSelector implements FDSelector {
 
     public EventSet firingEvents(VirtualFD fd) {
         EventSet ret = EventSet.none();
-        var hybrid = virtual2hybridMap.get(fd);
-        if (hybrid == null) {
-            if (writableFired.contains(fd)) {
-                ret = ret.combine(EventSet.write());
-            }
-            if (readableFired.contains(fd)) {
-                ret = ret.combine(EventSet.read());
-            }
-        } else {
-            if (writableFired.contains(hybrid)) {
-                ret = ret.combine(EventSet.write());
-            }
-            if (readableFired.contains(hybrid)) {
-                ret = ret.combine(EventSet.read());
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            var hybrid = virtual2hybridMap.get(fd);
+            if (hybrid == null) {
+                if (writableFired.contains(fd)) {
+                    ret = ret.combine(EventSet.write());
+                }
+                if (readableFired.contains(fd)) {
+                    ret = ret.combine(EventSet.read());
+                }
+            } else {
+                if (writableFired.contains(hybrid)) {
+                    ret = ret.combine(EventSet.write());
+                }
+                if (readableFired.contains(hybrid)) {
+                    ret = ret.combine(EventSet.read());
+                }
             }
         }
         return ret;
@@ -271,16 +276,20 @@ public class WrappedSelector implements FDSelector {
     @Override
     public EventSet events(FD fd) {
         if (fd instanceof VirtualFD) {
-            if (virtualSocketFDs.containsKey(fd)) {
-                return virtualSocketFDs.get(fd).watchedEvents;
-            } else {
-                throw new CancelledKeyExceptionWithInfo(fd.toString());
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                if (virtualSocketFDs.containsKey(fd)) {
+                    return virtualSocketFDs.get(fd).watchedEvents;
+                } else {
+                    throw new CancelledKeyExceptionWithInfo(fd.toString());
+                }
             }
         } else if (fd.real() instanceof VirtualFD) {
-            if (hybridSocketFDs.containsKey(fd)) {
-                return hybridSocketFDs.get(fd).watchedEvents;
-            } else {
-                throw new CancelledKeyExceptionWithInfo(fd.toString());
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                if (hybridSocketFDs.containsKey(fd)) {
+                    return hybridSocketFDs.get(fd).watchedEvents;
+                } else {
+                    throw new CancelledKeyExceptionWithInfo(fd.toString());
+                }
             }
         } else {
             return selector.events(fd);
@@ -290,16 +299,20 @@ public class WrappedSelector implements FDSelector {
     @Override
     public Object attachment(FD fd) {
         if (fd instanceof VirtualFD) {
-            if (virtualSocketFDs.containsKey(fd)) {
-                return virtualSocketFDs.get(fd).attachment;
-            } else {
-                throw new CancelledKeyExceptionWithInfo(fd.toString());
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                if (virtualSocketFDs.containsKey(fd)) {
+                    return virtualSocketFDs.get(fd).attachment;
+                } else {
+                    throw new CancelledKeyExceptionWithInfo(fd.toString());
+                }
             }
         } else if (fd.real() instanceof VirtualFD) {
-            if (hybridSocketFDs.containsKey(fd)) {
-                return hybridSocketFDs.get(fd).attachment;
-            } else {
-                throw new CancelledKeyExceptionWithInfo(fd.toString());
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                if (hybridSocketFDs.containsKey(fd)) {
+                    return hybridSocketFDs.get(fd).attachment;
+                } else {
+                    throw new CancelledKeyExceptionWithInfo(fd.toString());
+                }
             }
         } else {
             return selector.attachment(fd);
@@ -309,31 +322,36 @@ public class WrappedSelector implements FDSelector {
     @Override
     public Collection<RegisterEntry> entries() {
         var selectorRet = selector.entries();
-        if (virtualSocketFDs.isEmpty() && hybridSocketFDs.isEmpty()) {
-            return selectorRet;
-        }
-
-        Set<RegisterEntry> ret = new HashSet<>(selectorRet);
-        //noinspection rawtypes
-        for (Map map : virtualMaps) {
-            for (Object o : map.entrySet()) {
-                //noinspection rawtypes
-                Map.Entry e = (Map.Entry) o;
-                var fd = (FD) e.getKey();
-                var entry = (REntry) e.getValue();
-                ret.add(new RegisterEntry(fd, entry.watchedEvents, entry.attachment));
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            if (virtualSocketFDs.isEmpty() && hybridSocketFDs.isEmpty()) {
+                return selectorRet;
             }
+            Set<RegisterEntry> ret = new HashSet<>(selectorRet);
+            //noinspection rawtypes
+            for (Map map : virtualMaps) {
+                for (Object o : map.entrySet()) {
+                    //noinspection rawtypes
+                    Map.Entry e = (Map.Entry) o;
+                    var fd = (FD) e.getKey();
+                    var entry = (REntry) e.getValue();
+                    ret.add(new RegisterEntry(fd, entry.watchedEvents, entry.attachment));
+                }
+            }
+            return ret;
         }
-        return ret;
     }
 
     @Override
     public void close() throws IOException {
-        virtualSocketFDs.clear();
-        hybridSocketFDs.clear();
-        virtual2hybridMap.clear();
-        readableFired.clear();
-        writableFired.clear();
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            closed = true;
+            virtualSocketFDs.clear();
+            hybridSocketFDs.clear();
+            virtual2hybridMap.clear();
+            readableFired.clear();
+            writableFired.clear();
+            virtualReadyFds.clear();
+        }
         selector.close();
     }
 
@@ -345,41 +363,27 @@ public class WrappedSelector implements FDSelector {
             Logger.error(LogType.IMPROPER_USE, "fd " + vfd + " is not open, but still trying to register readable", new Throwable());
             return;
         }
-        if (!virtualSocketFDs.containsKey(vfd) && !virtual2hybridMap.containsKey(vfd)) {
-            assert Logger.lowLevelDebug("cannot register readable for " + vfd + " when the fd not handled by this selector." +
-                " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
-            return;
-        }
-        if (virtual2hybridMap.containsKey(vfd)) {
+        boolean shouldWake;
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            if (closed) throw new ClosedSelectorException();
             FD hybrid = virtual2hybridMap.get(vfd);
-            assert Logger.lowLevelDebug("add hybrid readable: " + hybrid);
-            readableFired.add(hybrid);
-
-            // check fired
-            var rentry = hybridSocketFDs.get(hybrid);
-            if (rentry.watchedEvents.have(Event.READABLE)) {
-                wakeup();
+            if (hybrid == null && !virtualSocketFDs.containsKey(vfd)) {
+                assert Logger.lowLevelDebug("cannot register readable for " + vfd + " when the fd not handled by this selector." +
+                    " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
+                return;
             }
-        } else {
-            assert Logger.lowLevelDebug("add virtual readable: " + vfd);
-            readableFired.add(vfd);
-
-            // check fired
-            var rentry = virtualSocketFDs.get(vfd);
-            if (rentry.watchedEvents.have(Event.READABLE)) {
-                wakeup();
-            }
+            FD key = hybrid == null ? vfd : hybrid;
+            readableFired.add(key);
+            REntry entry = hybrid == null ? virtualSocketFDs.get(vfd) : hybridSocketFDs.get(hybrid);
+            shouldWake = entry != null && entry.watchedEvents.have(Event.READABLE);
         }
+        if (shouldWake) wakeup();
     }
 
     public void removeVirtualReadable(VirtualFD vfd) {
-        var hybrid = virtual2hybridMap.get(vfd);
-        if (hybrid == null) {
-            assert Logger.lowLevelDebug("remove virtual readable: " + vfd);
-            readableFired.remove(vfd);
-        } else {
-            assert Logger.lowLevelDebug("remove hybrid readable: " + vfd);
-            readableFired.remove(hybrid);
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            var hybrid = virtual2hybridMap.get(vfd);
+            readableFired.remove(hybrid == null ? vfd : hybrid);
         }
     }
 
@@ -391,65 +395,53 @@ public class WrappedSelector implements FDSelector {
             Logger.error(LogType.IMPROPER_USE, "fd " + vfd + " is not open, but still trying to register writable", new Throwable());
             return;
         }
-        if (!virtualSocketFDs.containsKey(vfd) && !virtual2hybridMap.containsKey(vfd)) {
-            assert Logger.lowLevelDebug("cannot register writable for " + vfd + " when the fd not handled by this selector." +
-                " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
-            return;
-        }
-        if (virtual2hybridMap.containsKey(vfd)) {
+        boolean shouldWake;
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            if (closed) throw new ClosedSelectorException();
             FD hybrid = virtual2hybridMap.get(vfd);
-            assert Logger.lowLevelDebug("add hybrid writable: " + hybrid);
-            writableFired.add(hybrid);
-
-            // check fired
-            var rentry = hybridSocketFDs.get(hybrid);
-            if (rentry.watchedEvents.have(Event.WRITABLE)) {
-                wakeup();
+            if (hybrid == null && !virtualSocketFDs.containsKey(vfd)) {
+                assert Logger.lowLevelDebug("cannot register writable for " + vfd + " when the fd not handled by this selector." +
+                    " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
+                return;
             }
-        } else {
-            assert Logger.lowLevelDebug("add virtual writable: " + vfd);
-            writableFired.add(vfd);
-
-            // check fired
-            var rentry = virtualSocketFDs.get(vfd);
-            if (rentry.watchedEvents.have(Event.WRITABLE)) {
-                wakeup();
-            }
+            FD key = hybrid == null ? vfd : hybrid;
+            writableFired.add(key);
+            REntry entry = hybrid == null ? virtualSocketFDs.get(vfd) : hybridSocketFDs.get(hybrid);
+            shouldWake = entry != null && entry.watchedEvents.have(Event.WRITABLE);
         }
+        if (shouldWake) wakeup();
     }
 
     public void removeVirtualWritable(VirtualFD vfd) {
-        var hybrid = virtual2hybridMap.get(vfd);
-        if (hybrid == null) {
-            assert Logger.lowLevelDebug("remove virtual writable: " + vfd);
-            writableFired.remove(vfd);
-        } else {
-            assert Logger.lowLevelDebug("remove hybrid writable: " + hybrid);
-            writableFired.remove(hybrid);
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            var hybrid = virtual2hybridMap.get(vfd);
+            writableFired.remove(hybrid == null ? vfd : hybrid);
         }
     }
 
     public void copyFDEvents(Collection<FDInspection> coll) {
-        //noinspection rawtypes
-        for (Map map : virtualMaps) {
-            for (Object o : map.entrySet()) {
-                //noinspection rawtypes
-                var entry = (Map.Entry) o;
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            //noinspection rawtypes
+            for (Map map : virtualMaps) {
+                for (Object o : map.entrySet()) {
+                    //noinspection rawtypes
+                    var entry = (Map.Entry) o;
 
-                var fd = (FD) entry.getKey();
-                var watch = ((REntry) entry.getValue()).watchedEvents;
-                var fire = EventSet.none();
-                if (readableFired.contains(fd)) {
-                    fire = fire.combine(EventSet.read());
+                    var fd = (FD) entry.getKey();
+                    var watch = ((REntry) entry.getValue()).watchedEvents;
+                    var fire = EventSet.none();
+                    if (readableFired.contains(fd)) {
+                        fire = fire.combine(EventSet.read());
+                    }
+                    if (writableFired.contains(fd)) {
+                        fire = fire.combine(EventSet.write());
+                    }
+                    coll.add(new FDInspection(fd, watch, fire));
                 }
-                if (writableFired.contains(fd)) {
-                    fire = fire.combine(EventSet.write());
-                }
-                coll.add(new FDInspection(fd, watch, fire));
             }
-        }
-        for (var fd : virtual2hybridMap.keySet()) {
-            coll.add(new FDInspection(fd, null, null));
+            for (var fd : virtual2hybridMap.keySet()) {
+                coll.add(new FDInspection(fd, null, null));
+            }
         }
         for (var entry : selector.entries()) {
             var fd = entry.fd;

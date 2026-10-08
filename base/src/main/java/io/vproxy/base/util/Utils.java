@@ -756,22 +756,20 @@ public class Utils {
     }
 
     public static ByteArray buildPseudoIPv4Header(Ipv4Packet ipv4, int upperType, int upperLength) {
-        ByteArray pseudoHeaderTail = ByteArray.allocate(4);
-        ByteArray pseudoHeader = ByteArray.from(ipv4.getSrc().getAddress())
-            .concat(ByteArray.from(ipv4.getDst().getAddress()))
-            .concat(pseudoHeaderTail);
-        pseudoHeaderTail.set(1, (byte) upperType);
-        pseudoHeaderTail.int16(2, upperLength);
+        ByteArray pseudoHeader = ByteArray.allocate(12);
+        ipv4.getSrc().bytes.toNewJavaArray(pseudoHeader.toJavaArray(), 0);
+        ipv4.getDst().bytes.toNewJavaArray(pseudoHeader.toJavaArray(), 4);
+        pseudoHeader.set(9, (byte) upperType);
+        pseudoHeader.int16(10, upperLength);
         return pseudoHeader;
     }
 
     public static ByteArray buildPseudoIPv6Header(Ipv6Packet ipv6, int upperType, int upperLength) {
-        ByteArray pseudoHeaderTail = ByteArray.allocate(8);
-        ByteArray pseudoHeader = ByteArray.from(ipv6.getSrc().getAddress())
-            .concat(ByteArray.from(ipv6.getDst().getAddress()))
-            .concat(pseudoHeaderTail);
-        pseudoHeaderTail.int32(0, upperLength);
-        pseudoHeaderTail.set(7, (byte) upperType);
+        ByteArray pseudoHeader = ByteArray.allocate(40);
+        ipv6.getSrc().bytes.toNewJavaArray(pseudoHeader.toJavaArray(), 0);
+        ipv6.getDst().bytes.toNewJavaArray(pseudoHeader.toJavaArray(), 16);
+        pseudoHeader.int32(32, upperLength);
+        pseudoHeader.set(39, (byte) upperType);
         return pseudoHeader;
     }
 
@@ -780,20 +778,32 @@ public class Utils {
         return calculateChecksumDoFinal(intermediate);
     }
 
+    public static int calculateChecksum(ByteArray first, ByteArray second) {
+        long state = first.updateChecksum(0, 0, first.length());
+        state = second.updateChecksum(state, 0, second.length());
+        int sum = (int) (state >> 9);
+        if (((state >>> 8) & 1) != 0) {
+            sum += ((int) state & 0xff) << 8;
+        }
+        while (sum > 0xffff) {
+            sum = (sum & 0xffff) + (sum >>> 16);
+        }
+        return calculateChecksumDoFinal(sum);
+    }
+
     public static int calculateChecksumIntermediate(int sum, ByteArray array, int limit) {
-        for (int i = 0; i < limit / 2; ++i) {
-            sum += array.uint16(i * 2);
-            while (sum > 0xffff) {
-                sum = (sum & 0xffff) + 1;
-            }
+        if (limit == 0) {
+            return sum;
         }
-        if (limit % 2 != 0) {
-            sum += (array.uint8(limit - 1) << 8);
-            while (sum > 0xffff) {
-                sum = (sum & 0xffff) + 1;
-            }
+        long state = array.updateChecksum((long) sum << 9, 0, limit);
+        int result = (int) (state >> 9);
+        if (((state >>> 8) & 1) != 0) {
+            result += ((int) state & 0xff) << 8;
         }
-        return sum;
+        while (result > 0xffff) {
+            result = (result & 0xffff) + (result >>> 16);
+        }
+        return result;
     }
 
     public static int calculateChecksumDoFinal(int sum) {

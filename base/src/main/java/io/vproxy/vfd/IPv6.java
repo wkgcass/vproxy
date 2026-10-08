@@ -4,7 +4,6 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 
 import java.net.Inet6Address;
-import java.util.Objects;
 
 public class IPv6 extends IP {
     private final int value0;
@@ -71,7 +70,12 @@ public class IPv6 extends IP {
 
     @Override
     public int hashCode() {
-        return Objects.hash(value0, value1, value2, value3);
+        int result = 1;
+        result = 31 * result + value0;
+        result = 31 * result + value1;
+        result = 31 * result + value2;
+        result = 31 * result + value3;
+        return result;
     }
 
     public String formatToIPStringWithoutBrackets() {
@@ -144,7 +148,12 @@ public class IPv6 extends IP {
 
         @Override
         public int hashCode() {
-            return Objects.hash(value0, value1, value2, value3);
+            int result = 1;
+            result = 31 * result + value0;
+            result = 31 * result + value1;
+            result = 31 * result + value2;
+            result = 31 * result + value3;
+            return result;
         }
     }
 }

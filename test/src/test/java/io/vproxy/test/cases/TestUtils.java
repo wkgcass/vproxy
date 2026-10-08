@@ -3,6 +3,7 @@ package io.vproxy.test.cases;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bytearray.CompositeByteArray;
+import io.vproxy.base.util.bytearray.ByteArrayBuilder;
 import io.vproxy.base.util.bytearray.RandomAccessFileByteArray;
 import io.vproxy.base.util.bytearray.SimpleByteArray;
 import io.vproxy.base.util.file.MappedByteBufferLogger;
@@ -11,6 +12,11 @@ import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
 import io.vproxy.base.util.ringbuffer.SimpleRingBufferReaderCommitter;
 import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vfd.MacAddress;
+import io.vproxy.vpacket.tuples.PacketFullTuple;
 import io.vproxy.commons.util.IOUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -30,6 +36,247 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.*;
 
 public class TestUtils {
+    private int referenceChecksumIntermediate(int seed, byte[] bytes, int len) {
+        int sum = seed;
+        for (int i = 0; i < len; i += 2) {
+            int word = (bytes[i] & 0xff) << 8;
+            if (i + 1 < len) word |= bytes[i + 1] & 0xff;
+            sum += word;
+            while (sum > 0xffff) sum = (sum & 0xffff) + 1;
+        }
+        return sum;
+    }
+
+    private ByteArray randomComposite(byte[] bytes, Random random) {
+        ByteArray result = ByteArray.allocate(0);
+        int off = 0;
+        while (off < bytes.length) {
+            int n = Math.min(bytes.length - off, 1 + random.nextInt(23));
+            result = result.concat(ByteArray.from(Arrays.copyOfRange(bytes, off, off + n)));
+            off += n;
+        }
+        return result;
+    }
+
+    @Test
+    public void optimizedByteArrayChecksumMatchesReferenceAcrossSegments() {
+        Random random = new Random(0x5eed);
+        int[] lengths = {0, 1, 2, 3, 20, 40, 64, 1500, 65535};
+        int[] seeds = {0, 1, 0x7fff, 0xffff};
+        for (int len : lengths) {
+            byte[] bytes = new byte[len];
+            random.nextBytes(bytes);
+            ByteArray flat = ByteArray.from(bytes);
+            ByteArray composite = randomComposite(bytes, random);
+            ByteArray[] variants = {flat, composite, composite.unmodifiable()};
+            for (ByteArray array : variants) {
+                for (int limit : new int[]{0, len / 2, len}) {
+                    for (int seed : seeds) {
+                        assertEquals("type=" + array.getClass().getSimpleName() + ", len=" + len + ", limit=" + limit + ", seed=" + seed,
+                            referenceChecksumIntermediate(seed, bytes, limit),
+                            Utils.calculateChecksumIntermediate(seed, array, limit));
+                    }
+                }
+            }
+            if (len > 0) {
+                ByteBuffer direct = ByteBuffer.allocateDirect(len);
+                direct.put(bytes).flip();
+                ByteArray memorySegment = ByteArray.from(direct);
+                for (int limit : new int[]{len / 2, len}) {
+                    assertEquals(referenceChecksumIntermediate(0, bytes, limit),
+                        Utils.calculateChecksumIntermediate(0, memorySegment, limit));
+                }
+            }
+        }
+
+        byte[] joined = {1, 2, 3, 4, 5};
+        for (int split = 0; split <= joined.length; ++split) {
+            ByteArray first = ByteArray.from(Arrays.copyOfRange(joined, 0, split));
+            ByteArray second = ByteArray.from(Arrays.copyOfRange(joined, split, joined.length));
+            assertEquals(referenceChecksumIntermediate(0, joined, joined.length),
+                0xffff - Utils.calculateChecksum(first, second));
+        }
+    }
+
+    @Test
+    public void simpleByteArrayMultiByteReadsAndWritesMatchNetworkOrder() {
+        ByteArray array = ByteArray.allocate(24);
+        array.int16(0, 0x89ab).int16ReverseNetworkByteOrder(2, 0x89ab)
+            .int32(4, 0x89abcdef).int32ReverseNetworkByteOrder(8, 0x89abcdef)
+            .int64(12, 0x0123456789abcdefL);
+        assertEquals(0x89ab, array.uint16(0));
+        assertEquals(0x89ab, array.uint16ReverseNetworkByteOrder(2));
+        assertEquals(0x89abcdef, array.int32(4));
+        assertEquals(0x89abcdef, array.int32ReverseNetworkByteOrder(8));
+        assertEquals(0x0123456789abcdefL, array.int64(12));
+        array.int64ReverseNetworkByteOrder(16, 0x0123456789abcdefL);
+        assertEquals(0x0123456789abcdefL, array.int64ReverseNetworkByteOrder(16));
+        assertEquals(0xefcdab8967452301L, array.int64(16));
+        assertEquals(array.uint16(0), array.sub(0, array.length()).uint16(0));
+        assertEquals(array.int32(5), array.unmodifiable().int32(5));
+    }
+
+    @Test
+    public void segmentedScalarReadsMatchFlatReadsAcrossEveryBoundary() {
+        ByteArray flat = ByteArray.from(0x80, 0xff, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab,
+            0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60);
+        ByteArray segmented = ByteArray.from(0x80, 0xff, 0x01)
+            .concat(ByteArray.from(0x23, 0x45, 0x67, 0x89, 0xab))
+            .concat(ByteArray.from(0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60));
+        ByteArray[] variants = {segmented, segmented.sub(1, segmented.length() - 1), segmented.unmodifiable()};
+        for (ByteArray variant : variants) {
+            int offsetBase = variant == variants[1] ? 1 : 0;
+            for (int i = 0; i + 8 <= variant.length(); ++i) {
+                int off = i + offsetBase;
+                assertEquals(flat.uint24(i + offsetBase), variant.uint24(i));
+                assertEquals(flat.uint24ReverseNetworkByteOrder(i + offsetBase), variant.uint24ReverseNetworkByteOrder(i));
+                assertEquals(flat.uint32(i + offsetBase), variant.uint32(i));
+                assertEquals(flat.uint32ReverseNetworkByteOrder(i + offsetBase), variant.uint32ReverseNetworkByteOrder(i));
+                assertEquals(flat.int64(off), variant.int64(i));
+                assertEquals(flat.int64ReverseNetworkByteOrder(off), variant.int64ReverseNetworkByteOrder(i));
+            }
+        }
+    }
+
+    @Test
+    public void byteArrayRangeChecksAvoidIntegerOverflowAndPreserveOverlappingCopyOrder() {
+        ByteArray array = ByteArray.from(1, 2, 3, 4);
+        try {
+            array.uint16(Integer.MAX_VALUE);
+            fail("overflowing scalar range must fail");
+        } catch (ArrayIndexOutOfBoundsException expected) {
+            // expected
+        }
+        try {
+            array.sub(Integer.MAX_VALUE, 1);
+            fail("overflowing slice range must fail");
+        } catch (ArrayIndexOutOfBoundsException expected) {
+            // expected
+        }
+        try {
+            array.sub(-1, 0);
+            fail("negative slice offset must fail");
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+        ByteArray partialWrite = ByteArray.from(1, 2);
+        try {
+            partialWrite.int16(1, 0xabcd);
+            fail("out-of-range scalar writes must fail");
+        } catch (ArrayIndexOutOfBoundsException expected) {
+            assertArrayEquals(new byte[]{1, (byte) 0xab}, partialWrite.toJavaArray());
+        }
+        array.copyInto(array, 1, 0, 3);
+        assertArrayEquals(new byte[]{1, 1, 1, 1}, array.toJavaArray());
+
+        ByteArray backing = ByteArray.from(1, 2, 3, 4);
+        ByteArray composite = backing.sub(0, 2).concat(backing.sub(2, 2));
+        composite.copyInto(backing, 1, 0, 3);
+        assertArrayEquals(new byte[]{1, 1, 1, 1}, backing.toJavaArray());
+
+        ByteBuffer readOnly = ByteBuffer.allocate(4).asReadOnlyBuffer();
+        try {
+            array.byteBufferPut(readOnly, 0, 2);
+            fail("read-only destination must reject writes");
+        } catch (java.nio.ReadOnlyBufferException expected) {
+            // expected
+        }
+    }
+
+    @Test
+    public void segmentedByteArrayCopyUsesSameVisibleBytes() {
+        byte[] bytes = new byte[100];
+        new Random(123).nextBytes(bytes);
+        ByteArray source = randomComposite(bytes, new Random(456)).sub(7, 81);
+        ByteArray destination = ByteArray.allocate(90);
+        source.copyInto(destination, 4, 3, 70);
+        assertArrayEquals(Arrays.copyOfRange(bytes, 10, 80), destination.sub(4, 70).toJavaArray());
+
+        ByteArray wrapped = source.unmodifiable();
+        ByteArray target = ByteArray.allocate(80);
+        wrapped.copyInto(target, 2, 1, 60);
+        assertArrayEquals(Arrays.copyOfRange(bytes, 8, 68), target.sub(2, 60).toJavaArray());
+    }
+
+    @Test
+    public void compositeCapturesMutableChildLengthAndKeepsSharedBytesVisible() {
+        ByteArrayBuilder builder = new ByteArrayBuilder().append(1);
+        ByteArray composite = builder.concat(ByteArray.from(2));
+        builder.append(3);
+        assertEquals(2, composite.length());
+        assertArrayEquals(new byte[]{1, 2}, composite.toJavaArray());
+        builder.set(0, (byte) 9);
+        assertEquals(9, composite.get(0));
+    }
+
+    @Test
+    public void repeatedByteArrayConcatKeepsTreeBalancedAndBytesInOrder() {
+        int count = 20_000;
+        ByteArray result = ByteArray.allocate(0);
+        for (int i = 0; i < count; ++i) {
+            result = result.concat(ByteArray.from((byte) i));
+        }
+        assertEquals(count, result.length());
+        assertTrue("depth=" + result.treeDepth(), result.treeDepth() <= 20);
+        for (int i = 0; i < count; ++i) {
+            assertEquals((byte) i, result.get(i));
+        }
+
+        ByteArray prepended = ByteArray.allocate(0);
+        for (int i = 0; i < count; ++i) {
+            prepended = ByteArray.from((byte) i).concat(prepended);
+        }
+        assertEquals(count, prepended.length());
+        assertTrue("depth=" + prepended.treeDepth(), prepended.treeDepth() <= 20);
+        for (int i = 0; i < count; ++i) {
+            assertEquals((byte) (count - i - 1), prepended.get(i));
+        }
+    }
+
+    @Test
+    public void addressAndTupleHashesKeepTheirOldValueWithoutBoxingAndByteArrayHashDistributesPrefixes() {
+        IP ip = IP.from("2001:db8::1");
+        IPPort ipPort = new IPPort(ip, 443);
+        assertEquals(Objects.hash(ip, 443), ipPort.hashCode());
+
+        IPv6 ipv6 = (IPv6) ip;
+        assertEquals(Objects.hash(ipv6.getIPv6Value0(), ipv6.getIPv6Value1(), ipv6.getIPv6Value2(), ipv6.getIPv6Value3()), ipv6.hashCode());
+        MacAddress mac = MacAddress.BROADCAST;
+        assertEquals(Objects.hash(-1, 0xffff), mac.hashCode());
+
+        MacAddress srcMac = new MacAddress("00:11:22:33:44:55");
+        MacAddress dstMac = new MacAddress("66:77:88:99:aa:bb");
+        IP src = IP.from("192.0.2.1");
+        IP dst = IP.from("198.51.100.2");
+        PacketFullTuple tuple = new PacketFullTuple(3, srcMac, dstMac, src, dst, 6, 123, 443);
+        PacketFullTuple same = new PacketFullTuple(3, srcMac, dstMac, src, dst, 6, 123, 443);
+        assertEquals(tuple, same);
+        assertEquals(tuple.hashCode(), same.hashCode());
+        assertEquals(Objects.hash(3, srcMac, dstMac, src, dst, 6, 123, 443), tuple.hashCode());
+
+        ByteArray content = ByteArray.from(1, 0, 255, 42);
+        ByteArray segmented = ByteArray.from(1, 0).concat(ByteArray.from(255, 42));
+        int contentHash = content.hashCode();
+        assertEquals(contentHash, segmented.hashCode());
+        assertEquals(contentHash, segmented.unmodifiable().hashCode());
+        content.set(0, (byte) 2);
+        assertNotEquals(contentHash, content.hashCode());
+
+        byte[] value = new byte[4];
+        ByteArray mutable = ByteArray.from(value);
+        Set<Integer> hashes = new HashSet<>();
+        for (int high = 0; high < 256; ++high) {
+            for (int low = 0; low < 256; ++low) {
+                value[0] = (byte) high;
+                value[1] = (byte) low;
+                value[2] = 42;
+                value[3] = 7;
+                hashes.add(mutable.hashCode());
+            }
+        }
+        assertTrue("fixed suffix prefixes should no longer collapse to one hash", hashes.size() > 60_000);
+    }
+
     @Test
     public void compositeToNewJavaArrayHolderOffsets() {
         ByteArray array = ByteArray.from(1, 2).concat(ByteArray.from(3, 4)).concat(ByteArray.from(5, 6));

@@ -290,20 +290,28 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     private ByteArray genHeaderWithChecksumUnfilled() {
+        int headerLen = ihl * 4;
         byte flagsAndFragmentOffsetFirstByte = (byte) (
             ((flags << 5) & 0xff)
                 |
                 ((fragmentOffset >> 8) & 0xff)
         );
-        return ByteArray.allocate(6)
-            .set(0, (byte) ((version << 4) | ihl)).set(1, (byte) ((dscp << 2) | ecn)).int16(2, totalLength)
-            .int16(4, identification).concat(
-                ByteArray.allocate(6)
-                    .set(0, flagsAndFragmentOffsetFirstByte).set(1, (byte) fragmentOffset)
-                    .set(2, (byte) ttl).set(3, (byte) protocol) /*skip the checksum here*/)
-            .concat(src.bytes.copy())
-            .concat(dst.bytes.copy())
-            .concat(options);
+        ByteArray header = ByteArray.allocate(headerLen);
+        header.set(0, (byte) ((version << 4) | ihl));
+        header.set(1, (byte) ((dscp << 2) | ecn));
+        header.int16(2, totalLength);
+        header.int16(4, identification);
+        header.set(6, flagsAndFragmentOffsetFirstByte);
+        header.set(7, (byte) fragmentOffset);
+        header.set(8, (byte) ttl);
+        header.set(9, (byte) protocol);
+        // checksum bytes 10-11 stay zero
+        src.bytes.toNewJavaArray(header.toJavaArray(), 12);
+        dst.bytes.toNewJavaArray(header.toJavaArray(), 16);
+        if (options.length() > 0) {
+            options.toNewJavaArray(header.toJavaArray(), 20);
+        }
+        return header;
     }
 
     public int calculateChecksum() {

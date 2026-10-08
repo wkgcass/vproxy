@@ -1,5 +1,6 @@
 package io.vproxy.vproxyx.websocks;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.connection.NetEventLoop;
@@ -29,9 +30,33 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class AgentDNSServer extends DNSServer {
+    private static final int MAX_DNS_CACHE_ENTRIES = 4096;
+    private static final int MAX_DNS_INFLIGHT_QUERIES = 256;
+    private static final int MAX_DNS_INFLIGHT_WAITERS = 4096;
+    private static final long DNS_CACHE_TTL_MS = 60_000;
+    private static final boolean DNS_TRACE = Boolean.getBoolean("vproxy.dns.trace");
+
+    private record CacheKey(String domain, String serverGroup, int family) {
+    }
+
+    private record CacheEntry(IP address, long expiresAt) {
+    }
+
+    private static final class InFlight {
+        final List<Callback<IP, UnknownHostException>> callbacks = new ArrayList<>();
+    }
+
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
-    private final Map<String, IP> cache = new HashMap<>();
+    private final LinkedHashMap<CacheKey, CacheEntry> cache = new LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<CacheKey, CacheEntry> eldest) {
+            return size() > MAX_DNS_CACHE_ENTRIES;
+        }
+    };
+    private final Map<CacheKey, InFlight> inFlight = new HashMap<>();
+    private final Object dnsStateLock = new Object();
+    private int inFlightWaiterCount;
     private final List<DomainChecker> bondDomains = new LinkedList<>();
     private final ConfigProcessor config;
     private final DomainBinder domainBinder;
@@ -108,24 +133,54 @@ public class AgentDNSServer extends DNSServer {
         NetEventLoop thisLoop = loop;
         loop.getSelectorEventLoop().delay(5 * 60_000, () -> {
             if (loop == thisLoop) {
-                cache.clear();
+                synchronized (dnsStateLock) {
+                    cache.clear();
+                }
             }
             clearCacheTask();
         });
     }
 
-    private IP getFromCache(String domain) {
-        IP l3addr = cache.get(domain);
-        if (l3addr == null) {
-            String tmp;
-            if (domain.endsWith(".")) {
-                tmp = domain.substring(0, domain.length() - 1);
-            } else {
-                tmp = domain + ".";
+    private String normalizeDomain(String domain) {
+        String normalized = domain.endsWith(".") ? domain.substring(0, domain.length() - 1) : domain;
+        return normalized.toLowerCase(Locale.ROOT);
+    }
+
+    private CacheKey cacheKey(String domain, String serverGroup, int family) {
+        return new CacheKey(normalizeDomain(domain), serverGroup, family);
+    }
+
+    private IP getFromCache(CacheKey key) {
+        synchronized (dnsStateLock) {
+            CacheEntry entry = cache.get(key);
+            if (entry == null) {
+                return null;
             }
-            l3addr = cache.get(tmp);
+            if (Config.currentTimestamp >= entry.expiresAt) {
+                cache.remove(key);
+                return null;
+            }
+            return entry.address;
         }
-        return l3addr;
+    }
+
+    private Map.Entry<String, List<DomainChecker>> resolveRule(String domain) {
+        for (Map.Entry<String, List<DomainChecker>> entry : resolves.entrySet()) {
+            for (DomainChecker checker : entry.getValue()) {
+                if (checker.needProxy(domain, 0)) {
+                    return entry;
+                }
+            }
+        }
+        return null;
+    }
+
+    private int dnsFamily(DNSPacket packet) {
+        for (DNSQuestion question : packet.questions) {
+            if (question.qtype == DNSType.AAAA) return 6;
+            if (question.qtype == DNSType.A) return 4;
+        }
+        return 0;
     }
 
     @Override
@@ -256,77 +311,110 @@ public class AgentDNSServer extends DNSServer {
             // check bond domains
             for (DomainChecker chk : bondDomains) {
                 if (chk.needProxy(domain, 0)) {
-                    Logger.alert("[DNS] resolve to bond ip for " + domain);
+                    if (DNS_TRACE) Logger.alert("[DNS] resolve to bond ip for " + domain);
                     respondWithBondIp(p, domain, remote);
                     return;
                 }
             }
-            // try cache
-            {
-                IP l3addr = getFromCache(domain);
+            Map.Entry<String, List<DomainChecker>> rule = resolveRule(domain);
+            if (rule != null) {
+                String serverGroup = rule.getKey();
+                CacheKey key = cacheKey(domain, serverGroup, dnsFamily(p));
+                IP l3addr = getFromCache(key);
                 if (l3addr != null) {
-                    Logger.alert("[DNS] use cache for " + domain + " -> " + l3addr.formatToIPString());
+                    if (DNS_TRACE) Logger.alert("[DNS] use cache for " + domain + " -> " + l3addr.formatToIPString());
                     respond(p, domain, l3addr, remote);
                     return;
                 }
-            }
-            for (Map.Entry<String, List<DomainChecker>> entry : resolves.entrySet()) {
-                var servers = entry.getKey();
-                var ls = entry.getValue();
-                for (DomainChecker chk : ls) {
-                    if (chk.needProxy(domain, 0)) {
-                        Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
-                        requestAndResponse(p, serverGroups.get(servers), domain, remote);
-                        return;
-                    }
-                }
+                if (DNS_TRACE) Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + serverGroup);
+                requestAndResponse(p, serverGroups.get(serverGroup), serverGroup, domain, dnsFamily(p), remote);
+                return;
             }
         }
-        Logger.alert("[DNS] directly resolve for " + domain);
+        if (DNS_TRACE) Logger.alert("[DNS] directly resolve for " + domain);
         super.runRecursive(p, remote);
     }
 
     public void resolve(String domain, Callback<IP, UnknownHostException> cb) {
-        // try cache first
-        {
-            IP l3addr = getFromCache(domain);
-            if (l3addr != null) {
-                Logger.alert("[DNS] use cache for " + domain + " -> " + l3addr.formatToIPString());
-                cb.succeeded(l3addr);
-                return;
-            }
-        }
         if (domain.endsWith(".")) {
             domain = domain.substring(0, domain.length() - 1);
         }
-        for (Map.Entry<String, List<DomainChecker>> entry : resolves.entrySet()) {
-            var servers = entry.getKey();
-            var ls = entry.getValue();
-            for (DomainChecker chk : ls) {
-                if (chk.needProxy(domain, 0)) {
-                    Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
-                    requestAndGetResult(serverGroups.get(servers), domain, cb);
-                    return;
-                }
+        Map.Entry<String, List<DomainChecker>> rule = resolveRule(domain);
+        if (rule != null) {
+            String serverGroup = rule.getKey();
+            CacheKey key = cacheKey(domain, serverGroup, 0);
+            IP l3addr = getFromCache(key);
+            if (l3addr != null) {
+                if (DNS_TRACE) Logger.alert("[DNS] use cache for " + domain + " -> " + l3addr.formatToIPString());
+                cb.succeeded(l3addr);
+                return;
             }
+            if (DNS_TRACE) Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + serverGroup);
+            requestAndGetResult(serverGroups.get(serverGroup), serverGroup, domain, 0, cb);
+            return;
         }
         // otherwise no need to do resolve proxy
         Resolver.getDefault().resolve(domain, cb);
     }
 
-    private void requestAndGetResult(ServerGroup serverGroup, String domain, Callback<IP, UnknownHostException> cb) {
-        var svr = serverGroup.next(null /*will not use serverGroup*/);
-        if (svr == null) {
-            cb.failed(new UnknownHostException("cannot find server to send the dns request - " + domain));
+    private void requestAndGetResult(ServerGroup serverGroup, String serverGroupName, String domain, int family, Callback<IP, UnknownHostException> cb) {
+        if (serverGroup == null) {
+            cb.failed(new UnknownHostException("cannot find server group to resolve " + domain));
             return;
         }
-        // see ConfigProcessor.java
-        SharedData data = (SharedData) svr.getData();
-        CoroutineHttp1ClientConnection.simpleGet((data.svr.useSSL() ? "https" : "http") + "://"
-            + svr.remote.formatToIPPortString() + "/tools/resolve?domain=" + domain).setHandler((bytes, err) -> {
+        CacheKey key = cacheKey(domain, serverGroupName, family);
+        InFlight callbacks;
+        IP cached;
+        String overloadError = null;
+        synchronized (dnsStateLock) {
+            // A previous query may have completed since the caller's cache
+            // lookup. Recheck atomically with admission to the in-flight map.
+            cached = getFromCache(key);
+            InFlight current = inFlight.get(key);
+            if (cached != null) {
+                callbacks = null;
+            } else if (current != null) {
+                if (inFlightWaiterCount >= MAX_DNS_INFLIGHT_WAITERS) {
+                    overloadError = "too many DNS resolve waiters";
+                    callbacks = null;
+                } else {
+                    current.callbacks.add(cb);
+                    ++inFlightWaiterCount;
+                    return;
+                }
+            } else if (inFlight.size() >= MAX_DNS_INFLIGHT_QUERIES || inFlightWaiterCount >= MAX_DNS_INFLIGHT_WAITERS) {
+                overloadError = "too many concurrent DNS resolve requests";
+                callbacks = null;
+            } else {
+                callbacks = new InFlight();
+                callbacks.callbacks.add(cb);
+                inFlight.put(key, callbacks);
+                ++inFlightWaiterCount;
+            }
+        }
+        if (cached != null) {
+            cb.succeeded(cached);
+            return;
+        }
+        if (overloadError != null) {
+            cb.failed(new UnknownHostException(overloadError));
+            return;
+        }
+
+        try {
+            var svr = serverGroup.next(null /*will not use serverGroup*/);
+            if (svr == null) {
+                completeRequest(key, callbacks, null,
+                    new UnknownHostException("cannot find server to send the dns request - " + domain));
+                return;
+            }
+            // see ConfigProcessor.java
+            SharedData data = (SharedData) svr.getData();
+            CoroutineHttp1ClientConnection.simpleGet((data.svr.useSSL() ? "https" : "http") + "://"
+                + svr.remote.formatToIPPortString() + "/tools/resolve?domain=" + domain).setHandler((bytes, err) -> {
             if (err != null) {
                 Logger.error(LogType.CONN_ERROR, "request " + svr.remote + " to resolve " + domain + " failed", err);
-                cb.failed(new UnknownHostException(Utils.formatErr(err) + " - " + domain));
+                completeRequest(key, callbacks, null, new UnknownHostException(Utils.formatErr(err) + " - " + domain));
                 return;
             }
             String ip;
@@ -342,19 +430,46 @@ public class AgentDNSServer extends DNSServer {
             } catch (RuntimeException e) {
                 String msg = "http dns response format is not valid for resolving " + domain + " via " + svr.remote;
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, msg);
-                cb.failed(new UnknownHostException(msg));
+                completeRequest(key, callbacks, null, new UnknownHostException(msg));
                 return;
             }
 
-            Logger.alert("[DNS] resolve: " + domain + " -> " + ip);
+            if (DNS_TRACE) Logger.alert("[DNS] resolve: " + domain + " -> " + ip);
             IP l3addr = IP.from(ipBytes);
-            cache.put(domain, l3addr);
-            cb.succeeded(l3addr);
-        });
+            synchronized (dnsStateLock) {
+                cache.put(key, new CacheEntry(l3addr, Config.currentTimestamp + DNS_CACHE_TTL_MS));
+            }
+            completeRequest(key, callbacks, l3addr, null);
+            });
+        } catch (Throwable t) {
+            Logger.error(LogType.CONN_ERROR, "unable to start HTTP resolve request for " + domain, t);
+            completeRequest(key, callbacks, null, new UnknownHostException(Utils.formatErr(t) + " - " + domain));
+        }
     }
 
-    private void requestAndResponse(DNSPacket p, ServerGroup serverGroup, String domain, IPPort remote) {
-        requestAndGetResult(serverGroup, domain, new Callback<>() {
+    private void completeRequest(CacheKey key, InFlight callbacks, IP result, UnknownHostException error) {
+        List<Callback<IP, UnknownHostException>> completedCallbacks;
+        synchronized (dnsStateLock) {
+            if (inFlight.get(key) != callbacks) {
+                return;
+            }
+            inFlight.remove(key);
+            inFlightWaiterCount -= callbacks.callbacks.size();
+            completedCallbacks = new ArrayList<>(callbacks.callbacks);
+            callbacks.callbacks.clear();
+        }
+        for (Callback<IP, UnknownHostException> callback : completedCallbacks) {
+            try {
+                if (error == null) callback.succeeded(result);
+                else callback.failed(error);
+            } catch (Throwable t) {
+                Logger.error(LogType.IMPROPER_USE, "DNS resolve callback failed", t);
+            }
+        }
+    }
+
+    private void requestAndResponse(DNSPacket p, ServerGroup serverGroup, String serverGroupName, String domain, int family, IPPort remote) {
+        requestAndGetResult(serverGroup, serverGroupName, domain, family, new Callback<>() {
             @Override
             protected void onSucceeded(IP value) {
                 respond(p, domain, value, remote);
@@ -375,7 +490,7 @@ public class AgentDNSServer extends DNSServer {
             Logger.error(LogType.SYS_ERROR, msg);
             sendError(p, remote, new IOException(msg));
         } else {
-            Logger.alert("[DNS] choose local ip " + result.formatToIPString() + " for remote " + remote.formatToIPPortString() + " and domain " + domain);
+            if (DNS_TRACE) Logger.alert("[DNS] choose local ip " + result.formatToIPString() + " for remote " + remote.formatToIPPortString() + " and domain " + domain);
             respond(p, domain, result, remote);
         }
     }
@@ -408,14 +523,14 @@ public class AgentDNSServer extends DNSServer {
             Logger.error(LogType.SYS_ERROR, msg);
             sendError(p, remote, new IOException(msg));
         } else {
-            Logger.alert("[DNS] assigned ip " + l3addr.formatToIPString() + " for domain " + domain);
+            if (DNS_TRACE) Logger.alert("[DNS] assigned ip " + l3addr.formatToIPString() + " for domain " + domain);
             respond(p, domain, l3addr, remote);
         }
     }
 
     @SuppressWarnings("DuplicatedCode")
     private void respond(DNSPacket p, String domain, IP result, IPPort remote) {
-        Logger.alert("[DNS] respond " + domain + " -> " + result.formatToIPString() + " to " + remote.formatToIPPortString());
+        if (DNS_TRACE) Logger.alert("[DNS] respond " + domain + " -> " + result.formatToIPString() + " to " + remote.formatToIPPortString());
 
         DNSPacket dnsResp = new DNSPacket();
         dnsResp.id = p.id;

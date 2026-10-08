@@ -47,9 +47,12 @@ public class TcpEntry implements WithUserData {
 
     public final SendingQueue sendingQueue;
     public final ReceivingQueue receivingQueue;
+    final TcpConnectionDiagnostics diagnostics;
 
     public TimerEvent retransmissionTimer = null;
+    public TimerEvent persistTimer = null;
     public TimerEvent delayedAckTimer = null;
+    public int persistProbeCount = 0;
     public long synBacklogTimestamp = 0;
 
     // only one of these fields can be null
@@ -66,6 +69,7 @@ public class TcpEntry implements WithUserData {
         this.state = TcpState.CLOSED;
         this.sendingQueue = new SendingQueue(new Random().nextInt(TCP_SEQ_RAND) + TCP_SEQ_INIT_MIN);
         this.receivingQueue = new ReceivingQueue(seq == 0 ? 0 : seq + 1 /* the sequence is syn_packet.seq + 1 */);
+        this.diagnostics = TcpConnectionDiagnostics.enabled() ? new TcpConnectionDiagnostics() : null;
         this.synBacklogTimestamp = Config.currentTimestamp;
     }
 
@@ -74,6 +78,7 @@ public class TcpEntry implements WithUserData {
         this.local = local;
         this.sendingQueue = null;
         this.receivingQueue = null;
+        this.diagnostics = null;
         this.state = TcpState.CLOSED;
     }
 
@@ -107,10 +112,18 @@ public class TcpEntry implements WithUserData {
     }
 
     public void destroy() {
+        TcpState oldState = state;
         state = TcpState.CLOSED;
+        if (diagnostics != null) {
+            diagnostics.reportOnce(this, oldState);
+        }
         if (retransmissionTimer != null) {
             retransmissionTimer.cancel();
             retransmissionTimer = null;
+        }
+        if (persistTimer != null) {
+            persistTimer.cancel();
+            persistTimer = null;
         }
         if (delayedAckTimer != null) {
             delayedAckTimer.cancel();
@@ -140,6 +153,62 @@ public class TcpEntry implements WithUserData {
                 connectionHandler.writable(this);
             }
         }
+    }
+
+    public boolean diagnosticsEnabled() {
+        return diagnostics != null;
+    }
+
+    public void diagnosticReceived(long seq, int bytes) {
+        if (diagnostics != null) diagnostics.received(this, seq, bytes);
+    }
+
+    public void diagnosticSent(long seq, int bytes, String retransmissionReason) {
+        if (diagnostics != null) diagnostics.sent(this, seq, bytes, retransmissionReason);
+    }
+
+    public void diagnosticAcknowledged(long ackSeq, long bytes) {
+        if (diagnostics != null) diagnostics.acknowledged(this, ackSeq, bytes);
+    }
+
+    public void diagnosticPersistProbe(int bytes) {
+        if (diagnostics != null) diagnostics.persistProbe(this, bytes);
+    }
+
+    public void diagnosticReceivedFin() {
+        if (diagnostics != null) diagnostics.receivedFin();
+    }
+
+    public void diagnosticSentFin() {
+        if (diagnostics != null) diagnostics.sentFin();
+    }
+
+    public void diagnosticReceivedRst() {
+        if (diagnostics != null) diagnostics.receivedRst();
+    }
+
+    public void diagnosticSentRst() {
+        if (diagnostics != null) diagnostics.sentRst();
+    }
+
+    public void diagnosticCloseReason(String reason) {
+        if (diagnostics != null) diagnostics.closeReason(reason);
+    }
+
+    public void diagnosticRetransmitTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_RETRANSMIT, expectedAt, actualAt);
+    }
+
+    public void diagnosticPersistTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_PERSIST, expectedAt, actualAt);
+    }
+
+    public void diagnosticDelayedAckTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_DELAYED_ACK, expectedAt, actualAt);
+    }
+
+    public void diagnosticTimeWaitTimer(long expectedAt, long actualAt) {
+        if (diagnostics != null) diagnostics.timer(this, TcpConnectionDiagnostics.TIMER_TIME_WAIT, expectedAt, actualAt);
     }
 
     public int getPshMultiplier(int dataSize) {
@@ -211,6 +280,9 @@ public class TcpEntry implements WithUserData {
         private int window = 0;
         private int mss = 0;
         private int windowScale = 1;
+        private long peerWindowRightEdge;
+        private long zeroWindowProbeSeq = -1;
+        private boolean finSentOnWire;
         private boolean finAcked = false;
 
         // congestion control state
@@ -237,9 +309,10 @@ public class TcpEntry implements WithUserData {
         }
 
         public void init(int window, int mss, int windowScale, int initialCwnd) {
-            this.window = Math.min(MAX_REMOTE_WINDOW, window * windowScale);
+            this.windowScale = Math.max(1, windowScale);
+            this.window = scaledWindow(window);
             this.mss = mss;
-            this.windowScale = windowScale;
+            this.peerWindowRightEdge = ackSeq + this.window;
             this.cwnd = initialCwnd;
             this.ssthresh = Integer.MAX_VALUE;
             this.lastLossTime = Config.currentTimestamp;
@@ -250,20 +323,48 @@ public class TcpEntry implements WithUserData {
             this.cwnd = cwnd;
         }
 
-        private void updateWindow(int window) {
-            this.window = Math.min(MAX_REMOTE_WINDOW, window * windowScale);
+        private int scaledWindow(int window) {
+            long scaled = (long) window * windowScale;
+            return (int) Math.max(0, Math.min(MAX_REMOTE_WINDOW, scaled));
+        }
+
+        private void updateWindow(long ack, int window) {
+            // A stale or impossible ACK must not move the receive-window edge backwards
+            // or open it beyond data the peer could have acknowledged.
+            if (ack < ackSeq || ack > maxAckableSequence()) {
+                return;
+            }
+            this.window = scaledWindow(window);
+            this.peerWindowRightEdge = ack + this.window;
+        }
+
+        public boolean isAckAcceptable(long seq) {
+            return seq >= ackSeq && seq <= maxAckableSequence();
+        }
+
+        private long maxAckableSequence() {
+            long max = fetchSeq;
+            if (zeroWindowProbeSeq == fetchSeq) {
+                ++max;
+            }
+            if (finSentOnWire && state.finSent && fetchSeq == latestSeq) {
+                ++max;
+            }
+            return max;
         }
 
         public void incAllSeq() {
             this.latestSeq += 1;
             this.ackSeq += 1;
             this.fetchSeq += 1;
+            this.peerWindowRightEdge += 1;
         }
 
         public void decAllSeq() {
             this.latestSeq -= 1;
             this.ackSeq -= 1;
             this.fetchSeq -= 1;
+            this.peerWindowRightEdge -= 1;
         }
 
         public boolean hasMoreSpace() {
@@ -316,7 +417,7 @@ public class TcpEntry implements WithUserData {
             return fetch(false);
         }
 
-        private final List<Segment> REUSEABLE_BUFFER_FOR_fetch = new ArrayList<>(1024);
+        private final List<Segment> REUSEABLE_BUFFER_FOR_fetch = new ArrayList<>(8);
 
         public List<Segment> fetch(boolean isRetransmit) {
             int sendLimit = getAvailableSendWindow();
@@ -324,55 +425,100 @@ public class TcpEntry implements WithUserData {
                 return Collections.emptyList();
             }
 
-            long startSeq = isRetransmit ? ackSeq : fetchSeq;
             List<Segment> ret = REUSEABLE_BUFFER_FOR_fetch;
             ret.clear();
-            int newBytes = 0; // bytes beyond fetchSeq → added to bytesInFlight
+            long oldFetchSeq = fetchSeq;
+            long newFetchEnd = fetchSeq;
 
             for (var s : q) {
-                // 跳过无需处理的
-                if (s.seqEndExclusive <= startSeq) continue;
-                // 已经sack的无需处理
-                if (s.sacked) continue;
-
-                // 新发送的？
-                if (s.seqBeginInclusive > fetchSeq) {
-                    // 超出sendLimit了？
-                    if (s.seqEndExclusive - ackSeq > sendLimit) {
-                        break;
+                if (s.sacked) {
+                    continue;
+                }
+                if (isRetransmit) {
+                    // Retransmit only sequence space that has actually been sent. A
+                    // window-limited partial segment may still have an unsent suffix.
+                    long from = Math.max(s.seqBeginInclusive, ackSeq);
+                    long to = Math.min(s.seqEndExclusive, oldFetchSeq);
+                    if (from >= to) {
+                        continue;
                     }
-                }
-
-                // 如果比fetchSeq小，则说明它是重传的
-                if (s.seqBeginInclusive < fetchSeq) {
                     s.retransmitted++;
+                    ret.add(segmentSlice(s, from, to));
+                    continue;
                 }
 
-                ret.add(s);
-
-                // Track new bytes for bytesInFlight
-                if (s.seqEndExclusive > fetchSeq) {
-                    newBytes += s.data.length(); // 每次必定只发送/ack/sack完整的segment，所以这里逻辑比较简单
+                if (s.seqEndExclusive <= newFetchEnd) {
+                    continue;
+                }
+                if (s.seqBeginInclusive > newFetchEnd) {
+                    break;
+                }
+                int remaining = sendLimit - (int) (newFetchEnd - oldFetchSeq);
+                if (remaining <= 0) {
+                    break;
+                }
+                long from = Math.max(s.seqBeginInclusive, newFetchEnd);
+                long to = Math.min(s.seqEndExclusive, from + remaining);
+                if (from >= to) {
+                    break;
+                }
+                Segment sending = segmentSlice(s, from, to);
+                ret.add(sending);
+                newFetchEnd = to;
+                if (s.firstSentTime == 0) {
+                    long now = Config.currentTimestamp;
+                    s.firstSentTime = now;
+                    s.lastSendTime = now;
                 }
             }
 
             if (!ret.isEmpty()) {
+                int newBytes = (int) (newFetchEnd - oldFetchSeq);
                 bytesInFlight += newBytes;
-                long now = Config.currentTimestamp;
-                for (var seg : ret) {
-                    if (seg.retransmitted == 0) {
-                        seg.lastSendTime = now;
-                        if (seg.firstSentTime == 0) {
-                            seg.firstSentTime = now;
-                        }
-                    }
-                    if (seg.seqEndExclusive > fetchSeq) {
-                        fetchSeq = seg.seqEndExclusive;
-                    }
-                }
+                fetchSeq = newFetchEnd;
             }
 
             return ret;
+        }
+
+        /**
+         * Returns one unsent byte as a TCP persist probe while the peer has
+         * advertised a zero window. It deliberately does not advance SND.NXT
+         * or consume congestion-window accounting; ordinary fetch() remains
+         * blocked until a window update arrives. If only FIN remains, use an
+         * empty probe at SND.NXT - 1 to recover a lost window update.
+         */
+        public Segment fetchZeroWindowProbe() {
+            if (window != 0) {
+                return null;
+            }
+            if (fetchSeq >= latestSeq) {
+                // FIN also needs a window slot. An empty probe just before
+                // SND.NXT solicits a window update without sending FIN early.
+                return needToSendFin() ? new Segment(fetchSeq - 1, ByteArray.allocate(0)) : null;
+            }
+            for (Segment segment : q) {
+                if (segment.seqBeginInclusive <= fetchSeq && fetchSeq < segment.seqEndExclusive) {
+                    zeroWindowProbeSeq = fetchSeq;
+                    return segmentSlice(segment, fetchSeq, fetchSeq + 1);
+                }
+            }
+            return null;
+        }
+
+        public boolean hasUnsentData() {
+            return fetchSeq < latestSeq;
+        }
+
+        public void markFinSent() {
+            finSentOnWire = true;
+        }
+
+        private Segment segmentSlice(Segment source, long begin, long end) {
+            if (begin == source.seqBeginInclusive && end == source.seqEndExclusive) {
+                return source;
+            }
+            return new Segment(begin, source.data.sub((int) (begin - source.seqBeginInclusive), (int) (end - begin)));
         }
 
         /**
@@ -380,7 +526,12 @@ public class TcpEntry implements WithUserData {
          * the peer's receive window and our congestion window.
          */
         public int getAvailableSendWindow() {
-            return Math.max(0, cwnd - bytesInFlight);
+            int congestionAvailable = Math.max(0, cwnd - bytesInFlight);
+            long peerWindowAvailable = peerWindowRightEdge - fetchSeq;
+            if (peerWindowAvailable <= 0) {
+                return 0;
+            }
+            return (int) Math.min(congestionAvailable, Math.min(Integer.MAX_VALUE, peerWindowAvailable));
         }
 
         /**
@@ -442,22 +593,26 @@ public class TcpEntry implements WithUserData {
                 return;
             }
 
-            updateWindow(window);
+            if (!isAckAcceptable(seq)) {
+                return;
+            }
 
-            if (state.finSent && seq >= latestSeq + 1) {
+            updateWindow(seq, window);
+
+            if (finSentOnWire && state.finSent && seq >= latestSeq + 1) {
                 ackSeq = latestSeq + 1;
                 fetchSeq = latestSeq + 1;
                 finAcked = true;
                 bytesInFlight = 0;
                 q.clear();
+                currentSize = 0;
                 return;
             }
-            if (latestSeq < seq) {
-                if (q.isEmpty()) {
-                    return;
-                }
-                // is invalid, but we try our best to recover
-                seq = q.peekLast().seqEndExclusive;
+            if (zeroWindowProbeSeq == fetchSeq && seq > fetchSeq) {
+                fetchSeq = zeroWindowProbeSeq + 1;
+                zeroWindowProbeSeq = -1;
+            } else if (window > 0) {
+                zeroWindowProbeSeq = -1;
             }
 
             // compute newly acked bytes for congestion control
@@ -471,10 +626,10 @@ public class TcpEntry implements WithUserData {
             if (ackSeq < seq) {
                 ackSeq = seq;
             }
-            var ite = q.iterator();
             boolean sampled = false;
-            while (ite.hasNext()) {
-                var s = ite.next();
+            boolean becameWritable = false;
+            while (!q.isEmpty()) {
+                var s = q.peekFirst();
                 if (s.seqBeginInclusive >= seq) {
                     break; // entirely after ACK, nothing to do
                 }
@@ -485,14 +640,34 @@ public class TcpEntry implements WithUserData {
                         sampled = true;
                     }
                     currentSize -= s.data.length();
-                    ite.remove();
-                    if (connectionHandler != null) {
-                        connectionHandler.writable(TcpEntry.this);
-                    }
+                    q.pollFirst();
+                    becameWritable = true;
                 } else {
-                    // partially acked — segment is immutable, treat as not acked
+                    // Trim a partially acknowledged head so its consumed prefix no
+                    // longer occupies the send buffer or appears in a retransmission.
+                    int acked = (int) (seq - s.seqBeginInclusive);
+                    if (acked > 0) {
+                        if (!sampled) {
+                            sampleRtt(s);
+                            sampled = true;
+                        }
+                        q.pollFirst();
+                        currentSize -= acked;
+                        Segment remaining = new Segment(seq, s.data.sub(acked, s.data.length() - acked));
+                        if (seq < fetchSeq) {
+                            remaining.firstSentTime = s.firstSentTime;
+                            remaining.lastSendTime = s.lastSendTime;
+                            remaining.retransmitted = s.retransmitted;
+                            remaining.sacked = s.sacked;
+                        }
+                        q.addFirst(remaining);
+                        becameWritable = true;
+                    }
                     break;
                 }
+            }
+            if (becameWritable && connectionHandler != null) {
+                connectionHandler.writable(TcpEntry.this);
             }
         }
 
@@ -710,9 +885,17 @@ public class TcpEntry implements WithUserData {
                 Logger.error(LogType.IMPROPER_USE, "FIN received but is still storing data");
                 return;
             }
-            if (currentSize + oooSize >= RMEM_MAX) {
+            int available = RMEM_MAX - currentSize - oooSize;
+            if (available <= 0) {
                 // memory is full
                 return;
+            }
+            if (segment.data.length() > available) {
+                // Keep both the logical receive queue and retained packet backing
+                // within RMEM_MAX; the unaccepted suffix will be retransmitted.
+                byte[] prefix = Utils.allocateByteArray(available);
+                segment.data.byteBufferPut(ByteBuffer.wrap(prefix), 0, available);
+                segment = new Segment(segment.seqBeginInclusive, ByteArray.from(prefix));
             }
 
             long segBegin = segment.seqBeginInclusive;
@@ -835,43 +1018,77 @@ public class TcpEntry implements WithUserData {
         }
 
         public ByteArray apiRead(int maxLen) {
-            if (currentSize < maxLen) {
-                maxLen = currentSize;
+            int len = Math.min(currentSize, maxLen);
+            if (len <= 0 || q.isEmpty()) {
+                resetWindow();
+                return null;
             }
-            ByteArray arr = null;
-            int len = 0;
-            while (!q.isEmpty() && len < maxLen) {
-                Segment s = q.peekFirst();
-                ByteArray data = s.data;
-                int subLen = data.length();
-                if (len + data.length() > maxLen) {
-                    subLen = maxLen - len;
-                    data = data.sub(0, subLen);
-                }
-                len += data.length();
-                if (arr == null) {
-                    arr = data;
-                } else {
-                    arr = arr.concat(data);
-                }
-                if (subLen == s.data.length()) {
-                    // fully consumed
-                    q.pollFirst();
-                    currentSize -= s.data.length();
-                    readSeq = s.seqEndExclusive;
-                } else {
-                    // partially consumed
-                    q.pollFirst();
-                    var remaining = new Segment(s.seqBeginInclusive + subLen, s.data.sub(subLen, s.data.length() - subLen));
-                    q.addFirst(remaining);
-                    currentSize -= subLen;
-                    readSeq = remaining.seqBeginInclusive;
-                    break;
-                }
+            Segment first = q.peekFirst();
+            if (first.data.length() >= len) {
+                ByteArray result = first.data.sub(0, len);
+                consumeReadBytes(len);
+                resetWindow();
+                return result;
             }
-            // restore the receive window after consuming data
+
+            // Coalesce once when a read crosses multiple TCP segments. This keeps
+            // the application-facing ByteArray shallow and releases old backing
+            // segments as soon as they are consumed.
+            byte[] bytes = Utils.allocateByteArray(len);
+            int written = 0;
+            while (written < len) {
+                Segment segment = q.peekFirst();
+                int n = Math.min(len - written, segment.data.length());
+                segment.data.sub(0, n).toNewJavaArray(bytes, written);
+                consumeReadBytes(n);
+                written += n;
+            }
             resetWindow();
-            return arr;
+            return ByteArray.from(bytes);
+        }
+
+        /**
+         * Drain directly into an application buffer, avoiding an intermediate
+         * flattened byte[] for Composite/SubByteArray payloads.
+         */
+        public int apiRead(ByteBuffer dst) {
+            if (dst.isReadOnly()) {
+                throw new java.nio.ReadOnlyBufferException();
+            }
+            int len = Math.min(currentSize, dst.remaining());
+            if (len <= 0 || q.isEmpty()) {
+                resetWindow();
+                return 0;
+            }
+            int remaining = len;
+            while (remaining > 0) {
+                Segment segment = q.peekFirst();
+                int n = Math.min(remaining, segment.data.length());
+                segment.data.byteBufferPut(dst, 0, n);
+                consumeReadBytes(n);
+                remaining -= n;
+            }
+            resetWindow();
+            return len;
+        }
+
+        private void consumeReadBytes(int len) {
+            while (len > 0) {
+                Segment segment = q.peekFirst();
+                int segmentLen = segment.data.length();
+                int consumed = Math.min(len, segmentLen);
+                q.pollFirst();
+                currentSize -= consumed;
+                if (consumed == segmentLen) {
+                    readSeq = segment.seqEndExclusive;
+                } else {
+                    var remaining = new Segment(segment.seqBeginInclusive + consumed,
+                        segment.data.sub(consumed, segmentLen - consumed));
+                    q.addFirst(remaining);
+                    readSeq = remaining.seqBeginInclusive;
+                }
+                len -= consumed;
+            }
         }
 
         public int getCurrentSize() {

@@ -78,7 +78,7 @@ public class IPPort extends SockAddr {
 
     @Override
     public int hashCode() {
-        return Objects.hash(ip, port);
+        return 31 * (31 + Objects.hashCode(ip)) + port;
     }
 
     // BEGIN UTILS:

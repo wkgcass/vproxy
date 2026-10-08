@@ -89,10 +89,9 @@ public class UdpPacket extends TransportPacket {
         var common = buildCommonPart(flags);
 
         var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_UDP, common.length());
-        var toCalculate = pseudo.concat(common);
 
         if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
-            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+            checksum = Utils.calculateChecksum(pseudo, common);
 
             if (checksum == 0) {
                 checksum = 0xffff;
@@ -113,10 +112,9 @@ public class UdpPacket extends TransportPacket {
         var common = buildCommonPart(flags);
 
         var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_UDP, common.length());
-        var toCalculate = pseudo.concat(common);
 
         if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
-            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+            checksum = Utils.calculateChecksum(pseudo, common);
 
             if (checksum == 0) {
                 checksum = 0xffff;
@@ -146,8 +144,7 @@ public class UdpPacket extends TransportPacket {
     protected void updateChecksumWithIPv4(Ipv4Packet ipv4) {
         raw.pktBuf.int16(6, 0);
         var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_UDP, raw.pktBuf.length());
-        var toCalculate = pseudo.concat(raw.pktBuf);
-        var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+        var cksum = Utils.calculateChecksum(pseudo, raw.pktBuf);
 
         if (cksum == 0) {
             cksum = 0xffff;
@@ -161,8 +158,7 @@ public class UdpPacket extends TransportPacket {
     protected void updateChecksumWithIPv6(Ipv6Packet ipv6) {
         raw.pktBuf.int16(6, 0);
         var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_UDP, raw.pktBuf.length());
-        var toCalculate = pseudo.concat(raw.pktBuf);
-        var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+        var cksum = Utils.calculateChecksum(pseudo, raw.pktBuf);
 
         if (cksum == 0) {
             cksum = 0xffff;

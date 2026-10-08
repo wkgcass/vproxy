@@ -118,8 +118,8 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
         if (dg == null) {
             return null;
         }
-        if (buf.limit() - buf.position() > dg.data.length()) {
-            buf.put(dg.data.toJavaArray());
+        if (buf.remaining() >= dg.data.length()) {
+            dg.data.byteBufferPut(buf, 0, dg.data.length());
         } // otherwise drop the packet
 
         if (udpListenEntry.receivingQueue.hasMorePacketsToRead()) {

@@ -25,6 +25,25 @@ import java.util.function.Supplier;
 import static org.junit.Assert.*;
 
 public class TestPacket {
+    @Test
+    public void truncatedPacketPaddingPreservesPrefixAndRepeatsPatternAcrossBlocks() {
+        byte[] prefix = {1, 2, 3};
+        ByteArray padded = PacketDataBuffer.padToLength(ByteArray.from(prefix), 70_000);
+        assertEquals(70_000, padded.length());
+        assertArrayEquals(prefix, padded.sub(0, prefix.length).toJavaArray());
+        byte[] pattern = PacketDataBuffer.TRUNCATED_PAD_SEQ;
+        for (int i = prefix.length; i < padded.length(); ++i) {
+            assertEquals(pattern[(i - prefix.length) % pattern.length], padded.get(i));
+        }
+
+        PacketDataBuffer packet = new PacketDataBuffer(ByteArray.from(prefix));
+        packet.setAllowTruncatedPacket(true);
+        PacketDataBuffer extended = packet.padTo(11);
+        assertTrue(extended.allowTruncatedPacket());
+        assertSame(extended.pktBuf, extended.fullbuf);
+        assertEquals(11, extended.pktBuf.length());
+    }
+
     MacAddress randomMac() {
         byte[] mac = Utils.allocateByteArrayInitZero(6);
         new Random().nextBytes(mac);

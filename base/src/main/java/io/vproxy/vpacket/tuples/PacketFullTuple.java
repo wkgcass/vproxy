@@ -27,7 +27,7 @@ public class PacketFullTuple {
         this.tpSrc = tpSrc;
         this.tpDst = tpDst;
 
-        this.hashCode = hashCode();
+        this.hashCode = computeHash();
     }
 
     @Override
@@ -55,6 +55,19 @@ public class PacketFullTuple {
 
     @Override
     public int hashCode() {
-        return Objects.hash(devin, dlSrc, dlDst, nwSrc, nwDst, ipProto, tpSrc, tpDst, hashCode);
+        return hashCode;
+    }
+
+    private int computeHash() {
+        int result = 1;
+        result = 31 * result + devin;
+        result = 31 * result + Objects.hashCode(dlSrc);
+        result = 31 * result + Objects.hashCode(dlDst);
+        result = 31 * result + Objects.hashCode(nwSrc);
+        result = 31 * result + Objects.hashCode(nwDst);
+        result = 31 * result + ipProto;
+        result = 31 * result + tpSrc;
+        result = 31 * result + tpDst;
+        return result;
     }
 }

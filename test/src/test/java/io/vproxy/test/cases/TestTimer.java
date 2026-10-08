@@ -4,6 +4,8 @@ import io.vproxy.base.selector.PeriodicEvent;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.time.TimeElem;
+import io.vproxy.base.util.time.TimeQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -75,5 +77,26 @@ public class TestTimer {
         e.cancel();
         Thread.sleep(500);
         assertEquals("still 3 alerts", 3, i[0]);
+    }
+
+    @Test
+    public void indexedTimeQueueCancellationAndLargeTimestampOrdering() {
+        TimeQueue<String> queue = TimeQueue.create();
+        TimeElem<String> late = queue.add(Long.MAX_VALUE - 100, 20, "late");
+        queue.add(Long.MIN_VALUE + 100, 20, "early");
+        assertEquals(20, queue.nextTime(Long.MIN_VALUE + 100));
+        assertEquals("early", queue.poll());
+        late.removeSelf();
+        assertTrue(queue.isEmpty());
+
+        TimeElem<String> canceled = null;
+        for (int i = 0; i < 2000; ++i) {
+            canceled = queue.add(10, 100, "canceled");
+            canceled.removeSelf();
+        }
+        queue.add(10, 100, "live");
+        assertEquals(100, queue.nextTime(10));
+        assertEquals("live", queue.poll());
+        assertTrue(queue.isEmpty());
     }
 }

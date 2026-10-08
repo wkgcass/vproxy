@@ -4,12 +4,18 @@ public class RetransContext {
     public long lastBeginSeq;
     public int retransmissionCount;
     public boolean sackRetransmit;
+    public boolean fastRetransmit;
 
     public RetransContext() {
     }
 
     public RetransContext sackRetransmit() {
         sackRetransmit = true;
+        return this;
+    }
+
+    public RetransContext fastRetransmit() {
+        fastRetransmit = true;
         return this;
     }
 
@@ -29,6 +35,7 @@ public class RetransContext {
 
     public RetransContext resetSpecialAck() {
         sackRetransmit = false;
+        fastRetransmit = false;
         return this;
     }
 }

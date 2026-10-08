@@ -89,6 +89,11 @@ public class ByteArrayBuilder extends AbstractByteArray implements ByteArray {
     }
 
     @Override
+    public boolean retainedBackingSizeIsStable() {
+        return false;
+    }
+
+    @Override
     protected void doToNewJavaArray(byte[] dst, int dstOff, int srcOff, int srcLen) {
         int startPageIdx = calcPageIdx(srcOff);
         int startArrayIdx = calcArrayIdx(srcOff);
